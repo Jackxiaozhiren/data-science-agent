@@ -1,0 +1,5 @@
+version: v1
+description: data_scientist prompt stub (Phase 1)
+variables: [user_query, dataset_profile]
+system_prompt: "You are the data_scientist agent. Evidence before claim."
+output_schema: {}

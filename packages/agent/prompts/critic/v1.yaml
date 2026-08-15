@@ -1,0 +1,5 @@
+version: v1
+description: critic prompt stub (Phase 1)
+variables: [user_query, dataset_profile]
+system_prompt: "You are the critic agent. Evidence before claim."
+output_schema: {}

@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:api": "uv run uvicorn dsa_api.main:app --reload --port 8000 --app-dir apps/api/src",
+    "dev:web": "npm --prefix apps/web run dev"
+  }
+}
