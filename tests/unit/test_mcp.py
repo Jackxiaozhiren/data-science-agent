@@ -4,17 +4,21 @@ import pathlib
 
 
 def test_mcp_has_13_tools() -> None:
+    # V0.2 extends MCP to 16 tools (forecast/assumption_check/feature_importance added)
     from dsa_mcp.adapter import MCP_TOOL_MAP, list_mcp_tools
 
     tools = list_mcp_tools()
-    assert len(tools) == 13
-    assert len(MCP_TOOL_MAP) == 13
+    assert len(tools) == 16
+    assert len(MCP_TOOL_MAP) == 16
     names = {t.name for t in tools}
     assert "profile_dataset" in names
     assert "run_sql" in names
     assert "run_python" in names
     assert "run_statistical_test" in names
     assert "create_visualization" in names
+    assert "forecast" in names
+    assert "assumption_check" in names
+    assert "feature_importance" in names
 
 
 def test_adapter_is_decoupled_from_core() -> None:
@@ -88,13 +92,12 @@ def test_mcp_http_list_and_call() -> None:
     from dsa_mcp.server import app
 
     client = TestClient(app)
-    # tools/list via JSON-RPC
     r = client.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
     assert r.status_code == 200
     data = r.json()
     assert "result" in data
     assert "tools" in data["result"]
-    assert len(data["result"]["tools"]) >= 13
+    assert len(data["result"]["tools"]) >= 16
     # initialize
     r2 = client.post("/mcp", json={"jsonrpc": "2.0", "id": 2, "method": "initialize", "params": {}})
     assert r2.status_code == 200

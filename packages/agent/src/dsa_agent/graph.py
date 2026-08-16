@@ -40,9 +40,8 @@ async def _run_tool(tool_name: str, inputs: dict[str, Any]) -> tuple[Any, bool, 
 
 def _tool_inputs_for_step(step_tool: str, step_inputs: dict[str, Any], dataset_path: str | None) -> dict[str, Any]:
     inp = dict(step_inputs)
-    # normalize dataset_path keys
     if dataset_path:
-        if step_tool in ("run_sql", "run_python", "correlation_analysis", "hypothesis_test", "regression_analysis", "train_model", "evaluate_model", "create_chart"):
+        if step_tool in ("run_sql", "run_python", "correlation_analysis", "hypothesis_test", "assumption_check", "regression_analysis", "train_model", "evaluate_model", "feature_importance", "forecast", "create_chart"):
             if "dataset_path" not in inp:
                 inp["dataset_path"] = dataset_path
         if step_tool == "profile_dataset" and "path" not in inp:
@@ -83,6 +82,22 @@ def _evidence_for_tool_call(tool: str, call_id: str, output: Any) -> Evidence | 
             source_type = "model"
             result = {"metrics": getattr(output, "metrics", getattr(output, "cv_scores", {})), "model": getattr(output, "model", "")}
             claim = f"Model {getattr(output, 'model', '')} evaluated"
+            confidence = 0.75
+        elif tool == "forecast" and output is not None:
+            source_type = "model"
+            result = {"forecast": getattr(output, "forecast", [])[:5], "mae": getattr(output, "metrics", {}).get("mae"), "method": getattr(output, "method", "")}
+            claim = f"Forecast {getattr(output, 'method', '')}: next {len(getattr(output, 'forecast', []))} periods, MAE={getattr(output, 'metrics', {}).get('mae', 0):.2f}"
+            confidence = 0.7
+        elif tool == "feature_importance" and output is not None:
+            source_type = "model"
+            imps = getattr(output, "importances", [])[:3]
+            result = {"top_features": imps}
+            claim = f"Top features for {getattr(output, 'target', '')}: {', '.join(i.get('feature','') for i in imps)}"
+            confidence = 0.7
+        elif tool == "assumption_check" and output is not None:
+            source_type = "statistical_test"
+            result = {"checks": getattr(output, "checks", []), "passed": getattr(output, "passed", True)}
+            claim = f"Assumption check: {getattr(output, 'recommendation', '')[:120]}"
             confidence = 0.75
         elif tool == "create_chart" and output is not None:
             source_type = "visualization"
@@ -165,8 +180,7 @@ async def run_analysis(
             ev = _evidence_for_tool_call(step.tool, call_id, output)
             if ev:
                 state.evidence.append(ev)
-                # also create insight scaffold for statistical results
-                if step.tool in ("correlation_analysis", "hypothesis_test", "regression_analysis"):
+                if step.tool in ("correlation_analysis", "hypothesis_test", "regression_analysis", "forecast", "feature_importance", "assumption_check"):
                     iid = f"I-{uuid.uuid4().hex[:8]}"
                     state.insights.append(Insight(id=iid, finding=ev.claim, evidence_ids=[ev.id], limitation="Association does not imply causation."))
         state.current_step += 1

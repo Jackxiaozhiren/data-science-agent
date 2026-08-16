@@ -12,7 +12,6 @@ class MCPToolDef(BaseModel):
 
 
 MCP_TOOL_MAP: dict[str, str] = {
-    # mcp_name -> backend tool name (dsa_tools registry)
     "profile_dataset": "profile_dataset",
     "inspect_dataset": "profile_dataset",
     "query_dataset": "run_sql",
@@ -20,8 +19,11 @@ MCP_TOOL_MAP: dict[str, str] = {
     "run_python": "run_python",
     "run_statistical_test": "hypothesis_test",
     "correlation_analysis": "correlation_analysis",
+    "forecast": "forecast",
+    "assumption_check": "assumption_check",
     "train_model": "train_model",
     "evaluate_model": "evaluate_model",
+    "feature_importance": "feature_importance",
     "create_visualization": "create_chart",
     "get_evidence": "create_evidence",
     "generate_report": "generate_report",
@@ -37,8 +39,11 @@ MCP_DESCRIPTIONS: dict[str, str] = {
     "run_python": "Execute Python in a restricted sandbox with dataset as df (Polars).",
     "run_statistical_test": "Run hypothesis tests (t/welch/mann-whitney/anova/kruskal/chi2).",
     "correlation_analysis": "Correlation (pearson/spearman/kendall) with p-value and CI.",
+    "forecast": "Baseline time-series forecast (linear_trend/moving_average/naive_trend) with holdout MAE.",
+    "assumption_check": "Check statistical assumptions (Shapiro normality, Levene homogeneity).",
     "train_model": "Train a baseline model with cross-validation.",
     "evaluate_model": "Evaluate a model on holdout (accuracy/F1/ROC or MAE/RMSE/R2).",
+    "feature_importance": "Feature importance via RandomForest with chart artifact.",
     "create_visualization": "Create a chart (histogram/bar/scatter/line/boxplot/heatmap) as PNG artifact.",
     "get_evidence": "Create or validate an evidence record for a claim.",
     "generate_report": "Generate report.md + experiment.json + reproduce.sh + notebook.",

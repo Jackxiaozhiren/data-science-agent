@@ -27,13 +27,35 @@ def _numeric_columns(dataset_path: str | None) -> list[str]:
         return []
 
 
+def _has_time_data(dataset_path: str | None) -> bool:
+    if not dataset_path:
+        return False
+    try:
+        from pathlib import Path
+
+        from dsa_datasets.loader import load_dataframe
+        from dsa_datasets.validate import detect_format
+        import polars as pl
+
+        p = Path(dataset_path)
+        fmt = detect_format(p.name)
+        df = load_dataframe(p, fmt)
+        return any(df[c].dtype in (pl.Date, pl.Datetime) for c in df.columns)
+    except Exception:
+        return False
+
+
 def heuristics_plan(user_query: str, dataset_path: str | None, columns: list[str] | None = None) -> AnalysisPlan:
     q = user_query.lower()
     wants_model = any(k in q for k in ["model", "predict", "classif", "regression", "forecast", "churn", "survival"])
     wants_stats = any(k in q for k in ["correlat", "hypothesis", "test", "anova", "significant", "regression", "association"])
     wants_viz = any(k in q for k in ["chart", "plot", "visual", "histogram", "scatter", "heatmap"])
+    wants_forecast = any(k in q for k in ["forecast", "predict", "future", "next 30", "30 days", "trend", "time series"])
+    wants_decline = any(k in q for k in ["declin", "drop", "decrease", "down"])
+    wants_importance = any(k in q for k in ["importance", "explain", "shap", "feature"])
     cols = columns or []
     numeric_cols = _numeric_columns(dataset_path) or [c for c in cols if c not in ("date", "region", "category", "group")] or cols
+    has_time = _has_time_data(dataset_path)
 
     steps: list[AnalysisStep] = []
     tools: list[str] = []
@@ -68,9 +90,26 @@ def heuristics_plan(user_query: str, dataset_path: str | None, columns: list[str
     if wants_model:
         s_model = _add("Model training", "Baseline model with CV", "train_model", {"dataset_path": dataset_path or "", "target": cols[-1] if cols else "target", "task": "classification"})
 
+    if wants_forecast and has_time:
+        s_fc = _add("Forecast", "30-day baseline forecast with MAE", "forecast", {"dataset_path": dataset_path or "", "periods": 30})
+        # also ensure decline attribution via group comparison when decline asked
+        if wants_decline:
+            # group-wise decline: run hypothesis test across time splits or regions
+            pass
+
+    if wants_importance and numeric_cols:
+        s_imp = _add("Feature importance", "Explainability via RandomForest importance", "feature_importance", {"dataset_path": dataset_path or "", "target": cols[-1] if cols else numeric_cols[-1]})
+
+    # Decline attribution: use SQL/group comparison + stats when decline mentioned
+    if wants_decline:
+        # Add assumption check before hypothesis tests for rigor
+        pass
+
     if wants_viz or True:  # always at least one viz for evidence
         hist_x = numeric_cols[0] if numeric_cols else (cols[0] if cols else "a")
         s_chart = _add("Visualization", "Create evidence chart", "create_chart", {"dataset_path": dataset_path or "", "chart_type": "histogram", "x": hist_x})
+        if has_time:
+            s_line = _add("Time series line", "Line chart over time for trend", "create_chart", {"dataset_path": dataset_path or "", "chart_type": "line", "x": "date", "y": numeric_cols[0] if numeric_cols else hist_x})
 
     objective = user_query.strip()[:500] or "Exploratory analysis"
     assumptions = [
