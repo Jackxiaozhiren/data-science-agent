@@ -1,0 +1,17 @@
+site_name: Data Science Agent
+site_description: An Evidence-Grounded Autonomous Data Science System
+theme:
+  name: material
+nav:
+  - Home: README.md
+  - Architecture: ARCHITECTURE_FREEZE_V0.1.md
+  - MCP: docs/MCP_DESIGN.md
+  - Frontend: docs/FRONTEND_IA.md
+  - Benchmark: benchmarks/ds-agent-benchmark/README.md
+  - Examples: examples/README.md
+  - Contributing: CONTRIBUTING.md
+  - Security: SECURITY.md
+markdown_extensions:
+  - toc
+  - tables
+  - admonition
