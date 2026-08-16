@@ -24,7 +24,7 @@ class StubLLMProvider(LLMProvider):
             pass
         return {}
 
-    async def stream(self, prompt: str, **kwargs: Any):  # type: ignore[override]
+    async def stream(self, prompt: str, **kwargs: Any) -> Any:
         yield await self.generate(prompt, **kwargs)
 
 
@@ -35,14 +35,13 @@ class EnvLLMProvider(LLMProvider):
         self.fallback = fallback or StubLLMProvider()
 
     async def generate(self, prompt: str, **kwargs: Any) -> str:
-        # If any provider key is set, we could call real API — for V0.1 we stay stub
         _ = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GOOGLE_API_KEY")
         return await self.fallback.generate(prompt, **kwargs)
 
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any:
         return await self.fallback.structured_output(prompt, schema, **kwargs)
 
-    async def stream(self, prompt: str, **kwargs: Any):  # type: ignore[override]
+    async def stream(self, prompt: str, **kwargs: Any) -> Any:
         async for chunk in self.fallback.stream(prompt, **kwargs):  # type: ignore[attr-defined]
             yield chunk
 

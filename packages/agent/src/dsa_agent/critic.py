@@ -5,7 +5,19 @@ from collections.abc import Sequence
 
 from dsa_agent.state import AnalysisState, ValidationResult
 
-_CAUSAL_WORDS = re.compile(r"\b(cause[sd]?|caused by|impact|effect of|leads to|results in)\b", re.IGNORECASE)
+_CAUSAL_WORDS = re.compile(
+    r"\b(cause[sd]?|caused by|impact(?:s|ed)?|effect(?: of)?|leads to|results in|due to|drives|driven by)\b",
+    re.IGNORECASE,
+)
+
+
+def rewrite_unsupported_claim(text: str, has_causal_evidence: bool = False) -> str:
+    if has_causal_evidence:
+        return text
+    if _CAUSAL_WORDS.search(text):
+        rewritten = _CAUSAL_WORDS.sub("is associated with", text)
+        return rewritten + " (Causal inference is not established.)"
+    return text
 
 
 def check_unsupported_claims(insights: Sequence[object], has_causal_evidence: bool = False) -> ValidationResult:
@@ -58,6 +70,33 @@ def critic_validate(state: AnalysisState) -> list[ValidationResult]:
 def should_retry(validation_results: list[ValidationResult], retry_count: int, max_retries: int = 3) -> bool:
     failed = [r for r in validation_results if not r.passed and r.check in ("evidence_coverage", "tool_errors")]
     return bool(failed) and retry_count < max_retries
+
+
+def detect_prompt_injection(dataset_text: str) -> ValidationResult:
+    # Dataset cells are UNTRUSTED DATA — flag injection-like payloads without blocking the run
+    import dsa_execution.guardrails as _g
+
+    if _g.contains_prompt_injection(dataset_text):
+        return ValidationResult(
+            check="prompt_injection",
+            passed=False,
+            message="Injection-like content detected in dataset; treated as untrusted data (not executed).",
+            details={"snippet": dataset_text[:300]},
+        )
+    return ValidationResult(check="prompt_injection", passed=True, message="No injection detected")
+
+
+def check_resource_limits(state: AnalysisState) -> ValidationResult:
+    import dsa_execution.guardrails as _g
+
+    violations = _g.check_resource_limits(
+        tool_calls=state.tool_call_count,
+        max_tool_calls=state.budget.max_tool_calls,
+        max_tokens=state.budget.max_tokens,
+    )
+    if violations:
+        return ValidationResult(check="resource_limits", passed=False, message="; ".join(violations))
+    return ValidationResult(check="resource_limits", passed=True, message="Within limits")
 
 
 def correction_message(results: list[ValidationResult]) -> str:

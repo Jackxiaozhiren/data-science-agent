@@ -49,8 +49,15 @@ async def create_dataset_route(
                 break
             size += len(chunk)
             tmp.write(chunk)
+    # Capture head for MIME sniff + archive bomb heuristic
+    head: bytes | None = None
     try:
-        result = await save_dataset(session, file.filename, tmp_path, size)
+        head = tmp_path.read_bytes()[:4096] if tmp_path.exists() else None
+    except Exception:
+        head = None
+    ct = file.content_type
+    try:
+        result = await save_dataset(session, file.filename, tmp_path, size, content_type=ct, head=head)
         return result
     except (ValidationError, UnsupportedFormatError, FileTooLargeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

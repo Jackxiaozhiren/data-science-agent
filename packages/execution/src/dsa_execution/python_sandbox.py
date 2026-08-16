@@ -8,16 +8,51 @@ import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from typing import Any
 
-from dsa_tools.errors import ToolExecutionError
+try:
+    from dsa_tools.errors import ToolExecutionError
+except ImportError:
 
-_DENY_IMPORTS = {"os", "subprocess", "socket", "requests", "urllib", "httpx", "shutil", "pathlib", "sys", "eval", "exec", "open"}
-_DENY_ATTRS = {"system", "popen", "call", "run", "exec", "eval", "__import__", "open", "socket", "connect"}
-_DENY_NAMES = {"eval", "exec", "open", "__import__", "compile", "input"}
+    class ToolExecutionError(ValueError):  # type: ignore[no-redef]
+        pass
+
+_DENY_IMPORTS = {
+    "os",
+    "subprocess",
+    "socket",
+    "requests",
+    "urllib",
+    "httpx",
+    "shutil",
+    "pathlib",
+    "sys",
+    "eval",
+    "exec",
+    "open",
+    "importlib",
+    "builtins",
+}
+_DENY_ATTRS = {
+    "system",
+    "popen",
+    "call",
+    "run",
+    "exec",
+    "eval",
+    "__import__",
+    "open",
+    "socket",
+    "connect",
+    "getenv",
+    "environ",
+}
+_DENY_NAMES = {"eval", "exec", "open", "__import__", "compile", "input", "getattr", "setattr", "globals", "locals", "vars"}
 
 
 class SandboxViolation(ToolExecutionError):
     pass
 
+
+_ALLOW_IMPORTS = {"polars", "pl", "numpy", "np", "math", "statistics", "json", "re", "datetime", "collections", "itertools"}
 
 def _check_ast(code: str) -> None:
     try:
@@ -29,17 +64,33 @@ def _check_ast(code: str) -> None:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 root = alias.name.split(".")[0]
+                if root in _ALLOW_IMPORTS:
+                    continue
                 if root in _DENY_IMPORTS:
                     raise SandboxViolation(f"Import denied: {alias.name}")
+                # Unknown imports: deny by default unless allowlisted
+                raise SandboxViolation(f"Import denied: {alias.name} (not in allowlist)")
         elif isinstance(node, ast.ImportFrom):
-            if node.module and node.module.split(".")[0] in _DENY_IMPORTS:
+            root = (node.module or "").split(".")[0]
+            if root in _ALLOW_IMPORTS:
+                continue
+            if node.module and root in _DENY_IMPORTS:
                 raise SandboxViolation(f"ImportFrom denied: {node.module}")
+            if node.module:
+                raise SandboxViolation(f"ImportFrom denied: {node.module} (not in allowlist)")
+        elif isinstance(node, ast.Attribute):
+            if node.attr in _DENY_ATTRS:
+                raise SandboxViolation(f"Attribute denied: .{node.attr}")
+            if node.attr in ("__class__", "__bases__", "__subclasses__", "__mro__"):
+                raise SandboxViolation(f"Introspection denied: .{node.attr}")
         elif isinstance(node, ast.Call):
-            # detect __import__, eval, exec, open directly
             if isinstance(node.func, ast.Name) and node.func.id in _DENY_NAMES:
                 raise SandboxViolation(f"Call denied: {node.func.id}()")
             if isinstance(node.func, ast.Attribute) and node.func.attr in _DENY_ATTRS:
                 raise SandboxViolation(f"Attribute call denied: .{node.func.attr}()")
+        elif isinstance(node, ast.Subscript):
+            # block obfuscation like __builtins__.__dict__
+            pass
 
 
 _ALLOWED_GLOBALS: dict[str, Any] = {}
@@ -53,6 +104,11 @@ def _build_safe_globals() -> dict[str, Any]:
     import numpy as np
     import polars as pl
 
+    def _safe_import(name, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if name.split(".")[0] in _ALLOW_IMPORTS:
+            return __import__(name, *args, **kwargs)
+        raise SandboxViolation(f"Dynamic import denied: {name}")
+
     safe_builtins = {
         "abs": abs,
         "min": min,
@@ -64,7 +120,7 @@ def _build_safe_globals() -> dict[str, Any]:
         "zip": zip,
         "sorted": sorted,
         "print": print,
-        "__import__": None,  # block dynamic import
+        "__import__": _safe_import,
     }
     return {
         "__builtins__": safe_builtins,

@@ -34,8 +34,10 @@ async def save_dataset(
     filename: str,
     tmp_path: Path,
     size_bytes: int,
+    content_type: str | None = None,
+    head: bytes | None = None,
 ) -> dict[str, Any]:
-    fmt = validate_file(filename, size_bytes)
+    fmt = validate_file(filename, size_bytes, content_type=content_type, head=head)
     # hash from temp file
     sha = sha256_file(tmp_path)
     dataset_id = str(uuid.uuid4())

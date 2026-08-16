@@ -130,3 +130,31 @@ async def get_evidence_trace(run_id: str, evidence_id: str, session: AsyncSessio
     if traced is None:
         raise HTTPException(status_code=404, detail="Evidence not found")
     return traced
+
+
+@router.post("/{run_id}/approve")
+async def approve_analysis(run_id: str, body: dict[str, Any] | None = None, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+    row = await get_analysis_run(session, run_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    if row.get("status") != "HUMAN_REVIEW":
+        raise HTTPException(status_code=409, detail=f"Analysis not awaiting approval (status={row.get('status')})")
+    # For MVP, approval flips to COMPLETED with note; full re-run is Phase 9+
+    from dsa_api.models.analysis import AnalysisRunORM
+    from sqlalchemy import select as _select
+
+    result = await session.execute(_select(AnalysisRunORM).where(AnalysisRunORM.id == run_id))
+    orm = result.scalars().first()
+    if orm is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    note = (body or {}).get("note", "Approved by human")
+    # Append to state_json as synthetic validation
+    import json as _json
+
+    state = _json.loads(orm.state_json) if orm.state_json else {}
+    state.setdefault("validation_results", []).append({"check": "human_approval", "passed": True, "message": note})
+    orm.state_json = _json.dumps(state)
+    orm.status = "COMPLETED"
+    await session.commit()
+    await session.refresh(orm)
+    return orm.to_dict()
