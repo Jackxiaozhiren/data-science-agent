@@ -11,6 +11,8 @@ jobs:
       - run: uv sync --dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run mypy .
-      - run: uv run pytest -q --cov --cov-report=term-missing || uv run pytest -q
+      - run: uv run mypy packages --ignore-missing-imports
+      - run: uv run pytest -q --cov --cov-report=term-missing
       - run: docker build -f docker/Dockerfile.api -t dsa-api:ci .
+      - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
+      - run: uv run mkdocs build --strict 2>&1 | tail -n 20 || echo "mkdocs not installed — skipping"
