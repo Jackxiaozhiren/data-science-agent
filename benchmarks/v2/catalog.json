@@ -1,6 +1,6 @@
 {
   "name": "DS-Agent-Benchmark-v2",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "datasets": 30,
   "tasks": [
     {
@@ -23,7 +23,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Profile + describe columns"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-02",
@@ -44,7 +63,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Distribution + outliers"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-03",
@@ -66,7 +104,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Missing + dup + outliers"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-04",
@@ -87,7 +144,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Outlier detection"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-05",
@@ -108,7 +184,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "EDA + class balance"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-06",
@@ -129,7 +224,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Descriptive + profile"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-07",
@@ -150,7 +264,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Distribution by region"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-08",
@@ -171,7 +304,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Group-wise summary"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-01",
@@ -197,7 +349,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "GROUP BY region"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-02",
@@ -224,7 +394,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Top region"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-03",
@@ -250,7 +438,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "AVG by category"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-04",
@@ -276,7 +482,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "ORDER BY revenue LIMIT 5"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-05",
@@ -303,7 +527,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "HAVING count"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-06",
@@ -330,7 +572,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Survival by sex"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-07",
@@ -356,7 +616,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Filtered avg"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-01",
@@ -381,7 +659,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Pearson r"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,statistical_accuracy,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-02",
@@ -404,7 +703,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "ANOVA/Kruskal"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,statistical_accuracy,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-03",
@@ -427,7 +749,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "t_test/welch"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,statistical_accuracy,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-04",
@@ -449,7 +794,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Assumption check"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-05",
@@ -471,7 +839,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Chi2 / t-test"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-06",
@@ -493,7 +884,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Correlation paired"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,statistical_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-07",
@@ -514,7 +926,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Outlier-aware stats"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-08",
@@ -536,7 +971,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Cohen d"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-01",
@@ -559,7 +1017,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Linear/Ridge"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,statistical_accuracy,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-02",
@@ -580,7 +1059,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Model comparison"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-03",
@@ -601,7 +1101,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Multiple regression"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-04",
@@ -622,7 +1143,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Regression"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-05",
@@ -643,7 +1185,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Logistic"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-06",
@@ -664,7 +1227,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Linear coef"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-01",
@@ -687,7 +1271,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Classification baseline"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-02",
@@ -708,7 +1310,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "CV comparison"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-03",
@@ -729,7 +1349,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "evaluate_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Eval"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-04",
@@ -750,7 +1388,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Feature importance"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-05",
@@ -771,7 +1427,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Missing handling"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-06",
@@ -792,7 +1466,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "evaluate_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Evaluation"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-01",
@@ -813,7 +1505,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Trend analysis"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-02",
@@ -836,7 +1547,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Trend + line chart"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-03",
@@ -857,7 +1586,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Seasonality"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-04",
@@ -878,7 +1626,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Forecast/regression"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-05",
@@ -901,7 +1670,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Line chart"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-01",
@@ -924,7 +1711,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Histogram"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-02",
@@ -947,7 +1752,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Bar"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-03",
@@ -970,7 +1793,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Scatter"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-04",
@@ -993,7 +1834,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Heatmap"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-05",
@@ -1016,7 +1875,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Boxplot"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-01",
@@ -1038,7 +1915,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Missing + dup"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-02",
@@ -1059,7 +1955,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Outlier flag"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-03",
@@ -1080,7 +1995,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Missing handling"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-04",
@@ -1101,7 +2035,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Quality assessment"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-05",
@@ -1122,7 +2075,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Validation"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "prof-01",
@@ -1146,7 +2118,28 @@
       "required_evidence": [
         "schema"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "schema"
+      ],
+      "acceptable_interpretation": [
+        "Schema + missing + duplicates + dtype inference"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "prof-02",
@@ -1167,7 +2160,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Unicode-safe profiling"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "prof-03",
@@ -1188,7 +2200,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Wide-table cardinality"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "prof-04",
@@ -1209,7 +2240,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "High-cardinality assessment"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "prof-05",
@@ -1230,7 +2280,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Datetime detection"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "prof-06",
@@ -1253,7 +2322,30 @@
       "required_evidence": [
         "correlation"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "correlation"
+      ],
+      "acceptable_interpretation": [
+        "Leakage signal via correlation"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clus-01",
@@ -1274,7 +2366,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "KMeans k=3"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clus-02",
@@ -1295,7 +2405,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "evaluate_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Model selection for clustering"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clus-03",
@@ -1317,7 +2445,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Clustering + viz"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clus-04",
@@ -1338,7 +2484,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Dimensionality-aware clustering"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clus-05",
@@ -1360,7 +2524,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Aggregation + cluster"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clus-06",
@@ -1381,7 +2563,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Pre-clustering check"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-09",
@@ -1402,7 +2603,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Label balance + spread"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "eda-10",
@@ -1423,7 +2643,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Imbalance report"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-08",
@@ -1449,7 +2688,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "GROUP BY label"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-09",
@@ -1475,7 +2732,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Conditional avg"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "sql-10",
@@ -1503,7 +2778,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Top key by SUM"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-09",
@@ -1531,7 +2824,34 @@
         "cause",
         "causes",
         "caused"
-      ]
+      ],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "correlation"
+      ],
+      "acceptable_interpretation": [
+        "Correlation + do not claim causal"
+      ],
+      "forbidden_interpretation": [
+        "cause",
+        "causes",
+        "caused"
+      ],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-10",
@@ -1553,7 +2873,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Welch or Mann-Whitney"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "stats-11",
@@ -1574,7 +2917,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "5 tests + note multiplicity"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-07",
@@ -1596,7 +2962,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Leakage-aware regression"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "reg-08",
@@ -1617,7 +3004,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Imbalance-aware eval"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-07",
@@ -1638,7 +3043,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Stratified CV classification"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "clf-08",
@@ -1659,7 +3082,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "High-dim classification"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-06",
@@ -1680,7 +3121,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "forecast"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "30-day forecast"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ts-07",
@@ -1701,7 +3160,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "forecast"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Forecast comparison"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-06",
@@ -1724,7 +3201,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Scatter with hue"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "viz-07",
@@ -1749,7 +3244,27 @@
       "required_evidence": [],
       "forbidden_claims": [
         "cause"
-      ]
+      ],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Scatter + trend"
+      ],
+      "forbidden_interpretation": [
+        "cause"
+      ],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-06",
@@ -1770,7 +3285,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Heavy missing report"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "dq-07",
@@ -1791,7 +3325,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Unicode robustness"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-01",
@@ -1821,7 +3374,28 @@
         "sql",
         "evidence"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "sql",
+        "evidence"
+      ],
+      "acceptable_interpretation": [
+        "GROUP BY + evidence trace"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-02",
@@ -1845,7 +3419,30 @@
       "required_evidence": [
         "correlation"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "correlation"
+      ],
+      "acceptable_interpretation": [
+        "Evidence-grounded correlation"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-03",
@@ -1873,7 +3470,34 @@
         "caused",
         "impact",
         "effect"
-      ]
+      ],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Unsupported claim guard"
+      ],
+      "forbidden_interpretation": [
+        "cause",
+        "causes",
+        "caused",
+        "impact",
+        "effect"
+      ],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-04",
@@ -1902,7 +3526,28 @@
         "sql",
         "evidence"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "sql",
+        "evidence"
+      ],
+      "acceptable_interpretation": [
+        "Evidence trace end-to-end"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-05",
@@ -1926,7 +3571,32 @@
       "required_evidence": [
         "statistical_test"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "statistical_test"
+      ],
+      "acceptable_interpretation": [
+        "Statistical evidence graph"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-06",
@@ -1948,7 +3618,28 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Leakage evidence check"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-07",
@@ -1974,7 +3665,27 @@
       "required_evidence": [
         "visualization"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "visualization"
+      ],
+      "acceptable_interpretation": [
+        "Chart evidence"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-08",
@@ -1998,7 +3709,27 @@
       "required_evidence": [
         "sql"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "ds-agent-benchmark-v1",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "sql"
+      ],
+      "acceptable_interpretation": [
+        "Repro bundle present"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-09",
@@ -2019,7 +3750,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Metric evidence check"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "ev-10",
@@ -2043,7 +3792,27 @@
       "required_evidence": [
         "model"
       ],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "forecast"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [
+        "model"
+      ],
+      "acceptable_interpretation": [
+        "Forecast with MAE evidence"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-01",
@@ -2067,7 +3836,30 @@
       "required_evidence": [],
       "forbidden_claims": [
         "cause"
-      ]
+      ],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "regression_analysis",
+        "linear",
+        "ridge",
+        "lasso"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Controlled regression, association only"
+      ],
+      "forbidden_interpretation": [
+        "cause"
+      ],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-02",
@@ -2091,7 +3883,30 @@
       "required_evidence": [],
       "forbidden_claims": [
         "cause"
-      ]
+      ],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "correlation_analysis",
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Partial correlation / adjustment"
+      ],
+      "forbidden_interpretation": [
+        "cause"
+      ],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-03",
@@ -2112,7 +3927,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Standardize + k-means"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-04",
@@ -2134,7 +3967,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "train_model"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Leakage-aware classification"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-05",
@@ -2155,7 +4006,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Missing handling comparison"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-06",
@@ -2178,7 +4048,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Correlation heatmap"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-07",
@@ -2201,7 +4089,25 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "create_chart"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Seasonal decomposition + chart"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,visualization)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-08",
@@ -2223,7 +4129,30 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "hypothesis_test",
+        "t_test",
+        "welch",
+        "mannwhitney",
+        "anova",
+        "kruskal"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Welch per-key compare"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,evidence_coverage)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-09",
@@ -2244,7 +4173,26 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "profile_dataset",
+        "describe"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Text-aware EDA"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success)",
+      "evaluator_version": "evaluator_v1"
     },
     {
       "id": "exp-10",
@@ -2270,7 +4218,33 @@
       ],
       "gold_metrics": {},
       "required_evidence": [],
-      "forbidden_claims": []
+      "forbidden_claims": [],
+      "benchmark_version": "0.3.0",
+      "source": "synthetic",
+      "license": "MIT",
+      "citation": "Data Science Agent Benchmark v2 — synthetic/local datasets, seed 42",
+      "benchmark_generator": "scripts/generate_benchmark_v2.py (seed=42, R=random.Random(42))",
+      "human_reviewer": "PENDING (V3 W2 human_reviewer audit required)",
+      "statistical_reviewer": "PENDING",
+      "acceptable_method": [
+        "run_sql"
+      ],
+      "acceptable_metrics": {},
+      "acceptable_evidence": [],
+      "acceptable_interpretation": [
+        "Unicode WHERE"
+      ],
+      "forbidden_interpretation": [],
+      "evaluation_function": "dsa_evaluation.metrics.evaluate_task (criteria: task_success,sql_accuracy)",
+      "evaluator_version": "evaluator_v1"
     }
-  ]
+  ],
+  "audit": {
+    "phase": "W2 Benchmark Scientific Audit",
+    "seed": 42,
+    "audit_date": "2026-08-16",
+    "auditor": "W2 Phase B",
+    "catalog_sha_before": "45db0be7d65e",
+    "catalog_sha_after": "c493bc69b176"
+  }
 }
