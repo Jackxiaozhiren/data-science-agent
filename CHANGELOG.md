@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.5.0 — Reproducibility: executable notebook + chart-embedded report (upcoming)
+## 1.6.0 — Hardening: compose + web build + cov gate (upcoming)
+- `docker compose config` + `healthcheck (interval/timeout/retries/start_period)` + `depends_on: healthy` verified.
+- Web `npm run build --workspace=dsa-web` → 7 routes green (dashboard/datasets/detail/analysis/trace/reports).
+- `pytest --cov 74%` · `mypy 81` clean · `ruff` gated; benchmark 50/50 @1.0 retained.
+
+## 1.5.0 — Reproducibility: executable notebook + chart-embedded report
 - `analysis.ipynb` from skeleton → executable cells (profile + per-tool `run_sql/correlation/hypothesis/.../chart` + full `run_analysis`) via `build_notebook(run_id, dataset_path, query, plan, tool_calls)`.
 - `report.md` embeds `![chart](artifact.png)` for `create_chart` outputs.
 - `pyproject` + `config.version` → 1.5.0.
