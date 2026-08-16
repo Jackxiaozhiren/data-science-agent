@@ -31,8 +31,16 @@ class StubLLMProvider(LLMProvider):
 class EnvLLMProvider(LLMProvider):
     """Thin wrapper that would delegate to OpenAI/Anthropic if keys present; falls back to stub."""
 
+    active_provider: str = "stub"
+
     def __init__(self, fallback: LLMProvider | None = None) -> None:
         self.fallback = fallback or StubLLMProvider()
+        if os.getenv("OPENAI_API_KEY"):
+            self.active_provider = "openai"
+        elif os.getenv("ANTHROPIC_API_KEY"):
+            self.active_provider = "anthropic"
+        elif os.getenv("GOOGLE_API_KEY"):
+            self.active_provider = "google"
 
     async def generate(self, prompt: str, **kwargs: Any) -> str:
         _ = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GOOGLE_API_KEY")

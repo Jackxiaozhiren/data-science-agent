@@ -7,12 +7,16 @@ export default function DatasetsPage() {
   const [items, setItems] = useState<Dataset[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
-    const res = await fetch("http://localhost:8000/api/v1/datasets/");
-    if (!res.ok) { setErr(await res.text()); return; }
-    const data = (await res.json()) as { datasets: Dataset[] };
-    setItems(data.datasets);
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/datasets/");
+      if (!res.ok) { setErr(await res.text()); return; }
+      const data = (await res.json()) as { datasets: Dataset[] };
+      setItems(data.datasets);
+    } catch (e) { setErr(String(e)); } finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
 
@@ -38,6 +42,11 @@ export default function DatasetsPage() {
         {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
       </div>
       <div className="rounded border bg-white p-4">
+        {loading ? (
+          <p className="text-sm text-zinc-500">Loading datasets…</p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-zinc-500">No datasets yet. Upload a CSV/Parquet/JSON/Excel above to begin.</p>
+        ) : (
         <table className="w-full text-sm">
           <thead className="text-left text-zinc-500"><tr><th>File</th><th>Format</th><th>Rows</th><th>Cols</th><th></th></tr></thead>
           <tbody>
@@ -51,8 +60,7 @@ export default function DatasetsPage() {
               </tr>
             ))}
           </tbody>
-        </table>
-        {items.length === 0 && <p className="mt-2 text-sm text-zinc-500">No datasets.</p>}
+        </table> )}
       </div>
     </div>
   );
