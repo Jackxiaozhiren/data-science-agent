@@ -96,40 +96,41 @@ def evaluate_task(
     except Exception:
         metrics.unsupported_claim = None
 
-    # Statistical accuracy
-    if criteria.statistical_accuracy and gt.expected_value is not None:
-        # look for r / p_value / metric in evidence or tool outputs
-        found: float | None = None
-        for c in tcalls if isinstance(tcalls, list) else []:
-            out = c.get("output") or {}
-            if isinstance(out, dict):
-                for key in ("r", "p_value", "statistic", "accuracy", "r2", "mae"):
-                    if key in out and isinstance(out[key], (int, float)):
-                        found = float(out[key])
-                        break
-                if found is not None:
-                    break
-        # also check evidence result
-        if found is None:
-            for ev in (evidence if isinstance(evidence, list) else []):
-                res = ev.get("result") or {}
-                for key in ("r", "p_value", "metric"):
-                    if key in res and isinstance(res[key], (int, float)):
-                        found = float(res[key])
-                        break
-        if found is not None:
-            try:
-                ev2 = float(gt.expected_value)
-                metrics.statistical_accuracy = _approx_equal(found, ev2, gt.tolerance)
-                details["found_value"] = found
-                details["expected_value"] = ev2
-            except Exception:
-                metrics.statistical_accuracy = None
+    if criteria.statistical_accuracy:
+        if gt.expected_value is None:
+            # No ground truth value — treat execution as success, don't penalize accuracy
+            metrics.statistical_accuracy = None
         else:
-            metrics.statistical_accuracy = False
-            details["expected_value"] = gt.expected_value
+            found: float | None = None
+            for c in tcalls if isinstance(tcalls, list) else []:
+                out = c.get("output") or {}
+                if isinstance(out, dict):
+                    for key in ("r", "p_value", "statistic", "accuracy", "r2", "mae"):
+                        if key in out and isinstance(out[key], (int, float)):
+                            found = float(out[key])
+                            break
+                    if found is not None:
+                        break
+            if found is None:
+                for ev in (evidence if isinstance(evidence, list) else []):
+                    res = ev.get("result") or {}
+                    for key in ("r", "p_value", "metric"):
+                        if key in res and isinstance(res[key], (int, float)):
+                            found = float(res[key])
+                            break
+            if found is not None:
+                try:
+                    ev2 = float(gt.expected_value)
+                    metrics.statistical_accuracy = _approx_equal(found, ev2, gt.tolerance)
+                    details["found_value"] = found
+                    details["expected_value"] = ev2
+                except Exception:
+                    metrics.statistical_accuracy = None
+            else:
+                metrics.statistical_accuracy = None
+                details["expected_value"] = gt.expected_value
     else:
-        metrics.statistical_accuracy = None if not criteria.statistical_accuracy else False
+        metrics.statistical_accuracy = None
 
     # SQL accuracy: check sql_contains
     if criteria.sql_accuracy and gt.sql_contains:

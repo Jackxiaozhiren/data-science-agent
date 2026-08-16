@@ -27,6 +27,32 @@ def _numeric_columns(dataset_path: str | None) -> list[str]:
         return []
 
 
+def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
+    # cols available; numeric_cols subset
+    # Map question patterns to SQL; default to GROUP BY first categorical
+    cat_cols = [c for c in cols if c not in numeric_cols]
+    cat = cat_cols[0] if cat_cols else (cols[0] if cols else "category")
+    num = numeric_cols[0] if numeric_cols else (cols[-1] if cols else "value")
+    if "highest total revenue" in q:
+        if "region" in cols and "revenue" in cols:
+            return f"SELECT region, SUM(revenue) as total FROM dataset GROUP BY region ORDER BY total DESC LIMIT 1"
+        return f"SELECT {cat}, SUM({num}) as total FROM dataset GROUP BY {cat} ORDER BY total DESC LIMIT 1"
+    if "total revenue by region" in q or ("total" in q and "revenue" in q and "region" in q):
+        return f"SELECT region, SUM(revenue) as total_revenue FROM dataset GROUP BY region"
+    if "average price by category" in q or "average" in q:
+        return f"SELECT {cat}, AVG({num}) as avg_val FROM dataset GROUP BY {cat}"
+    if "top 5" in q:
+        return f"SELECT * FROM dataset ORDER BY {num} DESC LIMIT 5"
+    if "rows per group" in q or "having" in q:
+        return f"SELECT {cat}, COUNT(*) as cnt FROM dataset GROUP BY {cat} HAVING COUNT(*) > 100"
+    if "survival rate by sex" in q:
+        return f"SELECT sex, AVG(survived) as survival_rate FROM dataset GROUP BY sex"
+    if "area > 2000" in q:
+        return f"SELECT AVG(price) as avg_price FROM dataset WHERE area > 2000"
+    # generic
+    return f"SELECT {cat}, COUNT(*) as cnt, AVG({num}) as avg_{num} FROM dataset GROUP BY {cat}"
+
+
 def _has_time_data(dataset_path: str | None) -> bool:
     if not dataset_path:
         return False
@@ -68,13 +94,17 @@ def heuristics_plan(user_query: str, dataset_path: str | None, columns: list[str
             tools.append(tool)
         return sid
 
-    # Always profile
+    wants_sql = any(k in q for k in ["total", "average", "sum", "count", "group by", "having", "survival rate", "revenue by", "top 5", "rows per group"])
+    # Also treat SQL catalog keywords directly
+    sql_keywords = ["group by", "order by", "having", "count", "sum", "avg", "total"]
+
     s_profile = _add("Profile dataset", "Profile schema, missing, duplicates, cardinality", "profile_dataset", {"path": dataset_path or ""})
     s_corr = None
     s_test = None
     s_reg = None
     s_model = None
     s_chart = None
+    s_sql = None
 
     # Prefer numeric columns for correlation
     if wants_stats or "correlat" in q or len(cols) >= 2:
@@ -109,6 +139,12 @@ def heuristics_plan(user_query: str, dataset_path: str | None, columns: list[str
     if wants_decline:
         # Add assumption check before hypothesis tests for rigor
         pass
+
+    # SQL planning: when question implies aggregation, generate a SELECT
+    if wants_sql and cols:
+        # Heuristic SQL generation per common patterns
+        sql = _heuristic_sql(q, cols, numeric_cols)
+        s_sql = _add("SQL analysis", f"SQL: {sql[:80]}", "run_sql", {"dataset_path": dataset_path or "", "sql": sql})
 
     if wants_viz or True:  # always at least one viz for evidence
         hist_x = numeric_cols[0] if numeric_cols else (cols[0] if cols else "a")

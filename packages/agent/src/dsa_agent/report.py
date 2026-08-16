@@ -29,8 +29,7 @@ def build_markdown_report(state: AnalysisState) -> str:
     for ev in state.evidence:
         lines.append(f"- **{ev.id}** ({ev.source_type} → {ev.source_id}) — {ev.claim} — confidence {ev.confidence:.2f} — {ev.validation_status}")
         if ev.result:
-            # truncate
-            snippet = json.dumps(ev.result, ensure_ascii=False)[:600]
+            snippet = json.dumps(ev.result, ensure_ascii=False, default=str)[:600]
             lines.append(f"  - result: `{snippet}`")
     lines.append("")
     lines.append("## Insights")
