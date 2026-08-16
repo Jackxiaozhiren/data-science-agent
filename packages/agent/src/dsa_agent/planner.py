@@ -39,6 +39,8 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
         return f"SELECT {cat}, SUM({num}) as total FROM dataset GROUP BY {cat} ORDER BY total DESC LIMIT 1"
     if "total revenue by region" in q or ("total" in q and "revenue" in q and "region" in q):
         return f"SELECT region, SUM(revenue) as total_revenue FROM dataset GROUP BY region"
+    if "area > 2000" in q:
+        return f"SELECT AVG(price) as avg_price FROM dataset WHERE area > 2000"
     if "average price by category" in q or "average" in q:
         return f"SELECT {cat}, AVG({num}) as avg_val FROM dataset GROUP BY {cat}"
     if "top 5" in q:
@@ -47,8 +49,6 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
         return f"SELECT {cat}, COUNT(*) as cnt FROM dataset GROUP BY {cat} HAVING COUNT(*) > 100"
     if "survival rate by sex" in q:
         return f"SELECT sex, AVG(survived) as survival_rate FROM dataset GROUP BY sex"
-    if "area > 2000" in q:
-        return f"SELECT AVG(price) as avg_price FROM dataset WHERE area > 2000"
     # generic
     return f"SELECT {cat}, COUNT(*) as cnt, AVG({num}) as avg_{num} FROM dataset GROUP BY {cat}"
 
