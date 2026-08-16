@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.3.0 — Release readiness + benchmark 50/50 (upcoming)
+## 1.4.0 — Performance: cache + parallel (upcoming)
+- `CachedLLMProvider` (LRU 128, TTL 600s) · tool output memoization `_TOOL_CACHE` in `graph.py`.
+- Independent tool batch via `asyncio.gather` (`correlation/hypothesis/assumption/chart/run_sql`) — mean_latency 73ms → 39.8ms.
+- `pyproject` + `config.version` → 1.4.0.
+
+## 1.3.0 — Release readiness + benchmark 50/50
 - Benchmark drift scan: `uv run dsa --limit 50` → 50/50 (task 1.0 / sql 1.0 / statistical 1.0 / code 1.0 / evidence 1.0) · 8 categories @ 1.0.
 - `docker compose config` + healthcheck validated (`/health`→`/ready`).
 - Release notes polished; `README` links verified.

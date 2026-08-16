@@ -27,15 +27,28 @@ def _get_columns(dataset_path: str | None) -> list[str]:
         return []
 
 
+_TOOL_CACHE: dict[tuple[str, str], tuple[Any, bool, str | None]] = {}
+import hashlib, json as _json
+
+def _tool_cache_key(tool_name: str, inputs: dict[str, Any]) -> tuple[str, str]:
+    try:
+        raw = _json.dumps(inputs, sort_keys=True, default=str)
+    except Exception:
+        raw = str(sorted(inputs.items()))
+    return (tool_name, hashlib.sha256(raw.encode()).hexdigest()[:24])
+
+
 async def _run_tool(tool_name: str, inputs: dict[str, Any]) -> tuple[Any, bool, str | None]:
-    # lazy import to avoid cycles
+    key = _tool_cache_key(tool_name, inputs)
+    if key in _TOOL_CACHE:
+        return _TOOL_CACHE[key]
     from dsa_tools import get as get_tool
 
     tool = get_tool(tool_name)
     result = await tool.run(inputs)
-    if result.status == "ok":
-        return result.output, True, None
-    return None, False, result.error
+    val: tuple[Any, bool, str | None] = (result.output, True, None) if result.status == "ok" else (None, False, result.error)
+    _TOOL_CACHE[key] = val
+    return val
 
 
 def _tool_inputs_for_step(step_tool: str, step_inputs: dict[str, Any], dataset_path: str | None) -> dict[str, Any]:
@@ -165,22 +178,48 @@ async def run_analysis(
 
     state.agent_messages = [AgentMessage(agent="planner", content=f"Planned {len(plan.steps)} steps: {', '.join(s.tool for s in plan.steps)}")]
 
-    # DATA_PROFILING -> ANALYSIS -> MODELING loop (sequential via plan)
+    # DATA_PROFILING -> ANALYSIS -> MODELING loop
+    # batch independent steps (no depends_on) via gather; sequential for dependent tail
+    import asyncio as _asyncio
+
+    _PARALLEL_TOOLS = {"correlation_analysis", "hypothesis_test", "assumption_check", "create_chart", "run_sql"}
     state.status = AnalysisStatus.ANALYSIS
-    for step in state.plan:
-        if state.tool_call_count >= state.budget.max_tool_calls:
-            state.status = AnalysisStatus.FAILED
-            state.error = "Tool call budget exceeded"
-            break
+
+    async def _exec_one(step: Any) -> tuple[Any, Any, Any, Any, Any, float]:
         inputs = _tool_inputs_for_step(step.tool, step.inputs, dataset_path)
         t0 = time.perf_counter()
         output, ok, err = await _run_tool(step.tool, inputs)
         dur = int((time.perf_counter() - t0) * 1000)
+        return step, inputs, output, ok, err, dur
+
+    # identify leading independent batch (consecutive independent steps at start)
+    indep_batch: list[Any] = []
+    rest: list[Any] = []
+    seen_dep = False
+    for s in state.plan:
+        is_indep = not getattr(s, "depends_on", None) and s.tool in _PARALLEL_TOOLS
+        if not seen_dep and is_indep:
+            indep_batch.append(s)
+        else:
+            if not is_indep:
+                seen_dep = True
+            # once dependent seen, don't batch further
+            if indep_batch and not seen_dep:
+                indep_batch.append(s) if is_indep else None  # no-op
+                if not is_indep:
+                    rest.append(s)
+            else:
+                rest.append(s)
+    # fallback: if classification failed, treat all independent as batch
+    if len(indep_batch) <= 1:
+        indep_batch = [s for s in state.plan if not getattr(s, "depends_on", None) and s.tool in _PARALLEL_TOOLS][:4]
+        rest = [s for s in state.plan if s not in indep_batch]
+
+    async def _record(step: Any, inputs: Any, output: Any, ok: Any, err: Any, dur: Any) -> None:
         call_id = f"TC-{uuid.uuid4().hex[:8]}"
         rec = ToolCallRecord(call_id=call_id, tool=step.tool, input=inputs, output=output.model_dump(mode="json") if hasattr(output, "model_dump") else (dict(output) if isinstance(output, dict) else None), status="ok" if ok else "error", error=err, duration_ms=dur)
         state.tool_calls.append(rec)
         state.tool_call_count += 1
-        # evidence
         if ok and output is not None:
             ev = _evidence_for_tool_call(step.tool, call_id, output)
             if ev:
@@ -190,6 +229,26 @@ async def run_analysis(
                     state.insights.append(Insight(id=iid, finding=ev.claim, evidence_ids=[ev.id], limitation="Association does not imply causation."))
         state.current_step += 1
         state.touch()
+
+    if indep_batch and len(indep_batch) > 1 and state.tool_call_count + len(indep_batch) <= state.budget.max_tool_calls:
+        results = await _asyncio.gather(*[_exec_one(s) for s in indep_batch])
+        for step, inputs, output, ok, err, dur in results:
+            await _record(step, inputs, output, ok, err, dur)
+        for step in rest:
+            if state.tool_call_count >= state.budget.max_tool_calls:
+                state.status = AnalysisStatus.FAILED
+                state.error = "Tool call budget exceeded"
+                break
+            step2, inputs2, output2, ok2, err2, dur2 = await _exec_one(step)
+            await _record(step2, inputs2, output2, ok2, err2, dur2)
+    else:
+        for step in state.plan:
+            if state.tool_call_count >= state.budget.max_tool_calls:
+                state.status = AnalysisStatus.FAILED
+                state.error = "Tool call budget exceeded"
+                break
+            step2, inputs2, output2, ok2, err2, dur2 = await _exec_one(step)
+            await _record(step2, inputs2, output2, ok2, err2, dur2)
 
     # VALIDATION (Critic)
     state.status = AnalysisStatus.VALIDATION
