@@ -10,7 +10,7 @@
     "code_execution_success": 1.0,
     "evidence_coverage": 1.0,
     "unsupported_claim_rate": 0.06,
-    "mean_latency_ms": 41.02,
+    "mean_latency_ms": 41.68,
     "by_category": {
       "EDA": {
         "n": 8,
@@ -59,7 +59,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": true,
-        "latency_ms": 913
+        "latency_ms": 919
       },
       "details": {
         "evidence_count": 6,
@@ -79,7 +79,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 40
+        "latency_ms": 41
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -98,7 +98,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 36
+        "latency_ms": 35
       },
       "details": {
         "evidence_count": 3,
@@ -137,7 +137,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 49
+        "latency_ms": 48
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -156,7 +156,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 43
+        "latency_ms": 42
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -459,7 +459,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 41
+        "latency_ms": 40
       },
       "details": {
         "evidence_count": 3,
@@ -498,7 +498,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 6
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -557,7 +557,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 5
+        "latency_ms": 6
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -576,7 +576,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 37
+        "latency_ms": 46
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -614,7 +614,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 14
+        "latency_ms": 16
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -652,7 +652,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 10
+        "latency_ms": 33
       },
       "details": {
         "evidence_count": 3,
@@ -672,7 +672,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 66
+        "latency_ms": 44
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -710,7 +710,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 106
+        "latency_ms": 99
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -729,7 +729,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 9
+        "latency_ms": 11
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -767,7 +767,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 74
+        "latency_ms": 75
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -806,7 +806,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 71
+        "latency_ms": 87
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -844,7 +844,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 5
+        "latency_ms": 6
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -864,7 +864,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": true,
-        "latency_ms": 10
+        "latency_ms": 11
       },
       "details": {
         "unsupported_claim_check": "Causal language detected without causal evidence; rewrite as association.",
@@ -884,7 +884,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 11
+        "latency_ms": 13
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -964,7 +964,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 5
+        "latency_ms": 6
       },
       "details": {
         "evidence_count": 3,
@@ -1003,7 +1003,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 9
+        "latency_ms": 10
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
