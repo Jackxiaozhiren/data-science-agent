@@ -10,7 +10,7 @@
     "code_execution_success": 1.0,
     "evidence_coverage": 1.0,
     "unsupported_claim_rate": 0.06,
-    "mean_latency_ms": 41.86,
+    "mean_latency_ms": 42.7,
     "by_category": {
       "EDA": {
         "n": 8,
@@ -59,7 +59,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": true,
-        "latency_ms": 889
+        "latency_ms": 963
       },
       "details": {
         "evidence_count": 6,
@@ -98,7 +98,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 36
+        "latency_ms": 35
       },
       "details": {
         "evidence_count": 3,
@@ -118,7 +118,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 41
+        "latency_ms": 39
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -137,7 +137,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 51
+        "latency_ms": 48
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -156,7 +156,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 45
+        "latency_ms": 42
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -175,7 +175,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 46
+        "latency_ms": 43
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -194,7 +194,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 50
+        "latency_ms": 48
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -213,7 +213,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 18
+        "latency_ms": 17
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -236,7 +236,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 13
+        "latency_ms": 12
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -283,7 +283,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 17
+        "latency_ms": 16
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -306,7 +306,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 13
+        "latency_ms": 12
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -330,7 +330,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 18
+        "latency_ms": 17
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -354,7 +354,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 11
+        "latency_ms": 10
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -419,7 +419,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 9
+        "latency_ms": 8
       },
       "details": {
         "evidence_count": 2,
@@ -439,7 +439,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 13
+        "latency_ms": 12
       },
       "details": {
         "evidence_count": 3,
@@ -459,7 +459,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 44
+        "latency_ms": 41
       },
       "details": {
         "evidence_count": 3,
@@ -479,7 +479,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 40
+        "latency_ms": 38
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -498,7 +498,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 6
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -517,7 +517,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 8
+        "latency_ms": 7
       },
       "details": {
         "evidence_count": 3,
@@ -576,7 +576,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 40
+        "latency_ms": 38
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -595,7 +595,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 15
+        "latency_ms": 14
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -614,7 +614,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 16
+        "latency_ms": 15
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -633,7 +633,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 8
+        "latency_ms": 7
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -652,7 +652,7 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 10
+        "latency_ms": 33
       },
       "details": {
         "evidence_count": 3,
@@ -672,7 +672,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 70
+        "latency_ms": 45
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -691,7 +691,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 6
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -710,7 +710,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 106
+        "latency_ms": 123
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -748,7 +748,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 10
+        "latency_ms": 9
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -786,7 +786,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 86
+        "latency_ms": 82
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -806,7 +806,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 75
+        "latency_ms": 72
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
@@ -1003,7 +1003,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 13
+        "latency_ms": 9
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected"
