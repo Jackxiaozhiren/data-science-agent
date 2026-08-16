@@ -17,9 +17,9 @@ Next.js 15 + TypeScript + Tailwind + shadcn/ui · FastAPI + Pydantic v2 + SQLAlc
 ```bash
 # Python
 uv sync --dev
-uv run pytest -q          # 75 tests
+uv run pytest -q          # ~86+ tests
 uv run ruff check .
-uv run mypy packages      # 56 source files clean
+uv run mypy packages apps/api --ignore-missing-imports  # 81 source files clean
 
 # API (port 8000) — local-first, no cloud required
 uv run uvicorn dsa_api.main:app --reload --port 8000 --app-dir apps/api/src
@@ -27,11 +27,12 @@ uv run uvicorn dsa_api.main:app --reload --port 8000 --app-dir apps/api/src
 # Web (port 3000)
 cd apps/web && npm install --legacy-peer-deps && npm run dev
 # Build
-npm run build --workspace=dsa-web  # 7 routes green
+npm run build --workspace=dsa-web  # 7 routes green (/ /_not-found /analysis /analysis/[runId] /datasets /datasets/[id] /reports)
 
-# Benchmark (20 datasets / 50 tasks)
+# Benchmark (20 datasets / 50 tasks) — 50/50 @1.0
 uv run dsa --help
 uv run dsa --limit 3
+uv run dsa --limit 50
 ```
 
 ## Demo (One-Command Smoke)
@@ -74,9 +75,10 @@ GET  /health  GET /ready  GET /version  GET /
 
 MCP (adapter over Tool Layer, stateless 2026-07-28):
   GET  /mcp/tools  POST /mcp/call  POST /mcp (JSON-RPC: initialize/tools/list/tools/call)
-  Tools: profile_dataset, inspect_dataset, query_dataset, run_sql, run_python,
+  Tools: 17 — profile_dataset, inspect_dataset, query_dataset, run_sql, run_python,
          run_statistical_test, correlation_analysis, train_model, evaluate_model,
-         create_visualization, get_evidence, generate_report, save_artifact (13) — see docs/MCP_DESIGN.md
+         create_visualization, get_evidence, generate_report, save_artifact,
+         forecast, assumption_check, feature_importance, causal_check — see docs/MCP_DESIGN.md
 ```
 
 ## Frontend
@@ -98,7 +100,8 @@ Every important claim traces to executable computation:
 Insight → Evidence → ToolCall → Dataset (hash)
 ```
 
-Artifacts under `artifacts/reports/<runId>/`: `report.md`, `experiment.json`, `reproduce.sh`, `analysis.ipynb` skeleton, `evidence_graph.json`.
+Artifacts under `artifacts/reports/<runId>/`: `report.md` (with `![chart]` embeds), `experiment.json`, `reproduce.sh`, `analysis.ipynb` (executable cells: profile + per-tool + `run_analysis`), `evidence_graph.json`.
+`uv run mkdocs serve` / `build --strict` · health: `GET /health → {status, details:{db,duckdb,polars,llm:{active,status}}, version}` + `GET /ready`.
 
 ## Benchmark
 
@@ -139,10 +142,12 @@ Phase 0 Architecture Freeze ✓  Phase 1 Scaffold ✓  Phase 2 Data Layer ✓  P
 ## Testing
 
 ```bash
-uv run pytest -q           # 75 tests (unit + integration + security + benchmark)
-uv run pytest -v           # verbose
-uv run mypy packages       # strict
+uv run pytest -q           # ~86+ tests (unit + integration + security)
+uv run pytest --cov --cov-report=term-missing  # 74% cov
+uv run mypy packages apps/api --ignore-missing-imports  # strict, 81 files clean
 uv run ruff check .
+docker compose config && npm run build --workspace=dsa-web  # compose healthcheck + 7 routes
+uv run dsa --limit 50      # 50/50 @1.0
 ```
 
 ## Docker

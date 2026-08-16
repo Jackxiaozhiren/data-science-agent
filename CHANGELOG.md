@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.6.0 — Hardening: compose + web build + cov gate (upcoming)
+## 1.7.0 — Publishability: README + examples sync (upcoming)
+- `README` resynced: `~86 tests / 81 mypy / 17 tools / 50/50 @1.0` + `dv/health` details + `ready` + benchmark/seven-routes.
+- `examples/README` expanded with reproducibility (`artifacts/reports/<run_id>`) and health map + full `curl` smoke.
+
+## 1.6.0 — Hardening: compose + web build + cov gate
 - `docker compose config` + `healthcheck (interval/timeout/retries/start_period)` + `depends_on: healthy` verified.
 - Web `npm run build --workspace=dsa-web` → 7 routes green (dashboard/datasets/detail/analysis/trace/reports).
 - `pytest --cov 74%` · `mypy 81` clean · `ruff` gated; benchmark 50/50 @1.0 retained.
