@@ -5,13 +5,17 @@ from dsa_tools.registry import clear, get, list_tools, register
 
 from dsa_tools.tools.correlation import CorrelationTool
 from dsa_tools.tools.create_chart import CreateChartTool
+from dsa_tools.tools.create_evidence import CreateEvidenceTool
 from dsa_tools.tools.evaluate_model import EvaluateModelTool
+from dsa_tools.tools.generate_report import GenerateReportTool
 from dsa_tools.tools.hypothesis_test import HypothesisTestTool
 from dsa_tools.tools.profile_dataset import ProfileDatasetTool
 from dsa_tools.tools.regression import RegressionTool
 from dsa_tools.tools.run_python import RunPythonTool
 from dsa_tools.tools.run_sql import RunSQLTool
+from dsa_tools.tools.save_artifact import SaveArtifactTool
 from dsa_tools.tools.train_model import TrainModelTool
+from dsa_tools.tools.validate_result import ValidateResultTool
 
 
 def bootstrap() -> None:
@@ -25,6 +29,10 @@ def bootstrap() -> None:
         TrainModelTool(),
         EvaluateModelTool(),
         CreateChartTool(),
+        SaveArtifactTool(),
+        CreateEvidenceTool(),
+        ValidateResultTool(),
+        GenerateReportTool(),
     ]:
         register(t)  # type: ignore[arg-type]
 

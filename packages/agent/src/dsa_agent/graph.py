@@ -215,12 +215,40 @@ async def run_analysis(
     state.status = AnalysisStatus.REPORTING
     md = build_markdown_report(state)
     state.report_markdown = md
-    # persist artifacts
+    # persist artifacts + reproducibility bundle (experiment.json + reproduce.sh + notebook)
     try:
         paths = write_report_artifacts(state)
         state.report_id = state.run_id
         state.artifacts.append(Artifact(id=f"A-{uuid.uuid4().hex[:8]}", type="report", path=paths["markdown"], metadata={"kind": "markdown"}))
         state.artifacts.append(Artifact(id=f"A-{uuid.uuid4().hex[:8]}", type="report", path=paths["experiment"], metadata={"kind": "experiment"}))
+        # enrich with full evidence bundle
+        try:
+            from dsa_evidence.graph import build_evidence_graph
+            from dsa_evidence.repro import build_experiment_json, build_notebook_skeleton, build_reproduce_sh
+            from dsa_evidence.validator import validate_evidence_graph
+
+            g = build_evidence_graph(state.run_id, state.dataset_id, state.dataset_path, state.evidence, state.insights, state.tool_calls)
+            v = validate_evidence_graph(g)
+            # append validation for traceability
+            for item in v:
+                state.validation_results.append(ValidationResult(check=item["check"], passed=bool(item["passed"]), message=item["message"], details={k: v for k, v in item.items() if k not in ("check", "passed", "message")}))
+            # ensure report dir has evidence graph + enhanced bundle
+            report_dir = Path(paths["markdown"]).parent
+            (report_dir / "evidence_graph.json").write_text(g.model_dump_json(indent=2), encoding="utf-8")
+            state.artifacts.append(Artifact(id=f"A-{uuid.uuid4().hex[:8]}", type="evidence", path=str(report_dir / "evidence_graph.json"), metadata={"kind": "evidence_graph"}))
+            # full experiment/repro may already exist; ensure they are also enriched
+            sha = g.dataset_sha256
+            exp_path = build_experiment_json(state.run_id, state.dataset_path, sha, state.user_query, [s.model_dump(mode="json") for s in state.plan], [c.model_dump(mode="json") for c in state.tool_calls], [e.model_dump(mode="json") for e in state.evidence], [i.model_dump(mode="json") for i in state.insights], report_dir)
+            repro_path = build_reproduce_sh(state.run_id, state.dataset_path, state.user_query, report_dir)
+            nb_path = build_notebook_skeleton(state.run_id, report_dir)
+            # dedup artifacts by path
+            existing_paths = {a.path for a in state.artifacts}
+            for p, kind in [(exp_path, "experiment"), (repro_path, "reproduce"), (nb_path, "notebook")]:
+                sp = str(p)
+                if sp not in existing_paths:
+                    state.artifacts.append(Artifact(id=f"A-{uuid.uuid4().hex[:8]}", type="report" if kind == "experiment" else kind, path=sp, metadata={"kind": kind}))
+        except Exception:
+            pass
     except Exception as e:
         state.error = f"Report write failed: {e}"
 
