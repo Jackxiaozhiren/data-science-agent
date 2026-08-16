@@ -41,7 +41,7 @@ async def _run_tool(tool_name: str, inputs: dict[str, Any]) -> tuple[Any, bool, 
 def _tool_inputs_for_step(step_tool: str, step_inputs: dict[str, Any], dataset_path: str | None) -> dict[str, Any]:
     inp = dict(step_inputs)
     if dataset_path:
-        if step_tool in ("run_sql", "run_python", "correlation_analysis", "hypothesis_test", "assumption_check", "regression_analysis", "train_model", "evaluate_model", "feature_importance", "forecast", "create_chart"):
+        if step_tool in ("run_sql", "run_python", "correlation_analysis", "hypothesis_test", "assumption_check", "causal_check", "regression_analysis", "train_model", "evaluate_model", "feature_importance", "forecast", "create_chart"):
             if "dataset_path" not in inp:
                 inp["dataset_path"] = dataset_path
         if step_tool == "profile_dataset" and "path" not in inp:
@@ -99,6 +99,11 @@ def _evidence_for_tool_call(tool: str, call_id: str, output: Any) -> Evidence | 
             result = {"checks": getattr(output, "checks", []), "passed": getattr(output, "passed", True)}
             claim = f"Assumption check: {getattr(output, 'recommendation', '')[:120]}"
             confidence = 0.75
+        elif tool == "causal_check" and output is not None:
+            source_type = "statistical_test"
+            result = {"estimate": getattr(output, "estimate", 0), "method": getattr(output, "method", ""), "passes_causal_bar": getattr(output, "passes_causal_bar", False), "confidence_note": getattr(output, "confidence_note", "")}
+            claim = f"Causal check ({getattr(output, 'method', '')}): estimate={getattr(output, 'estimate', 0):.3f}, causal_bar={'pass' if getattr(output, 'passes_causal_bar', False) else 'fail'} — {getattr(output, 'confidence_note', '')[:100]}"
+            confidence = 0.5
         elif tool == "create_chart" and output is not None:
             source_type = "visualization"
             result = {"artifact_path": getattr(output, "artifact_path", ""), "chart_type": getattr(output, "chart_type", "")}
@@ -180,7 +185,7 @@ async def run_analysis(
             ev = _evidence_for_tool_call(step.tool, call_id, output)
             if ev:
                 state.evidence.append(ev)
-                if step.tool in ("correlation_analysis", "hypothesis_test", "regression_analysis", "forecast", "feature_importance", "assumption_check"):
+                if step.tool in ("correlation_analysis", "hypothesis_test", "regression_analysis", "forecast", "feature_importance", "assumption_check", "causal_check"):
                     iid = f"I-{uuid.uuid4().hex[:8]}"
                     state.insights.append(Insight(id=iid, finding=ev.claim, evidence_ids=[ev.id], limitation="Association does not imply causation."))
         state.current_step += 1

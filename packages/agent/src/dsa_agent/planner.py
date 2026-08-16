@@ -53,6 +53,7 @@ def heuristics_plan(user_query: str, dataset_path: str | None, columns: list[str
     wants_forecast = any(k in q for k in ["forecast", "predict", "future", "next 30", "30 days", "trend", "time series"])
     wants_decline = any(k in q for k in ["declin", "drop", "decrease", "down"])
     wants_importance = any(k in q for k in ["importance", "explain", "shap", "feature"])
+    wants_causal = any(k in q for k in ["cause", "causal", "effect", "impact", "treatment", "intervention", "ate"])
     cols = columns or []
     numeric_cols = _numeric_columns(dataset_path) or [c for c in cols if c not in ("date", "region", "category", "group")] or cols
     has_time = _has_time_data(dataset_path)
@@ -99,6 +100,10 @@ def heuristics_plan(user_query: str, dataset_path: str | None, columns: list[str
 
     if wants_importance and numeric_cols:
         s_imp = _add("Feature importance", "Explainability via RandomForest importance", "feature_importance", {"dataset_path": dataset_path or "", "target": cols[-1] if cols else numeric_cols[-1]})
+
+    if wants_causal and numeric_cols:
+        # Causal guard: prefer association language; still run stub to evidence the bar
+        s_causal = _add("Causal check (stub)", "Association vs causation guard — requires confounders for causal claim", "causal_check", {"dataset_path": dataset_path or "", "treatment": cols[0] if cols else "treatment", "outcome": numeric_cols[0] if numeric_cols else "outcome"})
 
     # Decline attribution: use SQL/group comparison + stats when decline mentioned
     if wants_decline:
