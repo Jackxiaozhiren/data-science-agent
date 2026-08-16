@@ -43,7 +43,11 @@ class EnvLLMProvider(LLMProvider):
             self.active_provider = "google"
 
     async def generate(self, prompt: str, **kwargs: Any) -> str:
-        _ = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        _ = (
+            os.getenv("OPENAI_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+            or os.getenv("GOOGLE_API_KEY")
+        )
         return await self.fallback.generate(prompt, **kwargs)
 
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any:

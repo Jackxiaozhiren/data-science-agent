@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal
 
@@ -42,7 +42,7 @@ class AgentMessage(BaseModel):
     agent: str
     role: Literal["system", "user", "assistant", "tool"] = "assistant"
     content: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ToolCallRecord(BaseModel):
@@ -53,7 +53,7 @@ class ToolCallRecord(BaseModel):
     status: Literal["ok", "error"] = "ok"
     error: str | None = None
     duration_ms: int = 0
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Evidence(BaseModel):
@@ -88,7 +88,7 @@ class Artifact(BaseModel):
     path: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_by: str = "agent"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Budget(BaseModel):
@@ -120,8 +120,8 @@ class AnalysisState(BaseModel):
     retry_count: int = 0
     tool_call_count: int = 0
     budget: Budget = Field(default_factory=Budget)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def touch(self) -> None:
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)

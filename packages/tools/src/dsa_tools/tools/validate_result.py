@@ -29,21 +29,40 @@ class ValidateResultTool(BaseTool[ValidateResultInput, ValidateResultOutput]):
     async def execute(self, inp: ValidateResultInput) -> ValidateResultOutput:
         import re
 
-        causal_pat = re.compile(r"\b(cause[sd]?|caused by|impact|effect of|leads to|results in|due to)\b", re.IGNORECASE)
+        causal_pat = re.compile(
+            r"\b(cause[sd]?|caused by|impact|effect of|leads to|results in|due to)\b", re.IGNORECASE
+        )
 
         if inp.check_type == "unsupported_claim":
             if causal_pat.search(inp.claim):
-                return ValidateResultOutput(check="unsupported_claim", passed=False, message="Causal language requires causal evidence; use association.", details={"claim": inp.claim})
-            return ValidateResultOutput(check="unsupported_claim", passed=True, message="No unsupported causal language")
+                return ValidateResultOutput(
+                    check="unsupported_claim",
+                    passed=False,
+                    message="Causal language requires causal evidence; use association.",
+                    details={"claim": inp.claim},
+                )
+            return ValidateResultOutput(
+                check="unsupported_claim", passed=True, message="No unsupported causal language"
+            )
 
         if inp.check_type == "evidence_coverage":
             if not inp.result:
-                return ValidateResultOutput(check="evidence_coverage", passed=False, message="Result is empty; no evidence to trace")
-            return ValidateResultOutput(check="evidence_coverage", passed=True, message="Evidence present")
+                return ValidateResultOutput(
+                    check="evidence_coverage",
+                    passed=False,
+                    message="Result is empty; no evidence to trace",
+                )
+            return ValidateResultOutput(
+                check="evidence_coverage", passed=True, message="Evidence present"
+            )
 
         # completeness: require both
         if not inp.result:
-            return ValidateResultOutput(check="completeness", passed=False, message="Missing result for claim")
+            return ValidateResultOutput(
+                check="completeness", passed=False, message="Missing result for claim"
+            )
         if causal_pat.search(inp.claim):
-            return ValidateResultOutput(check="completeness", passed=False, message="Causal claim without causal evidence")
+            return ValidateResultOutput(
+                check="completeness", passed=False, message="Causal claim without causal evidence"
+            )
         return ValidateResultOutput(check="completeness", passed=True, message="Validation passed")

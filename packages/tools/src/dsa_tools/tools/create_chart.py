@@ -110,7 +110,10 @@ class CreateChartTool(BaseTool[CreateChartInput, CreateChartOutput]):
                     raise ToolExecutionError("x required for boxplot")
                 if inp.group_by and inp.group_by in df.columns:
                     groups = df[inp.group_by].unique().to_list()
-                    data = [df.filter(pl.col(inp.group_by) == g)[inp.x].drop_nulls().to_numpy() for g in groups]
+                    data = [
+                        df.filter(pl.col(inp.group_by) == g)[inp.x].drop_nulls().to_numpy()
+                        for g in groups
+                    ]
                     ax.boxplot(data, tick_labels=[str(g) for g in groups])
                     ax.set_xlabel(inp.group_by)
                     ax.set_ylabel(inp.x)
@@ -120,7 +123,11 @@ class CreateChartTool(BaseTool[CreateChartInput, CreateChartOutput]):
                 ax.set_title(f"Boxplot: {inp.x}")
             elif inp.chart_type == "heatmap":
                 # correlation heatmap for numeric cols
-                numeric_cols = [c for c in df.columns if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)]
+                numeric_cols = [
+                    c
+                    for c in df.columns
+                    if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
+                ]
                 if len(numeric_cols) < 2:
                     raise ToolExecutionError("Need >=2 numeric columns for heatmap")
                 corr = df.select(numeric_cols).corr()

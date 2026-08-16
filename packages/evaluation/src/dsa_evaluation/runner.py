@@ -10,7 +10,9 @@ from dsa_evaluation.catalog import BenchmarkTask, Catalog
 from dsa_evaluation.metrics import EvaluationResult, aggregate_metrics, evaluate_task
 
 
-async def _run_one(task: BenchmarkTask, datasets_dir: Path) -> tuple[dict[str, Any] | None, int, str | None]:
+async def _run_one(
+    task: BenchmarkTask, datasets_dir: Path
+) -> tuple[dict[str, Any] | None, int, str | None]:
     dataset_path = datasets_dir / task.dataset
     if not dataset_path.exists():
         return None, 0, f"Dataset not found: {task.dataset}"
@@ -24,7 +26,9 @@ async def _run_one(task: BenchmarkTask, datasets_dir: Path) -> tuple[dict[str, A
             bootstrap()
         # Derive a dataset_id from filename
         dataset_id = task.dataset.replace(".csv", "").replace("/", "_")
-        state = await run_analysis(dataset_path=str(dataset_path), dataset_id=dataset_id, user_query=task.question)
+        state = await run_analysis(
+            dataset_path=str(dataset_path), dataset_id=dataset_id, user_query=task.question
+        )
         elapsed = int((time.perf_counter() - t0) * 1000)
         return state.model_dump(mode="json"), elapsed, None
     except Exception as e:
@@ -61,7 +65,9 @@ def run_benchmark(
                 if err:
                     ev.error = err
             results.append(ev)
-            raw_runs.append({"task_id": task.id, "elapsed_ms": elapsed, "run_result": run_result, "error": err})
+            raw_runs.append(
+                {"task_id": task.id, "elapsed_ms": elapsed, "run_result": run_result, "error": err}
+            )
 
     asyncio.run(_run_all())
 
@@ -73,10 +79,14 @@ def run_benchmark(
         "aggregate": agg,
         "results": [r.model_dump(mode="json") for r in results],
     }
-    (out_dir / "results.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    (out_dir / "results.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     # also write lightweight summary
     summary = json.dumps(agg, indent=2)
     (out_dir / "summary.json").write_text(summary, encoding="utf-8")
     # raw for debugging
-    (out_dir / "raw_runs.json").write_text(json.dumps(raw_runs, indent=2, ensure_ascii=False)[:10_000_000], encoding="utf-8")
+    (out_dir / "raw_runs.json").write_text(
+        json.dumps(raw_runs, indent=2, ensure_ascii=False)[:10_000_000], encoding="utf-8"
+    )
     return payload

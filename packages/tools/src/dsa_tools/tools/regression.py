@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-import polars as pl
 from pydantic import BaseModel, Field
 from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, LogisticRegression, Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -51,7 +50,9 @@ def _build_model(name: str, alpha: float):  # type: ignore[no-untyped-def]
 
 class RegressionTool(BaseTool[RegressionInput, RegressionOutput]):
     name = "regression_analysis"
-    description = "Run regression (linear/ridge/lasso/elastic/logistic) with train/test split and metrics"
+    description = (
+        "Run regression (linear/ridge/lasso/elastic/logistic) with train/test split and metrics"
+    )
     input_model = RegressionInput
     output_model = RegressionOutput
 
@@ -84,7 +85,9 @@ class RegressionTool(BaseTool[RegressionInput, RegressionOutput]):
         except Exception as e:
             raise ToolExecutionError(f"Non-numeric data: {e}") from e
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=inp.test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=inp.test_size, random_state=42
+        )
 
         model = _build_model(inp.model, inp.alpha)
         try:
@@ -119,7 +122,8 @@ class RegressionTool(BaseTool[RegressionInput, RegressionOutput]):
                 for name, val in zip(feat_cols, arr):
                     coefs[name] = float(val)
             raw_intercept = getattr(model, "intercept_", 0.0)
-            intercept = float(raw_intercept) if np.ndim(raw_intercept) == 0 else float(raw_intercept[0])  # type: ignore[index]
+            raw_any: Any = raw_intercept
+            intercept = float(raw_any) if np.ndim(raw_any) == 0 else float(raw_any[0])
         except Exception:
             coefs = {}
             intercept = 0.0

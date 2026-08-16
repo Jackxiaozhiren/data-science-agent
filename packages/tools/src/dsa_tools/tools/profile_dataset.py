@@ -5,9 +5,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from dsa_datasets.loader import load_dataframe
-from dsa_datasets.models import DatasetFormat
-from dsa_datasets.profiler import build_profile
 from dsa_datasets.validate import detect_format
 from dsa_tools.base import BaseTool
 from dsa_tools.errors import ToolExecutionError
@@ -45,4 +42,6 @@ class ProfileDatasetTool(BaseTool[ProfileDatasetInput, ProfileDatasetOutput]):
         from dsa_datasets.profiler import quick_profile_for_path
 
         _df, profile = quick_profile_for_path(p, fmt, ds_id)
-        return ProfileDatasetOutput(dataset_id=profile.dataset_id, profile=profile.model_dump(mode="json"))
+        return ProfileDatasetOutput(
+            dataset_id=profile.dataset_id, profile=profile.model_dump(mode="json")
+        )

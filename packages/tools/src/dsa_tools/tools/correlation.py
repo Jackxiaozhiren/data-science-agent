@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
-import polars as pl
 from pydantic import BaseModel, Field
 from scipy.stats import kendalltau, pearsonr, spearmanr
 
@@ -86,11 +85,23 @@ class CorrelationTool(BaseTool[CorrelationInput, CorrelationOutput]):
         pval_f = float(pval) if pval is not None else None
         # interpretation
         abs_r = abs(r)
-        strength = "negligible" if abs_r < 0.1 else "weak" if abs_r < 0.3 else "moderate" if abs_r < 0.5 else "strong" if abs_r < 0.7 else "very strong"
+        strength = (
+            "negligible"
+            if abs_r < 0.1
+            else "weak"
+            if abs_r < 0.3
+            else "moderate"
+            if abs_r < 0.5
+            else "strong"
+            if abs_r < 0.7
+            else "very strong"
+        )
         direction = "positive" if r > 0 else "negative" if r < 0 else "no"
         sig = ""
         if pval_f is not None:
-            sig = " (statistically significant at p<0.05)" if pval_f < 0.05 else " (not significant)"
+            sig = (
+                " (statistically significant at p<0.05)" if pval_f < 0.05 else " (not significant)"
+            )
 
         interpretation = f"{strength} {direction} association (r={r:.3f}){sig}."
 

@@ -6,7 +6,19 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-Category = Literal["EDA", "SQL", "Statistics", "Regression", "Classification", "Time Series", "Visualization", "Data Quality"]
+Category = Literal[
+    "EDA",
+    "SQL",
+    "Statistics",
+    "Regression",
+    "Classification",
+    "Time Series",
+    "Visualization",
+    "Data Quality",
+    "Data Profiling",
+    "Clustering",
+    "Evidence Validation",
+]
 
 
 class GroundTruth(BaseModel):
@@ -34,6 +46,12 @@ class BenchmarkTask(BaseModel):
     expected_analysis: str
     ground_truth: GroundTruth = Field(default_factory=GroundTruth)
     criteria: EvaluationCriteria = Field(default_factory=EvaluationCriteria)
+    difficulty: str = "medium"
+    gold_method: str | None = None
+    required_tools: list[str] = Field(default_factory=list)
+    gold_metrics: dict[str, Any] = Field(default_factory=dict)
+    required_evidence: list[str] = Field(default_factory=list)
+    forbidden_claims: list[str] = Field(default_factory=list)
 
 
 class Catalog(BaseModel):

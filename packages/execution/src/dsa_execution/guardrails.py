@@ -10,7 +10,9 @@ _INJECTION_PATTERNS = [
     r"system\s*:\s*you\s+are\s+now",
 ]
 
-_CAUSAL_PAT = re.compile(r"\b(cause[sd]?|caused by|impact|effect of|leads to|results in|due to)\b", re.IGNORECASE)
+_CAUSAL_PAT = re.compile(
+    r"\b(cause[sd]?|caused by|impact|effect of|leads to|results in|due to)\b", re.IGNORECASE
+)
 
 _INJECTION_RES = [re.compile(p, re.IGNORECASE) for p in _INJECTION_PATTERNS]
 

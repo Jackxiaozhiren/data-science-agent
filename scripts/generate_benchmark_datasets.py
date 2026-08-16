@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic synthetic benchmark datasets — seed 42, public domain."""
 from __future__ import annotations
-import random, math, csv
+
+import csv
+import math
+import random
 from pathlib import Path
 
 R = random.Random(42)

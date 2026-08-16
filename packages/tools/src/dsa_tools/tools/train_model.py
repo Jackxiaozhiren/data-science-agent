@@ -4,11 +4,9 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-import polars as pl
 from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, mean_absolute_error, r2_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 from dsa_datasets.loader import load_dataframe

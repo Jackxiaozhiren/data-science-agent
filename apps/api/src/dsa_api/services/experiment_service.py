@@ -43,7 +43,9 @@ async def create_experiment(
     return orm.to_dict()
 
 
-async def list_experiments(session: AsyncSession, run_id: str | None = None) -> list[dict[str, Any]]:
+async def list_experiments(
+    session: AsyncSession, run_id: str | None = None
+) -> list[dict[str, Any]]:
     await _ensure(session)
     q = select(ExperimentORM).order_by(ExperimentORM.created_at.desc())
     if run_id:
@@ -54,7 +56,11 @@ async def list_experiments(session: AsyncSession, run_id: str | None = None) -> 
 
 async def get_experiment(session: AsyncSession, exp_id: str) -> dict[str, Any] | None:
     await _ensure(session)
-    row = (await session.execute(select(ExperimentORM).where(ExperimentORM.id == exp_id))).scalars().first()
+    row = (
+        (await session.execute(select(ExperimentORM).where(ExperimentORM.id == exp_id)))
+        .scalars()
+        .first()
+    )
     return row.to_dict() if row else None
 
 
@@ -67,10 +73,16 @@ def compare_experiments(items: list[dict[str, Any]]) -> dict[str, Any]:
 
     keys: Counter[str] = Counter()
     for it in items:
-        for k in (it.get("metrics") or {}):
+        for k in it.get("metrics") or {}:
             keys[k] += 1
     if not keys:
         return {"ranking": [x["id"] for x in items]}
     top_metric = keys.most_common(1)[0][0]
-    ranked = sorted(items, key=lambda x: float(x.get("metrics", {}).get(top_metric, 0) or 0), reverse=True)
-    return {"metric": top_metric, "ranking": [x["id"] for x in ranked], "values": {x["id"]: x.get("metrics", {}).get(top_metric) for x in ranked}}
+    ranked = sorted(
+        items, key=lambda x: float(x.get("metrics", {}).get(top_metric, 0) or 0), reverse=True
+    )
+    return {
+        "metric": top_metric,
+        "ranking": [x["id"] for x in ranked],
+        "values": {x["id"]: x.get("metrics", {}).get(top_metric) for x in ranked},
+    }

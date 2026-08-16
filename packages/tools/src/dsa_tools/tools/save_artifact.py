@@ -12,7 +12,9 @@ from dsa_tools.errors import ToolExecutionError
 
 class SaveArtifactInput(BaseModel):
     run_id: str = Field(description="Analysis run id for artifact folder")
-    type: str = Field(description="Artifact type: dataset|code|sql|table|chart|model|notebook|report|evidence")
+    type: str = Field(
+        description="Artifact type: dataset|code|sql|table|chart|model|notebook|report|evidence"
+    )
     filename: str = Field(description="Filename, e.g. report.md")
     content: str = Field(description="Text content to save (base64 for binary handled elsewhere)")
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -44,4 +46,6 @@ class SaveArtifactTool(BaseTool[SaveArtifactInput, SaveArtifactOutput]):
             raise ToolExecutionError("Path escapes artifact root")
         dest.write_text(inp.content, encoding="utf-8")
         aid = f"A-{uuid.uuid4().hex[:8]}"
-        return SaveArtifactOutput(artifact_id=aid, path=str(dest), type=inp.type, metadata=inp.metadata)
+        return SaveArtifactOutput(
+            artifact_id=aid, path=str(dest), type=inp.type, metadata=inp.metadata
+        )

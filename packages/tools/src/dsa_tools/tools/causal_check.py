@@ -16,7 +16,9 @@ class CausalCheckInput(BaseModel):
     dataset_path: str
     treatment: str = Field(description="Treatment / exposure column")
     outcome: str = Field(description="Outcome column")
-    confounders: list[str] = Field(default_factory=list, description="Optional confounder columns for adjustment")
+    confounders: list[str] = Field(
+        default_factory=list, description="Optional confounder columns for adjustment"
+    )
     method: Literal["difference_in_means", "adjusted_regression"] = "difference_in_means"
 
 
@@ -97,7 +99,9 @@ class CausalCheckTool(BaseTool[CausalCheckInput, CausalCheckOutput]):
             t_series = sub[inp.treatment]
             if t_series.dtype in (pl.String, pl.Utf8):
                 mapping = {v: i for i, v in enumerate(t_series.unique().to_list()[:2])}
-                t_num = t_series.map_elements(lambda x: mapping.get(x, 0), return_dtype=pl.Int64).to_numpy()
+                t_num = t_series.map_elements(
+                    lambda x: mapping.get(x, 0), return_dtype=pl.Int64
+                ).to_numpy()
             else:
                 t_num = t_series.to_numpy().astype(float)
             X_list = [t_num.reshape(-1, 1)]

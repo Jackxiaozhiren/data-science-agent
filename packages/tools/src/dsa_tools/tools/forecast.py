@@ -19,7 +19,9 @@ class ForecastInput(BaseModel):
     dataset_path: str
     date_col: str | None = None
     value_col: str | None = None
-    periods: int = Field(default=30, ge=1, le=365, description="Number of future periods to forecast")
+    periods: int = Field(
+        default=30, ge=1, le=365, description="Number of future periods to forecast"
+    )
     method: Literal["naive_trend", "moving_average", "linear_trend"] = "linear_trend"
 
 
@@ -49,12 +51,20 @@ def _detect_cols(df: pl.DataFrame, date_col: str | None, value_col: str | None) 
                 date_candidates.append(c)
                 break
     if not date_candidates:
-        raise ToolExecutionError(f"No datetime column found; available: {df.columns}. Provide date_col explicitly.")
+        raise ToolExecutionError(
+            f"No datetime column found; available: {df.columns}. Provide date_col explicitly."
+        )
     # numeric value column: prefer revenue/price/value/numeric with most non-null
-    numeric = [c for c in df.columns if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32, pl.Int16, pl.Int8)]
+    numeric = [
+        c
+        for c in df.columns
+        if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32, pl.Int16, pl.Int8)
+    ]
     if value_col:
         if value_col not in numeric:
-            raise ToolExecutionError(f"value_col {value_col!r} is not numeric; numeric cols: {numeric}")
+            raise ToolExecutionError(
+                f"value_col {value_col!r} is not numeric; numeric cols: {numeric}"
+            )
         return date_candidates[0], value_col
     # pick best numeric: largest variance or named revenue/price/value
     preferred = [c for c in ["revenue", "value", "price", "sales", "demand"] if c in numeric]
@@ -111,7 +121,11 @@ class ForecastTool(BaseTool[ForecastInput, ForecastOutput]):
             fc = model.predict(t_future).tolist()
             slope = float(model.coef_[0])
             intercept = float(model.intercept_)
-            diagnostics: dict[str, object] = {"slope": slope, "intercept": intercept, "holdout": holdout}
+            diagnostics: dict[str, object] = {
+                "slope": slope,
+                "intercept": intercept,
+                "holdout": holdout,
+            }
         elif inp.method == "moving_average":
             window = min(7, len(y_train))
             ma = float(np.mean(y_train[-window:]))

@@ -7,7 +7,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dsa_api.core.database import get_session
-from dsa_api.services.experiment_service import compare_experiments, create_experiment, get_experiment, list_experiments
+from dsa_api.services.experiment_service import (
+    compare_experiments,
+    create_experiment,
+    get_experiment,
+    list_experiments,
+)
 
 router = APIRouter(prefix="/api/v1/experiments", tags=["experiments"])
 
@@ -22,14 +27,26 @@ class CreateExpBody(BaseModel):
 
 
 @router.post("/")
-async def create_exp(body: CreateExpBody, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def create_exp(
+    body: CreateExpBody, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     if not body.run_id or not body.dataset_id or not body.name.strip():
         raise HTTPException(status_code=400, detail="run_id, dataset_id and name required")
-    return await create_experiment(session, body.run_id, body.dataset_id, body.name, body.params, body.metrics, body.artifact_path)
+    return await create_experiment(
+        session,
+        body.run_id,
+        body.dataset_id,
+        body.name,
+        body.params,
+        body.metrics,
+        body.artifact_path,
+    )
 
 
 @router.get("/")
-async def list_exp(run_id: str | None = None, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def list_exp(
+    run_id: str | None = None, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     items = await list_experiments(session, run_id=run_id)
     return {"experiments": items}
 
@@ -43,7 +60,9 @@ async def get_exp(exp_id: str, session: AsyncSession = Depends(get_session)) -> 
 
 
 @router.post("/compare")
-async def compare_exp(body: dict[str, Any], session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def compare_exp(
+    body: dict[str, Any], session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     ids: list[str] = body.get("ids") or []
     if not ids:
         raise HTTPException(status_code=400, detail="ids required")

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import io
 import tempfile
 from pathlib import Path
 
-import polars as pl
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -14,8 +12,7 @@ from dsa_agent.graph import run_analysis
 from dsa_agent.state import AnalysisState, AnalysisStatus, Insight
 from dsa_api.core.database import Base, get_session
 from dsa_api.main import app
-from dsa_tools import bootstrap, clear
-from dsa_tools.registry import clear as tools_clear
+from dsa_tools import bootstrap
 
 # Ensure tools bootstrapped for graph tests
 try:
@@ -31,7 +28,7 @@ def _make_csv(path: Path, rows: int = 80) -> None:
     with path.open("w", encoding="utf-8") as f:
         f.write("a,b,group,target\n")
         for i in range(rows):
-            f.write(f"{i},{i*1.5 + (i%4)},{'A' if i%2==0 else 'B'},{i%2}\n")
+            f.write(f"{i},{i * 1.5 + (i % 4)},{'A' if i % 2 == 0 else 'B'},{i % 2}\n")
 
 
 @pytest.mark.asyncio
@@ -39,7 +36,11 @@ async def test_run_analysis_end_to_end() -> None:
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "t.csv"
         _make_csv(p)
-        state = await run_analysis(dataset_path=str(p), dataset_id="ds1", user_query="Analyze correlation between a and b and build a predictive model")
+        state = await run_analysis(
+            dataset_path=str(p),
+            dataset_id="ds1",
+            user_query="Analyze correlation between a and b and build a predictive model",
+        )
         assert state.run_id.startswith("run-")
         assert state.status in (AnalysisStatus.COMPLETED, AnalysisStatus.FAILED)
         # should have at least profile + correlation + chart
@@ -53,7 +54,6 @@ async def test_run_analysis_end_to_end() -> None:
 
 @pytest.mark.asyncio
 async def test_critic_blocks_causal_claim() -> None:
-    from dsa_agent.state import Evidence
 
     ins = Insight(id="I-1", finding="X causes Y", evidence_ids=[])
     res = check_unsupported_claims([ins])
@@ -63,7 +63,9 @@ async def test_critic_blocks_causal_claim() -> None:
 
 @pytest.mark.asyncio
 async def test_critic_evidence_coverage() -> None:
-    state = AnalysisState(run_id="r1", dataset_id="d1", user_query="hello", status=AnalysisStatus.ANALYSIS)
+    state = AnalysisState(
+        run_id="r1", dataset_id="d1", user_query="hello", status=AnalysisStatus.ANALYSIS
+    )
     # no evidence yet at ANALYSIS stage -> should fail coverage
     results = critic_validate(state)
     checks = {r.check: r.passed for r in results}
@@ -91,7 +93,13 @@ async def test_api_analysis_flow() -> None:
         ds_id = r.json()["id"]
 
         # create analysis
-        r2 = await ac.post("/api/v1/analysis/", json={"dataset_id": ds_id, "user_query": "Analyze correlation between a and b and test group differences"})
+        r2 = await ac.post(
+            "/api/v1/analysis/",
+            json={
+                "dataset_id": ds_id,
+                "user_query": "Analyze correlation between a and b and test group differences",
+            },
+        )
         assert r2.status_code == 200, r2.text
         data = r2.json()
         assert "id" in data
@@ -135,7 +143,13 @@ async def test_tool_budget_exceeded() -> None:
         _make_csv(p, rows=20)
         # force budget to 1 to trigger budget guard — we do via state patch by calling graph with mocked plan
         # Instead, test via direct critic: exceed max_tool_calls
-        state = AnalysisState(run_id="r1", dataset_id="d1", dataset_path=str(p), user_query="hello", status=AnalysisStatus.ANALYSIS)
+        state = AnalysisState(
+            run_id="r1",
+            dataset_id="d1",
+            dataset_path=str(p),
+            user_query="hello",
+            status=AnalysisStatus.ANALYSIS,
+        )
         state.tool_call_count = 100
         state.budget.max_tool_calls = 5
         results = critic_validate(state)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -14,7 +14,7 @@ class EvidenceNode(BaseModel):
     result: dict[str, Any] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0, default=0.0)
     validation_status: Literal["pending", "verified", "failed"] = "pending"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class InsightNode(BaseModel):
@@ -24,7 +24,7 @@ class InsightNode(BaseModel):
     magnitude: str | None = None
     significance: str | None = None
     limitation: str | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class EvidenceEdge(BaseModel):
@@ -42,7 +42,7 @@ class EvidenceGraph(BaseModel):
     insights: list[InsightNode] = Field(default_factory=list)
     edges: list[EvidenceEdge] = Field(default_factory=list)
     tool_calls: list[dict[str, Any]] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def trace_insight(self, insight_id: str) -> dict[str, Any]:
         ins = next((i for i in self.insights if i.id == insight_id), None)
@@ -55,5 +55,9 @@ class EvidenceGraph(BaseModel):
             "insight": ins.model_dump(mode="json"),
             "evidence": [e.model_dump(mode="json") for e in evs],
             "tool_calls": calls,
-            "dataset": {"dataset_id": self.dataset_id, "path": self.dataset_path, "sha256": self.dataset_sha256},
+            "dataset": {
+                "dataset_id": self.dataset_id,
+                "path": self.dataset_path,
+                "sha256": self.dataset_sha256,
+            },
         }

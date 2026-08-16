@@ -52,7 +52,9 @@ def test_mcp_call_run_sql(tmp_path: pathlib.Path) -> None:
     from dsa_mcp.adapter import call_mcp_tool
 
     async def _run():
-        r = await call_mcp_tool("run_sql", {"sql": "SELECT COUNT(*) as n FROM dataset", "dataset_path": str(p)})
+        r = await call_mcp_tool(
+            "run_sql", {"sql": "SELECT COUNT(*) as n FROM dataset", "dataset_path": str(p)}
+        )
         assert not r.get("isError"), r
         assert r["tool"] == "run_sql"
         assert "output" in r
@@ -62,6 +64,7 @@ def test_mcp_call_run_sql(tmp_path: pathlib.Path) -> None:
 
 def test_mcp_call_unknown_tool() -> None:
     import asyncio
+
     from dsa_mcp.adapter import call_mcp_tool
 
     async def _run():
@@ -80,7 +83,9 @@ def test_mcp_query_dataset_alias() -> None:
     from dsa_mcp.adapter import call_mcp_tool
 
     async def _run():
-        r = await call_mcp_tool("query_dataset", {"sql": "SELECT * FROM dataset LIMIT 1", "dataset_path": str(p)})
+        r = await call_mcp_tool(
+            "query_dataset", {"sql": "SELECT * FROM dataset LIMIT 1", "dataset_path": str(p)}
+        )
         assert not r.get("isError"), r
 
     asyncio.run(_run())
@@ -98,10 +103,18 @@ def test_mcp_http_list_and_call() -> None:
     assert "result" in data
     assert "tools" in data["result"]
     assert len(data["result"]["tools"]) >= 17
-    # initialize
+    # initialize is no longer supported on 2026-07-28 stateless core
     r2 = client.post("/mcp", json={"jsonrpc": "2.0", "id": 2, "method": "initialize", "params": {}})
-    assert r2.status_code == 200
+    assert r2.json()["error"]["code"] == -32601
     # tools/call
-    r3 = client.post("/mcp", json={"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}}})
+    r3 = client.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}},
+        },
+    )
     assert r3.status_code == 200
     assert "result" in r3.json()

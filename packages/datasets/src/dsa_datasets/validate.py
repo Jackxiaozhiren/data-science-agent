@@ -39,7 +39,9 @@ def detect_format(filename: str) -> DatasetFormat:
     ext = Path(filename).suffix.lower()
     fmt = ALLOWED_EXTS.get(ext)
     if fmt is None:
-        raise UnsupportedFormatError(f"Unsupported file extension: {ext!r}. Allowed: {sorted(ALLOWED_EXTS)}")
+        raise UnsupportedFormatError(
+            f"Unsupported file extension: {ext!r}. Allowed: {sorted(ALLOWED_EXTS)}"
+        )
     return fmt
 
 
@@ -48,7 +50,9 @@ def validate_size(size_bytes: int, limit: int = MAX_SIZE_BYTES) -> None:
         raise FileTooLargeError(f"File too large: {size_bytes} bytes > limit {limit} bytes")
 
 
-def validate_file(filename: str, size_bytes: int, content_type: str | None = None, head: bytes | None = None) -> DatasetFormat:
+def validate_file(
+    filename: str, size_bytes: int, content_type: str | None = None, head: bytes | None = None
+) -> DatasetFormat:
     validate_filename(filename)
     # archive bomb guard
     if Path(filename).suffix.lower() in _ARCHIVE_EXTS:
@@ -67,15 +71,17 @@ def validate_file(filename: str, size_bytes: int, content_type: str | None = Non
             ".parquet": {"application/octet-stream", "application/parquet"},
             ".json": {"application/json", "text/plain"},
             ".jsonl": {"application/json", "text/plain"},
-            ".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel", "application/zip"},
+            ".xlsx": {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-excel",
+                "application/zip",
+            },
             ".xls": {"application/vnd.ms-excel"},
         }
         allowed = ext_to_mime.get(ext)
         if allowed is not None:
             ok = False
-            if ct in allowed:
-                ok = True
-            elif ext in (".csv", ".json", ".jsonl") and ct.startswith("text/"):
+            if ct in allowed or ext in (".csv", ".json", ".jsonl") and ct.startswith("text/"):
                 ok = True
             if not ok:
                 raise ValidationError(f"MIME type mismatch for {filename!r}: {content_type!r}")

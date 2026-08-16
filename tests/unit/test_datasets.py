@@ -135,7 +135,7 @@ def test_large_file_handling_streaming_csv() -> None:
         with p.open("w", encoding="utf-8") as f:
             f.write("id,value,cat\n")
             for i in range(n):
-                f.write(f"{i},{i*0.5},{'a' if i%2==0 else 'b'}\n")
+                f.write(f"{i},{i * 0.5},{'a' if i % 2 == 0 else 'b'}\n")
         df = load_dataframe(p, DatasetFormat.csv)
         assert df.shape[0] == n
         profile = build_profile(df, "ds-large", "large.csv", DatasetFormat.csv)

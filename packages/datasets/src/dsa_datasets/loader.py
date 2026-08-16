@@ -53,13 +53,21 @@ def duckdb_query_parquet_or_csv(path: Path, sql: str):  # type: ignore[no-untype
     # Expose file as 'dataset' view via read_csv/read_parquet depending on ext
     ext = path.suffix.lower()
     if ext == ".csv":
-        con.execute(f"CREATE VIEW dataset AS SELECT * FROM read_csv('{path}', AUTO_DETECT=TRUE, SAMPLE_SIZE=-1)")
+        con.execute(
+            f"CREATE VIEW dataset AS SELECT * FROM read_csv('{path}', AUTO_DETECT=TRUE, SAMPLE_SIZE=-1)"
+        )
     elif ext == ".parquet":
         con.execute(f"CREATE VIEW dataset AS SELECT * FROM read_parquet('{path}')")
     else:
         # fallback: register polars df
 
-        fmt_fallback = DatasetFormat.excel if ext in (".xlsx", ".xls") else DatasetFormat.json if ext == ".json" else DatasetFormat.csv
+        fmt_fallback = (
+            DatasetFormat.excel
+            if ext in (".xlsx", ".xls")
+            else DatasetFormat.json
+            if ext == ".json"
+            else DatasetFormat.csv
+        )
         df = load_dataframe(path, fmt_fallback)
         con.register("dataset", df.to_arrow())
     return con.execute(sql).fetchall()

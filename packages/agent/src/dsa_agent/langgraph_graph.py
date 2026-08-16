@@ -29,7 +29,11 @@ class LGState(TypedDict, total=False):
 
 
 async def _node_understand(state: LGState) -> dict[str, Any]:
-    return {"messages": [{"role": "assistant", "content": "Understanding user query"}], "step_index": 0, "retry_count": 0}
+    return {
+        "messages": [{"role": "assistant", "content": "Understanding user query"}],
+        "step_index": 0,
+        "retry_count": 0,
+    }
 
 
 async def _node_plan(state: LGState) -> dict[str, Any]:
@@ -55,7 +59,12 @@ async def _node_plan(state: LGState) -> dict[str, Any]:
         "objective": plan.objective,
         "columns": cols,
         "status": "PLANNING",
-        "messages": [{"role": "assistant", "content": f"Planned {len(plan.steps)} steps: {', '.join(s.tool for s in plan.steps)}"}],
+        "messages": [
+            {
+                "role": "assistant",
+                "content": f"Planned {len(plan.steps)} steps: {', '.join(s.tool for s in plan.steps)}",
+            }
+        ],
     }
 
 
@@ -77,7 +86,9 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
         "call_id": call_id,
         "tool": tool,
         "input": inputs,
-        "output": output.model_dump(mode="json") if hasattr(output, "model_dump") else (dict(output) if isinstance(output, dict) else None),
+        "output": output.model_dump(mode="json")
+        if hasattr(output, "model_dump")
+        else (dict(output) if isinstance(output, dict) else None),
         "status": "ok" if ok else "error",
         "error": err,
         "duration_ms": dur,
@@ -85,9 +96,22 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
     ev = _evidence_for_tool_call(tool, call_id, output) if ok and output is not None else None
     evj = ev.model_dump(mode="json") if ev else None
     insight = None
-    if ev and tool in ("correlation_analysis", "hypothesis_test", "regression_analysis", "forecast", "feature_importance", "assumption_check", "causal_check"):
+    if ev and tool in (
+        "correlation_analysis",
+        "hypothesis_test",
+        "regression_analysis",
+        "forecast",
+        "feature_importance",
+        "assumption_check",
+        "causal_check",
+    ):
         iid = f"I-{uuid.uuid4().hex[:8]}"
-        insight = Insight(id=iid, finding=ev.claim, evidence_ids=[ev.id], limitation="Association does not imply causation.").model_dump(mode="json")
+        insight = Insight(
+            id=iid,
+            finding=ev.claim,
+            evidence_ids=[ev.id],
+            limitation="Association does not imply causation.",
+        ).model_dump(mode="json")
     # Incrementally update analysis_state via reducer-style merge in state
     analysis = state.get("analysis_state") or {}
     tcs = list(analysis.get("tool_calls") or [])
@@ -102,7 +126,9 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
     return {
         "analysis_state": new_analysis,
         "step_index": idx + 1,
-        "messages": [{"role": "assistant", "content": f"Step {idx+1}/{len(plan)} {tool} {rec['status']}"}],
+        "messages": [
+            {"role": "assistant", "content": f"Step {idx + 1}/{len(plan)} {tool} {rec['status']}"}
+        ],
     }
 
 
@@ -128,7 +154,10 @@ async def _node_critic(state: LGState) -> dict[str, Any]:
         insights = analysis.get("insights") or []
         validation: list[dict[str, Any]] = analysis.get("validation_results") or []
         # fabricate AS
-        from dsa_agent.state import Evidence as _Ev, Insight as _Ins, ToolCallRecord as _TC, ValidationResult as _VR
+        from dsa_agent.state import Evidence as _Ev
+        from dsa_agent.state import Insight as _Ins
+        from dsa_agent.state import ToolCallRecord as _TC
+        from dsa_agent.state import ValidationResult as _VR
 
         as_obj = AS(
             run_id=run_id,
@@ -145,11 +174,19 @@ async def _node_critic(state: LGState) -> dict[str, Any]:
             retry_count=int(state.get("retry_count") or 0),
         )
         vresults = critic_validate(as_obj)
-        analysis2 = {**analysis, "validation_results": [r.model_dump(mode="json") for r in vresults]}
+        analysis2 = {
+            **analysis,
+            "validation_results": [r.model_dump(mode="json") for r in vresults],
+        }
         retry = should_retry(vresults, int(state.get("retry_count") or 0))
         msg = f"Critic {'retry' if retry else 'pass'}: {len([r for r in vresults if not r.passed])} failed"
         new_retry = int(state.get("retry_count") or 0) + (1 if retry else 0)
-        return {"analysis_state": analysis2, "messages": [{"role": "assistant", "content": msg}], "retry_count": new_retry, "status": "VALIDATION"}
+        return {
+            "analysis_state": analysis2,
+            "messages": [{"role": "assistant", "content": msg}],
+            "retry_count": new_retry,
+            "status": "VALIDATION",
+        }
     except Exception as e:
         return {"messages": [{"role": "assistant", "content": f"Critic error: {e}"}]}
 
@@ -157,7 +194,11 @@ async def _node_critic(state: LGState) -> dict[str, Any]:
 def _route_after_critic(state: LGState) -> str:
     analysis = state.get("analysis_state") or {}
     vrs = analysis.get("validation_results") or []
-    failed = [v for v in vrs if not v.get("passed") and v.get("check") in ("evidence_coverage", "tool_errors")]
+    failed = [
+        v
+        for v in vrs
+        if not v.get("passed") and v.get("check") in ("evidence_coverage", "tool_errors")
+    ]
     rc = int(state.get("retry_count") or 0)
     if failed and rc < 3:
         # retry failed tool calls via exec_step again? For incremental graph we just record and proceed to report
@@ -194,7 +235,16 @@ async def _node_report(state: LGState) -> dict[str, Any]:
             status=AnalysisStatus.REPORTING,
         )
         md = build_markdown_report(as_obj)
-        analysis2 = {**analysis, "report_markdown": md, "run_id": run_id, "dataset_id": dataset_id, "dataset_path": dataset_path, "user_query": user_query, "objective": state.get("objective", ""), "status": "COMPLETED"}
+        analysis2 = {
+            **analysis,
+            "report_markdown": md,
+            "run_id": run_id,
+            "dataset_id": dataset_id,
+            "dataset_path": dataset_path,
+            "user_query": user_query,
+            "objective": state.get("objective", ""),
+            "status": "COMPLETED",
+        }
         # persist artifacts (best-effort)
         try:
             tmp_state = AS(
@@ -212,8 +262,22 @@ async def _node_report(state: LGState) -> dict[str, Any]:
             )
             paths = write_report_artifacts(tmp_state)
             arts = list(analysis2.get("artifacts") or [])
-            arts.append({"id": f"A-{uuid.uuid4().hex[:8]}", "type": "report", "path": paths["markdown"], "metadata": {"kind": "markdown"}})
-            arts.append({"id": f"A-{uuid.uuid4().hex[:8]}", "type": "report", "path": paths["experiment"], "metadata": {"kind": "experiment"}})
+            arts.append(
+                {
+                    "id": f"A-{uuid.uuid4().hex[:8]}",
+                    "type": "report",
+                    "path": paths["markdown"],
+                    "metadata": {"kind": "markdown"},
+                }
+            )
+            arts.append(
+                {
+                    "id": f"A-{uuid.uuid4().hex[:8]}",
+                    "type": "report",
+                    "path": paths["experiment"],
+                    "metadata": {"kind": "experiment"},
+                }
+            )
             analysis2["artifacts"] = arts
             # evidence bundle
             try:
@@ -234,34 +298,83 @@ async def _node_report(state: LGState) -> dict[str, Any]:
                 tcs = [TC.model_validate(x) for x in (analysis2.get("tool_calls") or [])]
                 g = build_evidence_graph(run_id, dataset_id, dataset_path, evs, iss, tcs)
                 v = validate_evidence_graph(g)
-                vjs = [VR(check=item["check"], passed=bool(item["passed"]), message=item["message"]).model_dump(mode="json") for item in v]
+                vjs = [
+                    VR(
+                        check=item["check"], passed=bool(item["passed"]), message=item["message"]
+                    ).model_dump(mode="json")
+                    for item in v
+                ]
                 existing_v = list(analysis2.get("validation_results") or [])
                 analysis2["validation_results"] = existing_v + vjs
                 from pathlib import Path as _P
 
                 report_dir = _P(paths["markdown"]).parent
-                (report_dir / "evidence_graph.json").write_text(g.model_dump_json(indent=2), encoding="utf-8")
+                (report_dir / "evidence_graph.json").write_text(
+                    g.model_dump_json(indent=2), encoding="utf-8"
+                )
                 arts2 = list(analysis2.get("artifacts") or [])
-                arts2.append({"id": f"A-{uuid.uuid4().hex[:8]}", "type": "evidence", "path": str(report_dir / "evidence_graph.json"), "metadata": {"kind": "evidence_graph"}})
+                arts2.append(
+                    {
+                        "id": f"A-{uuid.uuid4().hex[:8]}",
+                        "type": "evidence",
+                        "path": str(report_dir / "evidence_graph.json"),
+                        "metadata": {"kind": "evidence_graph"},
+                    }
+                )
                 sha = g.dataset_sha256
                 # plan for notebook cells comes from outer plan (if any) — best-effort
                 outer_plan = state.get("plan") or []
-                exp_path = build_experiment_json(run_id, dataset_path, sha, user_query, outer_plan, [c.model_dump(mode="json") for c in tcs], [e.model_dump(mode="json") for e in evs], [i.model_dump(mode="json") for i in iss], report_dir)
+                exp_path = build_experiment_json(
+                    run_id,
+                    dataset_path,
+                    sha,
+                    user_query,
+                    outer_plan,
+                    [c.model_dump(mode="json") for c in tcs],
+                    [e.model_dump(mode="json") for e in evs],
+                    [i.model_dump(mode="json") for i in iss],
+                    report_dir,
+                )
                 repro_path = build_reproduce_sh(run_id, dataset_path, user_query, report_dir)
-                nb_path = build_notebook(run_id, dataset_path, user_query, outer_plan, [c.model_dump(mode="json") for c in tcs], report_dir)
+                nb_path = build_notebook(
+                    run_id,
+                    dataset_path,
+                    user_query,
+                    outer_plan,
+                    [c.model_dump(mode="json") for c in tcs],
+                    report_dir,
+                )
                 existing = {a.get("path") for a in arts2}
-                for pth, kind in [(exp_path, "experiment"), (repro_path, "reproduce"), (nb_path, "notebook")]:
+                for pth, kind in [
+                    (exp_path, "experiment"),
+                    (repro_path, "reproduce"),
+                    (nb_path, "notebook"),
+                ]:
                     sp = str(pth)
                     if sp not in existing:
-                        arts2.append({"id": f"A-{uuid.uuid4().hex[:8]}", "type": "report" if kind == "experiment" else kind, "path": sp, "metadata": {"kind": kind}})
+                        arts2.append(
+                            {
+                                "id": f"A-{uuid.uuid4().hex[:8]}",
+                                "type": "report" if kind == "experiment" else kind,
+                                "path": sp,
+                                "metadata": {"kind": kind},
+                            }
+                        )
                 analysis2["artifacts"] = arts2
             except Exception:
                 pass
         except Exception:
             pass
-        return {"analysis_state": analysis2, "status": "COMPLETED", "messages": [{"role": "assistant", "content": "Report generated"}]}
+        return {
+            "analysis_state": analysis2,
+            "status": "COMPLETED",
+            "messages": [{"role": "assistant", "content": "Report generated"}],
+        }
     except Exception as e:
-        return {"messages": [{"role": "assistant", "content": f"Report error: {e}"}], "status": "FAILED"}
+        return {
+            "messages": [{"role": "assistant", "content": f"Report error: {e}"}],
+            "status": "FAILED",
+        }
 
 
 def build_graph(checkpoint: bool = True) -> Any:
@@ -274,7 +387,9 @@ def build_graph(checkpoint: bool = True) -> Any:
     g.set_entry_point("understand")
     g.add_edge("understand", "plan")
     g.add_edge("plan", "exec_step")
-    g.add_conditional_edges("exec_step", _route_after_step, {"exec_step": "exec_step", "critic": "critic"})
+    g.add_conditional_edges(
+        "exec_step", _route_after_step, {"exec_step": "exec_step", "critic": "critic"}
+    )
     g.add_conditional_edges("critic", _route_after_critic, {"report": "report"})
     g.add_edge("report", END)
     if checkpoint:
@@ -292,14 +407,28 @@ async def run_analysis_langgraph(
         graph = build_graph(checkpoint=True)
         cfg = {"configurable": {"thread_id": run_id or f"run-{uuid.uuid4().hex[:10]}"}}
         out = await graph.ainvoke(
-            {"dataset_path": dataset_path, "dataset_id": dataset_id, "user_query": user_query, "run_id": run_id, "analysis_state": {}, "step_index": 0, "retry_count": 0},
+            {
+                "dataset_path": dataset_path,
+                "dataset_id": dataset_id,
+                "user_query": user_query,
+                "run_id": run_id,
+                "analysis_state": {},
+                "step_index": 0,
+                "retry_count": 0,
+            },
             config=cfg,
         )
         state_dict = out.get("analysis_state") or {}
         # Map LG analysis_state dict to AnalysisState
         if state_dict:
             # ensure required fields present
-            state_dict.setdefault("run_id", out.get("run_id") or run_id or state_dict.get("run_id") or f"run-{uuid.uuid4().hex[:10]}")
+            state_dict.setdefault(
+                "run_id",
+                out.get("run_id")
+                or run_id
+                or state_dict.get("run_id")
+                or f"run-{uuid.uuid4().hex[:10]}",
+            )
             state_dict.setdefault("dataset_id", dataset_id)
             state_dict.setdefault("user_query", user_query)
             state_dict.setdefault("dataset_path", dataset_path)
@@ -309,7 +438,10 @@ async def run_analysis_langgraph(
             except Exception:
                 pass
             from dsa_agent.state import AnalysisState as AS
-            from dsa_agent.state import Evidence as _Ev2, Insight as _Ins2, ToolCallRecord as _TC2, ValidationResult as _VR2
+            from dsa_agent.state import Evidence as _Ev2
+            from dsa_agent.state import Insight as _Ins2
+            from dsa_agent.state import ToolCallRecord as _TC2
+            from dsa_agent.state import ValidationResult as _VR2
 
             try:
                 return AS(
@@ -318,10 +450,14 @@ async def run_analysis_langgraph(
                     dataset_path=dataset_path,
                     user_query=user_query,
                     objective=state_dict.get("objective", user_query[:500]),
-                    tool_calls=[_TC2.model_validate(x) for x in (state_dict.get("tool_calls") or [])],
+                    tool_calls=[
+                        _TC2.model_validate(x) for x in (state_dict.get("tool_calls") or [])
+                    ],
                     evidence=[_Ev2.model_validate(x) for x in (state_dict.get("evidence") or [])],
                     insights=[_Ins2.model_validate(x) for x in (state_dict.get("insights") or [])],
-                    validation_results=[_VR2.model_validate(x) for x in (state_dict.get("validation_results") or [])],
+                    validation_results=[
+                        _VR2.model_validate(x) for x in (state_dict.get("validation_results") or [])
+                    ],
                     report_markdown=state_dict.get("report_markdown"),
                     status=AnalysisStatus(state_dict.get("status", "COMPLETED")),
                 )

@@ -78,4 +78,10 @@ async def metrics() -> dict[str, Any]:
         tool_calls_total = len(_TOOL_CACHE)
     except Exception:
         pass
-    return {"version": settings.version, "uptime_s": round(uptime, 1), "rss_mb": rss_mb, "tool_cache_size": tool_calls_total, "pid": os.getpid()}
+    return {
+        "version": settings.version,
+        "uptime_s": round(uptime, 1),
+        "rss_mb": rss_mb,
+        "tool_cache_size": tool_calls_total,
+        "pid": os.getpid(),
+    }

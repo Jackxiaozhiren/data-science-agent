@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from dsa_evaluation.catalog import Catalog
-from dsa_evaluation.metrics import aggregate_metrics, evaluate_task
+from dsa_evaluation.metrics import evaluate_task
 from dsa_evaluation.runner import run_benchmark
 
 CATALOG = Path("benchmarks/ds-agent-benchmark/catalog.json")
@@ -16,7 +14,16 @@ def test_catalog_has_50_tasks_and_categories() -> None:
     cat = Catalog.load(CATALOG)
     assert len(cat.tasks) == 50
     cats = cat.categories()
-    assert set(cats) == {"EDA", "SQL", "Statistics", "Regression", "Classification", "Time Series", "Visualization", "Data Quality"}
+    assert set(cats) == {
+        "EDA",
+        "SQL",
+        "Statistics",
+        "Regression",
+        "Classification",
+        "Time Series",
+        "Visualization",
+        "Data Quality",
+    }
     assert len(cat.by_category("EDA")) == 8
     assert len(cat.by_category("SQL")) == 7
     from collections import Counter
@@ -71,8 +78,11 @@ def test_runner_smoke_limit_2() -> None:
 
 def test_cli_dsa_benchmark_help() -> None:
     # Smoke: CLI exists via entry point
-    import subprocess, sys
+    import subprocess
+    import sys
 
-    r = subprocess.run([sys.executable, "-m", "dsa_evaluation.cli", "--help"], capture_output=True, text=True)
+    r = subprocess.run(
+        [sys.executable, "-m", "dsa_evaluation.cli", "--help"], capture_output=True, text=True
+    )
     assert r.returncode == 0
     assert "DS-Agent-Benchmark" in r.stdout or "catalog" in r.stdout.lower()

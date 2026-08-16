@@ -26,6 +26,13 @@ nav:
   - Frontend: docs/FRONTEND_IA.md
   - Benchmark: benchmarks/ds-agent-benchmark/README.md
   - Security: docs/security.md
+  - V2 Baseline: docs/v2/Baseline Report.md
+  - V2 Evaluation: docs/v2/evaluation.md
+  - V2 MCP 2026-28: docs/v2/MCP_2026_Audit.md
+  - V2 Security: docs/v2/security.md
+  - Benchmark v2: benchmarks/v2/README.md
+  - Baseline: benchmarks/baseline/README.md
+  - ADR: docs/ADR/ADR-001-mcp-2026-07-28-stateless-core.md
   - Research: docs/research.md
   - Examples: examples/README.md
   - Changelog: CHANGELOG.md

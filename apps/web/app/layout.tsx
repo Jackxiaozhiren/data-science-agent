@@ -12,6 +12,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <a href="/datasets" className="hover:underline">Datasets</a>
               <a href="/analysis" className="hover:underline">Analysis</a>
               <a href="/reports" className="hover:underline">Reports</a>
+              <a href="/benchmarks" className="hover:underline">Benchmarks</a>
+              <a href="/evaluations" className="hover:underline">Evaluations</a>
+              <a href="/runs" className="hover:underline">Runs</a>
+              <a href="/failures" className="hover:underline">Failures</a>
+              <a href="/research" className="hover:underline">Research</a>
+              <a href="/mcp" className="hover:underline">MCP</a>
             </div>
           </nav>
         </header>

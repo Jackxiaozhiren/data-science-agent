@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +13,9 @@ class GenerateReportInput(BaseModel):
     run_id: str
     title: str = Field(default="Analysis Report")
     markdown: str | None = None
-    state_json: str | None = Field(default=None, description="Full AnalysisState JSON for appendix; optional")
+    state_json: str | None = Field(
+        default=None, description="Full AnalysisState JSON for appendix; optional"
+    )
     include_repro: bool = True
 
 
@@ -57,7 +58,11 @@ class GenerateReportTool(BaseTool[GenerateReportInput, GenerateReportOutput]):
                         dataset_sha = sha256_file(Path(dataset_path))
                     except Exception:
                         dataset_sha = None
-                from dsa_evidence.repro import build_experiment_json, build_notebook_skeleton, build_reproduce_sh
+                from dsa_evidence.repro import (
+                    build_experiment_json,
+                    build_notebook_skeleton,
+                    build_reproduce_sh,
+                )
 
                 exp_path_obj = build_experiment_json(
                     run_id=inp.run_id,
@@ -72,7 +77,11 @@ class GenerateReportTool(BaseTool[GenerateReportInput, GenerateReportOutput]):
                 )
                 exp_path = str(exp_path_obj)
                 if inp.include_repro:
-                    repro_path = str(build_reproduce_sh(inp.run_id, dataset_path, state.get("user_query", ""), root))
+                    repro_path = str(
+                        build_reproduce_sh(
+                            inp.run_id, dataset_path, state.get("user_query", ""), root
+                        )
+                    )
                 nb_path = str(build_notebook_skeleton(inp.run_id, root))
             except Exception as e:
                 raise ToolExecutionError(f"Failed to build repro bundle: {e}") from e

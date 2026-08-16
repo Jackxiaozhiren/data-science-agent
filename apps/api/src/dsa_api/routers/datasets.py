@@ -24,7 +24,9 @@ async def list_datasets_route(session: AsyncSession = Depends(get_session)) -> d
 
 
 @router.get("/{dataset_id}")
-async def get_dataset_route(dataset_id: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def get_dataset_route(
+    dataset_id: str, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     ds = await get_dataset(session, dataset_id)
     if ds is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
@@ -57,7 +59,9 @@ async def create_dataset_route(
         head = None
     ct = file.content_type
     try:
-        result = await save_dataset(session, file.filename, tmp_path, size, content_type=ct, head=head)
+        result = await save_dataset(
+            session, file.filename, tmp_path, size, content_type=ct, head=head
+        )
         return result
     except (ValidationError, UnsupportedFormatError, FileTooLargeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

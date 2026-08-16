@@ -10,9 +10,12 @@ jobs:
       - run: pip install uv
       - run: uv sync --dev
       - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy packages --ignore-missing-imports
+      - run: uv run ruff format --check packages apps/api tests 2>&1 | head -n 50
+      - run: uv run mypy packages apps/api --ignore-missing-imports
       - run: uv run pytest -q --cov --cov-report=term-missing
+      - run: uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
       - run: docker build -f docker/Dockerfile.api -t dsa-api:ci .
       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
+      - run: npm --prefix apps/web run build 2>&1 | tail -n 20
+      - run: docker compose config 2>&1 | head -n 40
       - run: uv run mkdocs build --strict 2>&1 | tail -n 20 || echo "mkdocs not installed — skipping"

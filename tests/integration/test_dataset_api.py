@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import io
 import tempfile
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import polars as pl
 import pytest
@@ -80,7 +81,7 @@ async def test_large_file_csv(client_with_tmp_db: AsyncClient) -> None:
     buf = io.StringIO()
     buf.write("id,value,cat\n")
     for i in range(n):
-        buf.write(f"{i},{i*0.5},{'a' if i % 2 == 0 else 'b'}\n")
+        buf.write(f"{i},{i * 0.5},{'a' if i % 2 == 0 else 'b'}\n")
     csv_bytes = buf.getvalue().encode()
     files: Any = {"file": ("large.csv", csv_bytes, "text/csv")}
     r = await ac.post("/api/v1/datasets/", files=files)

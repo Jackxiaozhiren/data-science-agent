@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import io
-import sys
 import time
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
@@ -14,6 +13,7 @@ except ImportError:
 
     class ToolExecutionError(ValueError):  # type: ignore[no-redef]
         pass
+
 
 _DENY_IMPORTS = {
     "os",
@@ -45,14 +45,39 @@ _DENY_ATTRS = {
     "getenv",
     "environ",
 }
-_DENY_NAMES = {"eval", "exec", "open", "__import__", "compile", "input", "getattr", "setattr", "globals", "locals", "vars"}
+_DENY_NAMES = {
+    "eval",
+    "exec",
+    "open",
+    "__import__",
+    "compile",
+    "input",
+    "getattr",
+    "setattr",
+    "globals",
+    "locals",
+    "vars",
+}
 
 
 class SandboxViolation(ToolExecutionError):
     pass
 
 
-_ALLOW_IMPORTS = {"polars", "pl", "numpy", "np", "math", "statistics", "json", "re", "datetime", "collections", "itertools"}
+_ALLOW_IMPORTS = {
+    "polars",
+    "pl",
+    "numpy",
+    "np",
+    "math",
+    "statistics",
+    "json",
+    "re",
+    "datetime",
+    "collections",
+    "itertools",
+}
+
 
 def _check_ast(code: str) -> None:
     try:

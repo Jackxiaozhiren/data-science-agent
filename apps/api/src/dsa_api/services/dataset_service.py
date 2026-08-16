@@ -50,7 +50,9 @@ async def save_dataset(
 
     # load + profile (raises DatasetError -> caller maps to 400)
     df = load_dataframe(dest, fmt)
-    profile = build_profile(df, dataset_id, filename, fmt if isinstance(fmt, DatasetFormat) else DatasetFormat(fmt))
+    profile = build_profile(
+        df, dataset_id, filename, fmt if isinstance(fmt, DatasetFormat) else DatasetFormat(fmt)
+    )
 
     orm = DatasetORM(
         id=dataset_id,

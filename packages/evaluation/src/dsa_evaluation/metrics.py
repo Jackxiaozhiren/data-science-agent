@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -47,7 +46,15 @@ def evaluate_task(
     if run_result is None:
         metrics.task_success = False
         error = "No run result"
-        return EvaluationResult(task_id=task.id, category=task.category, dataset=task.dataset, question=task.question, metrics=metrics, details=details, error=error)
+        return EvaluationResult(
+            task_id=task.id,
+            category=task.category,
+            dataset=task.dataset,
+            question=task.question,
+            metrics=metrics,
+            details=details,
+            error=error,
+        )
 
     # Task success: at least one tool succeeded and report exists
     tcalls = run_result.get("tool_calls") or run_result.get("toolCalls") or []
@@ -63,7 +70,10 @@ def evaluate_task(
         evidence, insights, validation, status = [], [], [], None
 
     has_ok = any((c.get("status") == "ok") for c in tcalls) if isinstance(tcalls, list) else False
-    has_report = bool((state.get("report_markdown") if isinstance(state, dict) else None) or run_result.get("report_markdown"))
+    has_report = bool(
+        (state.get("report_markdown") if isinstance(state, dict) else None)
+        or run_result.get("report_markdown")
+    )
     metrics.task_success = bool(has_ok and (has_report or tcalls))
     metrics.code_execution_success = has_ok
 
@@ -85,7 +95,7 @@ def evaluate_task(
 
         # adapt insights to sequence
         seq = []
-        for ins in (insights or []):
+        for ins in insights or []:
             if isinstance(ins, dict):
                 seq.append(type("O", (), {"finding": ins.get("finding", "")})())
             else:
@@ -112,7 +122,7 @@ def evaluate_task(
                     if found is not None:
                         break
             if found is None:
-                for ev in (evidence if isinstance(evidence, list) else []):
+                for ev in evidence if isinstance(evidence, list) else []:
                     res = ev.get("result") or {}
                     for key in ("r", "p_value", "metric"):
                         if key in res and isinstance(res[key], (int, float)):
@@ -140,24 +150,40 @@ def evaluate_task(
                 inp = c.get("input") or {}
                 sql_texts.append((inp.get("sql") or "").upper())
         need = [s.upper() for s in gt.sql_contains]
-        metrics.sql_accuracy = all(any(n in t for t in sql_texts) for n in need) if sql_texts else False
+        metrics.sql_accuracy = (
+            all(any(n in t for t in sql_texts) for n in need) if sql_texts else False
+        )
         details["sql_contains"] = gt.sql_contains
     else:
         metrics.sql_accuracy = None if not criteria.sql_accuracy else False
 
     # Visualization check
     if criteria.visualization:
-        has_chart = any(c.get("tool") == "create_chart" and c.get("status") == "ok" for c in (tcalls if isinstance(tcalls, list) else []))
-        metrics.task_success = metrics.task_success and has_chart if gt.chart_type else metrics.task_success
+        has_chart = any(
+            c.get("tool") == "create_chart" and c.get("status") == "ok"
+            for c in (tcalls if isinstance(tcalls, list) else [])
+        )
+        metrics.task_success = (
+            metrics.task_success and has_chart if gt.chart_type else metrics.task_success
+        )
         details["has_chart"] = has_chart
 
-    return EvaluationResult(task_id=task.id, category=task.category, dataset=task.dataset, question=task.question, metrics=metrics, details=details, error=error)
+    return EvaluationResult(
+        task_id=task.id,
+        category=task.category,
+        dataset=task.dataset,
+        question=task.question,
+        metrics=metrics,
+        details=details,
+        error=error,
+    )
 
 
 def aggregate_metrics(results: list[EvaluationResult]) -> dict[str, Any]:
     n = len(results)
     if n == 0:
         return {}
+
     def _avg(key: str) -> float | None:
         vals = [getattr(r.metrics, key) for r in results if getattr(r.metrics, key) is not None]
         if not vals:
@@ -180,5 +206,8 @@ def aggregate_metrics(results: list[EvaluationResult]) -> dict[str, Any]:
         "evidence_coverage": _avg("evidence_coverage"),
         "unsupported_claim_rate": _avg("unsupported_claim"),
         "mean_latency_ms": _mean_latency(),
-        "by_category": {k: {"n": len(v), "task_success": sum(1 for x in v if x.metrics.task_success) / len(v)} for k, v in by_cat.items()},
+        "by_category": {
+            k: {"n": len(v), "task_success": sum(1 for x in v if x.metrics.task_success) / len(v)}
+            for k, v in by_cat.items()
+        },
     }

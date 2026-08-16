@@ -1,0 +1,44 @@
+{
+  "n": 50,
+  "task_success_rate": 1.0,
+  "statistical_accuracy": 1.0,
+  "sql_accuracy": 1.0,
+  "code_execution_success": 1.0,
+  "evidence_coverage": 1.0,
+  "unsupported_claim_rate": 0.06,
+  "mean_latency_ms": 47.92,
+  "by_category": {
+    "EDA": {
+      "n": 8,
+      "task_success": 1.0
+    },
+    "SQL": {
+      "n": 7,
+      "task_success": 1.0
+    },
+    "Statistics": {
+      "n": 8,
+      "task_success": 1.0
+    },
+    "Regression": {
+      "n": 6,
+      "task_success": 1.0
+    },
+    "Classification": {
+      "n": 6,
+      "task_success": 1.0
+    },
+    "Time Series": {
+      "n": 5,
+      "task_success": 1.0
+    },
+    "Visualization": {
+      "n": 5,
+      "task_success": 1.0
+    },
+    "Data Quality": {
+      "n": 5,
+      "task_success": 1.0
+    }
+  }
+}

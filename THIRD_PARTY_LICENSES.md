@@ -33,4 +33,8 @@ Ruff (MIT), MyPy (MIT), Pytest (MIT), uv (MIT/Apache-2.0)
 
 ## Datasets
 
-All 20 benchmark datasets under `benchmarks/ds-agent-benchmark/datasets/` and `examples/datasets/` are **synthetic, deterministic (seed 42), public domain (CC0)** — no third-party dataset licenses required. When real public datasets are added (e.g., Titanic), record source/license/citation here per spec §69.
+All benchmark datasets under `benchmarks/ds-agent-benchmark/datasets/` (20), `benchmarks/v2/datasets` (30, 20 v1 verbatim + 10 new), and `examples/datasets/` are **synthetic, deterministic (seed 42), public domain (CC0)** — no third-party dataset licenses required. When real public datasets are added (e.g., Titanic), record source/license/citation here per spec §69.
+
+## Dependency Policy (V2 §69)
+
+No new dependency may be added without documenting Purpose / License / Size / Security / Maintenance / Alternative / Why-needed, and updating this file. V2 added none beyond the frozen stack above.

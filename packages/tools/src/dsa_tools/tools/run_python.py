@@ -5,10 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-import polars as pl
-
 from dsa_datasets.loader import load_dataframe
-from dsa_datasets.models import DatasetFormat
 from dsa_datasets.validate import detect_format
 from dsa_execution.python_sandbox import execute_python
 from dsa_tools.base import BaseTool
@@ -16,7 +13,9 @@ from dsa_tools.errors import ToolExecutionError
 
 
 class RunPythonInput(BaseModel):
-    code: str = Field(description="Python code to execute in sandbox. Available: pl, np, math, statistics, df (if dataset_path given)")
+    code: str = Field(
+        description="Python code to execute in sandbox. Available: pl, np, math, statistics, df (if dataset_path given)"
+    )
     dataset_path: str | None = None
     timeout_ms: int = Field(default=5000, ge=100, le=30000)
 

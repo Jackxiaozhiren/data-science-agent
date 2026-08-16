@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-import polars as pl
 from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
@@ -69,15 +68,27 @@ class EvaluateModelTool(BaseTool[EvaluateModelInput, EvaluateModelOutput]):
         except Exception as e:
             raise ToolExecutionError(f"Non-numeric: {e}") from e
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=inp.test_size, random_state=42, stratify=y if inp.task == "classification" and len(np.unique(y)) < 20 else None)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=inp.test_size,
+            random_state=42,
+            stratify=y if inp.task == "classification" and len(np.unique(y)) < 20 else None,
+        )
 
         if inp.task == "classification":
-            clf = LogisticRegression(max_iter=1000) if inp.model == "logistic" else RandomForestClassifier(n_estimators=100, random_state=42)
+            clf = (
+                LogisticRegression(max_iter=1000)
+                if inp.model == "logistic"
+                else RandomForestClassifier(n_estimators=100, random_state=42)
+            )
             clf.fit(X_train, y_train)
             y_pred = clf.predict(X_test)
             metrics: dict[str, float] = {
                 "accuracy": float(accuracy_score(y_test, y_pred)),
-                "precision": float(precision_score(y_test, y_pred, average="weighted", zero_division=0)),
+                "precision": float(
+                    precision_score(y_test, y_pred, average="weighted", zero_division=0)
+                ),
                 "recall": float(recall_score(y_test, y_pred, average="weighted", zero_division=0)),
                 "f1": float(f1_score(y_test, y_pred, average="weighted", zero_division=0)),
             }
@@ -88,7 +99,13 @@ class EvaluateModelTool(BaseTool[EvaluateModelInput, EvaluateModelOutput]):
             except Exception:
                 pass
             cm = confusion_matrix(y_test, y_pred).tolist()
-            return EvaluateModelOutput(task=inp.task, model=inp.model, metrics=metrics, confusion_matrix=cm, diagnostics={"features": feat_cols})
+            return EvaluateModelOutput(
+                task=inp.task,
+                model=inp.model,
+                metrics=metrics,
+                confusion_matrix=cm,
+                diagnostics={"features": feat_cols},
+            )
         else:
             # regression
             reg = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -100,4 +117,10 @@ class EvaluateModelTool(BaseTool[EvaluateModelInput, EvaluateModelOutput]):
                 "rmse": float(np.sqrt(mean_squared_error(y_test, y_pred))),
                 "r2": float(r2_score(y_test, y_pred)),
             }
-            return EvaluateModelOutput(task=inp.task, model="random_forest", metrics=metrics, confusion_matrix=None, diagnostics={"features": feat_cols})
+            return EvaluateModelOutput(
+                task=inp.task,
+                model="random_forest",
+                metrics=metrics,
+                confusion_matrix=None,
+                diagnostics={"features": feat_cols},
+            )

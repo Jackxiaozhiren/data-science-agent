@@ -2,7 +2,6 @@ from typing import Any
 
 from dsa_tools.base import BaseTool, ToolResult
 from dsa_tools.registry import clear, get, list_tools, register
-
 from dsa_tools.tools.assumption_check import AssumptionCheckTool
 from dsa_tools.tools.causal_check import CausalCheckTool
 from dsa_tools.tools.correlation import CorrelationTool

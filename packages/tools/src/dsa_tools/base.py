@@ -45,13 +45,23 @@ class BaseTool(ABC, Generic[InputT, OutputT]):
             inp = self._coerce_input(payload)
             out = await self.execute(inp)
             dur = int((time.perf_counter() - t0) * 1000)
-            return ToolResult(tool=self.name, call_id=call_id, status="ok", duration_ms=dur, output=out)
+            return ToolResult(
+                tool=self.name, call_id=call_id, status="ok", duration_ms=dur, output=out
+            )
         except ToolExecutionError as e:
             dur = int((time.perf_counter() - t0) * 1000)
-            return ToolResult(tool=self.name, call_id=call_id, status="error", duration_ms=dur, error=str(e))
+            return ToolResult(
+                tool=self.name, call_id=call_id, status="error", duration_ms=dur, error=str(e)
+            )
         except Exception as e:
             dur = int((time.perf_counter() - t0) * 1000)
-            return ToolResult(tool=self.name, call_id=call_id, status="error", duration_ms=dur, error=f"{type(e).__name__}: {e}")
+            return ToolResult(
+                tool=self.name,
+                call_id=call_id,
+                status="error",
+                duration_ms=dur,
+                error=f"{type(e).__name__}: {e}",
+            )
 
     def _coerce_input(self, payload: dict[str, Any] | InputT) -> InputT:
         if isinstance(payload, self.input_model):

@@ -10,7 +10,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import polars as pl
 from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
@@ -36,7 +35,9 @@ class FeatureImportanceOutput(BaseModel):
 
 class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOutput]):
     name = "feature_importance"
-    description = "RandomForest feature importance with chart artifact (explainability, no SHAP dep)"
+    description = (
+        "RandomForest feature importance with chart artifact (explainability, no SHAP dep)"
+    )
     input_model = FeatureImportanceInput
     output_model = FeatureImportanceOutput
 
@@ -86,4 +87,6 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
         dest = out_dir / f"{uuid.uuid4().hex[:8]}_featimp.png"
         dest.write_bytes(png)
 
-        return FeatureImportanceOutput(target=inp.target, importances=out, artifact_path=str(dest), base64_png=b64)
+        return FeatureImportanceOutput(
+            target=inp.target, importances=out, artifact_path=str(dest), base64_png=b64
+        )

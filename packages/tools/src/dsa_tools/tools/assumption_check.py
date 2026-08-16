@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 import polars as pl
 from pydantic import BaseModel, Field
 from scipy import stats
@@ -44,7 +43,9 @@ class AssumptionCheckTool(BaseTool[AssumptionCheckInput, AssumptionCheckOutput])
         cols = inp.columns or ([inp.column] if inp.column else [])
         if not cols:
             # default: first numeric col
-            numeric = [c for c in df.columns if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)]
+            numeric = [
+                c for c in df.columns if df[c].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
+            ]
             if not numeric:
                 raise ToolExecutionError(f"No numeric column found; columns: {df.columns}")
             cols = [numeric[0]]
@@ -60,7 +61,15 @@ class AssumptionCheckTool(BaseTool[AssumptionCheckInput, AssumptionCheckOutput])
             except Exception as e:
                 raise ToolExecutionError(f"Column {col!r} not numeric: {e}") from e
             if len(arr) < 8:
-                checks.append({"column": col, "check": "normality", "n": len(arr), "note": "n<8, normality unreliable", "passed": True})
+                checks.append(
+                    {
+                        "column": col,
+                        "check": "normality",
+                        "n": len(arr),
+                        "note": "n<8, normality unreliable",
+                        "passed": True,
+                    }
+                )
                 continue
             # Shapiro (n up to 5000) else D'Agostino
             try:
@@ -71,10 +80,20 @@ class AssumptionCheckTool(BaseTool[AssumptionCheckInput, AssumptionCheckOutput])
                     stat, pval = stats.normaltest(arr)
                     test_name = "dagostino"
             except Exception as e:
-                checks.append({"column": col, "check": "normality", "error": str(e), "passed": True})
+                checks.append(
+                    {"column": col, "check": "normality", "error": str(e), "passed": True}
+                )
                 continue
             passed = bool(pval > 0.05)
-            checks.append({"column": col, "check": test_name, "statistic": float(stat), "p_value": float(pval), "passed": passed})
+            checks.append(
+                {
+                    "column": col,
+                    "check": test_name,
+                    "statistic": float(stat),
+                    "p_value": float(pval),
+                    "passed": passed,
+                }
+            )
             if not passed:
                 overall_pass = False
 
@@ -93,11 +112,23 @@ class AssumptionCheckTool(BaseTool[AssumptionCheckInput, AssumptionCheckOutput])
                     try:
                         stat, pval = stats.levene(*arrays)
                         passed = bool(pval > 0.05)
-                        checks.append({"check": "levene", "statistic": float(stat), "p_value": float(pval), "passed": passed, "group_col": inp.group_col})
+                        checks.append(
+                            {
+                                "check": "levene",
+                                "statistic": float(stat),
+                                "p_value": float(pval),
+                                "passed": passed,
+                                "group_col": inp.group_col,
+                            }
+                        )
                         if not passed:
                             overall_pass = False
                     except Exception as e:
                         checks.append({"check": "levene", "error": str(e), "passed": True})
 
-        rec = "Assumptions hold (p>0.05)." if overall_pass else "Normality or homogeneity violated: consider Welch/Mann-Whitney, transform or bootstrap; report with caution."
+        rec = (
+            "Assumptions hold (p>0.05)."
+            if overall_pass
+            else "Normality or homogeneity violated: consider Welch/Mann-Whitney, transform or bootstrap; report with caution."
+        )
         return AssumptionCheckOutput(checks=checks, recommendation=rec, passed=overall_pass)

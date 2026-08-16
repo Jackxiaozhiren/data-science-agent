@@ -23,6 +23,12 @@ export default async function Home() {
           <a href="/analysis" className="rounded border px-3 py-2 text-sm">New analysis</a>
         </div>
       </div>
+      <div className="grid gap-4 sm:grid-cols-4">
+        <div className="rounded border bg-white p-3"><div className="text-xs text-zinc-500">Task Success</div><div className="text-lg font-semibold">—</div><div className="text-xs text-zinc-400">from benchmarks/baseline</div></div>
+        <div className="rounded border bg-white p-3"><div className="text-xs text-zinc-500">Evidence Coverage</div><div className="text-lg font-semibold">—</div></div>
+        <div className="rounded border bg-white p-3"><div className="text-xs text-zinc-500">Reproducibility</div><div className="text-lg font-semibold">L0–L5</div></div>
+        <div className="rounded border bg-white p-3"><div className="text-xs text-zinc-500">Avg Latency</div><div className="text-lg font-semibold">—</div></div>
+      </div>
       <div className="rounded-xl border bg-white p-4">
         <h2 className="font-medium">Recent analyses</h2>
         {recent.length === 0 ? (

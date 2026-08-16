@@ -9,14 +9,18 @@ EXT_TO_MIME: dict[str, set[str]] = {
     ".parquet": {"application/octet-stream", "application/parquet"},
     ".json": {"application/json", "text/plain"},
     ".jsonl": {"application/json", "text/plain"},
-    ".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel", "application/zip"},
+    ".xlsx": {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+        "application/zip",
+    },
     ".xls": {"application/vnd.ms-excel"},
 }
 
 # Magic-byte checks for stronger validation
 _MAGIC: list[tuple[bytes, str]] = [
     (b"PK\x03\x04", ".xlsx"),  # zip-based xlsx
-    (b"\xD0\xCF\x11\xE0", ".xls"),  # OLE
+    (b"\xd0\xcf\x11\xe0", ".xls"),  # OLE
     (b"PAR1", ".parquet"),
 ]
 

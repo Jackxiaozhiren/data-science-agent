@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from httpx import ASGITransport, AsyncClient
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from dsa_api.core.database import Base, get_session
@@ -31,7 +31,10 @@ async def _upload_and_run(ac: AsyncClient) -> tuple[str, str]:
     r = await ac.post("/api/v1/datasets/", files={"file": ("t.csv", csv, "text/csv")})
     assert r.status_code == 200, r.text
     ds_id = r.json()["id"]
-    r2 = await ac.post("/api/v1/analysis/", json={"dataset_id": ds_id, "user_query": "Analyze correlation between a and b"})
+    r2 = await ac.post(
+        "/api/v1/analysis/",
+        json={"dataset_id": ds_id, "user_query": "Analyze correlation between a and b"},
+    )
     assert r2.status_code == 200, r2.text
     return ds_id, r2.json()["id"]
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse
@@ -28,7 +29,9 @@ class CreateAnalysisBody(BaseModel):
 
 
 @router.post("/")
-async def create_analysis(body: CreateAnalysisBody, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def create_analysis(
+    body: CreateAnalysisBody, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     if not body.dataset_id or not body.user_query.strip():
         raise HTTPException(status_code=400, detail="dataset_id and user_query required")
     try:
@@ -41,7 +44,9 @@ async def create_analysis(body: CreateAnalysisBody, session: AsyncSession = Depe
 
 
 @router.get("/")
-async def list_analyses(dataset_id: str | None = None, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def list_analyses(
+    dataset_id: str | None = None, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     items = await list_analysis_runs(session, dataset_id=dataset_id)
     return {"analyses": items}
 
@@ -55,7 +60,9 @@ async def get_analysis(run_id: str, session: AsyncSession = Depends(get_session)
 
 
 @router.get("/{run_id}/progress")
-async def get_analysis_progress(run_id: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def get_analysis_progress(
+    run_id: str, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -63,7 +70,9 @@ async def get_analysis_progress(run_id: str, session: AsyncSession = Depends(get
 
 
 @router.get("/{run_id}/events")
-async def get_analysis_events(run_id: str, request: Request, session: AsyncSession = Depends(get_session)) -> StreamingResponse:
+async def get_analysis_events(
+    run_id: str, request: Request, session: AsyncSession = Depends(get_session)
+) -> StreamingResponse:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -86,11 +95,19 @@ async def get_analysis_events(run_id: str, request: Request, session: AsyncSessi
             await asyncio.sleep(0.01)
         yield "data: [DONE]\n\n"
 
-    return StreamingResponse(_gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(
+        _gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/{run_id}/report")
-async def get_analysis_report(run_id: str, format: str = Query(default="json", description="json|markdown"), session: AsyncSession = Depends(get_session)) -> Any:
+async def get_analysis_report(
+    run_id: str,
+    format: str = Query(default="json", description="json|markdown"),
+    session: AsyncSession = Depends(get_session),
+) -> Any:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -111,18 +128,26 @@ async def get_analysis_report(run_id: str, format: str = Query(default="json", d
 
 
 @router.get("/{run_id}/artifacts")
-async def get_analysis_artifacts(run_id: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def get_analysis_artifacts(
+    run_id: str, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     state = row.get("state") or {}
     # Enrich with progress
     prog = analysis_progress(row)
-    return {"artifacts": state.get("artifacts", []), "tool_calls": state.get("tool_calls", []), "progress": prog}
+    return {
+        "artifacts": state.get("artifacts", []),
+        "tool_calls": state.get("tool_calls", []),
+        "progress": prog,
+    }
 
 
 @router.get("/{run_id}/evidence/{evidence_id}")
-async def get_evidence_trace(run_id: str, evidence_id: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def get_evidence_trace(
+    run_id: str, evidence_id: str, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -133,15 +158,20 @@ async def get_evidence_trace(run_id: str, evidence_id: str, session: AsyncSessio
 
 
 @router.post("/{run_id}/approve")
-async def approve_analysis(run_id: str, body: dict[str, Any] | None = None, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def approve_analysis(
+    run_id: str, body: dict[str, Any] | None = None, session: AsyncSession = Depends(get_session)
+) -> dict[str, Any]:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     if row.get("status") != "HUMAN_REVIEW":
-        raise HTTPException(status_code=409, detail=f"Analysis not awaiting approval (status={row.get('status')})")
+        raise HTTPException(
+            status_code=409, detail=f"Analysis not awaiting approval (status={row.get('status')})"
+        )
     # For MVP, approval flips to COMPLETED with note; full re-run is Phase 9+
-    from dsa_api.models.analysis import AnalysisRunORM
     from sqlalchemy import select as _select
+
+    from dsa_api.models.analysis import AnalysisRunORM
 
     result = await session.execute(_select(AnalysisRunORM).where(AnalysisRunORM.id == run_id))
     orm = result.scalars().first()
@@ -152,7 +182,9 @@ async def approve_analysis(run_id: str, body: dict[str, Any] | None = None, sess
     import json as _json
 
     state = _json.loads(orm.state_json) if orm.state_json else {}
-    state.setdefault("validation_results", []).append({"check": "human_approval", "passed": True, "message": note})
+    state.setdefault("validation_results", []).append(
+        {"check": "human_approval", "passed": True, "message": note}
+    )
     orm.state_json = _json.dumps(state)
     orm.status = "COMPLETED"
     await session.commit()

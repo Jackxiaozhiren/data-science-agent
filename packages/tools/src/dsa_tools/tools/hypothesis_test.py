@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -16,7 +16,9 @@ from dsa_tools.errors import ToolExecutionError
 
 class HypothesisTestInput(BaseModel):
     dataset_path: str
-    test: Literal["t_test", "welch_t_test", "mann_whitney", "anova", "kruskal", "chi2", "fisher"] = "t_test"
+    test: Literal[
+        "t_test", "welch_t_test", "mann_whitney", "anova", "kruskal", "chi2", "fisher"
+    ] = "t_test"
     group_col: str | None = None
     value_col: str | None = None
     group_a: str | None = None
@@ -64,21 +66,35 @@ class HypothesisTestTool(BaseTool[HypothesisTestInput, HypothesisTestOutput]):
 
         if test in ("t_test", "welch_t_test", "mann_whitney"):
             if not inp.group_col or not inp.value_col:
-                raise ToolExecutionError("group_col and value_col required for t_test/welch/mann_whitney")
+                raise ToolExecutionError(
+                    "group_col and value_col required for t_test/welch/mann_whitney"
+                )
             if inp.group_col not in df.columns or inp.value_col not in df.columns:
                 raise ToolExecutionError(f"Columns not found: {df.columns}")
             groups = df[inp.group_col].unique().to_list()
             # filter nulls
             sub = df.select([inp.group_col, inp.value_col]).drop_nulls()
             if inp.group_a and inp.group_b:
-                a_vals = sub.filter(pl.col(inp.group_col) == inp.group_a)[inp.value_col].to_numpy().astype(float)
-                b_vals = sub.filter(pl.col(inp.group_col) == inp.group_b)[inp.value_col].to_numpy().astype(float)
+                a_vals = (
+                    sub.filter(pl.col(inp.group_col) == inp.group_a)[inp.value_col]
+                    .to_numpy()
+                    .astype(float)
+                )
+                b_vals = (
+                    sub.filter(pl.col(inp.group_col) == inp.group_b)[inp.value_col]
+                    .to_numpy()
+                    .astype(float)
+                )
             else:
                 if len(groups) < 2:
                     raise ToolExecutionError("Need at least 2 groups")
                 g0, g1 = groups[0], groups[1]
-                a_vals = sub.filter(pl.col(inp.group_col) == g0)[inp.value_col].to_numpy().astype(float)
-                b_vals = sub.filter(pl.col(inp.group_col) == g1)[inp.value_col].to_numpy().astype(float)
+                a_vals = (
+                    sub.filter(pl.col(inp.group_col) == g0)[inp.value_col].to_numpy().astype(float)
+                )
+                b_vals = (
+                    sub.filter(pl.col(inp.group_col) == g1)[inp.value_col].to_numpy().astype(float)
+                )
             if len(a_vals) < 2 or len(b_vals) < 2:
                 raise ToolExecutionError("Each group needs >=2 observations")
 
@@ -96,7 +112,9 @@ class HypothesisTestTool(BaseTool[HypothesisTestInput, HypothesisTestOutput]):
                 assumptions = ["independence", "ordinal/continuous"]
 
             sig = "reject H0" if float(pval) < 0.05 else "fail to reject H0"
-            interp = f"{test}: statistic={float(stat):.4f}, p={float(pval):.4g} -> {sig} at alpha=0.05."
+            interp = (
+                f"{test}: statistic={float(stat):.4f}, p={float(pval):.4g} -> {sig} at alpha=0.05."
+            )
             return HypothesisTestOutput(
                 test=test,
                 statistic=float(stat),
@@ -112,7 +130,10 @@ class HypothesisTestTool(BaseTool[HypothesisTestInput, HypothesisTestOutput]):
             if not inp.group_col or not inp.value_col:
                 raise ToolExecutionError("group_col and value_col required for anova/kruskal")
             sub = df.select([inp.group_col, inp.value_col]).drop_nulls()
-            groups = [sub.filter(pl.col(inp.group_col) == g)[inp.value_col].to_numpy().astype(float) for g in sub[inp.group_col].unique().to_list()]
+            groups = [
+                sub.filter(pl.col(inp.group_col) == g)[inp.value_col].to_numpy().astype(float)
+                for g in sub[inp.group_col].unique().to_list()
+            ]
             if len(groups) < 2:
                 raise ToolExecutionError("Need >=2 groups")
             if test == "anova":
@@ -123,7 +144,13 @@ class HypothesisTestTool(BaseTool[HypothesisTestInput, HypothesisTestOutput]):
                 assumptions = ["independence", "ordinal"]
             sig = "reject H0" if float(pval) < 0.05 else "fail to reject H0"
             interp = f"{test}: statistic={float(stat):.4f}, p={float(pval):.4g} -> {sig}."
-            return HypothesisTestOutput(test=test, statistic=float(stat), p_value=float(pval), assumptions=assumptions, interpretation=interp)
+            return HypothesisTestOutput(
+                test=test,
+                statistic=float(stat),
+                p_value=float(pval),
+                assumptions=assumptions,
+                interpretation=interp,
+            )
 
         if test == "chi2":
             if not inp.group_col or not inp.value_col:
@@ -142,6 +169,12 @@ class HypothesisTestTool(BaseTool[HypothesisTestInput, HypothesisTestOutput]):
                 raise ToolExecutionError(f"Failed to build contingency table: {e}") from e
             stat, pval, dof, expected = stats.chi2_contingency(mat)
             interp = f"chi2: statistic={float(stat):.4f}, p={float(pval):.4g} -> {'reject H0' if float(pval) < 0.05 else 'fail to reject H0'}."
-            return HypothesisTestOutput(test=test, statistic=float(stat), p_value=float(pval), assumptions=["independence", "expected counts >=5"], interpretation=interp)
+            return HypothesisTestOutput(
+                test=test,
+                statistic=float(stat),
+                p_value=float(pval),
+                assumptions=["independence", "expected counts >=5"],
+                interpretation=interp,
+            )
 
         raise ToolExecutionError(f"Unsupported test: {test}")

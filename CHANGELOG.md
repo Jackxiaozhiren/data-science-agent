@@ -1,6 +1,17 @@
 # Changelog
 
-## 1.8.0 — Lightweight observability (upcoming)
+## 2.0.0-alpha.1 — V2 Research Grade (W1–W10 scaffold)
+- Baseline freeze: `docs/v2/Baseline Report.md` (live: 86 → 116 tests, 7 → 13 routes, 50/50 frozen to `benchmarks/baseline/`)
+- W2 Evaluation Framework: `packages/evaluation/src/dsa_evaluation/evaluation_framework.py` (EvaluationResultV2 10-dim + 6-level, `by_difficulty`)
+- W3 Benchmark v2: `benchmarks/v2` (30 datasets / 100 tasks / 11 categories) via `scripts/generate_benchmark_v2.py`
+- W4–W7: trajectory (`packages/agent/src/dsa_agent/trajectory.py`), reproducibility L0–L5, failure taxonomy F01–F15, observability Trace/Span
+- W8 MCP 2026-07-28: stateless core (drop `initialize`), rich `MCPToolDef` + classification + `tests/mcp/conformance/` (7) + ADR-001
+- W9 Security: `tests/security/test_adversarial_suite.py` (10) — injection / abuse / DoS suite
+- W10 Research: `research/` (RQs, ablation A–F, `significance.py` bootstrap/McNemar/Wilcoxon), `research/results/ablation_*.json`
+- Frontend: `/benchmarks /evaluations /runs /runs/[id] /runs/[id]/replay /failures /research /mcp` (13 routes)
+- Version: `pyproject.toml` 1.8.0 → 2.0.0-alpha.1 · CI adds `dsa --limit 5`, `npm build`, `compose config`
+
+## 1.8.0 — Lightweight observability
 - `GET /metrics` (JSON: uptime, process `rss_mb`, `tool_calls_total`, `version`) + datasets empty-state health hint.
 - `CHANGELOG` finalizes `1.6/1.7` entries; version → `1.8.0`.
 

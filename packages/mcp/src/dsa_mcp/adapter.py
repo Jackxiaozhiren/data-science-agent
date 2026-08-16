@@ -1,14 +1,23 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+ToolClass = Literal["SAFE_READ", "ANALYSIS", "COMPUTE", "WRITE_ARTIFACT", "DESTRUCTIVE"]
 
 
 class MCPToolDef(BaseModel):
     name: str
     description: str
     input_schema: dict[str, Any] = Field(default_factory=dict)
+    output_schema: dict[str, Any] = Field(default_factory=dict)
+    permissions: list[str] = Field(default_factory=list)
+    idempotency: bool = False
+    timeout_ms: int = 30000
+    cost_class: str = "low"
+    tool_class: ToolClass = "ANALYSIS"
+    cache_hint: str | None = None
 
 
 MCP_TOOL_MAP: dict[str, str] = {
@@ -31,7 +40,37 @@ MCP_TOOL_MAP: dict[str, str] = {
     "save_artifact": "save_artifact",
 }
 
-# Human descriptions for MCP discovery
+MCP_TOOL_CLASS: dict[str, ToolClass] = {
+    "profile_dataset": "SAFE_READ",
+    "inspect_dataset": "SAFE_READ",
+    "query_dataset": "ANALYSIS",
+    "run_sql": "ANALYSIS",
+    "run_python": "COMPUTE",
+    "run_statistical_test": "ANALYSIS",
+    "correlation_analysis": "ANALYSIS",
+    "forecast": "COMPUTE",
+    "assumption_check": "ANALYSIS",
+    "causal_check": "ANALYSIS",
+    "train_model": "COMPUTE",
+    "evaluate_model": "ANALYSIS",
+    "feature_importance": "COMPUTE",
+    "create_visualization": "WRITE_ARTIFACT",
+    "get_evidence": "SAFE_READ",
+    "generate_report": "WRITE_ARTIFACT",
+    "save_artifact": "WRITE_ARTIFACT",
+}
+
+MCP_IDEMPOTENT = {
+    "profile_dataset",
+    "inspect_dataset",
+    "query_dataset",
+    "run_sql",
+    "correlation_analysis",
+    "assumption_check",
+    "forecast",
+}
+MCP_WRITE = {"generate_report", "save_artifact", "create_visualization"}
+
 MCP_DESCRIPTIONS: dict[str, str] = {
     "profile_dataset": "Profile a dataset file (schema, missing, duplicates, cardinality).",
     "inspect_dataset": "Inspect dataset schema / columns (alias of profile_dataset).",
@@ -52,7 +91,6 @@ MCP_DESCRIPTIONS: dict[str, str] = {
     "save_artifact": "Save an artifact under artifacts/<run_id>/",
 }
 
-# Route get_evidence specially: map to validate_result if claim looks like validation, else create_evidence
 EVIDENCE_VIA_VALIDATE = {"validate_result"}
 
 
@@ -66,40 +104,75 @@ def _tool_input_schema(backend: str) -> dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
+def _tool_output_schema(backend: str) -> dict[str, Any]:
+    from dsa_tools import get as get_tool
+
+    tool = get_tool(backend)
+    try:
+        return tool.output_model.model_json_schema()  # type: ignore[no-any-return]
+    except Exception:
+        return {"type": "object", "properties": {}}
+
+
 def list_mcp_tools() -> list[MCPToolDef]:
-    # Ensure tools bootstrapped
     from dsa_tools import bootstrap, list_tools
 
     if not list_tools():
         bootstrap()
     out: list[MCPToolDef] = []
     for mcp_name, backend in MCP_TOOL_MAP.items():
-        schema = _tool_input_schema(backend if MCP_TOOL_MAP[mcp_name] != "inspect_dataset" else "profile_dataset")
+        schema = _tool_input_schema(
+            backend if MCP_TOOL_MAP[mcp_name] != "inspect_dataset" else "profile_dataset"
+        )
+        out_schema = _tool_output_schema(
+            backend if MCP_TOOL_MAP[mcp_name] != "inspect_dataset" else "profile_dataset"
+        )
         desc = MCP_DESCRIPTIONS.get(mcp_name, backend)
-        out.append(MCPToolDef(name=mcp_name, description=desc, input_schema=schema))
+        klass = MCP_TOOL_CLASS.get(mcp_name, "ANALYSIS")
+        is_idem = mcp_name in MCP_IDEMPOTENT
+        is_write = mcp_name in MCP_WRITE
+        out.append(
+            MCPToolDef(
+                name=mcp_name,
+                description=desc,
+                input_schema=schema,
+                output_schema=out_schema,
+                permissions=["read"]
+                if klass in ("SAFE_READ", "ANALYSIS")
+                else (["write"] if is_write else ["compute"]),
+                idempotency=is_idem,
+                timeout_ms=30000 if klass == "COMPUTE" else 10000,
+                cost_class="high"
+                if klass == "COMPUTE"
+                else ("medium" if klass == "ANALYSIS" else "low"),
+                tool_class=klass,
+                cache_hint="max-age=60" if is_idem else None,
+            )
+        )
     return out
 
 
 async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     """Stateless dispatch: validate → call backend BaseTool → return output/error."""
-    from dsa_tools import bootstrap, get as get_tool, list_tools
+    from dsa_tools import bootstrap, list_tools
+    from dsa_tools import get as get_tool
 
     if not list_tools():
         bootstrap()
     backend = MCP_TOOL_MAP.get(name)
     if backend is None:
-        return {"isError": True, "error": f"Unknown MCP tool: {name}", "available": sorted(MCP_TOOL_MAP)}
-    # Special cases
+        return {
+            "isError": True,
+            "error": f"Unknown MCP tool: {name}",
+            "available": sorted(MCP_TOOL_MAP),
+        }
     if name == "inspect_dataset":
-        # map to profile_dataset but project a slimmer output (still full profile for V0.1)
         backend = "profile_dataset"
     if name == "query_dataset":
-        # ensure sql present; wrap as run_sql
         backend = "run_sql"
         if "sql" not in arguments and "query" in arguments:
             arguments = {**arguments, "sql": arguments["query"]}
     if name == "get_evidence":
-        # Heuristic: if arguments has 'check_type' or 'validate', route to validate_result
         if "check_type" in arguments or arguments.get("mode") == "validate":
             backend = "validate_result"
         else:
@@ -111,6 +184,24 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         out_val = result.output
         if out_val is not None:
             out = out_val.model_dump(mode="json") if hasattr(out_val, "model_dump") else out_val
-            return {"isError": False, "tool": backend, "mcp_tool": name, "call_id": result.call_id, "output": out}
-        return {"isError": False, "tool": backend, "mcp_tool": name, "call_id": result.call_id, "output": {}}
-    return {"isError": True, "tool": backend, "mcp_tool": name, "call_id": result.call_id, "error": result.error}
+            return {
+                "isError": False,
+                "tool": backend,
+                "mcp_tool": name,
+                "call_id": result.call_id,
+                "output": out,
+            }
+        return {
+            "isError": False,
+            "tool": backend,
+            "mcp_tool": name,
+            "call_id": result.call_id,
+            "output": {},
+        }
+    return {
+        "isError": True,
+        "tool": backend,
+        "mcp_tool": name,
+        "call_id": result.call_id,
+        "error": result.error,
+    }

@@ -8,7 +8,18 @@ import polars as pl
 
 from dsa_datasets.models import ColumnKind, ColumnProfile, DatasetFormat, DatasetProfile
 
-_NUMERIC_DTYPES = {pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64, pl.Float32, pl.Float64}
+_NUMERIC_DTYPES = {
+    pl.Int8,
+    pl.Int16,
+    pl.Int32,
+    pl.Int64,
+    pl.UInt8,
+    pl.UInt16,
+    pl.UInt32,
+    pl.UInt64,
+    pl.Float32,
+    pl.Float64,
+}
 _DATETIME_DTYPES = {pl.Date, pl.Datetime, pl.Time, pl.Duration}
 _BOOL_DTYPE = pl.Boolean
 
@@ -116,7 +127,12 @@ def build_profile(
     # heuristic potential target: low-card categorical / boolean near binary
     potential_targets = []
     for p in col_profiles:
-        if p.kind in (ColumnKind.categorical, ColumnKind.boolean) and p.unique_count is not None and 2 <= p.unique_count <= 10 and p.null_ratio < 0.3:
+        if (
+            p.kind in (ColumnKind.categorical, ColumnKind.boolean)
+            and p.unique_count is not None
+            and 2 <= p.unique_count <= 10
+            and p.null_ratio < 0.3
+        ):
             potential_targets.append(p.name)
 
     return DatasetProfile(
@@ -137,7 +153,9 @@ def build_profile(
     )
 
 
-def quick_profile_for_path(path: Path, fmt: DatasetFormat, dataset_id: str | None = None) -> tuple[pl.DataFrame, DatasetProfile]:
+def quick_profile_for_path(
+    path: Path, fmt: DatasetFormat, dataset_id: str | None = None
+) -> tuple[pl.DataFrame, DatasetProfile]:
     from dsa_datasets.loader import load_dataframe
 
     df = load_dataframe(path, fmt)

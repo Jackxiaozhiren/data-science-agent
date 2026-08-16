@@ -9,4 +9,5 @@ class Settings(BaseSettings):
 
     model_config = {"env_prefix": "DSA_"}
 
+
 settings = Settings()

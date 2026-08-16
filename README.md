@@ -1,11 +1,13 @@
-# Data Science Agent
+# Data Science Agent — v2.0.0-alpha.1 (Research Grade)
 
 > **An Evidence-Grounded Autonomous Data Science System.**
 > Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.
+> V2 adds: Evaluation Framework · Scientific Benchmark v2 (30 datasets / 100 tasks) · Reliability & Reproducibility · Failure Analysis · Observability · MCP 2026-07-28 Stateless · Security Hardening · Research Package.
 
 ## Documentation
 
 Docs: [Getting Started](./docs/getting-started.md) · [Agent](./docs/agent.md) · [Tools](./docs/tools.md) · [Evidence](./docs/evidence.md) · [API](./docs/api.md) · [MCP](./docs/MCP_DESIGN.md) · [Frontend IA](./docs/FRONTEND_IA.md) · [Research](./docs/research.md) · [Changelog](./CHANGELOG.md)
+V2: [Baseline Report](./docs/v2/Baseline%20Report.md) · [Evaluation](./docs/v2/evaluation.md) · [MCP 2026-07-28](./docs/v2/MCP_2026_Audit.md) · [Security (W9)](./docs/v2/security.md) · [Benchmark v2](./benchmarks/v2/README.md) · Benchmark baseline: [benchmarks/baseline](./benchmarks/baseline/README.md)
 MkDocs: `uv run mkdocs serve` / `uv run mkdocs build --strict` (see [mkdocs.yml](./mkdocs.yml)) — Architecture Freeze at [ARCHITECTURE_FREEZE_V0.1.md](./ARCHITECTURE_FREEZE_V0.1.md)
 
 ## Stack
@@ -26,13 +28,15 @@ uv run uvicorn dsa_api.main:app --reload --port 8000 --app-dir apps/api/src
 
 # Web (port 3000)
 cd apps/web && npm install --legacy-peer-deps && npm run dev
-# Build
-npm run build --workspace=dsa-web  # 7 routes green (/ /_not-found /analysis /analysis/[runId] /datasets /datasets/[id] /reports)
+# Build — V2: 13 routes (/benchmarks /evaluations /runs /runs/[id] /runs/[id]/replay /failures /research /mcp)
+npm run build --workspace=dsa-web  # 13 routes green
 
-# Benchmark (20 datasets / 50 tasks) — 50/50 @1.0
+# Benchmark v1 (20 datasets / 50 tasks) — frozen baseline: benchmarks/baseline — 50/50 @1.0
+# Benchmark v2 (30 datasets / 100 tasks) — benchmarks/v2 (Evaluation Framework + Evidence Validation)
 uv run dsa --help
 uv run dsa --limit 3
 uv run dsa --limit 50
+uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 50 --out /tmp/v2-bench
 ```
 
 ## Demo (One-Command Smoke)

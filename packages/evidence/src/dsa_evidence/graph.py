@@ -34,7 +34,9 @@ def build_evidence_graph(
                 claim=getattr(ev, "claim", str(ev)),
                 source_type=getattr(ev, "source_type", "python"),
                 source_id=getattr(ev, "source_id", ""),
-                result=getattr(ev, "result", {}) if hasattr(ev, "result") else (ev.get("result", {}) if isinstance(ev, dict) else {}),
+                result=getattr(ev, "result", {})
+                if hasattr(ev, "result")
+                else (ev.get("result", {}) if isinstance(ev, dict) else {}),
                 confidence=float(getattr(ev, "confidence", 0.0)),
                 validation_status=getattr(ev, "validation_status", "pending"),
             )
@@ -69,7 +71,9 @@ def build_evidence_graph(
         elif isinstance(tc, dict):
             tc_list.append(tc)
         else:
-            tc_list.append({"call_id": str(getattr(tc, "call_id", "")), "tool": str(getattr(tc, "tool", ""))})
+            tc_list.append(
+                {"call_id": str(getattr(tc, "call_id", "")), "tool": str(getattr(tc, "tool", ""))}
+            )
 
     return EvidenceGraph(
         run_id=run_id,
