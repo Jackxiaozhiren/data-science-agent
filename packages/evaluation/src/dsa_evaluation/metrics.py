@@ -142,20 +142,29 @@ def evaluate_task(
     else:
         metrics.statistical_accuracy = None
 
-    # SQL accuracy: check sql_contains
-    if criteria.sql_accuracy and gt.sql_contains:
-        sql_texts = []
-        for c in tcalls if isinstance(tcalls, list) else []:
-            if c.get("tool") == "run_sql":
-                inp = c.get("input") or {}
-                sql_texts.append((inp.get("sql") or "").upper())
-        need = [s.upper() for s in gt.sql_contains]
-        metrics.sql_accuracy = (
-            all(any(n in t for t in sql_texts) for n in need) if sql_texts else False
-        )
-        details["sql_contains"] = gt.sql_contains
+    # SQL accuracy: check sql_contains (empty sql_contains means any successful run_sql suffices when sql_accuracy required)
+    if criteria.sql_accuracy:
+        if gt.sql_contains:
+            sql_texts = []
+            for c in tcalls if isinstance(tcalls, list) else []:
+                if c.get("tool") == "run_sql":
+                    inp = c.get("input") or {}
+                    sql_texts.append((inp.get("sql") or "").upper())
+            need = [s.upper() for s in gt.sql_contains]
+            metrics.sql_accuracy = (
+                all(any(n in t for t in sql_texts) for n in need) if sql_texts else False
+            )
+            details["sql_contains"] = gt.sql_contains
+        else:
+            # sql_accuracy requested but no explicit fragments: pass if any run_sql succeeded
+            has_sql_ok = any(
+                c.get("tool") == "run_sql" and c.get("status") == "ok"
+                for c in (tcalls if isinstance(tcalls, list) else [])
+            )
+            metrics.sql_accuracy = bool(has_sql_ok)
+            details["sql_contains"] = []
     else:
-        metrics.sql_accuracy = None if not criteria.sql_accuracy else False
+        metrics.sql_accuracy = None
 
     # Visualization check
     if criteria.visualization:
