@@ -75,11 +75,52 @@ async def list_analysis_runs(session: AsyncSession, dataset_id: str | None = Non
 
 
 def sse_events_for_state(state_dict: dict[str, Any]) -> list[dict[str, Any]]:
-    # synthesize SSE events from stored state for polling fallback demo
     events: list[dict[str, Any]] = []
     state = state_dict.get("state") or {}
+    # Agent lifecycle
+    for msg in state.get("agent_messages", []):
+        events.append({"event": "agent_completed", "agent": msg.get("agent"), "content": msg.get("content")})
+    # Per-tool
     for tc in state.get("tool_calls", []):
-        events.append({"event": "tool_completed", "tool": tc.get("tool"), "status": tc.get("status"), "duration_ms": tc.get("duration_ms")})
+        events.append({"event": "tool_completed", "tool": tc.get("tool"), "status": tc.get("status"), "duration_ms": tc.get("duration_ms"), "call_id": tc.get("call_id")})
+    # Validation
+    for vr in state.get("validation_results", []):
+        events.append({"event": "validation_completed", "check": vr.get("check"), "passed": vr.get("passed"), "message": vr.get("message")})
+    # Report
+    if state.get("report_markdown"):
+        events.append({"event": "report_generated", "run_id": state_dict.get("id")})
     status = state_dict.get("status", "")
-    events.append({"event": "analysis_completed", "status": status})
+    events.append({"event": "analysis_completed", "status": status, "run_id": state_dict.get("id")})
     return events
+
+
+def evidence_trace_for_state(state_dict: dict[str, Any], evidence_id: str) -> dict[str, Any] | None:
+    state = state_dict.get("state") or {}
+    evs = {e.get("id"): e for e in state.get("evidence", [])}
+    ev = evs.get(evidence_id)
+    if ev is None:
+        return None
+    # trace to tool call
+    tcs = {c.get("call_id"): c for c in state.get("tool_calls", [])}
+    tc = tcs.get(ev.get("source_id"))
+    # trace to dataset
+    dataset = {"dataset_id": state_dict.get("dataset_id"), "dataset_path": state_dict.get("dataset_path")}
+    # insights that reference this evidence
+    insights = [i for i in state.get("insights", []) if evidence_id in (i.get("evidence_ids") or [])]
+    return {"evidence": ev, "tool_call": tc, "insights": insights, "dataset": dataset}
+
+
+def analysis_progress(state_dict: dict[str, Any]) -> dict[str, Any]:
+    state = state_dict.get("state") or {}
+    plan_len = len(state.get("plan", []))
+    done = len(state.get("tool_calls", []))
+    pct = int((done / plan_len * 100) if plan_len else (100 if state_dict.get("status") == "COMPLETED" else 0))
+    return {
+        "run_id": state_dict.get("id"),
+        "status": state_dict.get("status"),
+        "progress_pct": min(100, max(0, pct)),
+        "steps_total": plan_len,
+        "steps_done": done,
+        "evidence": len(state.get("evidence", [])),
+        "insights": len(state.get("insights", [])),
+    }
