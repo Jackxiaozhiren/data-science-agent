@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -14,7 +14,7 @@ class EvidenceNode(BaseModel):
     result: dict[str, Any] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0, default=0.0)
     validation_status: Literal["pending", "verified", "failed"] = "pending"
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class InsightNode(BaseModel):
@@ -24,7 +24,7 @@ class InsightNode(BaseModel):
     magnitude: str | None = None
     significance: str | None = None
     limitation: str | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class EvidenceEdge(BaseModel):
@@ -42,7 +42,7 @@ class EvidenceGraph(BaseModel):
     insights: list[InsightNode] = Field(default_factory=list)
     edges: list[EvidenceEdge] = Field(default_factory=list)
     tool_calls: list[dict[str, Any]] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     def trace_insight(self, insight_id: str) -> dict[str, Any]:
         ins = next((i for i in self.insights if i.id == insight_id), None)

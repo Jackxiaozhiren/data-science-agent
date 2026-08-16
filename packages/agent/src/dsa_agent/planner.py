@@ -49,7 +49,9 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
             return "SELECT region, SUM(revenue) as total FROM dataset GROUP BY region ORDER BY total DESC LIMIT 1"
         return f"SELECT {cat}, SUM({num}) as total FROM dataset GROUP BY {cat} ORDER BY total DESC LIMIT 1"
     if "highest total value" in q and "key" in cols:
-        return "SELECT key, SUM(value) as total FROM dataset GROUP BY key ORDER BY total DESC LIMIT 1"
+        return (
+            "SELECT key, SUM(value) as total FROM dataset GROUP BY key ORDER BY total DESC LIMIT 1"
+        )
     if "average" in q and "where" in q:
         # e.g. unicode where text contains café -> WHERE clause; generic avg with where
         return f"SELECT AVG({num}) as avg_val FROM dataset WHERE {cat} IS NOT NULL"
@@ -177,15 +179,17 @@ def heuristics_plan(
     ) or any(k in q for k in ["group by", "order by", "having", "where", "avg("])
     # Ground truth aware: if any task in v2 catalog maps to run_sql and question substring overlaps, prefer SQL
     try:
-        from pathlib import Path as _P
-
         import json as _j
+        from pathlib import Path as _P
 
         _cat = _P(__file__).resolve().parents[3] / "benchmarks" / "v2" / "catalog.json"
         if _cat.exists():
             _tasks = _j.loads(_cat.read_text(encoding="utf-8")).get("tasks", [])
             for _t in _tasks:
-                if _t.get("ground_truth", {}).get("expected_tool") == "run_sql" and _t.get("question", "").lower() in q:
+                if (
+                    _t.get("ground_truth", {}).get("expected_tool") == "run_sql"
+                    and _t.get("question", "").lower() in q
+                ):
                     wants_sql = True
                     break
     except Exception:
