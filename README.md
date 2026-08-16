@@ -3,9 +3,10 @@
 > **An Evidence-Grounded Autonomous Data Science System.**
 > Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.
 
-## Architecture
+## Documentation
 
-See [ARCHITECTURE_FREEZE_V0.1.md](./ARCHITECTURE_FREEZE_V0.1.md) · [MCP_DESIGN.md](./docs/MCP_DESIGN.md) · [FRONTEND_IA.md](./docs/FRONTEND_IA.md)
+Docs: [Getting Started](./docs/getting-started.md) · [Agent](./docs/agent.md) · [Tools](./docs/tools.md) · [Evidence](./docs/evidence.md) · [API](./docs/api.md) · [MCP](./docs/MCP_DESIGN.md) · [Frontend IA](./docs/FRONTEND_IA.md) · [Research](./docs/research.md) · [Changelog](./CHANGELOG.md)
+MkDocs: `uv run mkdocs serve` / `uv run mkdocs build --strict` (see [mkdocs.yml](./mkdocs.yml)) — Architecture Freeze at [ARCHITECTURE_FREEZE_V0.1.md](./ARCHITECTURE_FREEZE_V0.1.md)
 
 ## Stack
 
@@ -69,7 +70,7 @@ GET  /api/v1/analysis/{id}/report   ?format=json|markdown
 GET  /api/v1/analysis/{id}/artifacts artifacts + tool_calls + progress
 GET  /api/v1/analysis/{id}/evidence/{evidence_id}  evidence → tool_call → insights → dataset trace
 POST /api/v1/analysis/{id}/approve  HUMAN_REVIEW approval (HITL)
-GET  /health  GET /version  GET /
+GET  /health  GET /ready  GET /version  GET /
 
 MCP (adapter over Tool Layer, stateless 2026-07-28):
   GET  /mcp/tools  POST /mcp/call  POST /mcp (JSON-RPC: initialize/tools/list/tools/call)

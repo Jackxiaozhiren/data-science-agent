@@ -1,17 +1,33 @@
 site_name: Data Science Agent
 site_description: An Evidence-Grounded Autonomous Data Science System
+site_url: https://example.com/data-science-agent/
 theme:
   name: material
-nav:
-  - Home: README.md
-  - Architecture: ARCHITECTURE_FREEZE_V0.1.md
-  - MCP: docs/MCP_DESIGN.md
-  - Frontend: docs/FRONTEND_IA.md
-  - Benchmark: benchmarks/ds-agent-benchmark/README.md
-  - Examples: examples/README.md
-  - Contributing: CONTRIBUTING.md
-  - Security: SECURITY.md
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.follow
 markdown_extensions:
-  - toc
+  - toc:
+      permalink: true
   - tables
   - admonition
+  - pymdownx.superfences
+nav:
+  - Home: README.md
+  - Getting Started: docs/getting-started.md
+  - Architecture: ARCHITECTURE_FREEZE_V0.1.md
+  - Agent: docs/agent.md
+  - Tools: docs/tools.md
+  - Statistics: docs/statistics.md
+  - Evidence: docs/evidence.md
+  - MCP: docs/MCP_DESIGN.md
+  - API: docs/api.md
+  - Frontend: docs/FRONTEND_IA.md
+  - Benchmark: benchmarks/ds-agent-benchmark/README.md
+  - Security: docs/security.md
+  - Research: docs/research.md
+  - Examples: examples/README.md
+  - Changelog: CHANGELOG.md
+  - Contributing: CONTRIBUTING.md
+  - Licenses: THIRD_PARTY_LICENSES.md

@@ -1,30 +1,29 @@
 # Documentation Index
 
-- [Architecture Freeze](../ARCHITECTURE_FREEZE_V0.1.md) — System architecture, component diagram, ERD, tool contracts, security boundary, TDR (Phase 0)
-- [MCP Design](./MCP_DESIGN.md) — Stateless 2026-07-28 adapter over Tool Layer (13 tools)
-- [Frontend IA](./FRONTEND_IA.md) — Routes, data flow, UI principles (Phase 7)
-- [Benchmark README](../benchmarks/ds-agent-benchmark/README.md) — 20 datasets / 50 tasks / metrics + `dsa benchmark` CLI (Phase 9)
-- [README](../README.md) — Quick start, API, frontend, evidence, benchmark, security, testing, Docker
+- [Getting Started](./getting-started.md) — install, smoke, docker, benchmark, health
+- [Architecture Freeze](../ARCHITECTURE_FREEZE_V0.1.md) — system diagram, ERD, tool contracts, security boundary, TDR (Phase 0)
+- [Agent](./agent.md) — Planner / Data Scientist / Critic / Reporter, graph, evidence contract
+- [Tools](./tools.md) — 17-tool registry (Typed I/O)
+- [Statistics](./statistics.md) — correlation / tests / regression / guardrails
+- [Evidence](./evidence.md) — `Insight→Evidence→ToolCall→Dataset(hash)`, 4 checks, reproducibility bundle
+- [MCP Design](./MCP_DESIGN.md) — Stateless 2026-07-28 adapter over Tool Layer
+- [API](./api.md) — `/api/v1` endpoints incl. `/health /ready /version`
+- [Frontend IA](./FRONTEND_IA.md) — routes & data flow (Phase 7)
+- [Benchmark README](../benchmarks/ds-agent-benchmark/README.md) — 20 datasets / 50 tasks / metrics + `dsa benchmark` CLI
+- [Security](./security.md) — file / SQL / Python / prompt / output guardrails
+- [Research](./research.md) — benchmark + report stub
+- [Examples](../examples/README.md) — `sales.csv / titanic.csv` + curl examples
+- [README](../README.md) — Project overview & quick start
+- [Changelog](../CHANGELOG.md) — `0.1.0 → 1.2.0`
+- [Third-Party Licenses](../THIRD_PARTY_LICENSES.md) — runtime / frontend / datasets
 
-## MkDocs (Phase 11 placeholder)
+To serve: `uv sync --dev && uv run mkdocs serve` (or `uv run mkdocs build --strict` for CI gate).
 
-Full MkDocs site deferred to next iteration — current docs are Markdown in `docs/` + `README.md`.
-Future sections: Getting Started, Architecture, Agent System, Tools, Statistics, ML, Evidence, MCP, Security, Benchmarks, Research, Contributing.
-
-## API Quick Reference
+## Quick Quality
 
 ```
-POST /api/v1/datasets/ | GET /api/v1/datasets/{id}
-POST /api/v1/analysis/ | GET /api/v1/analysis/{id} | GET /.../events (SSE) | GET /.../progress
-GET  /.../report?format=markdown | GET /.../artifacts | GET /.../evidence/{id} | POST /.../approve
-GET  /mcp/tools  POST /mcp/call  POST /mcp (JSON-RPC)
-```
-
-## Testing & Quality
-
-```
-uv run pytest -q         # 75 tests
-uv run mypy packages     # strict
+uv run pytest -q         # 86+ tests
+uv run mypy packages apps/api --ignore-missing-imports
 uv run ruff check .
-npm run build --workspace=dsa-web  # 7 routes
+uv run dsa --limit 50
 ```
