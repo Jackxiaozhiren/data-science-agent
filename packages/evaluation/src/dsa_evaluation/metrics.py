@@ -220,3 +220,22 @@ def aggregate_metrics(results: list[EvaluationResult]) -> dict[str, Any]:
             for k, v in by_cat.items()
         },
     }
+
+
+def attach_statistical_eval(result: EvaluationResult, stat: Any) -> EvaluationResult:
+    """Attach StatisticalEvaluation (evaluator_v2) onto an EvaluationResult.
+
+    Stores evaluator_v2 dimensions under result.details["statistical_eval"] and
+    evaluator_v2 version marker so consumers can gate on evaluator_version.
+    """
+    try:
+        from dsa_evaluation.statistical_eval import StatisticalEvaluation  # noqa: F401
+    except Exception:
+        return result
+    # stat is StatisticalEvaluation
+    payload = stat.model_dump(mode="json") if hasattr(stat, "model_dump") else dict(stat)
+    result.details["statistical_eval"] = payload
+    result.details["evaluator_version"] = "evaluator_v2"
+    result.details["statistical_overall"] = payload.get("overall")
+    result.details["statistical_error_codes"] = payload.get("error_codes", [])
+    return result

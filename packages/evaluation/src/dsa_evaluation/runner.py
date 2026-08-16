@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from dsa_evaluation.catalog import BenchmarkTask, Catalog
-from dsa_evaluation.metrics import EvaluationResult, aggregate_metrics, evaluate_task
+from dsa_evaluation.metrics import (
+    EvaluationResult,
+    aggregate_metrics,
+    attach_statistical_eval,
+    evaluate_task,
+)
 
 
 async def _run_one(
@@ -64,6 +69,14 @@ def run_benchmark(
                 ev = evaluate_task(task, run_result, elapsed_ms=elapsed)
                 if err:
                     ev.error = err
+            # evaluator_v2 statistical dimensions (§22–25) — non-breaking, stored under details
+            try:
+                from dsa_evaluation.statistical_eval import evaluate_statistical
+
+                stat = evaluate_statistical(task, run_result, elapsed_ms=elapsed)
+                ev = attach_statistical_eval(ev, stat)
+            except Exception:
+                pass
             results.append(ev)
             raw_runs.append(
                 {"task_id": task.id, "elapsed_ms": elapsed, "run_result": run_result, "error": err}
