@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     app_name: str = "Data Science Agent API"
-    version: str = "1.0.0"
+    version: str = "1.2.0"
     debug: bool = False
     database_url: str = "sqlite+aiosqlite:///./data/dsa.db"
 
