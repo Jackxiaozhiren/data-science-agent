@@ -28,3 +28,4 @@ logs/
 *.sqlite3
 apps/data/
 apps/web/node_modules
+reproduction/
