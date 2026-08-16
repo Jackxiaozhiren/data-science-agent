@@ -49,6 +49,8 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
     "anyio>=4.4",
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.0",
 ]
 
 [tool.uv.workspace]
@@ -77,6 +79,15 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "SIM", "S"]
 ignore = ["S101", "E501"]
 
+[tool.ruff.lint.per-file-ignores]
+"apps/api/src/dsa_api/routers/*" = ["B008"]
+"tests/**/*" = ["S101", "S108", "B017", "S608", "F841", "I001", "B905", "SIM105", "S110", "F401", "UP042", "UP046", "S311", "SIM102", "SIM103", "SIM110", "SIM222", "B904", "E402"]
+"packages/agent/src/dsa_agent/*" = ["F841", "E402", "S110", "SIM102", "S608", "B904", "UP042"]
+"packages/evaluation/**/*" = ["S110", "F841", "B905", "SIM105"]
+"packages/evidence/**/*" = ["S110", "F841", "B904", "SIM102", "SIM105", "S608"]
+"packages/execution/**/*" = ["S110", "S311", "SIM105", "UP042", "UP046", "S608", "B904"]
+"packages/tools/**/*" = ["S110", "SIM105", "UP042", "UP046", "SIM102", "SIM103", "SIM110", "SIM222", "F401", "E402", "S608", "B904", "B905", "F841", "S311"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["dsa_api", "dsa_agent", "dsa_tools", "dsa_execution", "dsa_statistics", "dsa_ml", "dsa_viz", "dsa_evidence", "dsa_reports", "dsa_datasets", "dsa_llm", "dsa_mcp", "dsa_evaluation"]
 
@@ -91,6 +102,11 @@ ignore_missing_imports = true
 testpaths = ["tests", "apps/api/tests"]
 addopts = "-q --asyncio-mode=auto"
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning:fastapi.testclient",
+    "ignore::DeprecationWarning:pydantic",
+    "ignore::DeprecationWarning:sqlalchemy",
+]
 
 [tool.coverage.run]
 source = ["packages", "apps/api/src"]

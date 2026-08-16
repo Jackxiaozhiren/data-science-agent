@@ -1,0 +1,228 @@
+{
+  "catalog": "/Users/jackson/Data agent/benchmarks/v2/catalog.json",
+  "datasets_dir": "/Users/jackson/Data agent/benchmarks/v2/datasets",
+  "n_tasks": 10,
+  "aggregate": {
+    "n": 10,
+    "task_success_rate": 1.0,
+    "statistical_accuracy": null,
+    "sql_accuracy": 1.0,
+    "code_execution_success": 1.0,
+    "evidence_coverage": 1.0,
+    "unsupported_claim_rate": 0.1,
+    "mean_latency_ms": 120.5,
+    "by_category": {
+      "EDA": {
+        "n": 8,
+        "task_success": 1.0
+      },
+      "SQL": {
+        "n": 2,
+        "task_success": 1.0
+      }
+    }
+  },
+  "results": [
+    {
+      "task_id": "eda-01",
+      "category": "EDA",
+      "dataset": "sales.csv",
+      "question": "Summarize the sales dataset: rows, columns, missing values and duplicates.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": true,
+        "unsupported_claim": true,
+        "latency_ms": 887
+      },
+      "details": {
+        "evidence_count": 6,
+        "unsupported_claim_check": "Causal language detected without causal evidence; rewrite as association."
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-02",
+      "category": "EDA",
+      "dataset": "correlation.csv",
+      "question": "Describe the distribution of x, y, z and identify outliers.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 40
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-03",
+      "category": "EDA",
+      "dataset": "data_quality.csv",
+      "question": "Check data quality: missing, duplicates, and potential outliers in data_quality.csv.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": true,
+        "unsupported_claim": false,
+        "latency_ms": 34
+      },
+      "details": {
+        "evidence_count": 3,
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-04",
+      "category": "EDA",
+      "dataset": "outliers.csv",
+      "question": "Detect outliers in the value column and report their impact.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 38
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-05",
+      "category": "EDA",
+      "dataset": "titanic.csv",
+      "question": "Provide an EDA of the Titanic dataset focusing on survival patterns.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 48
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-06",
+      "category": "EDA",
+      "dataset": "house_prices.csv",
+      "question": "Summarize house price data and identify the range of key variables.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 42
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-07",
+      "category": "EDA",
+      "dataset": "region_revenue.csv",
+      "question": "Compare revenue distribution across regions.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 43
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "eda-08",
+      "category": "EDA",
+      "dataset": "groups.csv",
+      "question": "Summarize the groups dataset by group and value distribution.",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": null,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 46
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected"
+      },
+      "error": null
+    },
+    {
+      "task_id": "sql-01",
+      "category": "SQL",
+      "dataset": "sales.csv",
+      "question": "What is the total revenue by region?",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": true,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 16
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "sql_contains": [
+          "GROUP BY",
+          "SUM"
+        ]
+      },
+      "error": null
+    },
+    {
+      "task_id": "sql-02",
+      "category": "SQL",
+      "dataset": "region_revenue.csv",
+      "question": "Which region has the highest total revenue?",
+      "metrics": {
+        "task_success": true,
+        "statistical_accuracy": null,
+        "sql_accuracy": true,
+        "code_execution_success": true,
+        "evidence_coverage": null,
+        "unsupported_claim": false,
+        "latency_ms": 11
+      },
+      "details": {
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "sql_contains": [
+          "GROUP BY",
+          "ORDER BY",
+          "LIMIT"
+        ]
+      },
+      "error": null
+    }
+  ]
+}

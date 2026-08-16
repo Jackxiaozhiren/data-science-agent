@@ -194,27 +194,18 @@ def heuristics_plan(
                     break
     except Exception:
         pass
-    # Also treat SQL catalog keywords directly
-    sql_keywords = ["group by", "order by", "having", "count", "sum", "avg", "total"]
-
-    s_profile = _add(
+    _add(
         "Profile dataset",
         "Profile schema, missing, duplicates, cardinality",
         "profile_dataset",
         {"path": dataset_path or ""},
     )
-    s_corr = None
-    s_test = None
-    s_reg = None
-    s_model = None
-    s_chart = None
-    s_sql = None
 
     # Prefer numeric columns for correlation
     if wants_stats or "correlat" in q or len(cols) >= 2:
         corr_x = numeric_cols[0] if numeric_cols else (cols[0] if cols else "a")
         corr_y = numeric_cols[1] if len(numeric_cols) > 1 else (cols[1] if len(cols) > 1 else "b")
-        s_corr = _add(
+        _add(
             "Correlation",
             "Pearson correlation between key numeric variables",
             "correlation_analysis",
@@ -222,7 +213,7 @@ def heuristics_plan(
         )
 
     if "hypothesis" in q or "t-test" in q or "welch" in q or "anova" in q or "mann" in q:
-        s_test = _add(
+        _add(
             "Hypothesis test",
             "Appropriate hypothesis test with assumptions",
             "hypothesis_test",
@@ -235,7 +226,7 @@ def heuristics_plan(
         )
 
     if "regression" in q:
-        s_reg = _add(
+        _add(
             "Regression",
             "Regression with train/test split and metrics",
             "regression_analysis",
@@ -243,7 +234,7 @@ def heuristics_plan(
         )
 
     if wants_model:
-        s_model = _add(
+        _add(
             "Model training",
             "Baseline model with CV",
             "train_model",
@@ -255,19 +246,15 @@ def heuristics_plan(
         )
 
     if wants_forecast and has_time:
-        s_fc = _add(
+        _add(
             "Forecast",
             "30-day baseline forecast with MAE",
             "forecast",
             {"dataset_path": dataset_path or "", "periods": 30},
         )
-        # also ensure decline attribution via group comparison when decline asked
-        if wants_decline:
-            # group-wise decline: run hypothesis test across time splits or regions
-            pass
 
     if wants_importance and numeric_cols:
-        s_imp = _add(
+        _add(
             "Feature importance",
             "Explainability via RandomForest importance",
             "feature_importance",
@@ -275,8 +262,7 @@ def heuristics_plan(
         )
 
     if wants_causal and numeric_cols:
-        # Causal guard: prefer association language; still run stub to evidence the bar
-        s_causal = _add(
+        _add(
             "Causal check (stub)",
             "Association vs causation guard — requires confounders for causal claim",
             "causal_check",
@@ -294,9 +280,8 @@ def heuristics_plan(
 
     # SQL planning: when question implies aggregation, generate a SELECT
     if wants_sql and cols:
-        # Heuristic SQL generation per common patterns
         sql = _heuristic_sql(q, cols, numeric_cols)
-        s_sql = _add(
+        _add(
             "SQL analysis",
             f"SQL: {sql[:80]}",
             "run_sql",
@@ -305,14 +290,14 @@ def heuristics_plan(
 
     if wants_viz or True:  # always at least one viz for evidence
         hist_x = numeric_cols[0] if numeric_cols else (cols[0] if cols else "a")
-        s_chart = _add(
+        _add(
             "Visualization",
             "Create evidence chart",
             "create_chart",
             {"dataset_path": dataset_path or "", "chart_type": "histogram", "x": hist_x},
         )
         if has_time:
-            s_line = _add(
+            _add(
                 "Time series line",
                 "Line chart over time for trend",
                 "create_chart",

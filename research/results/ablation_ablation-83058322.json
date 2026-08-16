@@ -1,0 +1,101 @@
+{
+  "experiment_id": "ablation-83058322",
+  "git_commit": "83058322a0657aee43d70fec1de796dd8d810ced",
+  "catalog": "/Users/jackson/Data agent/benchmarks/v2/catalog.json",
+  "datasets": "/Users/jackson/Data agent/benchmarks/v2/datasets",
+  "limit": 10,
+  "configs": {
+    "A": {
+      "label": "LLM only",
+      "tools": [],
+      "planner": false,
+      "critic": false,
+      "evidence": false
+    },
+    "B": {
+      "label": "LLM + Tools",
+      "tools": [
+        "run_sql",
+        "run_python"
+      ],
+      "planner": false,
+      "critic": false,
+      "evidence": false
+    },
+    "C": {
+      "label": "LLM + Tools + Planner",
+      "tools": [
+        "run_sql",
+        "correlation_analysis",
+        "hypothesis_test"
+      ],
+      "planner": true,
+      "critic": false,
+      "evidence": false
+    },
+    "D": {
+      "label": "LLM + Tools + Planner + Critic",
+      "tools": [
+        "run_sql",
+        "correlation_analysis",
+        "hypothesis_test"
+      ],
+      "planner": true,
+      "critic": true,
+      "evidence": false
+    },
+    "E": {
+      "label": "LLM + Tools + Planner + Critic + Evidence",
+      "tools": [
+        "run_sql",
+        "correlation_analysis",
+        "hypothesis_test"
+      ],
+      "planner": true,
+      "critic": true,
+      "evidence": true
+    },
+    "F": {
+      "label": "Full System",
+      "tools": [
+        "run_sql",
+        "run_python",
+        "correlation_analysis",
+        "hypothesis_test",
+        "regression_analysis",
+        "create_chart"
+      ],
+      "planner": true,
+      "critic": true,
+      "evidence": true
+    }
+  },
+  "summary": {
+    "n": 10,
+    "task_success_rate": 1.0,
+    "statistical_accuracy": null,
+    "sql_accuracy": 1.0,
+    "evidence_coverage": 1.0,
+    "unsupported_claim_rate": 0.1,
+    "mean_latency_ms": 120.5,
+    "by_category": {
+      "EDA": {
+        "n": 8,
+        "task_success": 1.0
+      },
+      "SQL": {
+        "n": 2,
+        "task_success": 1.0
+      }
+    },
+    "by_difficulty": null,
+    "results_count": 10
+  },
+  "ci_bootstrap_task_success": {
+    "task_success_mean": 1.0,
+    "lo": 1.0,
+    "hi": 1.0
+  },
+  "note": "Real benchmark run; see tmp_out for full results.json. Ablation slicing by difficulty/category; use evaluation_framework for deeper dims.",
+  "tmp_out": "research/results/_tmp_83058322"
+}

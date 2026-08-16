@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json as _json
 import time
 import uuid
 from pathlib import Path
@@ -36,8 +38,6 @@ def _get_columns(dataset_path: str | None) -> list[str]:
 
 
 _TOOL_CACHE: dict[tuple[str, str], tuple[Any, bool, str | None]] = {}
-import hashlib
-import json as _json
 
 
 def _tool_cache_key(tool_name: str, inputs: dict[str, Any]) -> tuple[str, str]:
