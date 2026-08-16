@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.2.0 — Docs closeout (upcoming)
+## 1.3.0 — Release readiness + benchmark 50/50 (upcoming)
+- Benchmark drift scan: `uv run dsa --limit 50` → 50/50 (task 1.0 / sql 1.0 / statistical 1.0 / code 1.0 / evidence 1.0) · 8 categories @ 1.0.
+- `docker compose config` + healthcheck validated (`/health`→`/ready`).
+- Release notes polished; `README` links verified.
+
+## 1.2.0 — Docs closeout
 - MkDocs nav hardened (tabs/sections), `docs/` fleshed out: `getting-started / agent / tools / statistics / evidence / api / security / research`.
 - `THIRD_PARTY_LICENSES.md` final CC0 note; versioned via `pyproject.toml`.
 
