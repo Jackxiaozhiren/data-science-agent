@@ -1,0 +1,727 @@
+{
+  "name": "DS-Agent-Benchmark",
+  "version": "0.1.0",
+  "tasks": [
+    {
+      "id": "eda-01",
+      "category": "EDA",
+      "dataset": "sales.csv",
+      "question": "Summarize the sales dataset: rows, columns, missing values and duplicates.",
+      "expected_analysis": "Profile + describe columns",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "eda-02",
+      "category": "EDA",
+      "dataset": "correlation.csv",
+      "question": "Describe the distribution of x, y, z and identify outliers.",
+      "expected_analysis": "Distribution + outliers",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "eda-03",
+      "category": "EDA",
+      "dataset": "data_quality.csv",
+      "question": "Check data quality: missing, duplicates, and potential outliers in data_quality.csv.",
+      "expected_analysis": "Missing + dup + outliers",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "eda-04",
+      "category": "EDA",
+      "dataset": "outliers.csv",
+      "question": "Detect outliers in the value column and report their impact.",
+      "expected_analysis": "Outlier detection",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "eda-05",
+      "category": "EDA",
+      "dataset": "titanic.csv",
+      "question": "Provide an EDA of the Titanic dataset focusing on survival patterns.",
+      "expected_analysis": "EDA + class balance",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "eda-06",
+      "category": "EDA",
+      "dataset": "house_prices.csv",
+      "question": "Summarize house price data and identify the range of key variables.",
+      "expected_analysis": "Descriptive + profile",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "eda-07",
+      "category": "EDA",
+      "dataset": "region_revenue.csv",
+      "question": "Compare revenue distribution across regions.",
+      "expected_analysis": "Distribution by region",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "eda-08",
+      "category": "EDA",
+      "dataset": "groups.csv",
+      "question": "Summarize the groups dataset by group and value distribution.",
+      "expected_analysis": "Group-wise summary",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "sql-01",
+      "category": "SQL",
+      "dataset": "sales.csv",
+      "question": "What is the total revenue by region?",
+      "expected_analysis": "GROUP BY region",
+      "ground_truth": {
+        "sql_contains": [
+          "GROUP BY",
+          "SUM"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "sql-02",
+      "category": "SQL",
+      "dataset": "region_revenue.csv",
+      "question": "Which region has the highest total revenue?",
+      "expected_analysis": "Top region",
+      "ground_truth": {
+        "sql_contains": [
+          "GROUP BY",
+          "ORDER BY",
+          "LIMIT"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "sql-03",
+      "category": "SQL",
+      "dataset": "sales.csv",
+      "question": "Compute average price by category.",
+      "expected_analysis": "AVG by category",
+      "ground_truth": {
+        "sql_contains": [
+          "AVG",
+          "GROUP BY"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "sql-04",
+      "category": "SQL",
+      "dataset": "sales.csv",
+      "question": "Find the top 5 rows by revenue.",
+      "expected_analysis": "ORDER BY revenue LIMIT 5",
+      "ground_truth": {
+        "sql_contains": [
+          "ORDER BY",
+          "LIMIT"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "sql-05",
+      "category": "SQL",
+      "dataset": "groups.csv",
+      "question": "Count rows per group and filter groups with more than 100 rows.",
+      "expected_analysis": "HAVING count",
+      "ground_truth": {
+        "sql_contains": [
+          "COUNT",
+          "GROUP BY",
+          "HAVING"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "sql-06",
+      "category": "SQL",
+      "dataset": "titanic.csv",
+      "question": "Compute survival rate by sex.",
+      "expected_analysis": "Survival by sex",
+      "ground_truth": {
+        "sql_contains": [
+          "GROUP BY",
+          "AVG",
+          "sex"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "sql-07",
+      "category": "SQL",
+      "dataset": "house_prices.csv",
+      "question": "Find the average price for houses with area > 2000.",
+      "expected_analysis": "Filtered avg",
+      "ground_truth": {
+        "sql_contains": [
+          "AVG",
+          "WHERE"
+        ],
+        "expected_tool": "run_sql"
+      },
+      "criteria": {
+        "task_success": true,
+        "sql_accuracy": true
+      }
+    },
+    {
+      "id": "stats-01",
+      "category": "Statistics",
+      "dataset": "correlation.csv",
+      "question": "Is there a correlation between x and y?",
+      "expected_analysis": "Pearson r",
+      "ground_truth": {
+        "expected_value": 0.8,
+        "tolerance": 0.15,
+        "expected_tool": "correlation_analysis"
+      },
+      "criteria": {
+        "task_success": true,
+        "statistical_accuracy": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "stats-02",
+      "category": "Statistics",
+      "dataset": "groups.csv",
+      "question": "Does the average value differ across groups? Test appropriately.",
+      "expected_analysis": "ANOVA/Kruskal",
+      "ground_truth": {
+        "expected_tool": "hypothesis_test"
+      },
+      "criteria": {
+        "task_success": true,
+        "statistical_accuracy": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "stats-03",
+      "category": "Statistics",
+      "dataset": "groups.csv",
+      "question": "Compare group A vs group B on value using a t-test.",
+      "expected_analysis": "t_test/welch",
+      "ground_truth": {
+        "expected_tool": "hypothesis_test"
+      },
+      "criteria": {
+        "task_success": true,
+        "statistical_accuracy": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "stats-04",
+      "category": "Statistics",
+      "dataset": "correlation.csv",
+      "question": "Test the association between x and y controlling for appropriate assumptions.",
+      "expected_analysis": "Assumption check",
+      "ground_truth": {
+        "expected_tool": "hypothesis_test"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "stats-05",
+      "category": "Statistics",
+      "dataset": "health.csv",
+      "question": "Is there an association between bmi and disease status?",
+      "expected_analysis": "Chi2 / t-test",
+      "ground_truth": {
+        "expected_tool": "hypothesis_test"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "stats-06",
+      "category": "Statistics",
+      "dataset": "paired_series.csv",
+      "question": "Are series_a and series_b correlated?",
+      "expected_analysis": "Correlation paired",
+      "ground_truth": {
+        "expected_tool": "correlation_analysis"
+      },
+      "criteria": {
+        "task_success": true,
+        "statistical_accuracy": true
+      }
+    },
+    {
+      "id": "stats-07",
+      "category": "Statistics",
+      "dataset": "outliers.csv",
+      "question": "Test whether the outlier affects the mean significantly.",
+      "expected_analysis": "Outlier-aware stats",
+      "ground_truth": {
+        "expected_tool": "hypothesis_test"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "stats-08",
+      "category": "Statistics",
+      "dataset": "groups.csv",
+      "question": "Estimate the effect size between groups.",
+      "expected_analysis": "Cohen d",
+      "ground_truth": {
+        "expected_tool": "hypothesis_test"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "reg-01",
+      "category": "Regression",
+      "dataset": "house_prices.csv",
+      "question": "Build a regression model predicting price from area, bedrooms and age.",
+      "expected_analysis": "Linear/Ridge",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true,
+        "statistical_accuracy": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "reg-02",
+      "category": "Regression",
+      "dataset": "house_prices.csv",
+      "question": "Compare Ridge vs Lasso for price prediction and report best R2.",
+      "expected_analysis": "Model comparison",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "reg-03",
+      "category": "Regression",
+      "dataset": "energy.csv",
+      "question": "Regress demand on temp and hour.",
+      "expected_analysis": "Multiple regression",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "reg-04",
+      "category": "Regression",
+      "dataset": "sales.csv",
+      "question": "Predict revenue from price and units.",
+      "expected_analysis": "Regression",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "reg-05",
+      "category": "Regression",
+      "dataset": "health.csv",
+      "question": "Predict disease risk from bmi, bp, chol via logistic regression.",
+      "expected_analysis": "Logistic",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "reg-06",
+      "category": "Regression",
+      "dataset": "correlation.csv",
+      "question": "Regress y on x and report coefficients.",
+      "expected_analysis": "Linear coef",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "clf-01",
+      "category": "Classification",
+      "dataset": "titanic.csv",
+      "question": "Build a classifier predicting survived and report accuracy and F1.",
+      "expected_analysis": "Classification baseline",
+      "ground_truth": {
+        "expected_tool": "train_model",
+        "expected_metric": "accuracy"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "clf-02",
+      "category": "Classification",
+      "dataset": "customer_churn.csv",
+      "question": "Predict churn and compare models with cross-validation.",
+      "expected_analysis": "CV comparison",
+      "ground_truth": {
+        "expected_tool": "train_model"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "clf-03",
+      "category": "Classification",
+      "dataset": "health.csv",
+      "question": "Classify disease and evaluate with F1 and ROC-AUC.",
+      "expected_analysis": "Eval",
+      "ground_truth": {
+        "expected_tool": "evaluate_model"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "clf-04",
+      "category": "Classification",
+      "dataset": "hr_promotion.csv",
+      "question": "Predict promoted and report feature importance.",
+      "expected_analysis": "Feature importance",
+      "ground_truth": {
+        "expected_tool": "train_model"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "clf-05",
+      "category": "Classification",
+      "dataset": "titanic.csv",
+      "question": "Predict survived using pclass and sex, handling missing age.",
+      "expected_analysis": "Missing handling",
+      "ground_truth": {
+        "expected_tool": "train_model"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "clf-06",
+      "category": "Classification",
+      "dataset": "customer_churn.csv",
+      "question": "Evaluate a churn model and provide confusion matrix.",
+      "expected_analysis": "Evaluation",
+      "ground_truth": {
+        "expected_tool": "evaluate_model"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "ts-01",
+      "category": "Time Series",
+      "dataset": "timeseries.csv",
+      "question": "Analyze the time series trend and provide a summary.",
+      "expected_analysis": "Trend analysis",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "ts-02",
+      "category": "Time Series",
+      "dataset": "timeseries_trend.csv",
+      "question": "Detect trend in the series and visualize it.",
+      "expected_analysis": "Trend + line chart",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "line"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "ts-03",
+      "category": "Time Series",
+      "dataset": "timeseries_seasonal.csv",
+      "question": "Identify seasonality with period 30.",
+      "expected_analysis": "Seasonality",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "ts-04",
+      "category": "Time Series",
+      "dataset": "energy.csv",
+      "question": "Forecast energy demand from temp and hour.",
+      "expected_analysis": "Forecast/regression",
+      "ground_truth": {
+        "expected_tool": "regression_analysis"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "ts-05",
+      "category": "Time Series",
+      "dataset": "timeseries.csv",
+      "question": "Visualize the series as a line chart.",
+      "expected_analysis": "Line chart",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "line"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "viz-01",
+      "category": "Visualization",
+      "dataset": "sales.csv",
+      "question": "Create a histogram of revenue.",
+      "expected_analysis": "Histogram",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "histogram"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "viz-02",
+      "category": "Visualization",
+      "dataset": "region_revenue.csv",
+      "question": "Bar chart of total revenue by region.",
+      "expected_analysis": "Bar",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "bar"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "viz-03",
+      "category": "Visualization",
+      "dataset": "correlation.csv",
+      "question": "Scatter plot of x vs y.",
+      "expected_analysis": "Scatter",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "scatter"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "viz-04",
+      "category": "Visualization",
+      "dataset": "correlation.csv",
+      "question": "Heatmap of correlations among numeric columns.",
+      "expected_analysis": "Heatmap",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "heatmap"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "viz-05",
+      "category": "Visualization",
+      "dataset": "groups.csv",
+      "question": "Boxplot of value by group.",
+      "expected_analysis": "Boxplot",
+      "ground_truth": {
+        "expected_tool": "create_chart",
+        "chart_type": "boxplot"
+      },
+      "criteria": {
+        "task_success": true,
+        "visualization": true
+      }
+    },
+    {
+      "id": "dq-01",
+      "category": "Data Quality",
+      "dataset": "data_quality.csv",
+      "question": "Report missing values and duplicate rows.",
+      "expected_analysis": "Missing + dup",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true,
+        "evidence_coverage": true
+      }
+    },
+    {
+      "id": "dq-02",
+      "category": "Data Quality",
+      "dataset": "outliers.csv",
+      "question": "Identify and flag outliers in value.",
+      "expected_analysis": "Outlier flag",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "dq-03",
+      "category": "Data Quality",
+      "dataset": "titanic.csv",
+      "question": "Handle missing age and report the impact on survival analysis.",
+      "expected_analysis": "Missing handling",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "dq-04",
+      "category": "Data Quality",
+      "dataset": "sales.csv",
+      "question": "Assess data quality and recommend cleaning steps.",
+      "expected_analysis": "Quality assessment",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    },
+    {
+      "id": "dq-05",
+      "category": "Data Quality",
+      "dataset": "region_revenue.csv",
+      "question": "Validate that no revenue values are negative and report anomalies.",
+      "expected_analysis": "Validation",
+      "ground_truth": {
+        "expected_tool": "profile_dataset"
+      },
+      "criteria": {
+        "task_success": true
+      }
+    }
+  ]
+}

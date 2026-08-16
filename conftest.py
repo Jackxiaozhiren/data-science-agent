@@ -7,6 +7,7 @@ for p in [
     ROOT / "packages/agent/src",
     ROOT / "packages/llm/src",
     ROOT / "packages/datasets/src",
+    ROOT / "packages/evaluation/src",
     ROOT / "packages/tools/src",
     ROOT / "packages/execution/src",
     ROOT / "packages/statistics/src",

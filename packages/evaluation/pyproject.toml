@@ -1,0 +1,16 @@
+[project]
+name = "dsa-evaluation"
+version = "0.1.0"
+description = "DS-Agent-Benchmark evaluation engine"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.7", "polars>=1.0"]
+
+[project.scripts]
+dsa = "dsa_evaluation.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dsa_evaluation"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

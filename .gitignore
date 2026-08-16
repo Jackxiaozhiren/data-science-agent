@@ -27,3 +27,4 @@ logs/
 *.sqlite
 *.sqlite3
 apps/data/
+apps/web/node_modules
