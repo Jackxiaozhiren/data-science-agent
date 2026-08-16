@@ -33,6 +33,29 @@ uv run dsa --help
 uv run dsa --limit 3
 ```
 
+## Demo (One-Command Smoke)
+
+```bash
+# Start API
+uv run uvicorn dsa_api.main:app --host 127.0.0.1 --port 8000 --app-dir apps/api/src &
+
+# Upload sales.csv (note: explicit MIME needed with curl)
+curl -F "file=@examples/datasets/sales.csv;type=text/csv" http://127.0.0.1:8000/api/v1/datasets/
+# -> {"id": "<dataset_id>", "rows": 500, "cols": 6, ...}
+
+# Run analysis (numeric correlation + evidence)
+curl -X POST http://127.0.0.1:8000/api/v1/analysis/ \
+  -H 'Content-Type: application/json' \
+  -d '{"dataset_id": "<dataset_id>", "user_query": "Analyze correlation between price and revenue"}'
+# -> {"id": "run-...", "status": "COMPLETED", "state": {"evidence": [...], "report_markdown": "..."}}
+
+# Check report and SSE trace
+curl http://127.0.0.1:8000/api/v1/analysis/<run_id>/report?format=markdown
+curl -H "Accept: text/event-stream" http://127.0.0.1:8000/api/v1/analysis/<run_id>/events
+
+# Or via frontend: http://localhost:3000/datasets -> upload -> Analyze -> trace
+```
+
 ## API
 
 ```
