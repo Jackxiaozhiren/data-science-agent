@@ -45,7 +45,10 @@ export default function DatasetsPage() {
         {loading ? (
           <p className="text-sm text-zinc-500">Loading datasets…</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-zinc-500">No datasets yet. Upload a CSV/Parquet/JSON/Excel above to begin.</p>
+          <div className="space-y-2">
+            <p className="text-sm text-zinc-500">No datasets yet. Upload a CSV/Parquet/JSON/Excel above to begin.</p>
+            <p className="text-xs text-zinc-400">Health: <a href="http://localhost:8000/health" className="underline" target="_blank">/health</a> · <a href="http://localhost:8000/metrics" className="underline" target="_blank">/metrics</a> · <a href="http://localhost:8000/version" className="underline" target="_blank">/version</a></p>
+          </div>
         ) : (
         <table className="w-full text-sm">
           <thead className="text-left text-zinc-500"><tr><th>File</th><th>Format</th><th>Rows</th><th>Cols</th><th></th></tr></thead>

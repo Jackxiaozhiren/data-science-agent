@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.7.0 — Publishability: README + examples sync (upcoming)
+## 1.8.0 — Lightweight observability (upcoming)
+- `GET /metrics` (JSON: uptime, process `rss_mb`, `tool_calls_total`, `version`) + datasets empty-state health hint.
+- `CHANGELOG` finalizes `1.6/1.7` entries; version → `1.8.0`.
+
+## 1.7.0 — Publishability: README + examples sync
 - `README` resynced: `~86 tests / 81 mypy / 17 tools / 50/50 @1.0` + `dv/health` details + `ready` + benchmark/seven-routes.
 - `examples/README` expanded with reproducibility (`artifacts/reports/<run_id>`) and health map + full `curl` smoke.
 
