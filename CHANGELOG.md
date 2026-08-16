@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.4.0 — Performance: cache + parallel (upcoming)
+## 1.5.0 — Reproducibility: executable notebook + chart-embedded report (upcoming)
+- `analysis.ipynb` from skeleton → executable cells (profile + per-tool `run_sql/correlation/hypothesis/.../chart` + full `run_analysis`) via `build_notebook(run_id, dataset_path, query, plan, tool_calls)`.
+- `report.md` embeds `![chart](artifact.png)` for `create_chart` outputs.
+- `pyproject` + `config.version` → 1.5.0.
+
+## 1.4.0 — Performance: cache + parallel
 - `CachedLLMProvider` (LRU 128, TTL 600s) · tool output memoization `_TOOL_CACHE` in `graph.py`.
 - Independent tool batch via `asyncio.gather` (`correlation/hypothesis/assumption/chart/run_sql`) — mean_latency 73ms → 39.8ms.
 - `pyproject` + `config.version` → 1.4.0.

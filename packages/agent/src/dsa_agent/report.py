@@ -24,6 +24,13 @@ def build_markdown_report(state: AnalysisState) -> str:
         lines.append(f"- {status} **{tc.tool}** ({tc.call_id}) — {tc.duration_ms}ms")
         if tc.error:
             lines.append(f"  - error: {tc.error}")
+        if tc.tool == "create_chart" and tc.output:
+            ap = tc.output.get("artifact_path") if isinstance(tc.output, dict) else getattr(tc.output, "artifact_path", None)
+            if ap:
+                rel = Path(str(ap)).name
+                # artifact lives under artifacts/reports/<run_id>/ — link relative for markdown readers
+                lines.append(f"  - ![chart]({rel})")
+                lines.append(f"  - artifact: `{ap}`")
     lines.append("")
     lines.append("## Evidence")
     for ev in state.evidence:

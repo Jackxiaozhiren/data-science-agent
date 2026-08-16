@@ -302,7 +302,7 @@ async def run_analysis(
         # enrich with full evidence bundle
         try:
             from dsa_evidence.graph import build_evidence_graph
-            from dsa_evidence.repro import build_experiment_json, build_notebook_skeleton, build_reproduce_sh
+            from dsa_evidence.repro import build_experiment_json, build_notebook, build_reproduce_sh
             from dsa_evidence.validator import validate_evidence_graph
 
             g = build_evidence_graph(state.run_id, state.dataset_id, state.dataset_path, state.evidence, state.insights, state.tool_calls)
@@ -318,7 +318,7 @@ async def run_analysis(
             sha = g.dataset_sha256
             exp_path = build_experiment_json(state.run_id, state.dataset_path, sha, state.user_query, [s.model_dump(mode="json") for s in state.plan], [c.model_dump(mode="json") for c in state.tool_calls], [e.model_dump(mode="json") for e in state.evidence], [i.model_dump(mode="json") for i in state.insights], report_dir)
             repro_path = build_reproduce_sh(state.run_id, state.dataset_path, state.user_query, report_dir)
-            nb_path = build_notebook_skeleton(state.run_id, report_dir)
+            nb_path = build_notebook(state.run_id, state.dataset_path, state.user_query, [s.model_dump(mode="json") for s in state.plan], [c.model_dump(mode="json") for c in state.tool_calls], report_dir)
             # dedup artifacts by path
             existing_paths = {a.path for a in state.artifacts}
             for p, kind in [(exp_path, "experiment"), (repro_path, "reproduce"), (nb_path, "notebook")]:

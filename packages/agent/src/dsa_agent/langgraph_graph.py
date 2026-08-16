@@ -224,7 +224,7 @@ async def _node_report(state: LGState) -> dict[str, Any]:
                 from dsa_evidence.graph import build_evidence_graph
                 from dsa_evidence.repro import (
                     build_experiment_json,
-                    build_notebook_skeleton,
+                    build_notebook,
                     build_reproduce_sh,
                 )
                 from dsa_evidence.validator import validate_evidence_graph
@@ -244,9 +244,11 @@ async def _node_report(state: LGState) -> dict[str, Any]:
                 arts2 = list(analysis2.get("artifacts") or [])
                 arts2.append({"id": f"A-{uuid.uuid4().hex[:8]}", "type": "evidence", "path": str(report_dir / "evidence_graph.json"), "metadata": {"kind": "evidence_graph"}})
                 sha = g.dataset_sha256
-                exp_path = build_experiment_json(run_id, dataset_path, sha, user_query, [], [c.model_dump(mode="json") for c in tcs], [e.model_dump(mode="json") for e in evs], [i.model_dump(mode="json") for i in iss], report_dir)
+                # plan for notebook cells comes from outer plan (if any) — best-effort
+                outer_plan = state.get("plan") or []
+                exp_path = build_experiment_json(run_id, dataset_path, sha, user_query, outer_plan, [c.model_dump(mode="json") for c in tcs], [e.model_dump(mode="json") for e in evs], [i.model_dump(mode="json") for i in iss], report_dir)
                 repro_path = build_reproduce_sh(run_id, dataset_path, user_query, report_dir)
-                nb_path = build_notebook_skeleton(run_id, report_dir)
+                nb_path = build_notebook(run_id, dataset_path, user_query, outer_plan, [c.model_dump(mode="json") for c in tcs], report_dir)
                 existing = {a.get("path") for a in arts2}
                 for pth, kind in [(exp_path, "experiment"), (repro_path, "reproduce"), (nb_path, "notebook")]:
                     sp = str(pth)
