@@ -1,0 +1,10 @@
+[project]
+name = "dsa-time-series"
+version = "1.0.0"
+description = "Flagship time-series plugin — forecasting + backtesting + viz (V4 §81)"
+requires-python = ">=3.12"
+dependencies = ["dsa-plugins", "pydantic>=2.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

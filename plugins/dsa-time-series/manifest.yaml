@@ -1,0 +1,8 @@
+name: dsa-time-series
+version: 1.0.0
+type: [forecasting]
+requires: { dsa: ">=4.0,<5.0" }
+license: MIT
+entrypoint: { python: dsa_time_series.plugin:register }
+permissions: [read, compute]
+dependencies: []

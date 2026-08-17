@@ -121,3 +121,81 @@ class Agent:
     @property
     def version(self) -> str:
         return self._version
+
+
+@dataclass
+class BenchmarkResult:
+    n_tasks: int
+    aggregate: dict[str, Any] = field(default_factory=dict)
+    results: list[dict[str, Any]] = field(default_factory=list)
+
+
+class Benchmark:
+    """Benchmark facade (V4 §16) over evaluation framework."""
+
+    def run(
+        self,
+        catalog: str | Path = "benchmarks/ds-agent-benchmark/catalog.json",
+        datasets: str | Path = "benchmarks/ds-agent-benchmark/datasets",
+        out: str | Path = "benchmarks/ds-agent-benchmark/results",
+        limit: int | None = None,
+    ) -> BenchmarkResult:
+        from dsa_evaluation.runner import run_benchmark
+
+        payload = run_benchmark(Path(catalog), Path(datasets), Path(out), limit=limit)
+        return BenchmarkResult(
+            n_tasks=payload.get("n_tasks", 0),
+            aggregate=payload.get("aggregate", {}),
+            results=payload.get("results", []),
+        )
+
+
+@dataclass
+class ReproductionResult:
+    overall: float = 0.0
+    execution: float = 0.0
+    trajectory: float = 0.0
+    by_level: dict[str, float] = field(default_factory=dict)
+    out_dir: str = ""
+
+
+class Reproduction:
+    """Reproduction facade (V4 §16) over reproducibility harness."""
+
+    def run(
+        self,
+        catalog: str | Path = "benchmarks/v2/catalog.json",
+        datasets: str | Path = "benchmarks/v2/datasets",
+        out: str | Path = "reproduction/v2",
+    ) -> ReproductionResult:
+        from dsa_evaluation.cli import _reproduce_benchmark
+
+        # _reproduce_benchmark is internal; fallback to runner if missing
+        try:
+            _reproduce_benchmark(Path(catalog), Path(datasets), Path(out))
+        except Exception:
+            from dsa_evaluation.runner import run_benchmark as _rb
+
+            _rb(Path(catalog), Path(datasets), Path(out))
+        # Try to read comparison
+        try:
+            import json
+
+            comp = json.loads((Path(out) / "comparison.json").read_text(encoding="utf-8"))
+            rs = comp.get("reproduction_score", {})
+            return ReproductionResult(
+                overall=float(rs.get("overall", 0)),
+                execution=float(rs.get("execution", 0)),
+                trajectory=float(rs.get("trajectory", 0)),
+                by_level=rs.get("by_level", {}),
+                out_dir=str(out),
+            )
+        except Exception:
+            return ReproductionResult(out_dir=str(out))
+
+
+@dataclass
+class Report:
+    run_id: str
+    markdown: str | None = None
+    path: str | None = None

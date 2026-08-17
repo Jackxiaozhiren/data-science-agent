@@ -142,9 +142,18 @@ def main() -> None:
     sub.add_parser("doctor", help="One-command setup check (§34 W5): dsa doctor")
     p_init = sub.add_parser("init", help="One-command project (§36 W5): dsa init my-project")
     p_init.add_argument("project", nargs="?", default="my-project", help="Project name")
-    sub.add_parser("analyze", help="Analyze dataset (§37): dsa analyze <dataset> --task ... [--json]")
-    sub.add_parser("profile", help="Profile dataset (§37): dsa profile <dataset> [--json]")
-    sub.add_parser("benchmark", help="Run benchmark (§37): dsa benchmark [--limit N] [--catalog ...]")
+    p_analyze = sub.add_parser("analyze", help="Analyze dataset (§37): dsa analyze <dataset> --task ... [--json]")
+    p_analyze.add_argument("dataset", nargs="?", default=None, help="Dataset path")
+    p_analyze.add_argument("--task", dest="task", required=False, default=None, help="Task description")
+    p_analyze.add_argument("--json", action="store_true", help="JSON output")
+    p_profile = sub.add_parser("profile", help="Profile dataset (§37): dsa profile <dataset> [--json]")
+    p_profile.add_argument("dataset", nargs="?", default=None, help="Dataset path")
+    p_profile.add_argument("--json", action="store_true", help="JSON output")
+    p_benchmark = sub.add_parser("benchmark", help="Run benchmark (§37): dsa benchmark [--limit N] [--catalog ...]")
+    p_benchmark.add_argument("--limit", type=int, default=None)
+    p_benchmark.add_argument("--catalog", type=Path, default=None)
+    p_benchmark.add_argument("--datasets", type=Path, default=None)
+    p_benchmark.add_argument("--json", action="store_true", help="JSON output")
     sub.add_parser("reproduce", help="Reproduce (§37): dsa reproduce [--benchmark v2]")
     sub.add_parser("plugin", help="Plugin registry (§28): dsa plugin list")
     sub.add_parser("mcp", help="MCP (§32): dsa mcp tools")
@@ -215,8 +224,9 @@ def main() -> None:
         from dsa_evaluation.doctor import run_doctor
 
         rep = run_doctor()
-        as_json = "--json" in sys.argv
-        if as_json:
+        # doctor optionally supports --json via global argv; keep simple
+        _want_json = "--json" in sys.argv or getattr(args, "doctor_json", False)
+        if _want_json:
             print(json.dumps(rep, indent=2, ensure_ascii=False))
         else:
             print(f"=== dsa doctor ({rep['status']}) ===")
@@ -242,19 +252,14 @@ def main() -> None:
             print(f"Created {p}")
         return
     if args.cmd == "analyze":
-        # Usage: dsa analyze <dataset> --task "..." [--json]  -> parse remaining argv
-        import argparse as _ap2
-
-        ap2 = _ap2.ArgumentParser(prog="dsa analyze")
-        ap2.add_argument("dataset")
-        ap2.add_argument("--task", required=True)
-        ap2.add_argument("--json", action="store_true")
-        a2 = ap2.parse_args(sys.argv[2:])
+        if not args.dataset or not args.task:
+            print(json.dumps({"error": "Usage: dsa analyze <dataset> --task <task> [--json]"}, ensure_ascii=False))
+            sys.exit(2)
         from data_science_agent import Agent
 
         agent = Agent()
-        r = agent.analyze_sync(a2.dataset, a2.task)
-        if a2.json:
+        r = agent.analyze_sync(args.dataset, args.task)
+        if args.json:
             print(json.dumps({"run_id": r.run_id, "status": r.status, "report": r.report_markdown[:500] if r.report_markdown else None, "evidence": len(r.evidence), "error": r.error}, ensure_ascii=False))
         else:
             print(f"status={r.status} evidence={len(r.evidence)}")
@@ -262,30 +267,19 @@ def main() -> None:
                 print(r.report_markdown[:2000])
         return
     if args.cmd == "profile":
-        import argparse as _ap3
-
-        ap3 = _ap3.ArgumentParser(prog="dsa profile")
-        ap3.add_argument("dataset")
-        ap3.add_argument("--json", action="store_true")
-        a3 = ap3.parse_args(sys.argv[2:])
+        if not args.dataset:
+            print(json.dumps({"error": "Usage: dsa profile <dataset> [--json]"}, ensure_ascii=False))
+            sys.exit(2)
         from data_science_agent import Agent
 
-        prof = Agent().profile(a3.dataset)
-        print(json.dumps(prof, ensure_ascii=False) if a3.json else str(prof))
+        prof = Agent().profile(args.dataset)
+        print(json.dumps(prof, ensure_ascii=False) if args.json else str(prof))
         return
     if args.cmd == "benchmark":
-        import argparse as _ap4
-
-        ap4 = _ap4.ArgumentParser(prog="dsa benchmark")
-        ap4.add_argument("--limit", type=int, default=None)
-        ap4.add_argument("--catalog", type=Path, default=None)
-        ap4.add_argument("--datasets", type=Path, default=None)
-        ap4.add_argument("--json", action="store_true")
-        a4 = ap4.parse_args(sys.argv[2:])
-        cat = a4.catalog or Path("benchmarks/ds-agent-benchmark/catalog.json")
-        ds = a4.datasets or Path("benchmarks/ds-agent-benchmark/datasets")
-        payload = run_benchmark(cat, ds, Path("benchmarks/ds-agent-benchmark/results"), limit=a4.limit)
-        print(json.dumps({"n_tasks": payload.get("n_tasks"), "aggregate": payload.get("aggregate")}, ensure_ascii=False) if a4.json else f"Tasks: {payload.get('n_tasks')} success={payload.get('aggregate', {}).get('task_success_rate')}")
+        cat = args.catalog or Path("benchmarks/ds-agent-benchmark/catalog.json")
+        ds = args.datasets or Path("benchmarks/ds-agent-benchmark/datasets")
+        payload = run_benchmark(cat, ds, Path("benchmarks/ds-agent-benchmark/results"), limit=args.limit)
+        print(json.dumps({"n_tasks": payload.get("n_tasks"), "aggregate": payload.get("aggregate")}, ensure_ascii=False) if args.json else f"Tasks: {payload.get('n_tasks')} success={payload.get('aggregate', {}).get('task_success_rate')}")
         return
     if args.cmd == "plugin":
         from dsa_plugins.registry import list_plugins
