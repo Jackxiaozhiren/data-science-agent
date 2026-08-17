@@ -131,6 +131,8 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description="DS-Agent-Benchmark runner")
     sub = ap.add_subparsers(dest="cmd")
+    sub.add_parser("demo", help="One-command demo (§40): demo dataset → analysis → evidence → report")
+    sub.add_parser("external-validation", help="Installation + demo metrics (§42)")
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
     ap.add_argument(
@@ -144,6 +146,23 @@ def main() -> None:
     )
     ap.add_argument("--reproduce", nargs="?", const="benchmark", default=None, help="Run reproduction harness: --reproduce [benchmark]")
     args = ap.parse_args()
+
+    if args.cmd == "demo":
+        from dsa_evaluation.external_validation import run_demo
+
+        out = Path("demo/runs/demo")
+        res = run_demo(out=out)
+        print(json.dumps(res.model_dump(mode="json"), indent=2, ensure_ascii=False))
+        if not res.task_success:
+            print(f"demo failed: {res.error}", file=sys.stderr)
+            sys.exit(1)
+        return
+    if args.cmd == "external-validation":
+        from dsa_evaluation.external_validation import collect_installation_metrics
+
+        m = collect_installation_metrics()
+        print(json.dumps(m.model_dump(mode="json"), indent=2, ensure_ascii=False))
+        return
 
     if args.reproduce is not None:
         target = (args.reproduce or "benchmark").lower()
