@@ -64,8 +64,21 @@ class Analysis:
     raw_state: Any = None
 
 
+API_STABILITY: dict[str, str] = {
+    "Agent": "Stable",
+    "Dataset": "Stable",
+    "Analysis": "Stable",
+    "Evidence": "Stable",
+    "Artifact": "Stable",
+    "Insight": "Stable",
+    "Report": "Stable",
+    "Benchmark": "Stable",
+    "Reproduction": "Stable",
+}
+
+
 class Agent:
-    """Stable SDK facade (W2) over Core Engine (graph + evidence)."""
+    """Stable SDK facade (W2) over Core Engine (graph + evidence). [Stable]"""
 
     def __init__(self) -> None:
         self._version = "3.0.0"
