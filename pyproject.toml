@@ -19,6 +19,7 @@ dependencies = [
     "dsa-statistics",
     "dsa-tools",
     "dsa-visualization",
+    "dsa-plugins",
     "fastapi>=0.110",
     "pydantic>=2.7",
     "pydantic-settings>=2.4",
@@ -54,7 +55,7 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["apps/api", "packages/agent", "packages/datasets", "packages/evaluation", "packages/evidence", "packages/execution", "packages/llm", "packages/mcp", "packages/ml", "packages/reports", "packages/statistics", "packages/tools", "packages/visualization"]
+members = ["apps/api", "packages/agent", "packages/datasets", "packages/evaluation", "packages/evidence", "packages/execution", "packages/llm", "packages/mcp", "packages/ml", "packages/plugins", "packages/reports", "packages/statistics", "packages/tools", "packages/visualization"]
 
 [tool.uv.sources]
 dsa-agent = { workspace = true }
@@ -70,6 +71,7 @@ dsa-reports = { workspace = true }
 dsa-statistics = { workspace = true }
 dsa-tools = { workspace = true }
 dsa-visualization = { workspace = true }
+dsa-plugins = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -91,7 +93,7 @@ ignore = ["S101", "E501"]
 "packages/tools/**/*" = ["S110", "SIM105", "UP042", "UP046", "SIM102", "SIM103", "SIM110", "SIM222", "F401", "E402", "S608", "B904", "B905", "F841", "S311", "E702", "B007", "SIM103", "UP046"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["dsa_api", "dsa_agent", "dsa_tools", "dsa_execution", "dsa_statistics", "dsa_ml", "dsa_viz", "dsa_evidence", "dsa_reports", "dsa_datasets", "dsa_llm", "dsa_mcp", "dsa_evaluation"]
+known-first-party = ["dsa_api", "dsa_agent", "dsa_tools", "dsa_execution", "dsa_statistics", "dsa_ml", "dsa_viz", "dsa_evidence", "dsa_reports", "dsa_datasets", "dsa_llm", "dsa_mcp", "dsa_evaluation", "dsa_plugins"]
 
 [tool.mypy]
 python_version = "3.12"

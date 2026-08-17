@@ -152,6 +152,18 @@ def list_mcp_tools() -> list[MCPToolDef]:
     return out
 
 
+def list_tools() -> list[dict[str, Any]]:
+    return [t.model_dump(mode="json") for t in list_mcp_tools()]
+
+
+def list_resources() -> list[dict[str, Any]]:
+    return [
+        {"uri": "dataset://{dataset_id}", "name": "Dataset", "description": "Dataset resource (CSV/Parquet)"},
+        {"uri": "evidence://{run_id}", "name": "Evidence", "description": "Evidence graph for a run"},
+        {"uri": "report://{run_id}", "name": "Report", "description": "Report markdown + artifacts"},
+    ]
+
+
 async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     """Stateless dispatch: validate → call backend BaseTool → return output/error."""
     from dsa_tools import bootstrap, list_tools

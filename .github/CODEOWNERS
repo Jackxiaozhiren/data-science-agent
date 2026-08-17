@@ -1,0 +1,8 @@
+# CODEOWNERS (§69)
+* @jackson
+/packages/agent/ @jackson
+/packages/statistics/ @jackson
+/packages/ml/ @jackson
+/packages/mcp/ @jackson
+/docs/ @jackson
+/benchmarks/ @jackson

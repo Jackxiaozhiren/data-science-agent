@@ -139,6 +139,15 @@ def main() -> None:
     p_research = sub.add_parser("research", help="Research run/reproduce (§57): dsa research run|reproduce --experiment <id>")
     p_research.add_argument("action", nargs="?", choices=["run", "reproduce"], help="run or reproduce")
     p_research.add_argument("--experiment", type=str, default=None, help="Experiment id")
+    sub.add_parser("doctor", help="One-command setup check (§34 W5): dsa doctor")
+    p_init = sub.add_parser("init", help="One-command project (§36 W5): dsa init my-project")
+    p_init.add_argument("project", nargs="?", default="my-project", help="Project name")
+    sub.add_parser("analyze", help="Analyze dataset (§37): dsa analyze <dataset> --task ... [--json]")
+    sub.add_parser("profile", help="Profile dataset (§37): dsa profile <dataset> [--json]")
+    sub.add_parser("benchmark", help="Run benchmark (§37): dsa benchmark [--limit N] [--catalog ...]")
+    sub.add_parser("reproduce", help="Reproduce (§37): dsa reproduce [--benchmark v2]")
+    sub.add_parser("plugin", help="Plugin registry (§28): dsa plugin list")
+    sub.add_parser("mcp", help="MCP (§32): dsa mcp tools")
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
     ap.add_argument(
@@ -200,8 +209,96 @@ def main() -> None:
             man = build_manifest(exp, root=root, configuration={"action": action})
             print(json.dumps(man.model_dump(mode="json"), indent=2, ensure_ascii=False))
             return
-        print(json.dumps({"error": "Usage: dsa research run|reproduce --experiment <id> (§57)"}, ensure_ascii=False))
+            print(json.dumps({"error": "Usage: dsa research run|reproduce --experiment <id> (§57)"}, ensure_ascii=False))
         sys.exit(2)
+    if args.cmd == "doctor":
+        from dsa_evaluation.doctor import run_doctor
+
+        rep = run_doctor()
+        as_json = "--json" in sys.argv
+        if as_json:
+            print(json.dumps(rep, indent=2, ensure_ascii=False))
+        else:
+            print(f"=== dsa doctor ({rep['status']}) ===")
+            for c in rep["checks"]:
+                print(f"  {c['name']}: {c['status']}" + (f" — {c['message']}" if c.get("message") else ""))
+            print(f"Status: {rep['status']}")
+        sys.exit(0 if rep["status"] in ("ok", "warn") else 1)
+    if args.cmd == "init":
+        proj = getattr(args, "project", "my-project") or "my-project"
+        if "--json" in sys.argv:
+            import tempfile
+
+            # JSON mode for tests: create in temp
+            td = Path(tempfile.mkdtemp(prefix="dsa-init-"))
+            from dsa_evaluation.project_init import init_project
+
+            p = init_project(td / proj)
+            print(json.dumps({"project": str(p), "status": "ok"}, ensure_ascii=False))
+        else:
+            from dsa_evaluation.project_init import init_project
+
+            p = init_project(Path(proj))
+            print(f"Created {p}")
+        return
+    if args.cmd == "analyze":
+        # Usage: dsa analyze <dataset> --task "..." [--json]  -> parse remaining argv
+        import argparse as _ap2
+
+        ap2 = _ap2.ArgumentParser(prog="dsa analyze")
+        ap2.add_argument("dataset")
+        ap2.add_argument("--task", required=True)
+        ap2.add_argument("--json", action="store_true")
+        a2 = ap2.parse_args(sys.argv[2:])
+        from data_science_agent import Agent
+
+        agent = Agent()
+        r = agent.analyze_sync(a2.dataset, a2.task)
+        if a2.json:
+            print(json.dumps({"run_id": r.run_id, "status": r.status, "report": r.report_markdown[:500] if r.report_markdown else None, "evidence": len(r.evidence), "error": r.error}, ensure_ascii=False))
+        else:
+            print(f"status={r.status} evidence={len(r.evidence)}")
+            if r.report_markdown:
+                print(r.report_markdown[:2000])
+        return
+    if args.cmd == "profile":
+        import argparse as _ap3
+
+        ap3 = _ap3.ArgumentParser(prog="dsa profile")
+        ap3.add_argument("dataset")
+        ap3.add_argument("--json", action="store_true")
+        a3 = ap3.parse_args(sys.argv[2:])
+        from data_science_agent import Agent
+
+        prof = Agent().profile(a3.dataset)
+        print(json.dumps(prof, ensure_ascii=False) if a3.json else str(prof))
+        return
+    if args.cmd == "benchmark":
+        import argparse as _ap4
+
+        ap4 = _ap4.ArgumentParser(prog="dsa benchmark")
+        ap4.add_argument("--limit", type=int, default=None)
+        ap4.add_argument("--catalog", type=Path, default=None)
+        ap4.add_argument("--datasets", type=Path, default=None)
+        ap4.add_argument("--json", action="store_true")
+        a4 = ap4.parse_args(sys.argv[2:])
+        cat = a4.catalog or Path("benchmarks/ds-agent-benchmark/catalog.json")
+        ds = a4.datasets or Path("benchmarks/ds-agent-benchmark/datasets")
+        payload = run_benchmark(cat, ds, Path("benchmarks/ds-agent-benchmark/results"), limit=a4.limit)
+        print(json.dumps({"n_tasks": payload.get("n_tasks"), "aggregate": payload.get("aggregate")}, ensure_ascii=False) if a4.json else f"Tasks: {payload.get('n_tasks')} success={payload.get('aggregate', {}).get('task_success_rate')}")
+        return
+    if args.cmd == "plugin":
+        from dsa_plugins.registry import list_plugins
+
+        pls = list_plugins()
+        print(json.dumps([p.model_dump(mode="json") if hasattr(p, "model_dump") else dict(p) for p in pls], ensure_ascii=False))
+        return
+    if args.cmd == "mcp":
+        from dsa_mcp.adapter import list_tools as mcp_list
+
+        tools = mcp_list()
+        print(json.dumps([t if isinstance(t, dict) else t for t in tools], ensure_ascii=False))
+        return
 
     if args.reproduce is not None:
         target = (args.reproduce or "benchmark").lower()
