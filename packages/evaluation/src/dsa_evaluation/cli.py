@@ -133,6 +133,12 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("demo", help="One-command demo (§40): demo dataset → analysis → evidence → report")
     sub.add_parser("external-validation", help="Installation + demo metrics (§42)")
+    p_verify = sub.add_parser("verify-release", help="Release verification (§63): dsa verify-release v3.0.0")
+    p_verify.add_argument("version", nargs="?", default="v3.0.0", help="Release version")
+    p_verify.add_argument("--json", action="store_true", help="Output JSON")
+    p_research = sub.add_parser("research", help="Research run/reproduce (§57): dsa research run|reproduce --experiment <id>")
+    p_research.add_argument("action", nargs="?", choices=["run", "reproduce"], help="run or reproduce")
+    p_research.add_argument("--experiment", type=str, default=None, help="Experiment id")
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
     ap.add_argument(
@@ -163,6 +169,39 @@ def main() -> None:
         m = collect_installation_metrics()
         print(json.dumps(m.model_dump(mode="json"), indent=2, ensure_ascii=False))
         return
+    if args.cmd == "verify-release":
+        from dsa_evaluation.verify_release import verify_release
+
+        ver = getattr(args, "version", "v3.0.0") or "v3.0.0"
+        use_json = bool(getattr(args, "json", False))
+        rep = verify_release(ver)
+        if use_json:
+            print(json.dumps(rep, indent=2, ensure_ascii=False))
+        else:
+            print(f"=== Release Verification Report {rep['version']} ===")
+            for k, v in rep["gates"].items():
+                print(f"  {k}: {v}")
+            print(f"Summary: {rep['summary']}")
+            if rep["details"]:
+                print("\nDetails (failures):")
+                for k, v in rep["details"].items():
+                    print(f"  {k}: {v[:400]}")
+        if any(v == "FAIL" for v in rep["gates"].values()):
+            sys.exit(1)
+        return
+    if args.cmd == "research":
+        # dsa research run|reproduce --experiment <id> (§57) — via argparse subcommand
+        action = getattr(args, "action", None)
+        exp = getattr(args, "experiment", None)
+        if action in ("run", "reproduce") and exp:
+            from dsa_evaluation.research_manifest import build_manifest
+
+            root = Path.cwd() if (Path.cwd() / "pyproject.toml").exists() else Path(__file__).parents[3]
+            man = build_manifest(exp, root=root, configuration={"action": action})
+            print(json.dumps(man.model_dump(mode="json"), indent=2, ensure_ascii=False))
+            return
+        print(json.dumps({"error": "Usage: dsa research run|reproduce --experiment <id> (§57)"}, ensure_ascii=False))
+        sys.exit(2)
 
     if args.reproduce is not None:
         target = (args.reproduce or "benchmark").lower()
