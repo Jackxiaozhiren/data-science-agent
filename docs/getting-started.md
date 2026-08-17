@@ -1,8 +1,10 @@
-# Getting Started
+# Getting Started — V3 W10 §48
+
+> Structure: `docs/getting-started.md` · `docs/architecture.md` (§49 Mermaid 7 diagrams) · `docs/agent-system.md` · `docs/evidence.md` · `docs/evaluation.md` · `docs/benchmark.md` (§50) · `docs/reproducibility.md` · `docs/security.md` · `docs/mcp.md` · `docs/research.md` / `research/V3_RESEARCH_REPORT.md` (§51) · `docs/contributing.md` — see `mkdocs.yml`.
 
 ## Prerequisites
 - Python 3.12, `uv` (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- Node 20 (web app only)
+- Node 20 (web app only) — `npm --prefix apps/web run build` is part of the release gate (§59)
 
 ## Install & Run (local-first)
 
