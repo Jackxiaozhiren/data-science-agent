@@ -6,8 +6,8 @@ authors:
   - family-names: "Data Science Agent Contributors"
     given-names: ""
     orcid: ""
-version: 2.0.0
-date-released: 2026-08-16
+version: 3.0.0
+date-released: 2026-08-17
 license: MIT
 repository-code: "https://github.com/your-org/data-science-agent"
 url: "https://github.com/your-org/data-science-agent"
@@ -23,6 +23,6 @@ keywords:
   - duckdb
 references:
   - type: software
-    title: "Data Science Agent V2 Research Grade — Benchmark v2 (30 datasets / 100 tasks)"
-    version: 2.0.0
+    title: "Data Science Agent V3 — Research Validation, External Reproducibility & Open-Source Release — Benchmark v2 (30 datasets / 100 tasks)"
+    version: 3.0.0
     year: 2026

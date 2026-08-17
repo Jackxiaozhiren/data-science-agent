@@ -1,6 +1,12 @@
 # Changelog
 
-## 2.1.0 — V3 Phases A–H (W1–W8) — in progress toward v3.0.0
+## 3.0.0 — V3 Research Validation, External Reproducibility & Open-Source Release (§2 North Star)
+
+- **V3.0 scope** (12 workstreams W1–W12): Baseline Revalidation → Benchmark Scientific Audit (0.3.0, Q1–Q10, §13–17 versioned) → Independent Reproduction (`reproduction/` L0–L5 + 6-dim) → Statistical Upgrade (`evaluator_v2` 10 dims S01–S10) → Reliability (4 configs × 7 metrics §27–30) → Cross-Model (4 classes no-fabrication + 3 frontiers) → Human Eval (11/100, Kappa/Alpha) → External Validation (`dsa demo` local-first) → Release Engineering (ROADMAP/CITATION/README 6 questions + claim policy) → Documentation & Research Packaging (§48–51, 7 Mermaid diagrams) → Publication & Citation (related work + claim-evidence matrix + 7 showcases + paper versioning + figure/table scripts) → V3 Release (`dsa verify-release v3.0.0`, immutable `release/v3.0`).
+- **Gates** (§58–59 v3.0.0): `pytest 155 / mypy 94 clean / ruff All checks passed / cov 81% / ruff/mypy/pytest/dsa/npm/compose all PASS` + `benchmark v2 30/100/11 @1.00` + `human-eval 11/100` + `external dsa demo pass` + `research V3_RESEARCH_REPORT.md` + `release gates PASS` — all `Benchmark + Commit + Report` traceable (§45/64).
+- **Version**: `pyproject.toml` 2.0.0 → 3.0.0 · tag `v3.0.0` (verified via `dsa verify-release v3.0.0 §63`).
+
+## 2.1.0 — V3 Phases A–H (W1–W8) — frozen pre-release
 
 - **W1 Baseline**: `docs/v3/V2_FINAL_BASELINE.md` freeze (137 passed · 92 mypy · 81% · 13 routes · 50/50 + 100/100, dirty only from untracked V3 spec).
 - **W2 Benchmark Audit**: `docs/v3/BENCHMARK_AUDIT.md` + `benchmarks/v2/catalog.json 0.2.0→0.3.0` (Q1–Q10, per-task `source/license/citation/benchmark_version/generator/reviewer/acceptable_*`, evaluator_v2 note).

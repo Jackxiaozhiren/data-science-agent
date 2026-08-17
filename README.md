@@ -1,4 +1,4 @@
-# Data Science Agent — v2.0.0 Research Grade
+# Data Science Agent — v3.0.0
 
 > **An Evidence-Grounded Autonomous Data Science System.**
 > Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.
