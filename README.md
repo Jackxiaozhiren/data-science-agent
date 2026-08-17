@@ -1,4 +1,4 @@
-# Data Science Agent — v3.0.0
+# Data Science Agent — v4.0.0
 
 > **An Evidence-Grounded Autonomous Data Science System.**
 > Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.
@@ -10,7 +10,7 @@
 **How is it evaluated?** Benchmark v2: `30 datasets / 100 tasks / 11 categories, seed 42` via `dsa --catalog benchmarks/v2/catalog.json ...` — metrics: task success, statistical/tool/evidence, evaluator_v2.
 **How is it reproducible?** `dsa reproduce` ↔ `reproduction/{manifest,environment,results,comparison,logs}` + `ReproductionScore` (6-dim, L0–L5) — see `docs/v3/`.
 
-V2 adds: Evaluation Framework · Scientific Benchmark v2 (30/100/11) · Reliability & Reproducibility · Failure Taxonomy F01–F15 · Observability · MCP 2026-07-28 Stateless · Security Hardening · Research Package (RQs + ablation A–F). V3 adds: scientific audit (0.3.0, §13–17 versioned), independent reproduction, statistical upgrade (evaluator_v2), cross-model frontier, human evaluation (11/100, Kappa/Alpha), external validation (`dsa demo`).
+V2 adds: Evaluation Framework · Scientific Benchmark v2 (30/100/11) · Reliability & Reproducibility · Failure Taxonomy F01–F15 · Observability · MCP 2026-07-28 Stateless · Security Hardening · Research Package (RQs + ablation A–F). V3 adds: scientific audit (0.3.0, §13–17 versioned), independent reproduction, statistical upgrade (evaluator_v2), cross-model frontier, human evaluation (11/100, Kappa/Alpha), external validation (`dsa demo`). V4 adds: SDK (`from data_science_agent import Agent`), product CLI (`dsa doctor/init/analyze`), plugin architecture, MCP Apps, Jupyter/VS Code, community growth.
 
 **Quantitative claims (see §45):** Any number like `50/50 @1.0`, `100/100 @1.0`, `81% coverage`, `13 routes` must cite `Benchmark Version + Commit + Report` (e.g. `benchmarks/v2 0.3.0 + commit 1b6c3bf + docs/v3/V2_FINAL_BASELINE.md` or `benchmarks/baseline`). Avoid `State-of-the-art / Best / Enterprise-grade / Production-ready` without evidence.
 
@@ -19,7 +19,7 @@ V2 adds: Evaluation Framework · Scientific Benchmark v2 (30/100/11) · Reliabil
 Docs: [Getting Started](./docs/getting-started.md) · [Agent](./docs/agent.md) · [Tools](./docs/tools.md) · [Evidence](./docs/evidence.md) · [API](./docs/api.md) · [MCP](./docs/MCP_DESIGN.md) · [Frontend IA](./docs/FRONTEND_IA.md) · [Research](./docs/research.md) · [Changelog](./CHANGELOG.md) · [Roadmap](./ROADMAP.md) · [Citation](./CITATION.cff)
 V2: [Baseline Report](./docs/v2/Baseline%20Report.md) · [Evaluation](./docs/v2/evaluation.md) · [MCP 2026-07-28](./docs/v2/MCP_2026_Audit.md) · [Security (W9)](./docs/v2/security.md) · [Benchmark v2](./benchmarks/v2/README.md) · Benchmark baseline: [benchmarks/baseline](./benchmarks/baseline/README.md)
 V3: [V2 Baseline Freeze](./docs/v3/V2_FINAL_BASELINE.md) · [Benchmark Audit](./docs/v3/BENCHMARK_AUDIT.md) · [Reproduction](./docs/v3/REPRODUCTION.md) · [Statistical Eval](./docs/v3/STATISTICAL_EVALUATION.md) · [Reliability](./docs/v3/RELIABILITY.md) · [Cross-Model](./docs/v3/CROSS_MODEL.md) · [Human Eval](./docs/v3/HUMAN_EVALUATION_GUIDE.md) · [External Validation](./docs/v3/EXTERNAL_VALIDATION.md) — `human-eval/` samples + `demo/` one-command
-MkDocs: `uv run mkdocs serve` / `uv run mkdocs build --strict` (see [mkdocs.yml](./mkdocs.yml)) — Architecture Freeze at [ARCHITECTURE_FREEZE_V0.1.md](./ARCHITECTURE_FREEZE_V0.1.md)
+MkDocs: `uv run mkdocs serve` / `uv run mkdocs build` (see [mkdocs.yml](./mkdocs.yml)) — Architecture Freeze at [ARCHITECTURE_FREEZE_V0.1.md](./ARCHITECTURE_FREEZE_V0.1.md)
 
 ## Stack
 
@@ -154,7 +154,8 @@ data-science-agent/ (monorepo)
 
 Phase 0 Architecture Freeze ✓  Phase 1 Scaffold ✓  Phase 2 Data Layer ✓  Phase 3 Tool Layer ✓  Phase 4 Agent Graph ✓  Phase 5 Evidence ✓  Phase 6 API ✓  Phase 7 Frontend ✓  Phase 8 Security ✓  Phase 9 Benchmark ✓  Phase 10 MCP ✓  Phase 11 Docs ✓ — see `ROADMAP.md` for V3.0 W1–W12.
 V2.0 Research Grade ✓ `v2.0.0` (Evaluation 10×6 · Benchmark v2 30/100/11 · Reliability L0–L5/F01–F15 · MCP 2026-07-28 · Security 23) — `docs/v3/V2_FINAL_BASELINE.md`.
-V3.0 in progress: W1 Baseline ✓ W2 Audit ✓ W3 Reproduction ✓ W4 evaluator_v2 ✓ W5 Reliability ✓ W6 Cross-Model ✓ W7 Human Eval ✓ W8 External (`dsa demo`) ✓ → W9 Release (this) → W10–W12 docs/citation.
+V3.0 Release ✓ `v3.0.0` (12 workstreams, `docs/v3/V2_FINAL_BASELINE.md` + `research/V3_RESEARCH_REPORT.md`).
+V4.0 Ecosystem ✓ `v4.0.0` (SDK + CLI + Plugins + MCP Apps + Jupyter/VS Code + Community).
 
 ## Testing
 

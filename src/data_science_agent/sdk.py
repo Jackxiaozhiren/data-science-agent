@@ -81,7 +81,7 @@ class Agent:
     """Stable SDK facade (W2) over Core Engine (graph + evidence). [Stable]"""
 
     def __init__(self) -> None:
-        self._version = "3.0.0"
+        self._version = "4.0.0"
 
     async def analyze(
         self,

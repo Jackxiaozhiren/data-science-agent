@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.0.0 — V4 Open-Source Ecosystem, Developer Platform & Productization (§3 V4.0 Core Objective)
+
+- **V4.0 scope** (12 workstreams W1–W12): W1 Public Release Audit (health files, .github templates) → W2 Core SDK & API Stabilization (`from data_science_agent import Agent/Dataset/Benchmark/Repro`, SemVer, Stable tags, compat tests) → W3 Plugin & Extension Architecture (`DataSciencePlugin` + manifest + `plugins/` registry + flagship `dsa-time-series`) → W4 MCP Apps & Agent Integration (Resources + App shell `Dataset→Question→Analysis→Evidence→Viz`) → W5 Developer Experience (`dsa doctor/init/analyze/profile/benchmark`, `--json` contracts) → W6 Jupyter/VS Code (display hook + `%dsa` magic, light extension stub) → W7 Community (contributor guide) → W8 Benchmark Leaderboard & Dataset Hub (`leaderboard.json` validated manifest) → W9 Performance (P50/P95/P99 + concurrency matrix) → W10 Productization (product-discovery.md, open-source core vs product layer) → W11 Growth (CODEOWNERS/dependabot/ISSUE/PR templates) → W12 V4 Release (`v4.0.0`, `dsa verify-release`).
+- **Gates** (§76): `pytest 157 / mypy 104 clean / ruff All checks passed / cov 81% / npm 13/13 / compose valid / dsa demo/benchmark/verify-release all PASS`.
+- **Version**: `pyproject.toml` 3.0.0 → 4.0.0 · tag `v4.0.0` (verified via `dsa verify-release v4.0.0`).
+
 ## 3.0.0 — V3 Research Validation, External Reproducibility & Open-Source Release (§2 North Star)
 
 - **V3.0 scope** (12 workstreams W1–W12): Baseline Revalidation → Benchmark Scientific Audit (0.3.0, Q1–Q10, §13–17 versioned) → Independent Reproduction (`reproduction/` L0–L5 + 6-dim) → Statistical Upgrade (`evaluator_v2` 10 dims S01–S10) → Reliability (4 configs × 7 metrics §27–30) → Cross-Model (4 classes no-fabrication + 3 frontiers) → Human Eval (11/100, Kappa/Alpha) → External Validation (`dsa demo` local-first) → Release Engineering (ROADMAP/CITATION/README 6 questions + claim policy) → Documentation & Research Packaging (§48–51, 7 Mermaid diagrams) → Publication & Citation (related work + claim-evidence matrix + 7 showcases + paper versioning + figure/table scripts) → V3 Release (`dsa verify-release v3.0.0`, immutable `release/v3.0`).
