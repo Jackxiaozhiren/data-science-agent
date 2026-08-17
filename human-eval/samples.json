@@ -1,0 +1,90 @@
+[
+  {
+    "task_id": "clf-04",
+    "category": "Classification",
+    "dataset": "hr_promotion.csv",
+    "question": "Predict promoted and report feature importance.",
+    "gold_criteria": "train_model",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "clus-04",
+    "category": "Clustering",
+    "dataset": "wide_table.csv",
+    "question": "Reduce wide_table.csv (PCA heuristic or feature selection) then cluster.",
+    "gold_criteria": "train_model",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "dq-06",
+    "category": "Data Quality",
+    "dataset": "missing_heavy.csv",
+    "question": "Quantify missing rate and recommend imputation.",
+    "gold_criteria": "profile_dataset",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "eda-08",
+    "category": "EDA",
+    "dataset": "groups.csv",
+    "question": "Summarize the groups dataset by group and value distribution.",
+    "gold_criteria": "profile_dataset",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "ev-01",
+    "category": "Evidence Validation",
+    "dataset": "sales.csv",
+    "question": "Claim with evidence: total revenue by region must be grounded in SQL result.",
+    "gold_criteria": "run_sql",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "prof-04",
+    "category": "Data Profiling",
+    "dataset": "high_cardinality.csv",
+    "question": "Report high-cardinality key distribution and suggest handling.",
+    "gold_criteria": "profile_dataset",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "reg-08",
+    "category": "Regression",
+    "dataset": "imbalanced.csv",
+    "question": "Train logistic regression on imbalanced.csv and report PR-AUC / F1 rather than accuracy alone.",
+    "gold_criteria": "train_model",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "sql-05",
+    "category": "SQL",
+    "dataset": "groups.csv",
+    "question": "Count rows per group and filter groups with more than 100 rows.",
+    "gold_criteria": "run_sql",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "stats-10",
+    "category": "Statistics",
+    "dataset": "imbalanced.csv",
+    "question": "Compare x1 distribution between label groups (Welch t-test appropriate?).",
+    "gold_criteria": "hypothesis_test",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "ts-06",
+    "category": "Time Series",
+    "dataset": "time_series_long.csv",
+    "question": "Forecast next 30 days of time_series_long.csv (trend + weekly seasonality).",
+    "gold_criteria": "forecast",
+    "sampled_at_seed": 42
+  },
+  {
+    "task_id": "viz-03",
+    "category": "Visualization",
+    "dataset": "correlation.csv",
+    "question": "Scatter plot of x vs y.",
+    "gold_criteria": "create_chart",
+    "sampled_at_seed": 42
+  }
+]

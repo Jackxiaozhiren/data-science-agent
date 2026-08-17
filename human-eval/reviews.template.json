@@ -1,0 +1,58 @@
+{
+  "instructions": "Copy this file per reviewer: reviews/<reviewer>.json — scores 1..5 per dimension, see rubric",
+  "rubric_dimensions": [
+    "correctness",
+    "clarity",
+    "statistical_validity",
+    "evidence_quality",
+    "interpretation",
+    "uncertainty",
+    "actionability",
+    "report_quality"
+  ],
+  "score_scale": {
+    "1": "unacceptable",
+    "2": "poor",
+    "3": "acceptable",
+    "4": "strong",
+    "5": "excellent"
+  },
+  "sample_task_ids": [
+    "clf-04",
+    "clus-04",
+    "dq-06",
+    "eda-08",
+    "ev-01",
+    "prof-04",
+    "reg-08",
+    "sql-05",
+    "stats-10",
+    "ts-06",
+    "viz-03"
+  ],
+  "example_review": {
+    "task_id": "clf-04",
+    "reviewer": "reviewer_a",
+    "scores": {
+      "correctness": 3,
+      "clarity": 3,
+      "statistical_validity": 3,
+      "evidence_quality": 3,
+      "interpretation": 3,
+      "uncertainty": 3,
+      "actionability": 3,
+      "report_quality": 3
+    },
+    "comments": {
+      "correctness": "",
+      "clarity": "",
+      "statistical_validity": "",
+      "evidence_quality": "",
+      "interpretation": "",
+      "uncertainty": "",
+      "actionability": "",
+      "report_quality": ""
+    },
+    "overall": null
+  }
+}
