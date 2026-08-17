@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use Data Science Agent, please cite it as below."
+title: "Data Science Agent"
+abstract: "An Evidence-Grounded Autonomous Data Science System — from natural language to reproducible data science."
+authors:
+  - family-names: "Data Science Agent Contributors"
+    given-names: ""
+    orcid: ""
+version: 2.0.0
+date-released: 2026-08-16
+license: MIT
+repository-code: "https://github.com/your-org/data-science-agent"
+url: "https://github.com/your-org/data-science-agent"
+keywords:
+  - data-science
+  - llm-agent
+  - evidence-grounding
+  - reproducibility
+  - evaluation
+  - benchmark
+  - mcp
+  - langgraph
+  - duckdb
+references:
+  - type: software
+    title: "Data Science Agent V2 Research Grade — Benchmark v2 (30 datasets / 100 tasks)"
+    version: 2.0.0
+    year: 2026

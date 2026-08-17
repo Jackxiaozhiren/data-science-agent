@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.0 — V3 Phases A–H (W1–W8) — in progress toward v3.0.0
+
+- **W1 Baseline**: `docs/v3/V2_FINAL_BASELINE.md` freeze (137 passed · 92 mypy · 81% · 13 routes · 50/50 + 100/100, dirty only from untracked V3 spec).
+- **W2 Benchmark Audit**: `docs/v3/BENCHMARK_AUDIT.md` + `benchmarks/v2/catalog.json 0.2.0→0.3.0` (Q1–Q10, per-task `source/license/citation/benchmark_version/generator/reviewer/acceptable_*`, evaluator_v2 note).
+- **W3 Independent Reproduction**: `dsa --reproduce` / `dsa reproduce` → `reproduction/{manifest,environment,results,comparison,logs}` + `ReproductionScore` 6-dim L0–L5 — `docs/v3/REPRODUCTION.md`.
+- **W4 Statistical Upgrade**: `evaluator_v2` 10 dims + S01–S10 (causal/uncertainty) wired into `EvaluationResult.details` (non-breaking, `evaluator_version: evaluator_v2`) — `docs/v3/STATISTICAL_EVALUATION.md`.
+- **W5 Reliability**: 4 configs (single/planner/planner+critic/full) × 7 §27 metrics + §28–30 — `docs/v3/RELIABILITY.md`.
+- **W6 Cross-Model**: 4 classes (local_small/medium/open_api/frontier) no-fabrication (§31) + 3 Pareto frontiers (§33) — `docs/v3/CROSS_MODEL.md`.
+- **W7 Human Eval**: `human-eval/` 11/100 stratified (seed 42, hash c3835816) + 8-dim rubric (1–5) + Kappa/Alpha — `docs/v3/HUMAN_EVALUATION_GUIDE.md`.
+- **W8 External Validation**: `dsa demo` (§40/47) + `dsa external-validation` (§42) local-first + `demo/` package (§46) — `docs/v3/EXTERNAL_VALIDATION.md`.
+- **Docs/Claim policy**: README first-screen (What/Why/Why different/How run/How evaluated/How reproducible, §44), V3 docs index, claim policy §45 traceability (`Benchmark + Commit + Report`).
+
 ## 2.0.0 — V2 Research Grade (W1–W10 full)
 
 - Baseline freeze: `docs/v2/Baseline Report.md` (live 116 passed / 87 mypy clean / 75–76% cov / 13 routes / 50/50 frozen to `benchmarks/baseline/`, mean 47.92ms)

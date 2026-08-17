@@ -9,7 +9,7 @@ theme:
     - toc.follow
 markdown_extensions:
   - toc:
-      permalink: true
+       permalink: true
   - tables
   - admonition
   - pymdownx.superfences
@@ -33,8 +33,20 @@ nav:
   - Benchmark v2: benchmarks/v2/README.md
   - Baseline: benchmarks/baseline/README.md
   - ADR: docs/ADR/ADR-001-mcp-2026-07-28-stateless-core.md
+  - V3 Baseline: docs/v3/V2_FINAL_BASELINE.md
+  - V3 Benchmark Audit: docs/v3/BENCHMARK_AUDIT.md
+  - V3 Reproduction: docs/v3/REPRODUCTION.md
+  - V3 Statistical: docs/v3/STATISTICAL_EVALUATION.md
+  - V3 Reliability: docs/v3/RELIABILITY.md
+  - V3 Cross-Model: docs/v3/CROSS_MODEL.md
+  - V3 Human Eval: docs/v3/HUMAN_EVALUATION_GUIDE.md
+  - V3 External: docs/v3/EXTERNAL_VALIDATION.md
   - Research: docs/research.md
+  - Demo: demo/README.md
+  - Human Eval: human-eval/README.md
   - Examples: examples/README.md
   - Changelog: CHANGELOG.md
+  - Roadmap: ROADMAP.md
   - Contributing: CONTRIBUTING.md
+  - Citation: CITATION.cff
   - Licenses: THIRD_PARTY_LICENSES.md
