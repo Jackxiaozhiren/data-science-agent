@@ -16,7 +16,7 @@ markdown_extensions:
 nav:
   - Home: README.md
   - Getting Started: docs/getting-started.md
-  - Architecture: ARCHITECTURE_FREEZE_V0.1.md
+  - Architecture: docs/architecture.md
   - Agent: docs/agent.md
   - Tools: docs/tools.md
   - Statistics: docs/statistics.md
@@ -24,15 +24,11 @@ nav:
   - MCP: docs/MCP_DESIGN.md
   - API: docs/api.md
   - Frontend: docs/FRONTEND_IA.md
-  - Benchmark: benchmarks/ds-agent-benchmark/README.md
   - Security: docs/security.md
   - V2 Baseline: docs/v2/Baseline Report.md
   - V2 Evaluation: docs/v2/evaluation.md
   - V2 MCP 2026-28: docs/v2/MCP_2026_Audit.md
   - V2 Security: docs/v2/security.md
-  - Benchmark v2: benchmarks/v2/README.md
-  - Baseline: benchmarks/baseline/README.md
-  - ADR: docs/ADR/ADR-001-mcp-2026-07-28-stateless-core.md
   - V3 Baseline: docs/v3/V2_FINAL_BASELINE.md
   - V3 Benchmark Audit: docs/v3/BENCHMARK_AUDIT.md
   - V3 Reproduction: docs/v3/REPRODUCTION.md
@@ -42,11 +38,3 @@ nav:
   - V3 Human Eval: docs/v3/HUMAN_EVALUATION_GUIDE.md
   - V3 External: docs/v3/EXTERNAL_VALIDATION.md
   - Research: docs/research.md
-  - Demo: demo/README.md
-  - Human Eval: human-eval/README.md
-  - Examples: examples/README.md
-  - Changelog: CHANGELOG.md
-  - Roadmap: ROADMAP.md
-  - Contributing: CONTRIBUTING.md
-  - Citation: CITATION.cff
-  - Licenses: THIRD_PARTY_LICENSES.md
