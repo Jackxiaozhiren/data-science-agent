@@ -131,7 +131,8 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description="DS-Agent-Benchmark runner")
     sub = ap.add_subparsers(dest="cmd")
-    sub.add_parser("demo", help="One-command demo (§40): demo dataset → analysis → evidence → report")
+    p_demo = sub.add_parser("demo", help="One-command demo (§40): demo dataset → analysis → evidence → report")
+    p_demo.add_argument("--json", action="store_true", help="JSON output")
     sub.add_parser("external-validation", help="Installation + demo metrics (§42)")
     p_verify = sub.add_parser("verify-release", help="Release verification (§63): dsa verify-release v3.0.0")
     p_verify.add_argument("version", nargs="?", default="v3.0.0", help="Release version")
@@ -139,9 +140,11 @@ def main() -> None:
     p_research = sub.add_parser("research", help="Research run/reproduce (§57): dsa research run|reproduce --experiment <id>")
     p_research.add_argument("action", nargs="?", choices=["run", "reproduce"], help="run or reproduce")
     p_research.add_argument("--experiment", type=str, default=None, help="Experiment id")
-    sub.add_parser("doctor", help="One-command setup check (§34 W5): dsa doctor")
+    p_doctor = sub.add_parser("doctor", help="One-command setup check (§34 W5): dsa doctor")
+    p_doctor.add_argument("--json", action="store_true", help="JSON output")
     p_init = sub.add_parser("init", help="One-command project (§36 W5): dsa init my-project")
     p_init.add_argument("project", nargs="?", default="my-project", help="Project name")
+    p_init.add_argument("--json", action="store_true", help="JSON output")
     p_analyze = sub.add_parser("analyze", help="Analyze dataset (§37): dsa analyze <dataset> --task ... [--json]")
     p_analyze.add_argument("dataset", nargs="?", default=None, help="Dataset path")
     p_analyze.add_argument("--task", dest="task", required=False, default=None, help="Task description")
@@ -154,9 +157,12 @@ def main() -> None:
     p_benchmark.add_argument("--catalog", type=Path, default=None)
     p_benchmark.add_argument("--datasets", type=Path, default=None)
     p_benchmark.add_argument("--json", action="store_true", help="JSON output")
-    sub.add_parser("reproduce", help="Reproduce (§37): dsa reproduce [--benchmark v2]")
-    sub.add_parser("plugin", help="Plugin registry (§28): dsa plugin list")
-    sub.add_parser("mcp", help="MCP (§32): dsa mcp tools")
+    p_repro = sub.add_parser("reproduce", help="Reproduce (§37): dsa reproduce [--benchmark v2]")
+    p_repro.add_argument("--json", action="store_true", help="JSON output")
+    p_plugin = sub.add_parser("plugin", help="Plugin registry (§28): dsa plugin list")
+    p_plugin.add_argument("--json", action="store_true", help="JSON output")
+    p_mcp = sub.add_parser("mcp", help="MCP (§32): dsa mcp tools")
+    p_mcp.add_argument("--json", action="store_true", help="JSON output")
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
     ap.add_argument(
@@ -224,8 +230,7 @@ def main() -> None:
         from dsa_evaluation.doctor import run_doctor
 
         rep = run_doctor()
-        # doctor optionally supports --json via global argv; keep simple
-        _want_json = "--json" in sys.argv or getattr(args, "doctor_json", False)
+        _want_json = bool(getattr(args, "json", False))
         if _want_json:
             print(json.dumps(rep, indent=2, ensure_ascii=False))
         else:
@@ -236,7 +241,8 @@ def main() -> None:
         sys.exit(0 if rep["status"] in ("ok", "warn") else 1)
     if args.cmd == "init":
         proj = getattr(args, "project", "my-project") or "my-project"
-        if "--json" in sys.argv:
+        _init_json = bool(getattr(args, "json", False))
+        if _init_json:
             import tempfile
 
             # JSON mode for tests: create in temp

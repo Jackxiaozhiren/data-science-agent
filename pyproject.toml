@@ -1,10 +1,25 @@
 [project]
 name = "data-science-agent"
 version = "4.0.0"
-description = "An Evidence-Grounded Autonomous Data Science System"
+description = "An Evidence-Grounded Autonomous Data Science System — from natural language to reproducible analysis"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+authors = [{ name = "Data Science Agent Contributors", email = "maintainers@data-science-agent.local" }]
+maintainers = [{ name = "Data Science Agent Maintainers", email = "maintainers@data-science-agent.local" }]
+keywords = ["data-science", "agent", "llm", "reproducibility", "evidence", "benchmark", "mcp", "duckdb", "polars"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Operating System :: OS Independent",
+  "Framework :: FastAPI",
+]
 dependencies = [
     "dsa-agent",
     "dsa-api",
@@ -40,6 +55,12 @@ dependencies = [
     "openpyxl>=3.1",
     "greenlet>=3.5.5",
 ]
+urls = { Homepage = "https://github.com/data-science-agent/data-science-agent", Repository = "https://github.com/data-science-agent/data-science-agent", Documentation = "https://github.com/data-science-agent/data-science-agent/blob/main/docs/getting-started.md", Changelog = "https://github.com/data-science-agent/data-science-agent/blob/main/CHANGELOG.md", Issues = "https://github.com/data-science-agent/data-science-agent/issues" }
+
+[project.optional-dependencies]
+jupyter = ["ipython>=8.0", "ipykernel>=6.0"]
+time-series = ["statsmodels>=0.14"]
+dev-jupyter = ["ipython>=8.0", "ipykernel>=6.0", "jupyterlab>=4.0"]
 
 [dependency-groups]
 dev = [
@@ -83,7 +104,7 @@ ignore = ["S101", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "apps/api/src/dsa_api/routers/*" = ["B008", "S110", "SIM105"]
-"tests/**/*" = ["S101", "S108", "B017", "S608", "F841", "I001", "B905", "SIM105", "S110", "F401", "UP042", "UP046", "S311", "SIM102", "SIM103", "SIM110", "SIM222", "B904", "E402", "E702", "B007", "S110"]
+"tests/**/*" = ["S101", "S108", "B017", "S603", "S607", "S608", "F841", "I001", "B905", "SIM105", "S110", "F401", "UP042", "UP046", "S311", "SIM102", "SIM103", "SIM110", "SIM222", "B904", "E402", "E702", "B007", "S110"]
 "packages/agent/src/dsa_agent/*" = ["F841", "E402", "S110", "SIM102", "S608", "B904", "UP042", "SIM105", "SIM222", "S311", "UP046", "B905"]
 "packages/datasets/**/*" = ["S608", "UP042", "S110", "F841", "S311"]
 "packages/evaluation/**/*" = ["S110", "F841", "B905", "SIM105", "S608", "UP042", "S311", "SIM110", "SIM103", "SIM210", "SIM108"]
