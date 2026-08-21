@@ -15,7 +15,6 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "data-science-agent",
     "dsa-agent",
     "dsa-api",
     "dsa-datasets",
@@ -31,6 +30,7 @@ members = [
     "dsa-statistics",
     "dsa-tools",
     "dsa-visualization",
+    "jack-data-science-agent",
 ]
 
 [[package]]
@@ -723,144 +723,6 @@ wheels = [
 ]
 
 [[package]]
-name = "data-science-agent"
-version = "4.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "aiosqlite" },
-    { name = "dsa-agent" },
-    { name = "dsa-api" },
-    { name = "dsa-datasets" },
-    { name = "dsa-evaluation" },
-    { name = "dsa-evidence" },
-    { name = "dsa-execution" },
-    { name = "dsa-llm" },
-    { name = "dsa-mcp" },
-    { name = "dsa-ml" },
-    { name = "dsa-plugins" },
-    { name = "dsa-reports" },
-    { name = "dsa-statistics" },
-    { name = "dsa-tools" },
-    { name = "dsa-visualization" },
-    { name = "duckdb" },
-    { name = "fastapi" },
-    { name = "greenlet" },
-    { name = "httpx" },
-    { name = "langchain-core" },
-    { name = "langgraph" },
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "openpyxl" },
-    { name = "polars" },
-    { name = "pyarrow" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-multipart" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "sqlalchemy" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.optional-dependencies]
-dev-jupyter = [
-    { name = "dsa-jupyter" },
-    { name = "ipykernel" },
-    { name = "ipython" },
-    { name = "jupyterlab" },
-    { name = "nest-asyncio" },
-]
-jupyter = [
-    { name = "dsa-jupyter" },
-    { name = "ipykernel" },
-    { name = "ipython" },
-    { name = "nest-asyncio" },
-]
-time-series = [
-    { name = "statsmodels" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "anyio" },
-    { name = "dsa-jupyter" },
-    { name = "httpx" },
-    { name = "ipython" },
-    { name = "mkdocs" },
-    { name = "mkdocs-material" },
-    { name = "mypy" },
-    { name = "nest-asyncio" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiosqlite", specifier = ">=0.20" },
-    { name = "dsa-agent", editable = "packages/agent" },
-    { name = "dsa-api", editable = "apps/api" },
-    { name = "dsa-datasets", editable = "packages/datasets" },
-    { name = "dsa-evaluation", editable = "packages/evaluation" },
-    { name = "dsa-evidence", editable = "packages/evidence" },
-    { name = "dsa-execution", editable = "packages/execution" },
-    { name = "dsa-jupyter", marker = "extra == 'dev-jupyter'", editable = "apps/jupyter" },
-    { name = "dsa-jupyter", marker = "extra == 'jupyter'", editable = "apps/jupyter" },
-    { name = "dsa-llm", editable = "packages/llm" },
-    { name = "dsa-mcp", editable = "packages/mcp" },
-    { name = "dsa-ml", editable = "packages/ml" },
-    { name = "dsa-plugins", editable = "packages/plugins" },
-    { name = "dsa-reports", editable = "packages/reports" },
-    { name = "dsa-statistics", editable = "packages/statistics" },
-    { name = "dsa-tools", editable = "packages/tools" },
-    { name = "dsa-visualization", editable = "packages/visualization" },
-    { name = "duckdb", specifier = ">=1.0" },
-    { name = "fastapi", specifier = ">=0.110" },
-    { name = "greenlet", specifier = ">=3.5.5" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "ipykernel", marker = "extra == 'dev-jupyter'", specifier = ">=6.0" },
-    { name = "ipykernel", marker = "extra == 'jupyter'", specifier = ">=6.0" },
-    { name = "ipython", marker = "extra == 'dev-jupyter'", specifier = ">=8.0" },
-    { name = "ipython", marker = "extra == 'jupyter'", specifier = ">=8.0" },
-    { name = "jupyterlab", marker = "extra == 'dev-jupyter'", specifier = ">=4.0" },
-    { name = "langchain-core", specifier = ">=0.3" },
-    { name = "langgraph", specifier = ">=0.2" },
-    { name = "matplotlib", specifier = ">=3.8" },
-    { name = "nest-asyncio", marker = "extra == 'dev-jupyter'", specifier = ">=1.5" },
-    { name = "nest-asyncio", marker = "extra == 'jupyter'", specifier = ">=1.5" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "openpyxl", specifier = ">=3.1" },
-    { name = "polars", specifier = ">=1.0" },
-    { name = "pyarrow", specifier = ">=15.0" },
-    { name = "pydantic", specifier = ">=2.7" },
-    { name = "pydantic-settings", specifier = ">=2.4" },
-    { name = "python-multipart", specifier = ">=0.0.9" },
-    { name = "scikit-learn", specifier = ">=1.4" },
-    { name = "scipy", specifier = ">=1.12" },
-    { name = "sqlalchemy", specifier = ">=2.0" },
-    { name = "statsmodels", marker = "extra == 'time-series'", specifier = ">=0.14" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.29" },
-]
-provides-extras = ["jupyter", "time-series", "dev-jupyter"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "anyio", specifier = ">=4.4" },
-    { name = "dsa-jupyter", editable = "apps/jupyter" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "ipython", specifier = ">=8.0" },
-    { name = "mkdocs", specifier = ">=1.5" },
-    { name = "mkdocs-material", specifier = ">=9.0" },
-    { name = "mypy", specifier = ">=1.10" },
-    { name = "nest-asyncio", specifier = ">=1.5" },
-    { name = "pytest", specifier = ">=8.2" },
-    { name = "pytest-asyncio", specifier = ">=0.23" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "ruff", specifier = ">=0.4" },
-]
-
-[[package]]
 name = "debugpy"
 version = "1.8.21"
 source = { registry = "https://pypi.org/simple" }
@@ -1367,6 +1229,144 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7c/1a/3c8edc664e06e6bd06cce40c6b22da5f1429aa4224d0c590f3be21c91ead/isoduration-20.11.0.tar.gz", hash = "sha256:ac2f9015137935279eac671f94f89eb00584f940f5dc49462a0c4ee692ba1bd9", size = 11649, upload-time = "2020-11-01T11:00:00.312Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/55/e5326141505c5d5e34c5e0935d2908a74e4561eca44108fbfb9c13d2911a/isoduration-20.11.0-py3-none-any.whl", hash = "sha256:b2904c2a4228c3d44f409c8ae8e2370eb21a26f7ac2ec5446df141dde3452042", size = 11321, upload-time = "2020-11-01T10:59:58.02Z" },
+]
+
+[[package]]
+name = "jack-data-science-agent"
+version = "4.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "aiosqlite" },
+    { name = "dsa-agent" },
+    { name = "dsa-api" },
+    { name = "dsa-datasets" },
+    { name = "dsa-evaluation" },
+    { name = "dsa-evidence" },
+    { name = "dsa-execution" },
+    { name = "dsa-llm" },
+    { name = "dsa-mcp" },
+    { name = "dsa-ml" },
+    { name = "dsa-plugins" },
+    { name = "dsa-reports" },
+    { name = "dsa-statistics" },
+    { name = "dsa-tools" },
+    { name = "dsa-visualization" },
+    { name = "duckdb" },
+    { name = "fastapi" },
+    { name = "greenlet" },
+    { name = "httpx" },
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-multipart" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
+    { name = "sqlalchemy" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+dev-jupyter = [
+    { name = "dsa-jupyter" },
+    { name = "ipykernel" },
+    { name = "ipython" },
+    { name = "jupyterlab" },
+    { name = "nest-asyncio" },
+]
+jupyter = [
+    { name = "dsa-jupyter" },
+    { name = "ipykernel" },
+    { name = "ipython" },
+    { name = "nest-asyncio" },
+]
+time-series = [
+    { name = "statsmodels" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "anyio" },
+    { name = "dsa-jupyter" },
+    { name = "httpx" },
+    { name = "ipython" },
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mypy" },
+    { name = "nest-asyncio" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite", specifier = ">=0.20" },
+    { name = "dsa-agent", editable = "packages/agent" },
+    { name = "dsa-api", editable = "apps/api" },
+    { name = "dsa-datasets", editable = "packages/datasets" },
+    { name = "dsa-evaluation", editable = "packages/evaluation" },
+    { name = "dsa-evidence", editable = "packages/evidence" },
+    { name = "dsa-execution", editable = "packages/execution" },
+    { name = "dsa-jupyter", marker = "extra == 'dev-jupyter'", editable = "apps/jupyter" },
+    { name = "dsa-jupyter", marker = "extra == 'jupyter'", editable = "apps/jupyter" },
+    { name = "dsa-llm", editable = "packages/llm" },
+    { name = "dsa-mcp", editable = "packages/mcp" },
+    { name = "dsa-ml", editable = "packages/ml" },
+    { name = "dsa-plugins", editable = "packages/plugins" },
+    { name = "dsa-reports", editable = "packages/reports" },
+    { name = "dsa-statistics", editable = "packages/statistics" },
+    { name = "dsa-tools", editable = "packages/tools" },
+    { name = "dsa-visualization", editable = "packages/visualization" },
+    { name = "duckdb", specifier = ">=1.0" },
+    { name = "fastapi", specifier = ">=0.110" },
+    { name = "greenlet", specifier = ">=3.5.5" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "ipykernel", marker = "extra == 'dev-jupyter'", specifier = ">=6.0" },
+    { name = "ipykernel", marker = "extra == 'jupyter'", specifier = ">=6.0" },
+    { name = "ipython", marker = "extra == 'dev-jupyter'", specifier = ">=8.0" },
+    { name = "ipython", marker = "extra == 'jupyter'", specifier = ">=8.0" },
+    { name = "jupyterlab", marker = "extra == 'dev-jupyter'", specifier = ">=4.0" },
+    { name = "langchain-core", specifier = ">=0.3" },
+    { name = "langgraph", specifier = ">=0.2" },
+    { name = "matplotlib", specifier = ">=3.8" },
+    { name = "nest-asyncio", marker = "extra == 'dev-jupyter'", specifier = ">=1.5" },
+    { name = "nest-asyncio", marker = "extra == 'jupyter'", specifier = ">=1.5" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "openpyxl", specifier = ">=3.1" },
+    { name = "polars", specifier = ">=1.0" },
+    { name = "pyarrow", specifier = ">=15.0" },
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "pydantic-settings", specifier = ">=2.4" },
+    { name = "python-multipart", specifier = ">=0.0.9" },
+    { name = "scikit-learn", specifier = ">=1.4" },
+    { name = "scipy", specifier = ">=1.12" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+    { name = "statsmodels", marker = "extra == 'time-series'", specifier = ">=0.14" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.29" },
+]
+provides-extras = ["jupyter", "time-series", "dev-jupyter"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "anyio", specifier = ">=4.4" },
+    { name = "dsa-jupyter", editable = "apps/jupyter" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "ipython", specifier = ">=8.0" },
+    { name = "mkdocs", specifier = ">=1.5" },
+    { name = "mkdocs-material", specifier = ">=9.0" },
+    { name = "mypy", specifier = ">=1.10" },
+    { name = "nest-asyncio", specifier = ">=1.5" },
+    { name = "pytest", specifier = ">=8.2" },
+    { name = "pytest-asyncio", specifier = ">=0.23" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "ruff", specifier = ">=0.4" },
 ]
 
 [[package]]

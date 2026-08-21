@@ -1,12 +1,12 @@
 [project]
-name = "data-science-agent"
+name = "jack-data-science-agent"
 version = "4.1.0"
 description = "An Evidence-Grounded Autonomous Data Science System — from natural language to reproducible analysis"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "Data Science Agent Contributors", email = "maintainers@data-science-agent.local" }]
-maintainers = [{ name = "Data Science Agent Maintainers", email = "maintainers@data-science-agent.local" }]
+authors = [{ name = "Data Science Agent Contributors", email = "jackxiaozhiren@users.noreply.github.com" }]
+maintainers = [{ name = "Data Science Agent Maintainers", email = "jackxiaozhiren@users.noreply.github.com" }]
 keywords = ["data-science", "agent", "llm", "reproducibility", "evidence", "benchmark", "mcp", "duckdb", "polars"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -55,7 +55,7 @@ dependencies = [
     "openpyxl>=3.1",
     "greenlet>=3.5.5",
 ]
-urls = { Homepage = "https://github.com/data-science-agent/data-science-agent", Repository = "https://github.com/data-science-agent/data-science-agent", Documentation = "https://github.com/data-science-agent/data-science-agent/blob/main/docs/getting-started.md", Changelog = "https://github.com/data-science-agent/data-science-agent/blob/main/CHANGELOG.md", Issues = "https://github.com/data-science-agent/data-science-agent/issues" }
+urls = { Homepage = "https://github.com/Jackxiaozhiren/data-science-agent", Repository = "https://github.com/Jackxiaozhiren/data-science-agent", Documentation = "https://github.com/Jackxiaozhiren/data-science-agent/blob/main/docs/getting-started.md", Changelog = "https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md", Issues = "https://github.com/Jackxiaozhiren/data-science-agent/issues" }
 
 [project.optional-dependencies]
 jupyter = ["dsa-jupyter", "ipython>=8.0", "ipykernel>=6.0", "nest-asyncio>=1.5"]

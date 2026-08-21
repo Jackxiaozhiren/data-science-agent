@@ -554,6 +554,19 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "jack-data-science-agent",
+      "version": "4.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/jack-data-science-agent@4.1.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "jedi",
       "version": "0.20.0",
       "licenses": [
