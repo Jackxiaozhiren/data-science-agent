@@ -1,6 +1,6 @@
 {
-  "version": "4.0.0",
-  "generated": "2026-08-21T05:55:50.283236+00:00",
+  "version": "4.1.0",
+  "generated": "2026-08-21T11:03:04.823060+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -179,10 +179,10 @@
     },
     {
       "package": "data-science-agent",
-      "version": "4.0.0",
+      "version": "4.1.0",
       "license": "MIT",
       "source": "local:pyproject.toml",
-      "purl": "pkg:local/data-science-agent@4.0.0"
+      "purl": "pkg:local/data-science-agent@4.1.0"
     },
     {
       "package": "debugpy",

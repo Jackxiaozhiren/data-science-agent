@@ -35,7 +35,7 @@ ALLOWED_CAPABILITIES = {"forecast", "backtest", "metrics", "visualization", "evi
 POPULAR_PYPI = {"numpy", "pandas", "polars", "scikit-learn", "sklearn", "matplotlib", "scipy", "requests", "urllib3", "pyyaml", "yaml", "pydantic", "fastapi", "duckdb", "pyarrow", "openpyxl", "langgraph", "langchain", "dsa-time-series", "data-science-agent"}
 WORKSPACE_PACKAGES = {"dsa-agent", "dsa-api", "dsa-datasets", "dsa-evaluation", "dsa-evidence", "dsa-execution", "dsa-llm", "dsa-mcp", "dsa-ml", "dsa-plugins", "dsa-reports", "dsa-statistics", "dsa-tools", "dsa-visualization", "dsa-jupyter", "dsa-vscode", "data-science-agent"}
 
-CURRENT_DSA_VERSION = "4.0.0"
+CURRENT_DSA_VERSION = "4.1.0"
 
 
 def _levenshtein(a: str, b: str) -> int:

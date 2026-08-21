@@ -69,9 +69,14 @@ def parse_uv_lock() -> list[dict[str, str]]:
 def main() -> None:
     # collect workspace packages
     workspace_pkgs: list[dict[str, str]] = []
-    # root
+    # root version
+    try:
+        root_data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        root_version = root_data.get("project", {}).get("version", "4.1.0")
+    except Exception:
+        root_version = "4.1.0"
     root_license = parse_pyproject_license(ROOT / "pyproject.toml")
-    workspace_pkgs.append({"name": "data-science-agent", "version": "4.0.0", "license": root_license, "source": "local:pyproject.toml"})
+    workspace_pkgs.append({"name": "data-science-agent", "version": root_version, "license": root_license, "source": "local:pyproject.toml"})
     # workspace members
     for member in ["apps/api", "apps/jupyter", "packages/agent", "packages/datasets", "packages/evaluation", "packages/evidence", "packages/execution", "packages/llm", "packages/mcp", "packages/ml", "packages/plugins", "packages/reports", "packages/statistics", "packages/tools", "packages/visualization"]:
         p = ROOT / member / "pyproject.toml"
@@ -110,7 +115,7 @@ def main() -> None:
         "bomFormat": "CycloneDX",
         "specVersion": "1.4",
         "version": 1,
-        "metadata": {"component": {"name": "data-science-agent", "version": "4.0.0", "type": "application"}},
+        "metadata": {"component": {"name": "data-science-agent", "version": root_version, "type": "application"}},
         "components": [
             {"name": p["name"], "version": p["version"], "licenses": [{"license": {"id": p["license"]}}] if p["license"] != "Unknown" else [], "purl": f"pkg:pypi/{p['name']}@{p['version']}" if "pypi" in p["source"] else f"pkg:local/{p['name']}@{p['version']}", "source": p["source"]}
             for p in sorted(all_pkgs, key=lambda x: x["name"].lower())
@@ -118,7 +123,7 @@ def main() -> None:
     }
     # Also simple flat list per §47 spec
     sbom_simple = {
-        "version": "4.0.0",
+        "version": root_version,
         "generated": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "components": [{"package": c["name"], "version": c["version"], "license": (c["licenses"][0]["license"]["id"] if c["licenses"] else "Unknown"), "source": c["source"], "purl": c["purl"]} for c in sbom["components"]],
     }

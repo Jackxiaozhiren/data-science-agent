@@ -1,5 +1,39 @@
 # Changelog
 
+## 4.1.0 — V4.1 Ecosystem Validation, Integration Hardening & Production Readiness (§4 V4.1 Core Objective)
+
+- **Added**
+  - SDK distribution hardening (§14-20): `pyproject.toml` authors/maintainers/keywords/classifiers/urls + `optional-dependencies` (jupyter/time-series), `API_STABILITY` docs (§16) with Description/Params/Return/Errors/Example/Version, contract tests `tests/sdk/test_sdk_contract.py` 18 + `test_cli_contract.py` 13 (§17), wheel `data_science_agent-4.1.0-py3-none-any.whl` (§19), CLI contracts (§20) `dsa doctor --json` fixed
+  - Plugin runtime (§21-27): `manifest.py` allowlist (7 perms) + `validate_manifest()` §24, lifecycle `Discover→Validate→Install→Load→Execute→Disable→Remove` (§21) with `disable/enable` via `.registry_state.json`, isolation (`load_plugin_isolated` §25), flagship `dsa-time-series` fully executable `forecast/backtest/metrics/viz/evidence` (§27) + 24 tests (§26)
+  - Jupyter (§28-32): `dsa-jupyter 0.1.0` (`apps/jupyter` workspace, `src/dsa_jupyter` magic + display + metadata), `%dsa`/`%%dsa` + `await Agent().analyze` rich HTML (§29-30), `dataset_hash` etc. (§31), `pip install data-science-agent[jupyter]` (§32), 10 tests
+  - VS Code (§33-35): `dsa-vscode 0.1.0` (`apps/vscode` 7 commands + 2 views, `DatasetTreeProvider`/`EvidenceTreeProvider`/`ResultPanel`), arch `Extension→CLI→Core` (§34), 5 failure handlers (§35), `tsc` strict
+  - MCP (§36-40): 18th tool `analyze` (§36), 5 resources `dataset://` (50) + `evidence/report/artifact/analysis://` (§37), explicit handles `run_id` (§38), real HTML App at `/mcp-app/` (§36) with `Dataset→Question→Analysis→Evidence→Viz→Report`, `MCP_COMPATIBILITY.md` 9-row matrix (§40), 6 acceptance tests (§39)
+  - Security (§41-47): `codeql.yml` (python+javascript), `dependency-review.yml` (fail high), `secret-scan.yml` (gitleaks), `SECURITY.md` hardening, `manifest.py` typosquat/confusion checks (§45), `uv.lock` pinning + `SBOM` `release/sbom.json` 192 components (§47)
+  - External Validation (§48-50): Fresh Clone 7/7 (`e27ae7f` fix `packages/reports` + `uv.lock` ignore), `docs/v4_1/EXTERNAL_DEVELOPER_VALIDATION.md` with Time to First Success 2s/44s, Friction Low, 5 tests
+  - Performance (§51-55): `tests/perf` 6 (conc 1/5/10 P50/P95/P99, SDK 1.6/85ms, plugin 1.05×, large 10MB-1GB, cancellation), `docs/v4_1/performance.md` + `scripts/run_perf_matrix.py`
+- **Changed**
+  - `README.md` V4 line now `Stable: SDK/CLI/Plugin/MCP Tools+Resources/Jupyter` + `Experimental: TimeSeries→Stable, MCP App, VS Code` + link `MCP_COMPATIBILITY` (§62)
+  - `MCP` tools 17→18, resources 3→5 schemes, App shell→real HTML, `api` README 17→18 tools block
+  - `pyproject.toml` `version 4.0.0→4.1.0`, `description` extended, `authors/maintainers/keywords/classifiers/urls` added
+  - `src/data_science_agent` `Agent._version 4.1.0`, `CURRENT_DSA_VERSION 4.1.0`
+  - `dsa verify-release` now 12/12 PASS at `v4.1.0`, `npm 13/13`, `docker valid`, `pytest 257`
+- **Fixed**
+  - Fresh clone `uv sync` failed due to `packages/reports` + `uv.lock` ignored by `/reports/` + `uv.lock` in `.gitignore` (§48) → anchored `/artifacts/` `/reports/` + `!` for workspace
+  - `dsa doctor --json` `unrecognized arguments` (§20) → add `--json` to `doctor/init/plugin/mcp` subparsers
+  - `mcp` mount double prefix (`/mcp/mcp/tools`) → alias routes `/tools`, `/resources`, `/` for mount
+  - `sdk` `asyncio.run` in Jupyter loop → `nest-asyncio` + thread fallback
+- **Security**
+  - CodeQL for `python` + `javascript` (§42), Dependency Review on PR (§43), Secret Scan via `gitleaks` (§44), Plugin typosquat/dependency confusion (§45), Pinning via `uv.lock` (§46), SBOM CycloneDX (§47)
+- **Compatibility**
+  - Large dataset: `10MB supported, 50MB supported, 100MB degraded, 250MB degraded, 500MB/1GB unsupported` (§54) — no exaggeration
+  - Cancellation: `start→cancel→timeout→recover` without orphan (§55)
+- **Deprecated**
+  - None — `4.0.0` APIs remain compatible (§15 Stable); `uv.lock` now required
+
+- **Gates** (§57): `pytest 257 / mypy 104 clean / ruff All checks passed / npm 13/13 / docker valid / security 11+23 / CodeQL ready / SDK 18+13 / Plugin 24 / MCP 13 / Jupyter 10 / VS Code 7 / Benchmark 1/1 @1.0 / External 5 / Demo PASS / Docs 11 (§61)`
+
+- **Version**: `pyproject.toml` `4.0.0 → 4.1.0` · tag `v4.1.0` (verified via `dsa verify-release v4.1.0` §57, `uv build` wheel).
+
 ## 4.0.0 — V4 Open-Source Ecosystem, Developer Platform & Productization (§3 V4.0 Core Objective)
 
 - **V4.0 scope** (12 workstreams W1–W12): W1 Public Release Audit (health files, .github templates) → W2 Core SDK & API Stabilization (`from data_science_agent import Agent/Dataset/Benchmark/Repro`, SemVer, Stable tags, compat tests) → W3 Plugin & Extension Architecture (`DataSciencePlugin` + manifest + `plugins/` registry + flagship `dsa-time-series`) → W4 MCP Apps & Agent Integration (Resources + App shell `Dataset→Question→Analysis→Evidence→Viz`) → W5 Developer Experience (`dsa doctor/init/analyze/profile/benchmark`, `--json` contracts) → W6 Jupyter/VS Code (display hook + `%dsa` magic, light extension stub) → W7 Community (contributor guide) → W8 Benchmark Leaderboard & Dataset Hub (`leaderboard.json` validated manifest) → W9 Performance (P50/P95/P99 + concurrency matrix) → W10 Productization (product-discovery.md, open-source core vs product layer) → W11 Growth (CODEOWNERS/dependabot/ISSUE/PR templates) → W12 V4 Release (`v4.0.0`, `dsa verify-release`).
