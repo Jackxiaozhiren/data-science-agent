@@ -22,4 +22,4 @@
 
 **Notes**: Reads `AGENTS.md` missing (only `ARCHITECTURE_FREEZE_V0.1.md` freeze file exists — not a regression). All `Stub` rows are correctly labeled as such in V4.0 assessment §3; V4.1 §62 requires README to **not** list them under Stable.
 
-**Next**: W8 External Validation ✅ (Fresh Clone 7/7 PASS, 2s to demo, Friction Low) → W9 Performance/Compatibility/Reliability → W10 Release (§71). See `docs/v4_1/EXTERNAL_DEVELOPER_VALIDATION.md` (§50).
+**Next**: W9 Performance ✅ (conc 1/5/10 P50/P95/P99, SDK 1.6/85ms, plugin 1.05×, large 10MB-1GB classified, cancellation no orphan) → W10 Release (§71). See `docs/v4_1/performance.md` (§51-55) + `docs/v4_1/EXTERNAL_DEVELOPER_VALIDATION.md`.

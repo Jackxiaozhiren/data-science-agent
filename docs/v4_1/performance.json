@@ -1,0 +1,53 @@
+{
+  "benchmark_concurrency": {
+    "1": {
+      "n": 3,
+      "p50_ms": 13.6,
+      "p95_ms": 959.7,
+      "p99_ms": 959.7,
+      "error_rate": 0.0,
+      "throughput_per_s": 73.43,
+      "elapsed_ms": 986.0
+    },
+    "5": {
+      "n": 5,
+      "p50_ms": 48.1,
+      "p95_ms": 49.8,
+      "p99_ms": 49.8,
+      "error_rate": 0.0,
+      "throughput_per_s": 20.79,
+      "elapsed_ms": 50.4
+    },
+    "10": {
+      "n": 10,
+      "p50_ms": 90.5,
+      "p95_ms": 93.3,
+      "p99_ms": 93.3,
+      "error_rate": 0.0,
+      "throughput_per_s": 11.04,
+      "elapsed_ms": 94.8
+    }
+  },
+  "sdk": {
+    "profile_ms": 1.6,
+    "analysis_ms": 85.0,
+    "evidence": 4,
+    "evidence_lookup_ms": 0.0,
+    "report_len": 2284
+  },
+  "plugin_overhead": {
+    "core_ms": 10.6,
+    "plus_ms": 11.1,
+    "ratio": 1.05
+  },
+  "large_dataset": {
+    "10MB": "supported",
+    "50MB": "supported",
+    "100MB": "degraded",
+    "250MB": "degraded",
+    "500MB": "unsupported",
+    "1GB": "unsupported"
+  },
+  "cancellation": "start\u2192cancel\u2192timeout\u2192recover without orphan (tested via asyncio.wait_for)",
+  "generated": "2026-08-21T10:54:48Z"
+}
