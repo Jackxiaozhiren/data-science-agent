@@ -1,0 +1,19 @@
+[project]
+name = "dsa-jupyter"
+version = "0.1.0"
+description = "Jupyter integration for Data Science Agent — %dsa magic + rich display (V4 §28-32)"
+requires-python = ">=3.12"
+dependencies = [
+  "ipython>=8.0",
+  "ipykernel>=6.0",
+  "nest-asyncio>=1.5",
+  "polars>=1.0",
+]
+readme = "README.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dsa_jupyter"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

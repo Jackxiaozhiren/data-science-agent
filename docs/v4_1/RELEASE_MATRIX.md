@@ -12,7 +12,7 @@
 | MCP Tools (17, stateless 2026-07-28) | **Stable** | 4.0.0 | `tests/mcp/conformance` in 157, `uv run dsa mcp` 17 tools | `packages/mcp/src/dsa_mcp/adapter.py`, `docs/v4/mcp.md` |
 | MCP Resources (`dataset:// evidence:// report://`) | **Experimental** | 4.0.0 | `adapter.list_resources()` 3 resources (smoke) | `packages/mcp/src/dsa_mcp/adapter.py` |
 | MCP App (`/mcp-app` shell) | **Stub** | 4.0.0 | `packages/mcp/src/dsa_mcp/app.py` 2 routes PASS | `packages/mcp/src/dsa_mcp/app.py` — no analysis flow yet |
-| Jupyter (`%dsa` + `Agent` notebook) | **Stub** | 4.0.0 | README says `stub`, no `%dsa` exec | `apps/jupyter/README.md` (§38–41) |
+| Jupyter (`%dsa` + `Agent` notebook) | **Experimental** ⬆ | 4.0.0 / 0.1.0 (dsa-jupyter) | `tests/jupyter 10 passed; %dsa profile/analyze + Agent rich + metadata (§28-32)` | `apps/jupyter/src/dsa_jupyter/*`, `apps/jupyter/README.md`, `docs/v4/jupyter.md` |
 | VS Code (`Dataset Explorer / Ask DSA`) | **Stub** | 4.0.0 | No extension manifest, README says `Stub until SDK` | `apps/vscode/README.md` (§42) |
 | Benchmark (30 datasets / 100 tasks + leaderboard) | **Stable** | 0.3.0 (catalog) / 4.0.0 (platform) | `uv run dsa benchmark --limit 1` 1.0, `benchmarks/leaderboard/leaderboard.json` | `benchmarks/leaderboard/README.md` |
 | Reproduction (L0–L5 + `ReproductionScore`) | **Stable** | 4.0.0 | `packages/evidence/reproducibility.py`, `dsa reproduce` | `docs/reproducibility.md` |

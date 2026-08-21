@@ -58,9 +58,9 @@ dependencies = [
 urls = { Homepage = "https://github.com/data-science-agent/data-science-agent", Repository = "https://github.com/data-science-agent/data-science-agent", Documentation = "https://github.com/data-science-agent/data-science-agent/blob/main/docs/getting-started.md", Changelog = "https://github.com/data-science-agent/data-science-agent/blob/main/CHANGELOG.md", Issues = "https://github.com/data-science-agent/data-science-agent/issues" }
 
 [project.optional-dependencies]
-jupyter = ["ipython>=8.0", "ipykernel>=6.0"]
+jupyter = ["dsa-jupyter", "ipython>=8.0", "ipykernel>=6.0", "nest-asyncio>=1.5"]
 time-series = ["statsmodels>=0.14"]
-dev-jupyter = ["ipython>=8.0", "ipykernel>=6.0", "jupyterlab>=4.0"]
+dev-jupyter = ["dsa-jupyter", "ipython>=8.0", "ipykernel>=6.0", "jupyterlab>=4.0", "nest-asyncio>=1.5"]
 
 [dependency-groups]
 dev = [
@@ -73,10 +73,13 @@ dev = [
     "anyio>=4.4",
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
+    "dsa-jupyter",
+    "ipython>=8.0",
+    "nest-asyncio>=1.5",
 ]
 
 [tool.uv.workspace]
-members = ["apps/api", "packages/agent", "packages/datasets", "packages/evaluation", "packages/evidence", "packages/execution", "packages/llm", "packages/mcp", "packages/ml", "packages/plugins", "packages/reports", "packages/statistics", "packages/tools", "packages/visualization"]
+members = ["apps/api", "apps/jupyter", "packages/agent", "packages/datasets", "packages/evaluation", "packages/evidence", "packages/execution", "packages/llm", "packages/mcp", "packages/ml", "packages/plugins", "packages/reports", "packages/statistics", "packages/tools", "packages/visualization"]
 
 [tool.uv.sources]
 dsa-agent = { workspace = true }
@@ -85,6 +88,7 @@ dsa-datasets = { workspace = true }
 dsa-evaluation = { workspace = true }
 dsa-evidence = { workspace = true }
 dsa-execution = { workspace = true }
+dsa-jupyter = { workspace = true }
 dsa-llm = { workspace = true }
 dsa-mcp = { workspace = true }
 dsa-ml = { workspace = true }
@@ -113,6 +117,7 @@ ignore = ["S101", "E501"]
 "packages/execution/**/*" = ["S110", "S311", "SIM105", "UP042", "UP046", "S608", "B904", "F401", "E402", "E702", "SIM102", "SIM103", "SIM110"]
 "packages/llm/**/*" = ["S110"]
 "packages/tools/**/*" = ["S110", "SIM105", "UP042", "UP046", "SIM102", "SIM103", "SIM110", "SIM222", "F401", "E402", "S608", "B904", "B905", "F841", "S311", "E702", "B007", "SIM103", "UP046"]
+"apps/jupyter/**/*" = ["S101", "S112", "F401", "I001", "E501", "S603", "S607", "S110", "SIM105", "F841", "B904", "E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dsa_api", "dsa_agent", "dsa_tools", "dsa_execution", "dsa_statistics", "dsa_ml", "dsa_viz", "dsa_evidence", "dsa_reports", "dsa_datasets", "dsa_llm", "dsa_mcp", "dsa_evaluation", "dsa_plugins"]
