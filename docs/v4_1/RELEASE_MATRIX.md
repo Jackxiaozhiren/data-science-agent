@@ -22,4 +22,4 @@
 
 **Notes**: Reads `AGENTS.md` missing (only `ARCHITECTURE_FREEZE_V0.1.md` freeze file exists — not a regression). All `Stub` rows are correctly labeled as such in V4.0 assessment §3; V4.1 §62 requires README to **not** list them under Stable.
 
-**Next**: Phase B onward must turn `Stub → Experimental → Stable` per V4.1 §71 order (W2 SDK/CLI Distribution → W3 Plugin Runtime → W4 Jupyter → W5 VS Code → W6 MCP App → W7 Security → W8 External Validation).
+**Next**: W8 External Validation ✅ (Fresh Clone 7/7 PASS, 2s to demo, Friction Low) → W9 Performance/Compatibility/Reliability → W10 Release (§71). See `docs/v4_1/EXTERNAL_DEVELOPER_VALIDATION.md` (§50).
