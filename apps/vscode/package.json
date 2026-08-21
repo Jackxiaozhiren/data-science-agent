@@ -1,0 +1,122 @@
+{
+  "name": "dsa-vscode",
+  "displayName": "Data Science Agent",
+  "description": "VS Code Real Integration — Open Dataset → Ask DSA → Run Analysis → View Result/Evidence → Open Report (§33-35)",
+  "version": "0.1.0",
+  "publisher": "data-science-agent",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dsa.openDataset",
+        "title": "DSA: Open Dataset",
+        "category": "DSA"
+      },
+      {
+        "command": "dsa.askAnalysis",
+        "title": "DSA: Ask Analysis",
+        "category": "DSA"
+      },
+      {
+        "command": "dsa.runAnalysis",
+        "title": "DSA: Run Analysis",
+        "category": "DSA"
+      },
+      {
+        "command": "dsa.viewResult",
+        "title": "DSA: View Result",
+        "category": "DSA"
+      },
+      {
+        "command": "dsa.viewEvidence",
+        "title": "DSA: View Evidence",
+        "category": "DSA"
+      },
+      {
+        "command": "dsa.openReport",
+        "title": "DSA: Open Report",
+        "category": "DSA"
+      },
+      {
+        "command": "dsa.doctor",
+        "title": "DSA: Doctor (Setup Check)",
+        "category": "DSA"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dsaExplorer",
+          "title": "DSA",
+          "icon": "$(graph)"
+        }
+      ]
+    },
+    "views": {
+      "dsaExplorer": [
+        {
+          "type": "tree",
+          "id": "dsa.datasetExplorer",
+          "name": "Dataset Explorer",
+          "when": "true"
+        },
+        {
+          "type": "tree",
+          "id": "dsa.evidenceExplorer",
+          "name": "Evidence Explorer",
+          "when": "dsa:hasResult"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "dsa.openDataset",
+          "when": "view == dsa.datasetExplorer",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "dsa.openDataset"
+        },
+        {
+          "command": "dsa.askAnalysis"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Data Science Agent",
+      "properties": {
+        "dsa.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python path (§35 Python unavailable fallback)"
+        },
+        "dsa.apiUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "DSA API URL (§35 Backend unavailable fallback)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/suite.test.js",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "20.x",
+    "typescript": "^5.9.0",
+    "@vscode/test-electron": "^2.3.0"
+  }
+}
