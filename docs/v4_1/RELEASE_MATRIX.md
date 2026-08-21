@@ -7,8 +7,8 @@
 | Core Agent (LangGraph Planner→Scientist→Critic→Report) | **Stable** | 4.0.0 | `pytest 157 passed, demo COMPLETED` | `docs/architecture.md` (7 Mermaid §49) |
 | SDK (`from data_science_agent import Agent/Dataset/Benchmark/Repro`) | **Stable** | 4.0.0 | `tests/api/compatibility/test_sdk_compat.py`, `uv run python -c "from data_science_agent import Agent"` | `docs/v4/sdk.md`, `src/data_science_agent/sdk.py` |
 | CLI (`dsa --help / doctor / init / analyze / profile / benchmark / demo / verify-release`) | **Stable** | 4.0.0 | `uv run dsa doctor` warn, `uv run dsa profile --json` + `benchmark --limit 1 --json` | `docs/v4/cli.md`, `packages/evaluation/src/dsa_evaluation/cli.py` |
-| Plugin Arch (`DataSciencePlugin`, manifest, local discovery) | **Stable** | 4.0.0 | `uv run dsa plugin` → `dsa-time-series 1.0.0` | `docs/v4/plugins.md`, `packages/plugins/src/dsa_plugins/*` |
-| Time Series Plugin (`dsa-time-series`) | **Experimental** | 1.0.0 | `dsa plugin` discovery PASS, execution via `forecast` tool | `plugins/dsa-time-series/README.md` |
+| Plugin Arch (`DataSciencePlugin`, manifest, local discovery) | **Stable** | 4.0.0 | `212 passed; dsa plugin list/validate/disable/enable/remove/install (§21) + isolation §25` | `docs/v4/plugins.md`, `packages/plugins/src/dsa_plugins/*`, `docs/v4_1/W3_PLUGIN_HARDENING.md` |
+| Time Series Plugin (`dsa-time-series`) | **Stable** ⬆ | 1.0.0 | `forecast/backtest/metrics/viz/evidence (§27) — tests/plugins 24 passed; dsa plugin validate ok` | `plugins/dsa-time-series/README.md`, `plugins/dsa-time-series/src/dsa_time_series/plugin.py` |
 | MCP Tools (17, stateless 2026-07-28) | **Stable** | 4.0.0 | `tests/mcp/conformance` in 157, `uv run dsa mcp` 17 tools | `packages/mcp/src/dsa_mcp/adapter.py`, `docs/v4/mcp.md` |
 | MCP Resources (`dataset:// evidence:// report://`) | **Experimental** | 4.0.0 | `adapter.list_resources()` 3 resources (smoke) | `packages/mcp/src/dsa_mcp/adapter.py` |
 | MCP App (`/mcp-app` shell) | **Stub** | 4.0.0 | `packages/mcp/src/dsa_mcp/app.py` 2 routes PASS | `packages/mcp/src/dsa_mcp/app.py` — no analysis flow yet |

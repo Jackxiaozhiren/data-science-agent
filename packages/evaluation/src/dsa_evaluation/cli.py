@@ -6,6 +6,7 @@ import json
 import platform
 import sys
 from pathlib import Path
+from typing import Any
 
 from dsa_evaluation.runner import run_benchmark
 
@@ -159,7 +160,9 @@ def main() -> None:
     p_benchmark.add_argument("--json", action="store_true", help="JSON output")
     p_repro = sub.add_parser("reproduce", help="Reproduce (§37): dsa reproduce [--benchmark v2]")
     p_repro.add_argument("--json", action="store_true", help="JSON output")
-    p_plugin = sub.add_parser("plugin", help="Plugin registry (§28): dsa plugin list")
+    p_plugin = sub.add_parser("plugin", help="Plugin registry (§21 lifecycle): dsa plugin [list|validate|install|remove|disable|enable|execute]")
+    p_plugin.add_argument("action", nargs="?", default="list", help="list|validate|install|disable|enable|remove|execute|status")
+    p_plugin.add_argument("target", nargs="?", default=None, help="manifest path, plugin name, or tool name for execute")
     p_plugin.add_argument("--json", action="store_true", help="JSON output")
     p_mcp = sub.add_parser("mcp", help="MCP (§32): dsa mcp tools")
     p_mcp.add_argument("--json", action="store_true", help="JSON output")
@@ -288,11 +291,102 @@ def main() -> None:
         print(json.dumps({"n_tasks": payload.get("n_tasks"), "aggregate": payload.get("aggregate")}, ensure_ascii=False) if args.json else f"Tasks: {payload.get('n_tasks')} success={payload.get('aggregate', {}).get('task_success_rate')}")
         return
     if args.cmd == "plugin":
-        from dsa_plugins.registry import list_plugins
+        from dsa_plugins.registry import (
+            disable_plugin,
+            enable_plugin,
+            get_plugin_status,
+            list_plugins,
+            remove_plugin,
+            validate_plugin,
+        )
 
-        pls = list_plugins()
-        print(json.dumps([p.model_dump(mode="json") if hasattr(p, "model_dump") else dict(p) for p in pls], ensure_ascii=False))
-        return
+        action = (getattr(args, "action", "list") or "list").lower()
+        target = getattr(args, "target", None)
+        is_json = bool(getattr(args, "json", False))
+        try:
+            if action in ("list", "ls"):
+                plugin_list = list_plugins()
+                plugins_payload = [pm.model_dump(mode="json") for pm in plugin_list]
+                print(json.dumps(plugins_payload, ensure_ascii=False))
+                return
+            elif action == "validate":
+                # target is manifest path or plugin name
+                if target and Path(target).exists():
+                    file_errs: list[str] = validate_plugin(Path(target))
+                    if file_errs:
+                        print(json.dumps({"status": "fail", "errors": file_errs}, ensure_ascii=False))
+                        sys.exit(1)
+                    print(json.dumps({"status": "ok"}, ensure_ascii=False))
+                    return
+                # validate all or named plugin
+                plugin_list_v: list[Any] = list_plugins()
+                if target:
+                    plugin_list_v = [pm for pm in plugin_list_v if pm.name == target]
+                    if not plugin_list_v:
+                        print(json.dumps({"error": f"plugin {target!r} not found"}, ensure_ascii=False))
+                        sys.exit(2)
+                collected_errs: list[Any] = []
+                for pm in plugin_list_v:
+                    err_list = validate_plugin(pm)
+                    if err_list:
+                        collected_errs.append({pm.name: err_list})
+                if not collected_errs:
+                    print(json.dumps({"status": "ok", "plugins": [pm.name for pm in plugin_list_v]}, ensure_ascii=False))
+                    return
+                print(json.dumps({"status": "fail", "errors": collected_errs}, ensure_ascii=False))
+                sys.exit(1)
+            elif action == "status":
+                if not target:
+                    print(json.dumps({"error": "Usage: dsa plugin status <name> [--json]"}, ensure_ascii=False))
+                    sys.exit(2)
+                st = get_plugin_status(target)
+                print(json.dumps({"name": target, "status": st}, ensure_ascii=False))
+                return
+            elif action == "disable":
+                if not target:
+                    print(json.dumps({"error": "Usage: dsa plugin disable <name> [--json]"}, ensure_ascii=False))
+                    sys.exit(2)
+                disable_plugin(target)
+                print(json.dumps({"name": target, "status": "disabled"}, ensure_ascii=False))
+                return
+            elif action == "enable":
+                if not target:
+                    print(json.dumps({"error": "Usage: dsa plugin enable <name> [--json]"}, ensure_ascii=False))
+                    sys.exit(2)
+                enable_plugin(target)
+                print(json.dumps({"name": target, "status": "enabled"}, ensure_ascii=False))
+                return
+            elif action == "remove":
+                if not target:
+                    print(json.dumps({"error": "Usage: dsa plugin remove <name> [--json]"}, ensure_ascii=False))
+                    sys.exit(2)
+                remove_plugin(target)
+                print(json.dumps({"name": target, "status": "removed"}, ensure_ascii=False))
+                return
+            elif action == "install":
+                if not target:
+                    print(json.dumps({"error": "Usage: dsa plugin install <source-dir> [--json]"}, ensure_ascii=False))
+                    sys.exit(2)
+                from dsa_plugins.registry import install_plugin
+
+                installed_pm = install_plugin(Path(target))
+                print(json.dumps({"name": installed_pm.name, "version": installed_pm.version, "status": "installed"}, ensure_ascii=False))
+                return
+            elif action == "execute":
+                # dsa plugin execute <plugin-name> <tool> [args json]
+                print(json.dumps({"error": "Use SDK: dsa_plugins.registry.execute_plugin_tool(manifest, tool) — CLI execute via SDK"}, ensure_ascii=False))
+                sys.exit(2)
+            else:
+                # fallback: treat as list for backward compat
+                fallback_list = list_plugins()
+                print(json.dumps([pm.model_dump(mode="json") for pm in fallback_list], ensure_ascii=False))
+                return
+        except SystemExit:
+            raise
+        except Exception as e:
+            # §25 failure isolation — never crash core, return structured error
+            print(json.dumps({"error": str(e), "isError": True}, ensure_ascii=False))
+            sys.exit(1)
     if args.cmd == "mcp":
         from dsa_mcp.adapter import list_tools as mcp_list
 

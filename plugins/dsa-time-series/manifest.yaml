@@ -1,8 +1,13 @@
 name: dsa-time-series
 version: 1.0.0
 type: [forecasting]
+dsa:
+  min_version: "4.0.0"
+  max_version: "5.0.0"
 requires: { dsa: ">=4.0,<5.0" }
 license: MIT
 entrypoint: { python: dsa_time_series.plugin:register }
-permissions: [read, compute]
+permissions: [dataset.read, process, artifact.write, filesystem.read]
 dependencies: []
+capabilities: [forecast, backtest, metrics, visualization, evidence]
+description: "Flagship time-series plugin — forecasting + backtesting + metrics + viz + evidence (V4 §27)"
