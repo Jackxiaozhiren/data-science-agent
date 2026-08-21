@@ -10,7 +10,8 @@ from dsa_mcp.server import app
 
 def test_tool_discovery_and_metadata() -> None:
     tools = list_mcp_tools()
-    assert len(tools) == 17
+    assert len(tools) == 18  # 17 + analyze (§36)
+    assert any(t.name == "analyze" for t in tools)
     for t in tools:
         assert t.name
         assert t.description
@@ -30,13 +31,14 @@ def test_tool_discovery_and_metadata() -> None:
     assert MCP_TOOL_CLASS["run_sql"] == "ANALYSIS"
     assert MCP_TOOL_CLASS["run_python"] == "COMPUTE"
     assert MCP_TOOL_CLASS["generate_report"] == "WRITE_ARTIFACT"
+    assert MCP_TOOL_CLASS["analyze"] == "COMPUTE"
 
 
 def test_tools_list_endpoint() -> None:
     c = TestClient(app)
     r = c.get("/mcp/tools")
     assert r.status_code == 200
-    assert r.json()["count"] == 17
+    assert r.json()["count"] == 18
     r2 = c.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
     assert r2.status_code == 200
     assert "tools" in r2.json()["result"]

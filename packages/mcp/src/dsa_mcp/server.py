@@ -7,18 +7,35 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools
+from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools, list_resources, read_resource
 
 app = FastAPI(title="Data Science MCP Server", version="0.1.0")
 
 
 @app.get("/mcp/tools")
+@app.get("/tools")
 async def mcp_tools_list() -> dict[str, Any]:
     tools = list_mcp_tools()
     return {"tools": [t.model_dump(mode="json") for t in tools], "count": len(tools)}
 
 
+@app.get("/mcp/resources")
+@app.get("/resources")
+async def mcp_resources_list() -> dict[str, Any]:
+    resources = list_resources()
+    return {"resources": resources, "count": len(resources)}
+
+
+@app.get("/mcp/resources/read")
+@app.get("/resources/read")
+async def mcp_resources_read(uri: str) -> JSONResponse:
+    result = await read_resource(uri)
+    status = 200 if not result.get("isError") else 404
+    return JSONResponse(result, status_code=status)
+
+
 @app.post("/mcp/call")
+@app.post("/call")
 async def mcp_call(body: dict[str, Any]) -> JSONResponse:
     name = body.get("name") or body.get("tool")
     arguments = body.get("arguments") or body.get("input") or {}
@@ -30,6 +47,8 @@ async def mcp_call(body: dict[str, Any]) -> JSONResponse:
 
 
 @app.post("/mcp")
+@app.post("/")
+@app.post("")
 async def mcp_jsonrpc(request: Request) -> JSONResponse:
     body = await request.json()
     req_id = body.get("id")
@@ -69,6 +88,19 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
                 },
                 status_code=200,
             )
+        return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": result})
+
+    if method == "resources/list":
+        resources = list_resources()
+        return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": {"resources": resources}})
+
+    if method == "resources/read":
+        uri = params.get("uri", "")
+        if not uri:
+            return JSONResponse({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": "Missing uri"}}, status_code=200)
+        result = await read_resource(uri)
+        if result.get("isError"):
+            return JSONResponse({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": result.get("text", "not found")}}, status_code=200)
         return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": result})
 
     return JSONResponse(
@@ -135,6 +167,19 @@ async def stdio_main() -> None:
                         "id": req_id,
                         "error": {"code": -32602, "message": result.get("error")},
                     }
+                else:
+                    resp = {"jsonrpc": "2.0", "id": req_id, "result": result}
+        elif method == "resources/list":
+            resources = list_resources()
+            resp = {"jsonrpc": "2.0", "id": req_id, "result": {"resources": resources}}
+        elif method == "resources/read":
+            uri = params.get("uri", "")
+            if not uri:
+                resp = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": "Missing uri"}}
+            else:
+                result = await read_resource(uri)
+                if result.get("isError"):
+                    resp = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": result.get("text", "not found")}}
                 else:
                     resp = {"jsonrpc": "2.0", "id": req_id, "result": result}
         else:

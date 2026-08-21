@@ -7,8 +7,8 @@ def test_mcp_has_13_tools() -> None:
     from dsa_mcp.adapter import MCP_TOOL_MAP, list_mcp_tools
 
     tools = list_mcp_tools()
-    assert len(tools) == 17
-    assert len(MCP_TOOL_MAP) == 17
+    assert len(tools) == 18  # 17 + analyze (§36)
+    assert len(MCP_TOOL_MAP) == 18
     names = {t.name for t in tools}
     assert "profile_dataset" in names
     assert "run_sql" in names
