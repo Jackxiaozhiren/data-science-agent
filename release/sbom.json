@@ -1,0 +1,1350 @@
+{
+  "version": "4.0.0",
+  "generated": "2026-08-21T05:55:50.283236+00:00",
+  "components": [
+    {
+      "package": "aiosqlite",
+      "version": "0.22.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/aiosqlite@0.22.1"
+    },
+    {
+      "package": "annotated-doc",
+      "version": "0.0.5",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/annotated-doc@0.0.5"
+    },
+    {
+      "package": "annotated-types",
+      "version": "0.8.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/annotated-types@0.8.0"
+    },
+    {
+      "package": "anyio",
+      "version": "4.14.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/anyio@4.14.2"
+    },
+    {
+      "package": "appnope",
+      "version": "1.0.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/appnope@1.0.0"
+    },
+    {
+      "package": "argon2-cffi",
+      "version": "25.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/argon2-cffi@25.1.0"
+    },
+    {
+      "package": "argon2-cffi-bindings",
+      "version": "26.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/argon2-cffi-bindings@26.1.0"
+    },
+    {
+      "package": "arrow",
+      "version": "1.4.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/arrow@1.4.0"
+    },
+    {
+      "package": "ast-serialize",
+      "version": "0.8.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ast-serialize@0.8.0"
+    },
+    {
+      "package": "asttokens",
+      "version": "3.0.2",
+      "license": "Apache 2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/asttokens@3.0.2"
+    },
+    {
+      "package": "async-lru",
+      "version": "2.3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/async-lru@2.3.0"
+    },
+    {
+      "package": "attrs",
+      "version": "26.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/attrs@26.1.0"
+    },
+    {
+      "package": "babel",
+      "version": "2.18.0",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/babel@2.18.0"
+    },
+    {
+      "package": "backrefs",
+      "version": "8.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/backrefs@8.0"
+    },
+    {
+      "package": "beautifulsoup4",
+      "version": "4.15.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/beautifulsoup4@4.15.0"
+    },
+    {
+      "package": "bleach",
+      "version": "6.4.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/bleach@6.4.0"
+    },
+    {
+      "package": "certifi",
+      "version": "2026.7.22",
+      "license": "MPL-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/certifi@2026.7.22"
+    },
+    {
+      "package": "cffi",
+      "version": "2.1.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/cffi@2.1.1"
+    },
+    {
+      "package": "charset-normalizer",
+      "version": "3.5.1",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/charset-normalizer@3.5.1"
+    },
+    {
+      "package": "click",
+      "version": "8.4.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/click@8.4.2"
+    },
+    {
+      "package": "colorama",
+      "version": "0.4.6",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/colorama@0.4.6"
+    },
+    {
+      "package": "comm",
+      "version": "0.2.3",
+      "license": "BSD 3-Clause License\n\nCopyright (c) 2022, Jupyter\nAll rights reserved.\n\nRedistri...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/comm@0.2.3"
+    },
+    {
+      "package": "contourpy",
+      "version": "1.3.3",
+      "license": "BSD 3-Clause License\n\n Copyright (c) 2021-2025, ContourPy Developers.\n All right...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/contourpy@1.3.3"
+    },
+    {
+      "package": "coverage",
+      "version": "7.15.4",
+      "license": "Apache-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/coverage@7.15.4"
+    },
+    {
+      "package": "cycler",
+      "version": "0.12.1",
+      "license": "Copyright (c) 2015, matplotlib project\nAll rights reserved.\n\nRedistribution and ...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/cycler@0.12.1"
+    },
+    {
+      "package": "data-science-agent",
+      "version": "4.0.0",
+      "license": "MIT",
+      "source": "local:pyproject.toml",
+      "purl": "pkg:local/data-science-agent@4.0.0"
+    },
+    {
+      "package": "debugpy",
+      "version": "1.8.21",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/debugpy@1.8.21"
+    },
+    {
+      "package": "defusedxml",
+      "version": "0.7.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/defusedxml@0.7.1"
+    },
+    {
+      "package": "distro",
+      "version": "1.9.0",
+      "license": "Apache License, Version 2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/distro@1.9.0"
+    },
+    {
+      "package": "dsa-agent",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/agent",
+      "purl": "pkg:local/dsa-agent@0.1.0"
+    },
+    {
+      "package": "dsa-api",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:apps/api",
+      "purl": "pkg:local/dsa-api@0.1.0"
+    },
+    {
+      "package": "dsa-datasets",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/datasets",
+      "purl": "pkg:local/dsa-datasets@0.1.0"
+    },
+    {
+      "package": "dsa-evaluation",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/evaluation",
+      "purl": "pkg:local/dsa-evaluation@0.1.0"
+    },
+    {
+      "package": "dsa-evidence",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/evidence",
+      "purl": "pkg:local/dsa-evidence@0.1.0"
+    },
+    {
+      "package": "dsa-execution",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/execution",
+      "purl": "pkg:local/dsa-execution@0.1.0"
+    },
+    {
+      "package": "dsa-jupyter",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:apps/jupyter",
+      "purl": "pkg:local/dsa-jupyter@0.1.0"
+    },
+    {
+      "package": "dsa-llm",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/llm",
+      "purl": "pkg:local/dsa-llm@0.1.0"
+    },
+    {
+      "package": "dsa-mcp",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/mcp",
+      "purl": "pkg:local/dsa-mcp@0.1.0"
+    },
+    {
+      "package": "dsa-ml",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/ml",
+      "purl": "pkg:local/dsa-ml@0.1.0"
+    },
+    {
+      "package": "dsa-plugins",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/plugins",
+      "purl": "pkg:local/dsa-plugins@0.1.0"
+    },
+    {
+      "package": "dsa-reports",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/reports",
+      "purl": "pkg:local/dsa-reports@0.1.0"
+    },
+    {
+      "package": "dsa-statistics",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/statistics",
+      "purl": "pkg:local/dsa-statistics@0.1.0"
+    },
+    {
+      "package": "dsa-tools",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/tools",
+      "purl": "pkg:local/dsa-tools@0.1.0"
+    },
+    {
+      "package": "dsa-visualization",
+      "version": "0.1.0",
+      "license": "Unknown",
+      "source": "local:packages/visualization",
+      "purl": "pkg:local/dsa-visualization@0.1.0"
+    },
+    {
+      "package": "duckdb",
+      "version": "1.5.5",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/duckdb@1.5.5"
+    },
+    {
+      "package": "et-xmlfile",
+      "version": "2.0.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/et-xmlfile@2.0.0"
+    },
+    {
+      "package": "executing",
+      "version": "2.2.1",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/executing@2.2.1"
+    },
+    {
+      "package": "fastapi",
+      "version": "0.141.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/fastapi@0.141.1"
+    },
+    {
+      "package": "fastjsonschema",
+      "version": "2.22.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/fastjsonschema@2.22.2"
+    },
+    {
+      "package": "fonttools",
+      "version": "4.63.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/fonttools@4.63.0"
+    },
+    {
+      "package": "fqdn",
+      "version": "1.5.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/fqdn@1.5.1"
+    },
+    {
+      "package": "ghp-import",
+      "version": "2.1.0",
+      "license": "Apache Software License",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ghp-import@2.1.0"
+    },
+    {
+      "package": "greenlet",
+      "version": "3.5.5",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/greenlet@3.5.5"
+    },
+    {
+      "package": "h11",
+      "version": "0.16.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/h11@0.16.0"
+    },
+    {
+      "package": "httpcore",
+      "version": "1.0.9",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpcore@1.0.9"
+    },
+    {
+      "package": "httptools",
+      "version": "0.8.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httptools@0.8.0"
+    },
+    {
+      "package": "httpx",
+      "version": "0.28.1",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpx@0.28.1"
+    },
+    {
+      "package": "idna",
+      "version": "3.18",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/idna@3.18"
+    },
+    {
+      "package": "iniconfig",
+      "version": "2.3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/iniconfig@2.3.0"
+    },
+    {
+      "package": "ipykernel",
+      "version": "7.3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ipykernel@7.3.0"
+    },
+    {
+      "package": "ipython",
+      "version": "9.16.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ipython@9.16.1"
+    },
+    {
+      "package": "ipython-pygments-lexers",
+      "version": "1.1.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ipython-pygments-lexers@1.1.1"
+    },
+    {
+      "package": "isoduration",
+      "version": "20.11.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/isoduration@20.11.0"
+    },
+    {
+      "package": "jedi",
+      "version": "0.20.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jedi@0.20.0"
+    },
+    {
+      "package": "jinja2",
+      "version": "3.1.6",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jinja2@3.1.6"
+    },
+    {
+      "package": "joblib",
+      "version": "1.5.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/joblib@1.5.3"
+    },
+    {
+      "package": "json5",
+      "version": "0.15.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/json5@0.15.0"
+    },
+    {
+      "package": "jsonpatch",
+      "version": "1.33",
+      "license": "Modified BSD License",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jsonpatch@1.33"
+    },
+    {
+      "package": "jsonpointer",
+      "version": "3.1.1",
+      "license": "Modified BSD License",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jsonpointer@3.1.1"
+    },
+    {
+      "package": "jsonschema",
+      "version": "4.26.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jsonschema@4.26.0"
+    },
+    {
+      "package": "jsonschema-specifications",
+      "version": "2025.9.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jsonschema-specifications@2025.9.1"
+    },
+    {
+      "package": "jupyter-builder",
+      "version": "1.2.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-builder@1.2.2"
+    },
+    {
+      "package": "jupyter-client",
+      "version": "8.9.1",
+      "license": "BSD 3-Clause License\n\n- Copyright (c) 2001-2015, IPython Development Team\n- Copy...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-client@8.9.1"
+    },
+    {
+      "package": "jupyter-core",
+      "version": "5.9.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-core@5.9.1"
+    },
+    {
+      "package": "jupyter-events",
+      "version": "0.12.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-events@0.12.1"
+    },
+    {
+      "package": "jupyter-lsp",
+      "version": "2.3.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-lsp@2.3.1"
+    },
+    {
+      "package": "jupyter-server",
+      "version": "2.20.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-server@2.20.0"
+    },
+    {
+      "package": "jupyter-server-terminals",
+      "version": "0.5.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyter-server-terminals@0.5.4"
+    },
+    {
+      "package": "jupyterlab",
+      "version": "4.6.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyterlab@4.6.3"
+    },
+    {
+      "package": "jupyterlab-pygments",
+      "version": "0.3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyterlab-pygments@0.3.0"
+    },
+    {
+      "package": "jupyterlab-server",
+      "version": "2.28.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/jupyterlab-server@2.28.0"
+    },
+    {
+      "package": "kiwisolver",
+      "version": "1.5.0",
+      "license": "=========================\n The Kiwi licensing terms\n=========================\nKi...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/kiwisolver@1.5.0"
+    },
+    {
+      "package": "langchain-core",
+      "version": "1.5.5",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langchain-core@1.5.5"
+    },
+    {
+      "package": "langchain-protocol",
+      "version": "0.0.18",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langchain-protocol@0.0.18"
+    },
+    {
+      "package": "langgraph",
+      "version": "1.2.11",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langgraph@1.2.11"
+    },
+    {
+      "package": "langgraph-checkpoint",
+      "version": "4.2.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langgraph-checkpoint@4.2.0"
+    },
+    {
+      "package": "langgraph-prebuilt",
+      "version": "1.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langgraph-prebuilt@1.1.0"
+    },
+    {
+      "package": "langgraph-sdk",
+      "version": "0.4.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langgraph-sdk@0.4.2"
+    },
+    {
+      "package": "langsmith",
+      "version": "0.11.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/langsmith@0.11.0"
+    },
+    {
+      "package": "lark",
+      "version": "1.3.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/lark@1.3.1"
+    },
+    {
+      "package": "librt",
+      "version": "0.15.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/librt@0.15.0"
+    },
+    {
+      "package": "markdown",
+      "version": "3.10.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/markdown@3.10.3"
+    },
+    {
+      "package": "markupsafe",
+      "version": "3.0.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/markupsafe@3.0.3"
+    },
+    {
+      "package": "matplotlib",
+      "version": "3.11.1",
+      "license": "License agreement for matplotlib versions 1.3.0 and later\n =====================...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/matplotlib@3.11.1"
+    },
+    {
+      "package": "matplotlib-inline",
+      "version": "0.2.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/matplotlib-inline@0.2.2"
+    },
+    {
+      "package": "mergedeep",
+      "version": "1.3.4",
+      "license": "UNKNOWN",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mergedeep@1.3.4"
+    },
+    {
+      "package": "mistune",
+      "version": "3.3.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mistune@3.3.4"
+    },
+    {
+      "package": "mkdocs",
+      "version": "1.6.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mkdocs@1.6.1"
+    },
+    {
+      "package": "mkdocs-get-deps",
+      "version": "0.2.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mkdocs-get-deps@0.2.2"
+    },
+    {
+      "package": "mkdocs-material",
+      "version": "9.7.7",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mkdocs-material@9.7.7"
+    },
+    {
+      "package": "mkdocs-material-extensions",
+      "version": "1.3.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mkdocs-material-extensions@1.3.1"
+    },
+    {
+      "package": "mypy",
+      "version": "2.3.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mypy@2.3.1"
+    },
+    {
+      "package": "mypy-extensions",
+      "version": "1.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/mypy-extensions@1.1.0"
+    },
+    {
+      "package": "narwhals",
+      "version": "2.24.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/narwhals@2.24.0"
+    },
+    {
+      "package": "nbclient",
+      "version": "0.11.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/nbclient@0.11.0"
+    },
+    {
+      "package": "nbconvert",
+      "version": "7.17.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/nbconvert@7.17.1"
+    },
+    {
+      "package": "nbformat",
+      "version": "5.11.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/nbformat@5.11.1"
+    },
+    {
+      "package": "nest-asyncio",
+      "version": "1.6.0",
+      "license": "BSD",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/nest-asyncio@1.6.0"
+    },
+    {
+      "package": "nest-asyncio2",
+      "version": "1.7.2",
+      "license": "BSD",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/nest-asyncio2@1.7.2"
+    },
+    {
+      "package": "notebook-shim",
+      "version": "0.2.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/notebook-shim@0.2.4"
+    },
+    {
+      "package": "numpy",
+      "version": "2.5.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/numpy@2.5.2"
+    },
+    {
+      "package": "openpyxl",
+      "version": "3.1.5",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/openpyxl@3.1.5"
+    },
+    {
+      "package": "orjson",
+      "version": "3.12.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/orjson@3.12.0"
+    },
+    {
+      "package": "ormsgpack",
+      "version": "1.12.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ormsgpack@1.12.2"
+    },
+    {
+      "package": "packaging",
+      "version": "26.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/packaging@26.3"
+    },
+    {
+      "package": "paginate",
+      "version": "0.5.7",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/paginate@0.5.7"
+    },
+    {
+      "package": "pandas",
+      "version": "3.0.5",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pandas@3.0.5"
+    },
+    {
+      "package": "pandocfilters",
+      "version": "1.5.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pandocfilters@1.5.1"
+    },
+    {
+      "package": "parso",
+      "version": "0.8.7",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/parso@0.8.7"
+    },
+    {
+      "package": "pathspec",
+      "version": "1.1.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pathspec@1.1.1"
+    },
+    {
+      "package": "patsy",
+      "version": "1.0.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/patsy@1.0.2"
+    },
+    {
+      "package": "pexpect",
+      "version": "4.9.0",
+      "license": "ISC license",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pexpect@4.9.0"
+    },
+    {
+      "package": "pillow",
+      "version": "12.3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pillow@12.3.0"
+    },
+    {
+      "package": "platformdirs",
+      "version": "4.11.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/platformdirs@4.11.3"
+    },
+    {
+      "package": "pluggy",
+      "version": "1.6.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pluggy@1.6.0"
+    },
+    {
+      "package": "polars",
+      "version": "1.43.2",
+      "license": "Copyright (c) 2025 Ritchie Vink\nCopyright (c) 2024 (Some portions) NVIDIA CORPOR...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/polars@1.43.2"
+    },
+    {
+      "package": "polars-runtime-32",
+      "version": "1.43.2",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/polars-runtime-32@1.43.2"
+    },
+    {
+      "package": "prometheus-client",
+      "version": "0.26.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/prometheus-client@0.26.0"
+    },
+    {
+      "package": "prompt-toolkit",
+      "version": "3.0.53",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/prompt-toolkit@3.0.53"
+    },
+    {
+      "package": "psutil",
+      "version": "7.2.2",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/psutil@7.2.2"
+    },
+    {
+      "package": "ptyprocess",
+      "version": "0.7.0",
+      "license": "UNKNOWN",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ptyprocess@0.7.0"
+    },
+    {
+      "package": "pure-eval",
+      "version": "0.2.3",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pure-eval@0.2.3"
+    },
+    {
+      "package": "pyarrow",
+      "version": "25.0.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pyarrow@25.0.1"
+    },
+    {
+      "package": "pycparser",
+      "version": "3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pycparser@3.0"
+    },
+    {
+      "package": "pydantic",
+      "version": "2.13.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pydantic@2.13.4"
+    },
+    {
+      "package": "pydantic-core",
+      "version": "2.46.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pydantic-core@2.46.4"
+    },
+    {
+      "package": "pydantic-settings",
+      "version": "2.15.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pydantic-settings@2.15.0"
+    },
+    {
+      "package": "pygments",
+      "version": "2.20.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pygments@2.20.0"
+    },
+    {
+      "package": "pymdown-extensions",
+      "version": "11.0.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pymdown-extensions@11.0.1"
+    },
+    {
+      "package": "pyparsing",
+      "version": "3.3.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pyparsing@3.3.2"
+    },
+    {
+      "package": "pytest",
+      "version": "9.1.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pytest@9.1.1"
+    },
+    {
+      "package": "pytest-asyncio",
+      "version": "1.4.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pytest-asyncio@1.4.0"
+    },
+    {
+      "package": "pytest-cov",
+      "version": "7.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pytest-cov@7.1.0"
+    },
+    {
+      "package": "python-dateutil",
+      "version": "2.9.0.post0",
+      "license": "Dual License",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/python-dateutil@2.9.0.post0"
+    },
+    {
+      "package": "python-dotenv",
+      "version": "1.2.2",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/python-dotenv@1.2.2"
+    },
+    {
+      "package": "python-json-logger",
+      "version": "4.2.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/python-json-logger@4.2.0"
+    },
+    {
+      "package": "python-multipart",
+      "version": "0.0.32",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/python-multipart@0.0.32"
+    },
+    {
+      "package": "pywinpty",
+      "version": "3.0.5",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pywinpty@3.0.5"
+    },
+    {
+      "package": "pyyaml",
+      "version": "6.0.3",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pyyaml@6.0.3"
+    },
+    {
+      "package": "pyyaml-env-tag",
+      "version": "1.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pyyaml-env-tag@1.1"
+    },
+    {
+      "package": "pyzmq",
+      "version": "27.2.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pyzmq@27.2.0"
+    },
+    {
+      "package": "referencing",
+      "version": "0.37.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/referencing@0.37.0"
+    },
+    {
+      "package": "requests",
+      "version": "2.34.2",
+      "license": "Apache-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/requests@2.34.2"
+    },
+    {
+      "package": "requests-toolbelt",
+      "version": "1.0.0",
+      "license": "Apache 2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/requests-toolbelt@1.0.0"
+    },
+    {
+      "package": "rfc3339-validator",
+      "version": "0.1.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/rfc3339-validator@0.1.4"
+    },
+    {
+      "package": "rfc3986-validator",
+      "version": "0.1.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/rfc3986-validator@0.1.1"
+    },
+    {
+      "package": "rfc3987-syntax",
+      "version": "1.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/rfc3987-syntax@1.1.0"
+    },
+    {
+      "package": "rpds-py",
+      "version": "2026.6.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/rpds-py@2026.6.3"
+    },
+    {
+      "package": "ruff",
+      "version": "0.16.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/ruff@0.16.3"
+    },
+    {
+      "package": "scikit-learn",
+      "version": "1.9.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/scikit-learn@1.9.0"
+    },
+    {
+      "package": "scipy",
+      "version": "1.18.0",
+      "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.\n All rights rese...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/scipy@1.18.0"
+    },
+    {
+      "package": "send2trash",
+      "version": "2.1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/send2trash@2.1.0"
+    },
+    {
+      "package": "six",
+      "version": "1.17.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/six@1.17.0"
+    },
+    {
+      "package": "sniffio",
+      "version": "1.3.1",
+      "license": "MIT OR Apache-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/sniffio@1.3.1"
+    },
+    {
+      "package": "soupsieve",
+      "version": "2.9.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/soupsieve@2.9.2"
+    },
+    {
+      "package": "sqlalchemy",
+      "version": "2.0.52",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/sqlalchemy@2.0.52"
+    },
+    {
+      "package": "stack-data",
+      "version": "0.6.3",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/stack-data@0.6.3"
+    },
+    {
+      "package": "starlette",
+      "version": "1.6.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/starlette@1.6.0"
+    },
+    {
+      "package": "statsmodels",
+      "version": "0.14.6",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/statsmodels@0.14.6"
+    },
+    {
+      "package": "tenacity",
+      "version": "9.1.4",
+      "license": "Apache 2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/tenacity@9.1.4"
+    },
+    {
+      "package": "terminado",
+      "version": "0.18.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/terminado@0.18.1"
+    },
+    {
+      "package": "threadpoolctl",
+      "version": "3.6.0",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/threadpoolctl@3.6.0"
+    },
+    {
+      "package": "tinycss2",
+      "version": "1.5.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/tinycss2@1.5.1"
+    },
+    {
+      "package": "tornado",
+      "version": "6.5.8",
+      "license": "Apache-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/tornado@6.5.8"
+    },
+    {
+      "package": "traitlets",
+      "version": "5.16.1",
+      "license": "BSD 3-Clause License\n\n- Copyright (c) 2001-, IPython Development Team\n\nAll right...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/traitlets@5.16.1"
+    },
+    {
+      "package": "typing-extensions",
+      "version": "4.16.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/typing-extensions@4.16.0"
+    },
+    {
+      "package": "typing-inspection",
+      "version": "0.4.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/typing-inspection@0.4.4"
+    },
+    {
+      "package": "tzdata",
+      "version": "2026.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/tzdata@2026.3"
+    },
+    {
+      "package": "uri-template",
+      "version": "1.3.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/uri-template@1.3.0"
+    },
+    {
+      "package": "urllib3",
+      "version": "2.7.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/urllib3@2.7.0"
+    },
+    {
+      "package": "uuid-utils",
+      "version": "0.17.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/uuid-utils@0.17.0"
+    },
+    {
+      "package": "uvicorn",
+      "version": "0.52.3",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/uvicorn@0.52.3"
+    },
+    {
+      "package": "uvloop",
+      "version": "0.22.1",
+      "license": "MIT License",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/uvloop@0.22.1"
+    },
+    {
+      "package": "watchdog",
+      "version": "6.0.0",
+      "license": "Apache-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/watchdog@6.0.0"
+    },
+    {
+      "package": "watchfiles",
+      "version": "1.2.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/watchfiles@1.2.0"
+    },
+    {
+      "package": "wcwidth",
+      "version": "0.8.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/wcwidth@0.8.2"
+    },
+    {
+      "package": "webcolors",
+      "version": "25.10.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/webcolors@25.10.0"
+    },
+    {
+      "package": "webencodings",
+      "version": "0.6.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/webencodings@0.6.1"
+    },
+    {
+      "package": "websocket-client",
+      "version": "1.9.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/websocket-client@1.9.0"
+    },
+    {
+      "package": "websockets",
+      "version": "15.0.1",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/websockets@15.0.1"
+    },
+    {
+      "package": "xxhash",
+      "version": "4.0.0",
+      "license": "BSD-2-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/xxhash@4.0.0"
+    },
+    {
+      "package": "zstandard",
+      "version": "0.25.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/zstandard@0.25.0"
+    }
+  ]
+}

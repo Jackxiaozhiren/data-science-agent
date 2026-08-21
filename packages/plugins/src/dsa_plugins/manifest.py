@@ -31,7 +31,55 @@ PERMISSION_CANONICAL = {
 ALLOWED_LICENSES = {"MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Proprietary"}
 ALLOWED_CAPABILITIES = {"forecast", "backtest", "metrics", "visualization", "evidence", "forecasting", "time_series"}
 
+# §45 supply-chain: popular packages for typosquatting detection
+POPULAR_PYPI = {"numpy", "pandas", "polars", "scikit-learn", "sklearn", "matplotlib", "scipy", "requests", "urllib3", "pyyaml", "yaml", "pydantic", "fastapi", "duckdb", "pyarrow", "openpyxl", "langgraph", "langchain", "dsa-time-series", "data-science-agent"}
+WORKSPACE_PACKAGES = {"dsa-agent", "dsa-api", "dsa-datasets", "dsa-evaluation", "dsa-evidence", "dsa-execution", "dsa-llm", "dsa-mcp", "dsa-ml", "dsa-plugins", "dsa-reports", "dsa-statistics", "dsa-tools", "dsa-visualization", "dsa-jupyter", "dsa-vscode", "data-science-agent"}
+
 CURRENT_DSA_VERSION = "4.0.0"
+
+
+def _levenshtein(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    if len(a) < len(b):
+        a, b = b, a
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            cost = 0 if ca == cb else 1
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
+        prev = cur
+    return prev[-1]
+
+
+def _is_typosquat(name: str) -> str | None:
+    for popular in POPULAR_PYPI:
+        if name == popular:
+            return None
+        if _levenshtein(name, popular) <= 2 and len(name) >= 4:
+            return popular
+    return None
+
+
+def _is_suspicious_entrypoint(ep: str) -> str | None:
+    suspicious = ["..", "/", "os.", "subprocess", "eval", "exec(", "__import__", "open(", "socket", "requests."]
+    for s in suspicious:
+        if s in ep:
+            return s
+    return None
+
+
+def _is_dependency_confusion(dep: str) -> str | None:
+    # dep may be "package>=1.0" — extract name
+    base = re.split(r"[<>=!~\[]", dep, maxsplit=1)[0].strip()
+    if base.startswith("dsa-") and base not in WORKSPACE_PACKAGES:
+        return f"workspace confusion: {base} not in {WORKSPACE_PACKAGES}"
+    # typosquat for deps
+    typo = _is_typosquat(base)
+    if typo:
+        return f"typosquat: {base} ~ {typo}"
+    return None
 
 
 def _semver_ok(v: str) -> bool:
@@ -126,6 +174,23 @@ class PluginManifest(BaseModel):
         # hash format if present
         if self.hash and not re.match(r"^[a-f0-9]{8,64}$", self.hash):
             errors.append("hash must be hex 8..64 chars if present")
+        # §45 supply-chain: entrypoint, typosquatting, dependency confusion
+        ep = self.entrypoint.get("python", "")
+        susp = _is_suspicious_entrypoint(ep)
+        if susp:
+            errors.append(f"suspicious entrypoint pattern {susp!r} (§45 arbitrary code)")
+        typo = _is_typosquat(self.name)
+        if typo:
+            errors.append(f"typosquat risk: plugin name {self.name!r} ~ popular {typo!r} (§45)")
+        for dep in self.dependencies:
+            conf = _is_dependency_confusion(dep)
+            if conf:
+                errors.append(f"dependency {dep!r} flagged: {conf} (§45)")
+            # also check dependency typosquat
+            base = re.split(r"[<>=!~\[]", dep, maxsplit=1)[0].strip()
+            # arbitrary code via dependency name with suspicious chars
+            if ".." in dep or "/" in dep or " " in dep:
+                errors.append(f"dependency {dep!r} contains suspicious path (§45)")
         return errors
 
     def _check_dsa_compat(self, req: str) -> bool:
