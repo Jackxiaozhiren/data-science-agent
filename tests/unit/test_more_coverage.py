@@ -42,10 +42,24 @@ def test_create_chart_all_types_and_generate_report() -> None:
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             p = td / "chart.csv"
-            pl.DataFrame({"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10], "cat": ["A", "A", "B", "B", "C"], "val": [1, 2, 3, 4, 5]}).write_csv(p)
+            pl.DataFrame(
+                {
+                    "x": [1, 2, 3, 4, 5],
+                    "y": [2, 4, 6, 8, 10],
+                    "cat": ["A", "A", "B", "B", "C"],
+                    "val": [1, 2, 3, 4, 5],
+                }
+            ).write_csv(p)
             for ct in ["histogram", "bar", "scatter", "line", "boxplot", "heatmap"]:
                 tool = get("create_chart")
-                r = await tool.run({"dataset_path": str(p), "chart_type": ct, "x": "x" if ct in ("histogram", "line") else "cat", "y": "y" if ct not in ("histogram",) else None})
+                r = await tool.run(
+                    {
+                        "dataset_path": str(p),
+                        "chart_type": ct,
+                        "x": "x" if ct in ("histogram", "line") else "cat",
+                        "y": "y" if ct not in ("histogram",) else None,
+                    }
+                )
                 assert r.status in ("ok", "error")
             # fallback without dataset_path should error or ok
             rg = get("generate_report")
@@ -65,17 +79,30 @@ def test_tool_error_branches_and_regression_variants() -> None:
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             p = td / "reg.csv"
-            pl.DataFrame({"a": [1.0, 2.0, 3.0], "b": ["x", "y", "z"], "target": [1, 0, 1]}).write_csv(p)
+            pl.DataFrame(
+                {"a": [1.0, 2.0, 3.0], "b": ["x", "y", "z"], "target": [1, 0, 1]}
+            ).write_csv(p)
             # regression with non-numeric should hit error path
             rg = get("regression_analysis")
-            r = await rg.run({"dataset_path": str(p), "target": "target", "features": ["b"], "model": "linear"})
+            r = await rg.run(
+                {"dataset_path": str(p), "target": "target", "features": ["b"], "model": "linear"}
+            )
             assert r.status in ("ok", "error")
             # missing feature
-            r2 = await rg.run({"dataset_path": str(p), "target": "target", "features": ["missing"], "model": "linear"})
+            r2 = await rg.run(
+                {
+                    "dataset_path": str(p),
+                    "target": "target",
+                    "features": ["missing"],
+                    "model": "linear",
+                }
+            )
             assert r2.status == "error"
             # hypothesis with missing data edge
             hyp = get("hypothesis_test")
-            r3 = await hyp.run({"dataset_path": str(p), "test": "welch_t_test", "group_col": "b", "value_col": "a"})
+            r3 = await hyp.run(
+                {"dataset_path": str(p), "test": "welch_t_test", "group_col": "b", "value_col": "a"}
+            )
             assert r3.status in ("ok", "error")
 
     asyncio.run(_run())

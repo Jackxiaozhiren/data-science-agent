@@ -35,7 +35,13 @@ def test_sampling_ratio_and_stratified() -> None:
 
 def test_rubric_and_kappa_alpha() -> None:
     assert len(RUBRIC_DIMENSIONS) == 8
-    assert set(SCORE_SCALE.values()) == {"unacceptable", "poor", "acceptable", "strong", "excellent"}
+    assert set(SCORE_SCALE.values()) == {
+        "unacceptable",
+        "poor",
+        "acceptable",
+        "strong",
+        "excellent",
+    }
     # Perfect agreement -> kappa 1
     assert cohens_kappa_two_raters([3, 4, 5, 3], [3, 4, 5, 3]) == 1.0
     # Krippendorff: 3 raters perfect agreement -> 1

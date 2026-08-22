@@ -122,7 +122,10 @@ def _analyze_input_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "properties": {
-            "dataset": {"type": "string", "description": "Dataset path or dataset_id (e.g. sales.csv or dataset://sales)"},
+            "dataset": {
+                "type": "string",
+                "description": "Dataset path or dataset_id (e.g. sales.csv or dataset://sales)",
+            },
             "dataset_path": {"type": "string", "description": "Alias for dataset"},
             "task": {"type": "string", "description": "Natural-language question"},
             "question": {"type": "string", "description": "Alias for task"},
@@ -277,23 +280,58 @@ def list_resources() -> list[dict[str, Any]]:
                 {
                     "uri": f"artifact://{run_id}/{aid}",
                     "name": f"Artifact: {aid}",
-                    "description": f"Artifact {art.get('type','')} at {art.get('path','')}",
+                    "description": f"Artifact {art.get('type', '')} at {art.get('path', '')}",
                     "mimeType": "application/octet-stream",
                 }
             )
     # Ensure templates for all 5 schemes are discoverable even when no stored analysis (§37)
     schemes_present = {r["uri"].split("://")[0] for r in resources}
     if "evidence" not in schemes_present:
-        resources.append({"uri": "evidence://{run_id}", "name": "Evidence", "description": "Evidence graph for a run", "mimeType": "application/json"})
+        resources.append(
+            {
+                "uri": "evidence://{run_id}",
+                "name": "Evidence",
+                "description": "Evidence graph for a run",
+                "mimeType": "application/json",
+            }
+        )
     if "report" not in schemes_present:
-        resources.append({"uri": "report://{run_id}", "name": "Report", "description": "Report markdown + artifacts", "mimeType": "text/markdown"})
+        resources.append(
+            {
+                "uri": "report://{run_id}",
+                "name": "Report",
+                "description": "Report markdown + artifacts",
+                "mimeType": "text/markdown",
+            }
+        )
     if "artifact" not in schemes_present:
-        resources.append({"uri": "artifact://{run_id}/{artifact_id}", "name": "Artifact", "description": "Artifact file", "mimeType": "application/octet-stream"})
+        resources.append(
+            {
+                "uri": "artifact://{run_id}/{artifact_id}",
+                "name": "Artifact",
+                "description": "Artifact file",
+                "mimeType": "application/octet-stream",
+            }
+        )
     if "analysis" not in schemes_present:
-        resources.append({"uri": "analysis://{run_id}", "name": "Analysis", "description": "Full Analysis state", "mimeType": "application/json"})
+        resources.append(
+            {
+                "uri": "analysis://{run_id}",
+                "name": "Analysis",
+                "description": "Full Analysis state",
+                "mimeType": "application/json",
+            }
+        )
     # dataset template is covered by concrete datasets above; if none, add
     if "dataset" not in schemes_present:
-        resources.append({"uri": "dataset://{dataset_id}", "name": "Dataset", "description": "Dataset resource (CSV/Parquet)", "mimeType": "text/csv"})
+        resources.append(
+            {
+                "uri": "dataset://{dataset_id}",
+                "name": "Dataset",
+                "description": "Dataset resource (CSV/Parquet)",
+                "mimeType": "text/csv",
+            }
+        )
     return resources
 
 
@@ -308,50 +346,102 @@ async def read_resource(uri: str) -> dict[str, Any]:
                 try:
                     # return head (first 5 rows) as text/csv + metadata
                     head = p.read_text(encoding="utf-8")[:5000] if p.exists() else "not found"
-                    return {"uri": uri, "mimeType": "text/csv", "text": head, "meta": {"path": str(p), "dataset_id": ds_id}}
+                    return {
+                        "uri": uri,
+                        "mimeType": "text/csv",
+                        "text": head,
+                        "meta": {"path": str(p), "dataset_id": ds_id},
+                    }
                 except Exception as e:
-                    return {"uri": uri, "mimeType": "text/plain", "text": f"error: {e}", "isError": True}
-        return {"uri": uri, "mimeType": "text/plain", "text": f"dataset {ds_id} not found", "isError": True}
+                    return {
+                        "uri": uri,
+                        "mimeType": "text/plain",
+                        "text": f"error: {e}",
+                        "isError": True,
+                    }
+        return {
+            "uri": uri,
+            "mimeType": "text/plain",
+            "text": f"dataset {ds_id} not found",
+            "isError": True,
+        }
     # evidence://
     if uri.startswith("evidence://"):
         run_id = uri[len("evidence://") :].split("?")[0].split("/")[0]
         payload = _ANALYSIS_STORE.get(run_id)
         if payload is not None:
             ev = payload.get("evidence", [])
-            return {"uri": uri, "mimeType": "application/json", "text": __import__("json").dumps(ev, indent=2, ensure_ascii=False, default=str)}
+            return {
+                "uri": uri,
+                "mimeType": "application/json",
+                "text": __import__("json").dumps(ev, indent=2, ensure_ascii=False, default=str),
+            }
         # Try to load from artifacts/reports/<run_id>/evidence_graph.json if store empty
         try:
             from pathlib import Path as _P
 
             eg = _P(f"artifacts/reports/{run_id}/evidence_graph.json")
             if eg.exists():
-                return {"uri": uri, "mimeType": "application/json", "text": eg.read_text(encoding="utf-8")}
+                return {
+                    "uri": uri,
+                    "mimeType": "application/json",
+                    "text": eg.read_text(encoding="utf-8"),
+                }
         except Exception:
             pass
-        return {"uri": uri, "mimeType": "text/plain", "text": f"evidence for {run_id} not found", "isError": True}
+        return {
+            "uri": uri,
+            "mimeType": "text/plain",
+            "text": f"evidence for {run_id} not found",
+            "isError": True,
+        }
     # report://
     if uri.startswith("report://"):
         run_id = uri[len("report://") :].split("?")[0].split("/")[0]
         payload = _ANALYSIS_STORE.get(run_id)
         if payload is not None and payload.get("report_markdown"):
-            return {"uri": uri, "mimeType": "text/markdown", "text": str(payload["report_markdown"])}
+            return {
+                "uri": uri,
+                "mimeType": "text/markdown",
+                "text": str(payload["report_markdown"]),
+            }
         # try artifacts
         try:
             from pathlib import Path as _P
 
             rp = _P(f"artifacts/reports/{run_id}/report.md")
             if rp.exists():
-                return {"uri": uri, "mimeType": "text/markdown", "text": rp.read_text(encoding="utf-8")}
+                return {
+                    "uri": uri,
+                    "mimeType": "text/markdown",
+                    "text": rp.read_text(encoding="utf-8"),
+                }
         except Exception:
             pass
-        return {"uri": uri, "mimeType": "text/plain", "text": f"report for {run_id} not found", "isError": True}
+        return {
+            "uri": uri,
+            "mimeType": "text/plain",
+            "text": f"report for {run_id} not found",
+            "isError": True,
+        }
     # analysis://
     if uri.startswith("analysis://"):
         run_id = uri[len("analysis://") :].split("?")[0].split("/")[0]
         payload = _ANALYSIS_STORE.get(run_id)
         if payload is not None:
-            return {"uri": uri, "mimeType": "application/json", "text": __import__("json").dumps(payload, indent=2, ensure_ascii=False, default=str)}
-        return {"uri": uri, "mimeType": "text/plain", "text": f"analysis {run_id} not found", "isError": True}
+            return {
+                "uri": uri,
+                "mimeType": "application/json",
+                "text": __import__("json").dumps(
+                    payload, indent=2, ensure_ascii=False, default=str
+                ),
+            }
+        return {
+            "uri": uri,
+            "mimeType": "text/plain",
+            "text": f"analysis {run_id} not found",
+            "isError": True,
+        }
     # artifact://
     if uri.startswith("artifact://"):
         rest = uri[len("artifact://") :]
@@ -373,8 +463,19 @@ async def read_resource(uri: str) -> dict[str, Any]:
 
                             b64 = base64.b64encode(pp.read_bytes()[:20000]).decode()
                             return {"uri": uri, "mimeType": "application/octet-stream", "blob": b64}
-                    return {"uri": uri, "mimeType": "application/json", "text": __import__("json").dumps(art, indent=2, ensure_ascii=False, default=str)}
-        return {"uri": uri, "mimeType": "text/plain", "text": f"artifact {aid} for {run_id} not found", "isError": True}
+                    return {
+                        "uri": uri,
+                        "mimeType": "application/json",
+                        "text": __import__("json").dumps(
+                            art, indent=2, ensure_ascii=False, default=str
+                        ),
+                    }
+        return {
+            "uri": uri,
+            "mimeType": "text/plain",
+            "text": f"artifact {aid} for {run_id} not found",
+            "isError": True,
+        }
     return {"uri": uri, "mimeType": "text/plain", "text": "unknown scheme", "isError": True}
 
 
@@ -383,14 +484,23 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     # §36 analyze — full loop with explicit handles (stateless)
     if name == "analyze":
         # Resolve dataset: support dataset://, dataset_path, dataset
-        raw_ds = arguments.get("dataset") or arguments.get("dataset_path") or arguments.get("dataset_id") or ""
+        raw_ds = (
+            arguments.get("dataset")
+            or arguments.get("dataset_path")
+            or arguments.get("dataset_id")
+            or ""
+        )
         task = arguments.get("task") or arguments.get("question") or ""
         run_id = arguments.get("run_id") or arguments.get("analysis_id")
         if not raw_ds:
             # try discover default
             raw_ds = "benchmarks/v2/datasets/sales.csv"
         if not task:
-            return {"isError": True, "error": "task/question required for analyze (§36)", "mcp_tool": name}
+            return {
+                "isError": True,
+                "error": "task/question required for analyze (§36)",
+                "mcp_tool": name,
+            }
         # Resolve dataset:// URI
         if isinstance(raw_ds, str) and raw_ds.startswith("dataset://"):
             ds_id = raw_ds[len("dataset://") :]
@@ -420,7 +530,13 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             payload = _json.loads(_json.dumps(payload_raw, default=str, ensure_ascii=False))
             # Store for explicit resource handles (§38)
             store_analysis(analysis_res.run_id, payload)
-            return {"isError": False, "mcp_tool": name, "tool": "analyze", "output": payload, "call_id": analysis_res.run_id}
+            return {
+                "isError": False,
+                "mcp_tool": name,
+                "tool": "analyze",
+                "output": payload,
+                "call_id": analysis_res.run_id,
+            }
         except Exception as e:
             return {"isError": True, "mcp_tool": name, "error": str(e)}
 

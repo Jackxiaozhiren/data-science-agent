@@ -42,7 +42,9 @@ def test_jupyter_profile_rich_and_json() -> None:
 def test_jupyter_analyze_via_magic_6step() -> None:
     """§29 Notebook UX: Ask → Run → Progress → Chart → Evidence → Result."""
     ip = get_ipython_shell()
-    res = ip.run_line_magic("dsa", 'analyze benchmarks/v2/datasets/sales.csv --task "Analyze revenue"')
+    res = ip.run_line_magic(
+        "dsa", 'analyze benchmarks/v2/datasets/sales.csv --task "Analyze revenue"'
+    )
     # Should be Analysis
     from data_science_agent.sdk import Analysis
 
@@ -59,7 +61,9 @@ def test_jupyter_analyze_via_magic_6step() -> None:
 def test_jupyter_cell_magic_task_from_cell() -> None:
     ip = get_ipython_shell()
     # cell magic: task in cell body
-    res = ip.run_cell_magic("dsa", "analyze benchmarks/v2/datasets/sales.csv", "Analyze revenue trend")
+    res = ip.run_cell_magic(
+        "dsa", "analyze benchmarks/v2/datasets/sales.csv", "Analyze revenue trend"
+    )
     from data_science_agent.sdk import Analysis
 
     # cell magic returns None? Our implementation returns result via line_cell_magic — check
@@ -88,7 +92,9 @@ def test_jupyter_direct_sdk_await_and_display() -> None:
         assert "dataset_hash" in html
         assert r.run_id in html
         # metadata §31
-        meta = collect_notebook_metadata("benchmarks/v2/datasets/sales.csv", "Analyze revenue", r.run_id)
+        meta = collect_notebook_metadata(
+            "benchmarks/v2/datasets/sales.csv", "Analyze revenue", r.run_id
+        )
         assert meta["dataset_hash"] is not None
         assert meta["sdk_version"] == "4.2.0"
         assert meta["experiment_id"] == r.run_id
@@ -131,7 +137,9 @@ def test_jupyter_reproducibility_metadata_all_fields() -> None:
 
     h = dataset_hash("benchmarks/v2/datasets/sales.csv")
     assert h is not None and len(h) == 16
-    meta = collect_notebook_metadata("benchmarks/v2/datasets/sales.csv", "test prompt", "run-abc123")
+    meta = collect_notebook_metadata(
+        "benchmarks/v2/datasets/sales.csv", "test prompt", "run-abc123"
+    )
     assert meta["dataset_hash"] == h
     assert meta["agent_version"] is not None
     assert meta["sdk_version"] == "4.2.0"

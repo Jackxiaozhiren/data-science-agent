@@ -9,7 +9,13 @@ from pathlib import Path
 import pytest
 
 from data_science_agent import Agent, Analysis, Artifact, Benchmark, Dataset, Evidence, Reproduction
-from data_science_agent.sdk import API_STABILITY, BenchmarkResult, Insight, Report, ReproductionResult
+from data_science_agent.sdk import (
+    API_STABILITY,
+    BenchmarkResult,
+    Insight,
+    Report,
+    ReproductionResult,
+)
 
 
 # §14 Public surface — must match spec
@@ -18,7 +24,15 @@ def test_sdk_public_surface_exports() -> None:
 
     assert __version__ == "4.2.0"
     # Required §14 exports
-    for name in ("Agent", "Dataset", "Analysis", "Evidence", "Artifact", "Benchmark", "Reproduction"):
+    for name in (
+        "Agent",
+        "Dataset",
+        "Analysis",
+        "Evidence",
+        "Artifact",
+        "Benchmark",
+        "Reproduction",
+    ):
         assert name in dir(__import__("data_science_agent")), f"missing {name}"
     # Stability map must mark all as Stable
     for k in ("Agent", "Dataset", "Analysis", "Evidence", "Artifact", "Benchmark", "Reproduction"):
@@ -58,7 +72,9 @@ def test_evidence_schema() -> None:
 
 
 def test_analysis_dataclass_schema() -> None:
-    a = Analysis(run_id="run-1", status="COMPLETED", report_markdown="# hi", evidence=[], insights=[])
+    a = Analysis(
+        run_id="run-1", status="COMPLETED", report_markdown="# hi", evidence=[], insights=[]
+    )
     assert a.run_id == "run-1"
     assert a.status == "COMPLETED"
     assert isinstance(a.evidence, list)
@@ -143,7 +159,19 @@ def test_agent_version_stable() -> None:
 def test_sdk_backward_compat_exports() -> None:
     import data_science_agent as m
 
-    expected = {"Agent", "Dataset", "Analysis", "Evidence", "Artifact", "Insight", "Report", "Benchmark", "BenchmarkResult", "Reproduction", "ReproductionResult"}
+    expected = {
+        "Agent",
+        "Dataset",
+        "Analysis",
+        "Evidence",
+        "Artifact",
+        "Insight",
+        "Report",
+        "Benchmark",
+        "BenchmarkResult",
+        "Reproduction",
+        "ReproductionResult",
+    }
     for name in expected:
         assert hasattr(m, name), f"backward compat missing {name}"
 

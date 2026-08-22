@@ -147,4 +147,10 @@ async def root() -> str:
 
 @app.get("/app", response_class=JSONResponse)
 async def app_info() -> dict[str, str]:
-    return {"app": "mcp-data-science", "version": "0.1.0", "levels": "Tools/Resources/Apps/Tasks", "flow": "Dataset→Question→Analysis→Evidence→Viz→Report (§36)", "handles": "run_id, analysis_id, dataset (§38 stateless)"}
+    return {
+        "app": "mcp-data-science",
+        "version": "0.1.0",
+        "levels": "Tools/Resources/Apps/Tasks",
+        "flow": "Dataset→Question→Analysis→Evidence→Viz→Report (§36)",
+        "handles": "run_id, analysis_id, dataset (§38 stateless)",
+    }

@@ -32,4 +32,9 @@ def concurrency_matrix(levels: list[int] | None = None) -> dict[str, Any]:
 
 
 def measure_latencies(runs: list[float]) -> dict[str, float]:
-    return {"p50": p50(runs), "p95": p95(runs), "p99": p99(runs), "mean": float(statistics.mean(runs)) if runs else 0.0}
+    return {
+        "p50": p50(runs),
+        "p95": p95(runs),
+        "p99": p99(runs),
+        "mean": float(statistics.mean(runs)) if runs else 0.0,
+    }

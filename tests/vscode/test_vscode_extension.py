@@ -17,7 +17,15 @@ def test_package_manifest_commands_and_views() -> None:
     assert pkg["main"] == "./out/extension.js"
     cmds = {c["command"] for c in pkg["contributes"]["commands"]}
     # §33 6-step loop + doctor
-    for required in ("dsa.openDataset", "dsa.askAnalysis", "dsa.runAnalysis", "dsa.viewResult", "dsa.viewEvidence", "dsa.openReport", "dsa.doctor"):
+    for required in (
+        "dsa.openDataset",
+        "dsa.askAnalysis",
+        "dsa.runAnalysis",
+        "dsa.viewResult",
+        "dsa.viewEvidence",
+        "dsa.openReport",
+        "dsa.doctor",
+    ):
         assert required in cmds, f"missing {required}"
     views = pkg["contributes"]["views"]["dsaExplorer"]
     ids = {v["id"] for v in views}
@@ -50,19 +58,40 @@ def test_extension_src_exists_and_arch_guard() -> None:
 def test_failure_handling_all_five_cases() -> None:
     """§35 must support 5 failures with clear suggestions."""
     dsa = (VSCODE / "src" / "dsa.ts").read_text()
-    for case in ("LLM unavailable", "Python unavailable", "Dataset missing", "Plugin failure", "Backend unavailable"):
+    for case in (
+        "LLM unavailable",
+        "Python unavailable",
+        "Dataset missing",
+        "Plugin failure",
+        "Backend unavailable",
+    ):
         assert case in dsa, f"missing case {case}"
     # Each should have suggestion
     assert "Suggestion" in dsa or "suggestion" in dsa
     # Check functions exist
-    for fn in ("checkPython", "checkLLM", "checkDataset", "checkPlugin", "checkBackend", "runAnalysis", "runProfile"):
+    for fn in (
+        "checkPython",
+        "checkLLM",
+        "checkDataset",
+        "checkPlugin",
+        "checkBackend",
+        "runAnalysis",
+        "runProfile",
+    ):
         assert fn in dsa
 
 
 def test_views_implement_6step_flow() -> None:
     ext = (VSCODE / "src" / "extension.ts").read_text()
     # Flow commands
-    for cmd in ("openDataset", "askAnalysis", "runAnalysis", "viewResult", "viewEvidence", "openReport"):
+    for cmd in (
+        "openDataset",
+        "askAnalysis",
+        "runAnalysis",
+        "viewResult",
+        "viewEvidence",
+        "openReport",
+    ):
         assert cmd in ext
     # Progress
     assert "withProgress" in ext
@@ -80,7 +109,9 @@ def test_views_implement_6step_flow() -> None:
 def test_typescript_compiles() -> None:
     import subprocess
 
-    cp = subprocess.run(["npm", "--prefix", str(VSCODE), "run", "compile"], capture_output=True, text=True)
+    cp = subprocess.run(
+        ["npm", "--prefix", str(VSCODE), "run", "compile"], capture_output=True, text=True
+    )
     assert cp.returncode == 0, cp.stderr + cp.stdout
     assert (VSCODE / "out" / "extension.js").exists()
     assert (VSCODE / "out" / "dsa.js").exists()

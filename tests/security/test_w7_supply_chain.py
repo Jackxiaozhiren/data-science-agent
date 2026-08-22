@@ -132,7 +132,11 @@ def test_dependency_pinning_uv_lock_exists_and_auditable() -> None:
 
 def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
     # Simple grep for obvious secrets in tracked files (not .venv)
-    patterns = [r"sk-[A-Za-z0-9]{20}", r"ghp_[A-Za-z0-9]{30}", r"api_key\s*=\s*['\"][A-Za-z0-9]{20}"]
+    patterns = [
+        r"sk-[A-Za-z0-9]{20}",
+        r"ghp_[A-Za-z0-9]{30}",
+        r"api_key\s*=\s*['\"][A-Za-z0-9]{20}",
+    ]
     for pat in patterns:
         for p in Path(".").rglob("*.py"):
             if ".venv" in str(p) or ".git" in str(p) or "node_modules" in str(p):
@@ -143,4 +147,7 @@ def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
             except Exception:  # noqa: S112
                 continue
     # Also check that SECURITY.md mentions secret scanning
-    assert "Secret Scanning" in Path("SECURITY.md").read_text() or "secret" in Path("SECURITY.md").read_text().lower()
+    assert (
+        "Secret Scanning" in Path("SECURITY.md").read_text()
+        or "secret" in Path("SECURITY.md").read_text().lower()
+    )

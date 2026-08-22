@@ -23,7 +23,10 @@ def run_doctor() -> dict[str, Any]:
     # LLM config
     import os
 
-    has_llm = any(os.getenv(k) for k in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_HOST", "OPENROUTER_API_KEY"])
+    has_llm = any(
+        os.getenv(k)
+        for k in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_HOST", "OPENROUTER_API_KEY"]
+    )
     add("LLM", "ok" if has_llm else "warn", "no LLM key (stub/Ollama local fallback)")
     # Disk/memory heuristic
     try:
@@ -35,7 +38,11 @@ def run_doctor() -> dict[str, Any]:
     except Exception as e:
         add("Disk", "warn", str(e))
 
-    status = "fail" if any(c["status"] == "fail" for c in checks) else ("warn" if any(c["status"] == "warn" for c in checks) else "ok")
+    status = (
+        "fail"
+        if any(c["status"] == "fail" for c in checks)
+        else ("warn" if any(c["status"] == "warn" for c in checks) else "ok")
+    )
     # Never fail doctor on missing optional deps
     if status == "fail":
         status = "warn"

@@ -97,10 +97,24 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
     if method == "resources/read":
         uri = params.get("uri", "")
         if not uri:
-            return JSONResponse({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": "Missing uri"}}, status_code=200)
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32602, "message": "Missing uri"},
+                },
+                status_code=200,
+            )
         result = await read_resource(uri)
         if result.get("isError"):
-            return JSONResponse({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": result.get("text", "not found")}}, status_code=200)
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32602, "message": result.get("text", "not found")},
+                },
+                status_code=200,
+            )
         return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": result})
 
     return JSONResponse(
@@ -175,11 +189,19 @@ async def stdio_main() -> None:
         elif method == "resources/read":
             uri = params.get("uri", "")
             if not uri:
-                resp = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": "Missing uri"}}
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32602, "message": "Missing uri"},
+                }
             else:
                 result = await read_resource(uri)
                 if result.get("isError"):
-                    resp = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": result.get("text", "not found")}}
+                    resp = {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "error": {"code": -32602, "message": result.get("text", "not found")},
+                    }
                 else:
                     resp = {"jsonrpc": "2.0", "id": req_id, "result": result}
         else:

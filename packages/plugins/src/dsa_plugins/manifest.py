@@ -29,11 +29,60 @@ PERMISSION_CANONICAL = {
 }
 
 ALLOWED_LICENSES = {"MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Proprietary"}
-ALLOWED_CAPABILITIES = {"forecast", "backtest", "metrics", "visualization", "evidence", "forecasting", "time_series"}
+ALLOWED_CAPABILITIES = {
+    "forecast",
+    "backtest",
+    "metrics",
+    "visualization",
+    "evidence",
+    "forecasting",
+    "time_series",
+}
 
 # §45 supply-chain: popular packages for typosquatting detection
-POPULAR_PYPI = {"numpy", "pandas", "polars", "scikit-learn", "sklearn", "matplotlib", "scipy", "requests", "urllib3", "pyyaml", "yaml", "pydantic", "fastapi", "duckdb", "pyarrow", "openpyxl", "langgraph", "langchain", "dsa-time-series", "data-science-agent", "jack-data-science-agent"}
-WORKSPACE_PACKAGES = {"dsa-agent", "dsa-api", "dsa-datasets", "dsa-evaluation", "dsa-evidence", "dsa-execution", "dsa-llm", "dsa-mcp", "dsa-ml", "dsa-plugins", "dsa-reports", "dsa-statistics", "dsa-tools", "dsa-visualization", "dsa-jupyter", "dsa-vscode", "data-science-agent", "jack-data-science-agent"}
+POPULAR_PYPI = {
+    "numpy",
+    "pandas",
+    "polars",
+    "scikit-learn",
+    "sklearn",
+    "matplotlib",
+    "scipy",
+    "requests",
+    "urllib3",
+    "pyyaml",
+    "yaml",
+    "pydantic",
+    "fastapi",
+    "duckdb",
+    "pyarrow",
+    "openpyxl",
+    "langgraph",
+    "langchain",
+    "dsa-time-series",
+    "data-science-agent",
+    "jack-data-science-agent",
+}
+WORKSPACE_PACKAGES = {
+    "dsa-agent",
+    "dsa-api",
+    "dsa-datasets",
+    "dsa-evaluation",
+    "dsa-evidence",
+    "dsa-execution",
+    "dsa-llm",
+    "dsa-mcp",
+    "dsa-ml",
+    "dsa-plugins",
+    "dsa-reports",
+    "dsa-statistics",
+    "dsa-tools",
+    "dsa-visualization",
+    "dsa-jupyter",
+    "dsa-vscode",
+    "data-science-agent",
+    "jack-data-science-agent",
+}
 
 CURRENT_DSA_VERSION = "4.2.0"
 
@@ -63,7 +112,18 @@ def _is_typosquat(name: str) -> str | None:
 
 
 def _is_suspicious_entrypoint(ep: str) -> str | None:
-    suspicious = ["..", "/", "os.", "subprocess", "eval", "exec(", "__import__", "open(", "socket", "requests."]
+    suspicious = [
+        "..",
+        "/",
+        "os.",
+        "subprocess",
+        "eval",
+        "exec(",
+        "__import__",
+        "open(",
+        "socket",
+        "requests.",
+    ]
     for s in suspicious:
         if s in ep:
             return s
@@ -158,7 +218,9 @@ class PluginManifest(BaseModel):
         else:
             for p in self.permissions:
                 if p not in ALLOWED_PERMISSIONS:
-                    errors.append(f"permission {p!r} not allowed (§23) — allowed {sorted(ALLOWED_PERMISSIONS)}")
+                    errors.append(
+                        f"permission {p!r} not allowed (§23) — allowed {sorted(ALLOWED_PERMISSIONS)}"
+                    )
         # capabilities
         if not self.capabilities and not self.type:
             errors.append("capabilities or type required (§22)")
@@ -170,7 +232,9 @@ class PluginManifest(BaseModel):
         # dsa compatibility
         req = self.effective_dsa_requirement()
         if req and not self._check_dsa_compat(req):
-            errors.append(f"dsa compatibility failed: requires {req!r} but current is {CURRENT_DSA_VERSION} (§24)")
+            errors.append(
+                f"dsa compatibility failed: requires {req!r} but current is {CURRENT_DSA_VERSION} (§24)"
+            )
         # hash format if present
         if self.hash and not re.match(r"^[a-f0-9]{8,64}$", self.hash):
             errors.append("hash must be hex 8..64 chars if present")

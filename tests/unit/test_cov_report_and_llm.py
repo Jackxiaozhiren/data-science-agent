@@ -26,7 +26,9 @@ def test_generate_report_and_mcp_stdio_extra() -> None:
             # mcp adapter extra branch: get_evidence via validate_result
             from dsa_mcp.adapter import call_mcp_tool
 
-            r = await call_mcp_tool("get_evidence", {"mode": "validate", "check_type": "evidence_coverage"})
+            r = await call_mcp_tool(
+                "get_evidence", {"mode": "validate", "check_type": "evidence_coverage"}
+            )
             assert "isError" in r
             r2 = await call_mcp_tool("get_evidence", {"claim": "test claim", "source": "python"})
             assert "isError" in r2
@@ -55,9 +57,13 @@ def test_llm_provider_generate_and_path_not_found() -> None:
         bootstrap()
 
     async def _run2() -> None:
-        r = await get("run_sql").run({"sql": "SELECT 1 as a", "dataset_path": "/tmp/no_such_file_xyz.csv"})
+        r = await get("run_sql").run(
+            {"sql": "SELECT 1 as a", "dataset_path": "/tmp/no_such_file_xyz.csv"}
+        )
         assert r.status == "error"
-        r2 = await get("run_python").run({"code": "print(df.head())", "dataset_path": "/tmp/no_such_xyz.csv"})
+        r2 = await get("run_python").run(
+            {"code": "print(df.head())", "dataset_path": "/tmp/no_such_xyz.csv"}
+        )
         assert r2.status == "error"
 
     asyncio.run(_run2())

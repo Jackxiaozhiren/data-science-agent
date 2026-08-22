@@ -31,7 +31,9 @@ def test_installation_metrics_captured() -> None:
     # first_launch is import+bootstrap time
     assert m.first_launch_time_ms is not None
     assert m.benchmark_setup_time_ms is not None
-    assert "cold_install_time_ms_note" in m.details.get("cold_install_time_ms_note", "") or "cold_install" in json.dumps(m.details)
+    assert "cold_install_time_ms_note" in m.details.get(
+        "cold_install_time_ms_note", ""
+    ) or "cold_install" in json.dumps(m.details)
 
 
 def test_fresh_machine_checklist_no_fabrication() -> None:

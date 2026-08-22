@@ -75,15 +75,21 @@ def test_cached_llm_provider_and_hypothesis_extra() -> None:
         rows = []
         for g in ["A", "B", "C"]:
             for i in range(10):
-                rows.append({"g": g, "v": float(i + (5 if g == "C" else 0)), "cat": g, "num": float(i)})
+                rows.append(
+                    {"g": g, "v": float(i + (5 if g == "C" else 0)), "cat": g, "num": float(i)}
+                )
         pl.DataFrame(rows).write_csv(p)
         import asyncio as aio
 
         async def _hyp() -> None:
             tool = get("hypothesis_test")
-            r1 = await tool.run({"dataset_path": str(p), "test": "anova", "group_col": "g", "value_col": "v"})
+            r1 = await tool.run(
+                {"dataset_path": str(p), "test": "anova", "group_col": "g", "value_col": "v"}
+            )
             assert r1.status in ("ok", "error")
-            r2 = await tool.run({"dataset_path": str(p), "test": "chi_square", "group_col": "g", "value_col": "cat"})
+            r2 = await tool.run(
+                {"dataset_path": str(p), "test": "chi_square", "group_col": "g", "value_col": "cat"}
+            )
             assert r2.status in ("ok", "error")
 
         aio.run(_hyp())
@@ -98,10 +104,21 @@ def test_forecast_and_regression_extra() -> None:
         td = Path(td)
         # timeseries for forecast
         p = td / "ts.csv"
-        pl.DataFrame({"date": [f"2024-01-{i+1:02d}" for i in range(60)], "value": [float(i) for i in range(60)]}).write_csv(p)
+        pl.DataFrame(
+            {
+                "date": [f"2024-01-{i + 1:02d}" for i in range(60)],
+                "value": [float(i) for i in range(60)],
+            }
+        ).write_csv(p)
         # regression dataset
         pr = td / "reg.csv"
-        pl.DataFrame({"x": [float(i) for i in range(80)], "y": [float(i * 2) for i in range(80)], "z": [float(i % 5) for i in range(80)]}).write_csv(pr)
+        pl.DataFrame(
+            {
+                "x": [float(i) for i in range(80)],
+                "y": [float(i * 2) for i in range(80)],
+                "z": [float(i % 5) for i in range(80)],
+            }
+        ).write_csv(pr)
         import asyncio as aio
 
         async def _run() -> None:
@@ -109,9 +126,25 @@ def test_forecast_and_regression_extra() -> None:
             r = await fc.run({"dataset_path": str(p), "periods": 10, "method": "linear_trend"})
             assert r.status in ("ok", "error")
             rg = get("regression_analysis")
-            r2 = await rg.run({"dataset_path": str(pr), "target": "y", "features": ["x", "z"], "model": "ridge", "alpha": 1.0})
+            r2 = await rg.run(
+                {
+                    "dataset_path": str(pr),
+                    "target": "y",
+                    "features": ["x", "z"],
+                    "model": "ridge",
+                    "alpha": 1.0,
+                }
+            )
             assert r2.status in ("ok", "error")
-            r3 = await rg.run({"dataset_path": str(pr), "target": "y", "features": ["x"], "model": "lasso", "alpha": 0.1})
+            r3 = await rg.run(
+                {
+                    "dataset_path": str(pr),
+                    "target": "y",
+                    "features": ["x"],
+                    "model": "lasso",
+                    "alpha": 0.1,
+                }
+            )
             assert r3.status in ("ok", "error")
 
         aio.run(_run())
@@ -127,7 +160,14 @@ def test_create_chart_all_types_and_errors() -> None:
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             p = td / "chart.csv"
-            pl.DataFrame({"x": [1, 2, 3, 4, 5], "y": [2, 4, 1, 3, 5], "cat": ["A", "A", "B", "B", "C"], "v": [10, 20, 30, 40, 50]}).write_csv(p)
+            pl.DataFrame(
+                {
+                    "x": [1, 2, 3, 4, 5],
+                    "y": [2, 4, 1, 3, 5],
+                    "cat": ["A", "A", "B", "B", "C"],
+                    "v": [10, 20, 30, 40, 50],
+                }
+            ).write_csv(p)
             # hit each branch to raise coverage on create_chart.py 108-141
             for ct, kwargs in [
                 ("histogram", {"x": "x"}),
@@ -172,7 +212,9 @@ def test_assumption_check_and_validate_result() -> None:
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             p = td / "assump.csv"
-            pl.DataFrame({"g": ["A"] * 10 + ["B"] * 10, "v": [float(i) for i in range(20)]}).write_csv(p)
+            pl.DataFrame(
+                {"g": ["A"] * 10 + ["B"] * 10, "v": [float(i) for i in range(20)]}
+            ).write_csv(p)
             ac = get("assumption_check")
             r = await ac.run({"dataset_path": str(p), "group_col": "g", "value_col": "v"})
             assert r.status in ("ok", "error")

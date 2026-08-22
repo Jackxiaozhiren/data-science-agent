@@ -47,7 +47,9 @@ def _manifest_source_path(manifest: PluginManifest, root: Path | str = REGISTRY_
     return None
 
 
-def discover_plugins(root: Path | str = REGISTRY_DIR, include_disabled: bool = False) -> list[PluginManifest]:
+def discover_plugins(
+    root: Path | str = REGISTRY_DIR, include_disabled: bool = False
+) -> list[PluginManifest]:
     """§21 Discover — scan for manifest.yaml/plugin.yaml (§22)."""
     root_p = Path(root)
     if not root_p.exists():
@@ -186,7 +188,9 @@ def check_permission(manifest: PluginManifest, required: str | list[str]) -> boo
 
 
 # §21 Execute — isolated, permission-checked
-def execute_plugin_tool(manifest: PluginManifest, tool_name: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
+def execute_plugin_tool(
+    manifest: PluginManifest, tool_name: str, *args: Any, **kwargs: Any
+) -> dict[str, Any]:
     """Execute a plugin tool with isolation and permission check (§23/§25).
 
     Returns: {"ok": bool, "result": Any, "error": str|None}
@@ -203,7 +207,11 @@ def execute_plugin_tool(manifest: PluginManifest, tool_name: str, *args: Any, **
     }
     needed = TOOL_PERMS.get(tool_name, [])
     if needed and not check_permission(manifest, needed):
-        return {"ok": False, "result": None, "error": f"permission denied §23: {tool_name} needs {needed}, has {manifest.permissions}"}
+        return {
+            "ok": False,
+            "result": None,
+            "error": f"permission denied §23: {tool_name} needs {needed}, has {manifest.permissions}",
+        }
     plugin, err = load_plugin_isolated(manifest)
     if err:
         return {"ok": False, "result": None, "error": err}
@@ -215,10 +223,18 @@ def execute_plugin_tool(manifest: PluginManifest, tool_name: str, *args: Any, **
         elif plugin is not None and hasattr(plugin, "execute"):
             res = plugin.execute(tool_name, *args, **kwargs)
         else:
-            return {"ok": False, "result": None, "error": f"tool {tool_name} not found on plugin {manifest.name}"}
+            return {
+                "ok": False,
+                "result": None,
+                "error": f"tool {tool_name} not found on plugin {manifest.name}",
+            }
         return {"ok": True, "result": res, "error": None}
     except Exception as e:
-        return {"ok": False, "result": None, "error": f"plugin tool {tool_name} failed (isolated §25): {e}"}
+        return {
+            "ok": False,
+            "result": None,
+            "error": f"plugin tool {tool_name} failed (isolated §25): {e}",
+        }
 
 
 # §21 Disable / Enable / Remove

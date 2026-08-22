@@ -31,8 +31,22 @@ def test_mcp_resource_model_five_schemes() -> None:
 async def test_explicit_handles_stateless() -> None:
     """§38 Explicit handles (analysis_id/run_id) not protocol session; stateless core."""
     # Two different run_id should give different resources
-    r1 = await call_mcp_tool("analyze", {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "Analyze revenue", "run_id": "run-explicit-1"})
-    r2 = await call_mcp_tool("analyze", {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "Analyze revenue", "run_id": "run-explicit-2"})
+    r1 = await call_mcp_tool(
+        "analyze",
+        {
+            "dataset": "benchmarks/v2/datasets/sales.csv",
+            "task": "Analyze revenue",
+            "run_id": "run-explicit-1",
+        },
+    )
+    r2 = await call_mcp_tool(
+        "analyze",
+        {
+            "dataset": "benchmarks/v2/datasets/sales.csv",
+            "task": "Analyze revenue",
+            "run_id": "run-explicit-2",
+        },
+    )
     assert not r1.get("isError") and not r2.get("isError")
     assert r1["output"]["run_id"] == "run-explicit-1"
     assert r2["output"]["run_id"] == "run-explicit-2"
@@ -57,14 +71,29 @@ def test_mcp_app_acceptance_via_server() -> None:
     # 2. Call Tool (analyze) — explicit handle
     rc = c.post(
         "/mcp",
-        json={"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "analyze", "arguments": {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "Analyze revenue", "run_id": "run-accept-1"}}},
+        json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "analyze",
+                "arguments": {
+                    "dataset": "benchmarks/v2/datasets/sales.csv",
+                    "task": "Analyze revenue",
+                    "run_id": "run-accept-1",
+                },
+            },
+        },
     )
     assert rc.status_code == 200 and "result" in rc.json()
     assert rc.json()["result"]["output"]["run_id"] == "run-accept-1"
     # 3. Receive Result already done
     # 4. Open Resource (evidence, report)
     for uri in ["evidence://run-accept-1", "report://run-accept-1", "analysis://run-accept-1"]:
-        rr = c.post("/mcp", json={"jsonrpc": "2.0", "id": 3, "method": "resources/read", "params": {"uri": uri}})
+        rr = c.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 3, "method": "resources/read", "params": {"uri": uri}},
+        )
         assert rr.status_code == 200 and "result" in rr.json(), uri
         assert not rr.json()["result"].get("isError")
     # 5. Render App
@@ -83,9 +112,26 @@ def test_mcp_app_acceptance_via_main_app() -> None:
     assert r.status_code == 200 and r.json()["count"] >= 18
     # Resources via main
     r2 = c.get("/mcp/resources")
-    assert r2.status_code == 200 and any(x["uri"].startswith("dataset://") for x in r2.json()["resources"])
+    assert r2.status_code == 200 and any(
+        x["uri"].startswith("dataset://") for x in r2.json()["resources"]
+    )
     # JSON-RPC via main (/mcp)
-    rc = c.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "analyze", "arguments": {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "Analyze revenue", "run_id": "run-main-1"}}})
+    rc = c.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "analyze",
+                "arguments": {
+                    "dataset": "benchmarks/v2/datasets/sales.csv",
+                    "task": "Analyze revenue",
+                    "run_id": "run-main-1",
+                },
+            },
+        },
+    )
     assert rc.status_code == 200 and "result" in rc.json()
     # App via main
     ra = c.get("/mcp-app/")
@@ -98,17 +144,40 @@ def test_mcp_app_acceptance_via_main_app() -> None:
 def test_mcp_resources_read_dataset_and_analysis() -> None:
     c = TestClient(mcp_server)
     # dataset:// via JSON-RPC
-    r = c.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "resources/read", "params": {"uri": "dataset://sales"}})
+    r = c.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "resources/read",
+            "params": {"uri": "dataset://sales"},
+        },
+    )
     assert r.status_code == 200 and "result" in r.json()
     assert r.json()["result"]["mimeType"] == "text/csv"
     # analysis:// after creating one
     import asyncio
 
     async def _create():
-        return await call_mcp_tool("analyze", {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "test", "run_id": "run-res-test"})
+        return await call_mcp_tool(
+            "analyze",
+            {
+                "dataset": "benchmarks/v2/datasets/sales.csv",
+                "task": "test",
+                "run_id": "run-res-test",
+            },
+        )
 
     asyncio.run(_create())
-    r2 = c.post("/mcp", json={"jsonrpc": "2.0", "id": 2, "method": "resources/read", "params": {"uri": "analysis://run-res-test"}})
+    r2 = c.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "resources/read",
+            "params": {"uri": "analysis://run-res-test"},
+        },
+    )
     assert r2.status_code == 200 and "result" in r2.json()
 
 
@@ -125,8 +194,22 @@ def test_mcp_stateless_no_session() -> None:
     import asyncio
 
     async def _dup():
-        a1 = await call_mcp_tool("analyze", {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "Q1", "run_id": "run-stateless"})
-        a2 = await call_mcp_tool("analyze", {"dataset": "benchmarks/v2/datasets/sales.csv", "task": "Q2", "run_id": "run-stateless"})
+        a1 = await call_mcp_tool(
+            "analyze",
+            {
+                "dataset": "benchmarks/v2/datasets/sales.csv",
+                "task": "Q1",
+                "run_id": "run-stateless",
+            },
+        )
+        a2 = await call_mcp_tool(
+            "analyze",
+            {
+                "dataset": "benchmarks/v2/datasets/sales.csv",
+                "task": "Q2",
+                "run_id": "run-stateless",
+            },
+        )
         return a1, a2
 
     a1, a2 = asyncio.run(_dup())

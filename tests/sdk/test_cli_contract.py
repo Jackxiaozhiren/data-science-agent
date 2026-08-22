@@ -25,7 +25,17 @@ def run_dsa(*args: str) -> subprocess.CompletedProcess[str]:
 def test_cli_help_shows_all_subcommands() -> None:
     r = run_dsa("--help")
     assert r.returncode == 0
-    for cmd in ("doctor", "init", "analyze", "profile", "benchmark", "demo", "verify-release", "plugin", "mcp"):
+    for cmd in (
+        "doctor",
+        "init",
+        "analyze",
+        "profile",
+        "benchmark",
+        "demo",
+        "verify-release",
+        "plugin",
+        "mcp",
+    ):
         assert cmd in r.stdout, f"missing {cmd} in --help"
 
 
@@ -107,7 +117,9 @@ def test_cli_mcp_json() -> None:
 
 def test_cli_analyze_success_json() -> None:
     # Real analysis smoke (1-2s) — structured output
-    r = run_dsa("analyze", "benchmarks/v2/datasets/sales.csv", "--task", "Analyze revenue", "--json")
+    r = run_dsa(
+        "analyze", "benchmarks/v2/datasets/sales.csv", "--task", "Analyze revenue", "--json"
+    )
     assert r.returncode == 0, r.stderr
     payload = json.loads(r.stdout)
     assert payload["run_id"].startswith("run-")

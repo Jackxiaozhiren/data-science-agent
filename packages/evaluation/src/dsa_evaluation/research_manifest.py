@@ -35,7 +35,9 @@ def _git_commit(root: Path | None = None) -> str | None:
         gp = shutil.which("git")
         if not gp:
             return None
-        out = subprocess.run([gp, "rev-parse", "HEAD"], cwd=str(r), capture_output=True, text=True, timeout=3)  # noqa: S603
+        out = subprocess.run(
+            [gp, "rev-parse", "HEAD"], cwd=str(r), capture_output=True, text=True, timeout=3
+        )  # noqa: S603
         if out.returncode == 0:
             return out.stdout.strip()[:12]
     except Exception:
@@ -57,7 +59,9 @@ def build_manifest(
     bv = benchmark_version
     if bv is None and root is not None:
         try:
-            bv = json.loads((root / "benchmarks/v2/catalog.json").read_text(encoding="utf-8")).get("version")
+            bv = json.loads((root / "benchmarks/v2/catalog.json").read_text(encoding="utf-8")).get(
+                "version"
+            )
         except Exception:
             pass
     return ExperimentManifest(
@@ -68,5 +72,6 @@ def build_manifest(
         model=model,
         prompt_version=prompt_version,
         seed=seed,
-        configuration=configuration or {"platform": platform.platform(), "python": sys.version.split()[0]},
+        configuration=configuration
+        or {"platform": platform.platform(), "python": sys.version.split()[0]},
     )

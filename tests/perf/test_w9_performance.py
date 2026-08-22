@@ -14,10 +14,12 @@ from data_science_agent import Agent, Benchmark
 def _p50_p95_p99(times: list[float]) -> tuple[float, float, float]:
     s = sorted(times)
     n = len(s)
+
     def pct(p: float) -> float:
         idx = int(p * n)
         idx = min(idx, n - 1)
         return s[idx]
+
     return pct(0.5), pct(0.95), pct(0.99)
 
 
@@ -102,7 +104,13 @@ def test_large_dataset_supported_degraded() -> None:
     import polars as pl
 
     def gen_csv(path: Path, rows: int) -> None:
-        df = pl.DataFrame({"a": list(range(rows)), "b": [f"x{i%10}" for i in range(rows)], "c": [float(i) * 1.1 for i in range(rows)]})
+        df = pl.DataFrame(
+            {
+                "a": list(range(rows)),
+                "b": [f"x{i % 10}" for i in range(rows)],
+                "c": [float(i) * 1.1 for i in range(rows)],
+            }
+        )
         df.write_csv(path)
 
     # 10MB ~ 300k rows (approx 30 bytes per row)
@@ -142,7 +150,9 @@ async def test_cancellation_start_cancel_timeout_recover() -> None:
 
     # Try to cancel via timeout — if analysis is fast, it may not timeout; we test both paths
     try:
-        await asyncio.wait_for(agent.analyze("benchmarks/v2/datasets/sales.csv", "Analyze revenue"), timeout=0.05)
+        await asyncio.wait_for(
+            agent.analyze("benchmarks/v2/datasets/sales.csv", "Analyze revenue"), timeout=0.05
+        )
     except TimeoutError:
         pass  # expected on slow, okay if not
 
@@ -157,8 +167,12 @@ def test_no_orphaned_process_on_analysis() -> None:
     """Ensure no orphaned process after analysis (check via ps)."""
     import subprocess
 
-    before = subprocess.run("ps aux | grep -E 'dsa|uv' | wc -l", shell=True, capture_output=True, text=True).stdout.strip()  # noqa: S602
+    before = subprocess.run(
+        "ps aux | grep -E 'dsa|uv' | wc -l", shell=True, capture_output=True, text=True
+    ).stdout.strip()  # noqa: S602
     Agent().analyze_sync("benchmarks/v2/datasets/sales.csv", "Analyze revenue")
-    after = subprocess.run("ps aux | grep -E 'dsa|uv' | wc -l", shell=True, capture_output=True, text=True).stdout.strip()  # noqa: S602
+    after = subprocess.run(
+        "ps aux | grep -E 'dsa|uv' | wc -l", shell=True, capture_output=True, text=True
+    ).stdout.strip()  # noqa: S602
     # Should not leak processes (allow +1/-1)
     assert abs(int(after) - int(before)) <= 2

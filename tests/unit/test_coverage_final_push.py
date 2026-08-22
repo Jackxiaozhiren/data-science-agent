@@ -51,7 +51,10 @@ def test_mcp_adapter_branches() -> None:
             td = Path(td)
             csv = td / "a.csv"
             pl.DataFrame({"a": [1, 2], "b": [3, 4]}).write_csv(csv)
-            r = await call_mcp_tool("query_dataset", {"query": "SELECT COUNT(*) as n FROM dataset", "dataset_path": str(csv)})
+            r = await call_mcp_tool(
+                "query_dataset",
+                {"query": "SELECT COUNT(*) as n FROM dataset", "dataset_path": str(csv)},
+            )
             assert "isError" in r
             # unknown tool
             r2 = await call_mcp_tool("no_such_tool_xyz", {})

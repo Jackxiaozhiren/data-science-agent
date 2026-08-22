@@ -60,18 +60,42 @@ def test_train_model_variants_and_csv_formats() -> None:
             td = Path(td)
             # classification
             p = td / "cls.csv"
-            pl.DataFrame({"f1": [float(i) for i in range(80)], "f2": [float(i % 3) for i in range(80)], "label": [i % 2 for i in range(80)]}).write_csv(p)
+            pl.DataFrame(
+                {
+                    "f1": [float(i) for i in range(80)],
+                    "f2": [float(i % 3) for i in range(80)],
+                    "label": [i % 2 for i in range(80)],
+                }
+            ).write_csv(p)
             for model in ["logistic", "random_forest", "xgboost"]:
-                r = await get("train_model").run({"dataset_path": str(p), "target": "label", "task": "classification", "model": model, "cv_folds": 3})
+                r = await get("train_model").run(
+                    {
+                        "dataset_path": str(p),
+                        "target": "label",
+                        "task": "classification",
+                        "model": model,
+                        "cv_folds": 3,
+                    }
+                )
                 assert r.status in ("ok", "error")
             # regression variant
             pr = td / "reg.csv"
-            pl.DataFrame({"x": [float(i) for i in range(80)], "y": [float(i * 1.5) for i in range(80)]}).write_csv(pr)
-            r2 = await get("regression_analysis").run({"dataset_path": str(pr), "target": "y", "features": ["x"], "model": "elastic", "alpha": 0.5})
+            pl.DataFrame(
+                {"x": [float(i) for i in range(80)], "y": [float(i * 1.5) for i in range(80)]}
+            ).write_csv(pr)
+            r2 = await get("regression_analysis").run(
+                {
+                    "dataset_path": str(pr),
+                    "target": "y",
+                    "features": ["x"],
+                    "model": "elastic",
+                    "alpha": 0.5,
+                }
+            )
             assert r2.status in ("ok", "error")
             # csv parsing edge: comma-containing column
             pc = td / "comma.csv"
-            pc.write_text("a,b\n1,\"2,3\"\n", encoding="utf-8")
+            pc.write_text('a,b\n1,"2,3"\n', encoding="utf-8")
             from dsa_datasets.loader import load_dataframe
             from dsa_datasets.validate import detect_format
 

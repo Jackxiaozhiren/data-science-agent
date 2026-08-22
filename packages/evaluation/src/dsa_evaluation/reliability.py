@@ -89,7 +89,11 @@ def _tool_selection_quality(
     normalized = [_TOOL_ALIAS.get(t, t) for t in tool_names]
     required = _REQUIRED_BY_CATEGORY.get(category, set())
     # Heuristic: correct = required tool present; wrong = stats tool on non-stats without need
-    has_required = bool(required & set(normalized)) if required else any("profile" in n or "run_sql" in n for n in tool_names)
+    has_required = (
+        bool(required & set(normalized))
+        if required
+        else any("profile" in n or "run_sql" in n for n in tool_names)
+    )
     correct = 1 if has_required else 0
     unnecessary = max(0, len(tool_names) - (3 if category in ("Evidence Validation", "EDA") else 2))
     wrong = 0
@@ -105,7 +109,9 @@ def _loop_quality(tool_calls: list[dict[str, Any]]) -> dict[str, Any]:
     # duplicate consecutive
     dups = sum(1 for i in range(1, len(names)) if names[i] == names[i - 1])
     # oscillation: A-B-A pattern
-    osc = sum(1 for i in range(2, len(names)) if names[i] == names[i - 2] and names[i] != names[i - 1])
+    osc = sum(
+        1 for i in range(2, len(names)) if names[i] == names[i - 2] and names[i] != names[i - 1]
+    )
     # repeated failures: same tool failed twice
     failed = [c.get("tool") for c in tool_calls if c.get("status") == "error"]
     rep_fail = len(failed) - len(set(failed)) if failed else 0
@@ -143,7 +149,11 @@ def evaluate_reliability(
         return ReliabilityReport(config=config, label=config, n=0)
 
     def _avg(key: str) -> float | None:
-        vals = [getattr(r.metrics, key, None) for r in results if getattr(r.metrics, key, None) is not None]
+        vals = [
+            getattr(r.metrics, key, None)
+            for r in results
+            if getattr(r.metrics, key, None) is not None
+        ]
         return round(sum(1 for v in vals if v) / len(vals), 4) if vals else None
 
     # From evaluator metrics
@@ -194,7 +204,9 @@ def evaluate_reliability(
             if lq["agent_efficiency"] is not None:
                 tool_eff_vals.append(float(lq["agent_efficiency"]))
 
-    tool_selection_accuracy = round(sum(sel_acc_vals) / len(sel_acc_vals), 4) if sel_acc_vals else None
+    tool_selection_accuracy = (
+        round(sum(sel_acc_vals) / len(sel_acc_vals), 4) if sel_acc_vals else None
+    )
     tool_efficiency = round(sum(tool_eff_vals) / len(tool_eff_vals), 4) if tool_eff_vals else None
     agent_efficiency = tool_efficiency
 
@@ -203,7 +215,7 @@ def evaluate_reliability(
     critic_corrections = 0
     if raw_runs:
         for rr in raw_runs:
-            rr_state = (rr.get("run_result") or {})
+            rr_state = rr.get("run_result") or {}
             vres = rr_state.get("validation_results") or []
             for v in vres if isinstance(vres, list) else []:
                 if isinstance(v, dict) and v.get("passed") is False:
@@ -231,15 +243,24 @@ def evaluate_reliability(
             has_ok = any(c.get("status") == "ok" for c in tcalls if isinstance(c, dict))
             if rc and rc > 0:
                 recovery_vals.append(bool(has_ok))
-    recovery_success = round(sum(1 for v in recovery_vals if v) / len(recovery_vals), 4) if recovery_vals else None
+    recovery_success = (
+        round(sum(1 for v in recovery_vals if v) / len(recovery_vals), 4) if recovery_vals else None
+    )
 
-    latency_vals = [getattr(r.metrics, "latency_ms", 0) for r in results if hasattr(r.metrics, "latency_ms")]
+    latency_vals = [
+        getattr(r.metrics, "latency_ms", 0) for r in results if hasattr(r.metrics, "latency_ms")
+    ]
     latency_ms = round(sum(latency_vals) / len(latency_vals), 2) if latency_vals else None
 
     # Reproducibility proxy: tool_efficiency as stability signal
     reproducibility = tool_efficiency
 
-    label_map = {"single": "Single Agent", "planner": "Planner + Agent", "planner_critic": "Planner + Agent + Critic", "full": "Full Evidence-Grounded Agent"}
+    label_map = {
+        "single": "Single Agent",
+        "planner": "Planner + Agent",
+        "planner_critic": "Planner + Agent + Critic",
+        "full": "Full Evidence-Grounded Agent",
+    }
 
     return ReliabilityReport(
         config=config,

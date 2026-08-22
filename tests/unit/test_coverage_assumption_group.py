@@ -25,7 +25,9 @@ def test_assumption_check_group_and_edges() -> None:
 
         async def _run() -> None:
             tool = get("assumption_check")
-            r1 = await tool.run({"dataset_path": str(p), "column": "v", "group_col": "g", "check": "all"})
+            r1 = await tool.run(
+                {"dataset_path": str(p), "column": "v", "group_col": "g", "check": "all"}
+            )
             assert r1.status == "ok"
             assert "passed" in (r1.output.model_dump() if r1.output else {})
             # columns list path

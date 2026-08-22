@@ -15,10 +15,13 @@ try:
     from IPython.display import HTML, Markdown, display  # type: ignore[import-not-found]
 except Exception:  # pragma: no cover
     Magics = object  # type: ignore[assignment]
+
     def magics_class(cls):  # type: ignore[no-redef]
         return cls
+
     def line_cell_magic(func):  # type: ignore[no-redef]
         return func
+
     HTML = Markdown = display = None  # type: ignore[assignment]
 
 from dsa_jupyter.display import display_analysis
@@ -84,7 +87,11 @@ class DSAMagic(Magics):
             if "--task" not in raw:
                 # append task from cell
                 task_from_cell = cell.strip().replace("\n", " ")[:500]
-                raw = f"{raw} --task {shlex.quote(task_from_cell)}" if raw else f"--task {shlex.quote(task_from_cell)}"
+                raw = (
+                    f"{raw} --task {shlex.quote(task_from_cell)}"
+                    if raw
+                    else f"--task {shlex.quote(task_from_cell)}"
+                )
             else:
                 raw = f"{raw} {cell.strip()}"
         if not raw or raw in ("--help", "-h", "help"):
@@ -149,7 +156,9 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             return None
         if not ns.dataset:
             if display is not None:
-                display(HTML("<b style='color:red;'>Usage: %dsa profile &lt;dataset&gt; [--json]</b>"))
+                display(
+                    HTML("<b style='color:red;'>Usage: %dsa profile &lt;dataset&gt; [--json]</b>")
+                )
             else:
                 print("Usage: %dsa profile <dataset> [--json]")
             return None
@@ -178,8 +187,8 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             html = f"""
             <div style="border:1px solid #ddd; padding:10px; border-radius:6px;">
               <h4>📊 Profile: {ns.dataset}</h4>
-              <b>Rows:</b> {prof.get('rows')} | <b>Columns:</b> {', '.join(map(str, prof.get('columns', [])[:10]))}<br/>
-              <small>dataset_hash:{meta['dataset_hash']} sdk:{meta['sdk_version']}</small>
+              <b>Rows:</b> {prof.get("rows")} | <b>Columns:</b> {", ".join(map(str, prof.get("columns", [])[:10]))}<br/>
+              <small>dataset_hash:{meta["dataset_hash"]} sdk:{meta["sdk_version"]}</small>
             </div>
             """
             display(HTML(html))
@@ -211,13 +220,21 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             return None
         if not ns.dataset or not ns.task:
             if display is not None:
-                display(HTML("<b style='color:red;'>Usage: %dsa analyze &lt;dataset&gt; --task \"&lt;question&gt;\" [--json]</b>"))
+                display(
+                    HTML(
+                        "<b style='color:red;'>Usage: %dsa analyze &lt;dataset&gt; --task \"&lt;question&gt;\" [--json]</b>"
+                    )
+                )
             else:
                 print('Usage: %dsa analyze <dataset> --task "<question>" [--json]')
             return None
         # Show progress (§29)
         if display is not None:
-            display(HTML(f"<div style='background:#eef; padding:8px; border-radius:6px;'><b>🔬 Ask:</b> {ns.task}<br/><i>Running analysis on {ns.dataset} … (Planner→Scientist→Critic→Report)</i></div>"))
+            display(
+                HTML(
+                    f"<div style='background:#eef; padding:8px; border-radius:6px;'><b>🔬 Ask:</b> {ns.task}<br/><i>Running analysis on {ns.dataset} … (Planner→Scientist→Critic→Report)</i></div>"
+                )
+            )
         else:
             print(f"Ask: {ns.task} | Running on {ns.dataset} …")
         from data_science_agent import Agent
@@ -282,10 +299,18 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             import json
 
             if display is not None:
-                display(HTML(f"<pre>{json.dumps({'n_tasks': res.n_tasks, 'aggregate': res.aggregate}, indent=2)}</pre>"))
+                display(
+                    HTML(
+                        f"<pre>{json.dumps({'n_tasks': res.n_tasks, 'aggregate': res.aggregate}, indent=2)}</pre>"
+                    )
+                )
             return res
         if display is not None:
-            display(HTML(f"<b>Benchmark:</b> {res.n_tasks} tasks, success={res.aggregate.get('task_success_rate')}"))
+            display(
+                HTML(
+                    f"<b>Benchmark:</b> {res.n_tasks} tasks, success={res.aggregate.get('task_success_rate')}"
+                )
+            )
         else:
             print(f"Benchmark: {res.n_tasks} tasks")
         return res

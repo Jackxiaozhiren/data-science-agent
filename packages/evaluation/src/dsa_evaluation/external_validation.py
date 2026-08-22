@@ -101,7 +101,13 @@ def run_demo(
 
     ds = dataset or _resolve_demo_dataset()
     if ds is None:
-        return DemoResult(task_id="demo", question=question, dataset="missing", workdir=str(out or ""), error="No demo dataset found")
+        return DemoResult(
+            task_id="demo",
+            question=question,
+            dataset="missing",
+            workdir=str(out or ""),
+            error="No demo dataset found",
+        )
     workdir = out or Path(tempfile.mkdtemp(prefix="dsa-demo-"))
     workdir.mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
@@ -124,9 +130,20 @@ def run_demo(
         has_report = bool(state.get("report_markdown"))
         # write artifacts for inspectability
         (workdir / "report.md").write_text(state.get("report_markdown") or "", encoding="utf-8")
-        (workdir / "state.json").write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+        (workdir / "state.json").write_text(
+            json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         (workdir / "manifest.json").write_text(
-            json.dumps({"dataset": str(ds), "question": question, "elapsed_ms": elapsed, "workdir": str(workdir)}, indent=2, ensure_ascii=False),
+            json.dumps(
+                {
+                    "dataset": str(ds),
+                    "question": question,
+                    "elapsed_ms": elapsed,
+                    "workdir": str(workdir),
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
             encoding="utf-8",
         )
         ok = any(c.get("status") == "ok" for c in tcalls) if tcalls else False
@@ -175,7 +192,12 @@ def collect_installation_metrics(
     try:
         np = shutil.which("node")
         if np:
-            node = subprocess.run([np, "--version"], capture_output=True, text=True, timeout=3).stdout.strip() or None  # noqa: S603
+            node = (
+                subprocess.run(
+                    [np, "--version"], capture_output=True, text=True, timeout=3
+                ).stdout.strip()
+                or None
+            )  # noqa: S603
     except Exception:
         pass
     install_present = (ROOT / "uv.lock").exists() and (ROOT / "pyproject.toml").exists()
@@ -204,7 +226,9 @@ def collect_installation_metrics(
     demo_ms: int | None = None
     if include_demo:
         # run_demo already measures elapsed_ms
-        demo_res = run_demo(question=demo_question, out=Path(tempfile.mkdtemp(prefix="dsa-demo-metrics-")))
+        demo_res = run_demo(
+            question=demo_question, out=Path(tempfile.mkdtemp(prefix="dsa-demo-metrics-"))
+        )
         demo_ms = demo_res.elapsed_ms if demo_res else None
 
     return InstallationMetrics(
@@ -230,7 +254,18 @@ def fresh_machine_checklist() -> dict[str, Any]:
     """Lightweight §41 checklist without fabricating OS claims."""
     return {
         "linux": {"tested_local": True, "note": "uv + stub LLM verified in this repo (no cloud)"},
-        "macos": {"tested_local": True, "note": "Darwin verified in this repo (§42 demo/benchmark pass)"},
-        "windows": {"tested_local": False, "note": "Not tested; PowerShell paths may differ — documented as limitation in §41"},
-        "local_first": {"llm": "stub/small (no key) + Ollama small if OLLAMA_HOST", "data_engine": "DuckDB+Polars", "storage": "data/ + artifacts/", "cloud_cost": "$0"},
+        "macos": {
+            "tested_local": True,
+            "note": "Darwin verified in this repo (§42 demo/benchmark pass)",
+        },
+        "windows": {
+            "tested_local": False,
+            "note": "Not tested; PowerShell paths may differ — documented as limitation in §41",
+        },
+        "local_first": {
+            "llm": "stub/small (no key) + Ollama small if OLLAMA_HOST",
+            "data_engine": "DuckDB+Polars",
+            "storage": "data/ + artifacts/",
+            "cloud_cost": "$0",
+        },
     }

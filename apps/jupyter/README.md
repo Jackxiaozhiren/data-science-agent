@@ -80,6 +80,7 @@ Notebook metadata collected by `dsa_jupyter.metadata.collect_notebook_metadata`:
 
 ```python
 from dsa_jupyter.metadata import collect_notebook_metadata
+
 meta = collect_notebook_metadata("sales.csv", "Analyze revenue", run_id)
 # {
 #   "dataset_hash": "96fabf8340c8f6e1",  # sha256 of file (size+mtime+content)

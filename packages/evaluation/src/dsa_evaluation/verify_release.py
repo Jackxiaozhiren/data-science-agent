@@ -36,7 +36,9 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
     # §59 required gates
     ok, out = _run(["uv", "run", "pytest", "-q"], timeout=120)
     gate("pytest", ok, out[:800] if not ok else "")
-    ok, out = _run(["uv", "run", "mypy", "packages", "apps/api", "--ignore-missing-imports"], timeout=60)
+    ok, out = _run(
+        ["uv", "run", "mypy", "packages", "apps/api", "--ignore-missing-imports"], timeout=60
+    )
     gate("mypy", ok, out[:800] if not ok else "")
     ok, out = _run(["uv", "run", "ruff", "check", "packages", "apps/api", "tests"], timeout=30)
     gate("ruff", ok, out[:800] if not ok else "")
@@ -60,7 +62,21 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
     ok, out = _run(["uv", "run", "python", "research/scripts/generate_figures.py"], timeout=20)
     gate("research figures (generate_figures.py)", ok, out[:500] if not ok else "")
     # docs — non-strict build (strict has README cross-file link warnings, not release-blocking)
-    ok2, out2 = _run(["uv", "run", "--with", "mkdocs", "--with", "mkdocs-material", "python", "-m", "mkdocs", "build"], timeout=30)
+    ok2, out2 = _run(
+        [
+            "uv",
+            "run",
+            "--with",
+            "mkdocs",
+            "--with",
+            "mkdocs-material",
+            "python",
+            "-m",
+            "mkdocs",
+            "build",
+        ],
+        timeout=30,
+    )
     gate("documentation build (mkdocs)", ok2, out2[:800] if not ok2 else "")
 
     # Compose §59 report

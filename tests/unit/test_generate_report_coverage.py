@@ -29,7 +29,14 @@ def test_generate_report_with_state_json_and_hash() -> None:
         async def _run() -> None:
             tool = get("generate_report")
             run_id = f"test-report-{td.name[-6:]}"
-            r = await tool.run({"run_id": run_id, "markdown": "# Title\nHi", "state_json": state_json, "include_repro": True})
+            r = await tool.run(
+                {
+                    "run_id": run_id,
+                    "markdown": "# Title\nHi",
+                    "state_json": state_json,
+                    "include_repro": True,
+                }
+            )
             assert r.status == "ok"
             assert Path(r.output.report_path).exists()
             assert r.output.experiment_path is not None
@@ -39,7 +46,9 @@ def test_generate_report_with_state_json_and_hash() -> None:
             r2 = await tool.run({"run_id": f"{run_id}-2", "state_json": state_json})
             assert r2.status == "ok"
             # with include_repro False -> no repro but has exp + nb
-            r3 = await tool.run({"run_id": f"{run_id}-3", "state_json": state_json, "include_repro": False})
+            r3 = await tool.run(
+                {"run_id": f"{run_id}-3", "state_json": state_json, "include_repro": False}
+            )
             assert r3.status == "ok"
             assert r3.output.reproduce_path is None
             # missing run_id
@@ -58,7 +67,9 @@ def test_mcp_server_jsonrpc_and_stdio_parse() -> None:
     # JSON-RPC equivalent via /mcp/call with invalid params
     r = c.post("/mcp/call", json={"name": "run_sql", "arguments": {"sql": "DROP TABLE dataset"}})
     assert r.status_code in (400, 200)
-    r2 = c.post("/mcp/tools", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
+    r2 = c.post(
+        "/mcp/tools", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+    )
     assert r2.status_code in (200, 404, 405)
     # GET unknown should 404
     assert c.get("/not-exist-xyz").status_code in (404, 405)

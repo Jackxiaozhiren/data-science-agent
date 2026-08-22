@@ -94,7 +94,9 @@ def test_full_pipeline_sdk_cli_benchmark_report_integration(plugin) -> None:
     # CLI: via dsa plugin list (already tested)
     import subprocess
 
-    cp = subprocess.run(["uv", "run", "dsa", "plugin", "--json"], capture_output=True, text=True, cwd=Path.cwd())
+    cp = subprocess.run(
+        ["uv", "run", "dsa", "plugin", "--json"], capture_output=True, text=True, cwd=Path.cwd()
+    )
     assert cp.returncode == 0
     assert "dsa-time-series" in cp.stdout
     # Benchmark: plugin evaluator not crashing benchmark

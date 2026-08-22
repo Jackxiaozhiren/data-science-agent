@@ -24,15 +24,42 @@ def test_hypothesis_forecast_extra_variants() -> None:
                     rows.append({"group": g, "val": float(i + (3 if g == "B" else 0)), "cat": g})
             pl.DataFrame(rows).write_csv(p)
             hyp = get("hypothesis_test")
-            for test in ["t_test", "welch_t_test", "mann_whitney", "anova", "kruskal", "chi_square", "fisher_exact"]:
-                r = await hyp.run({"dataset_path": str(p), "test": test, "group_col": "group", "value_col": "val" if "chi" not in test and "fisher" not in test else "cat"})
+            for test in [
+                "t_test",
+                "welch_t_test",
+                "mann_whitney",
+                "anova",
+                "kruskal",
+                "chi_square",
+                "fisher_exact",
+            ]:
+                r = await hyp.run(
+                    {
+                        "dataset_path": str(p),
+                        "test": test,
+                        "group_col": "group",
+                        "value_col": "val" if "chi" not in test and "fisher" not in test else "cat",
+                    }
+                )
                 assert r.status in ("ok", "error")
             # invalid test
-            r2 = await hyp.run({"dataset_path": str(p), "test": "unknown_test", "group_col": "group", "value_col": "val"})
+            r2 = await hyp.run(
+                {
+                    "dataset_path": str(p),
+                    "test": "unknown_test",
+                    "group_col": "group",
+                    "value_col": "val",
+                }
+            )
             assert r2.status == "error"
             # forecast variants + bad fallback
             pf = td / "ts2.csv"
-            pl.DataFrame({"date": [f"2024-01-{i+1:02d}" for i in range(80)], "value": [float(i) for i in range(80)]}).write_csv(pf)
+            pl.DataFrame(
+                {
+                    "date": [f"2024-01-{i + 1:02d}" for i in range(80)],
+                    "value": [float(i) for i in range(80)],
+                }
+            ).write_csv(pf)
             fc = get("forecast")
             for method in ["linear_trend", "moving_average", "naive_trend", "bad_method"]:
                 r = await fc.run({"dataset_path": str(pf), "periods": 10, "method": method})

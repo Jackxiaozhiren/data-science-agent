@@ -44,14 +44,20 @@ def _pricing_stub(model_class: ModelClass, tokens_total: int | None) -> float | 
     if tokens_total is None:
         return None
     # heuristic ordering: local free, open small cost, frontier higher — placeholder only
-    scale = {"local_small": 0.0, "local_medium": 0.0, "open_api": 0.002, "frontier": 0.01}.get(model_class, 0.0)
+    scale = {"local_small": 0.0, "local_medium": 0.0, "open_api": 0.002, "frontier": 0.01}.get(
+        model_class, 0.0
+    )
     return round(scale * (tokens_total / 1000), 6)
 
 
 def _probe_provider(model_class: ModelClass) -> tuple[str, bool, str]:
     # §31 categories mapped to actual env
     if model_class == "local_small":
-        provider = "ollama/small" if os.getenv("OLLAMA_HOST") or os.getenv("OLLAMA_MODEL") else "stub/small"
+        provider = (
+            "ollama/small"
+            if os.getenv("OLLAMA_HOST") or os.getenv("OLLAMA_MODEL")
+            else "stub/small"
+        )
         # stub is always available (§34 local-first)
         return provider, True, "stub/local small — deterministic heuristics (no LLM)"
     if model_class == "local_medium":
@@ -59,13 +65,37 @@ def _probe_provider(model_class: ModelClass) -> tuple[str, bool, str]:
         provider = "ollama/medium" if os.getenv("OLLAMA_HOST") else "stub/medium"
         return provider, True, "stub/local medium — deterministic heuristics"
     if model_class == "open_api":
-        has_key = bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GOOGLE_API_KEY"))
-        provider = "openai" if os.getenv("OPENAI_API_KEY") else ("anthropic" if os.getenv("ANTHROPIC_API_KEY") else "not_configured")
-        return provider, has_key, "open_api — requires env key (not fabricated)" if has_key else "NOT RUN — no API key configured"
+        has_key = bool(
+            os.getenv("OPENAI_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+            or os.getenv("GOOGLE_API_KEY")
+        )
+        provider = (
+            "openai"
+            if os.getenv("OPENAI_API_KEY")
+            else ("anthropic" if os.getenv("ANTHROPIC_API_KEY") else "not_configured")
+        )
+        return (
+            provider,
+            has_key,
+            "open_api — requires env key (not fabricated)"
+            if has_key
+            else "NOT RUN — no API key configured",
+        )
     if model_class == "frontier":
         has_key = bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
-        provider = "frontier/" + ("openai" if os.getenv("OPENAI_API_KEY") else "anthropic" if os.getenv("ANTHROPIC_API_KEY") else "not_configured")
-        return provider, has_key, "frontier — requires env key" if has_key else "NOT RUN — no frontier key"
+        provider = "frontier/" + (
+            "openai"
+            if os.getenv("OPENAI_API_KEY")
+            else "anthropic"
+            if os.getenv("ANTHROPIC_API_KEY")
+            else "not_configured"
+        )
+        return (
+            provider,
+            has_key,
+            "frontier — requires env key" if has_key else "NOT RUN — no frontier key",
+        )
     return "unknown", False, "unknown class"
 
 
@@ -113,7 +143,11 @@ def build_cross_model_matrix(
             continue
 
         token_in, token_out = (token_estimates or {}).get(mc, (None, None))
-        total = (token_in or 0) + (token_out or 0) if token_in is not None or token_out is not None else None
+        total = (
+            (token_in or 0) + (token_out or 0)
+            if token_in is not None or token_out is not None
+            else None
+        )
         records.append(
             ModelRecord(
                 model_class=mc,
@@ -131,15 +165,31 @@ def build_cross_model_matrix(
                 token_output=token_out,
                 token_total=total,
                 cost_usd=_pricing_stub(mc, total),
-                failure_rate=(1 - float(agg.get("task_success_rate") or 0)) if agg.get("task_success_rate") is not None else None,
+                failure_rate=(1 - float(agg.get("task_success_rate") or 0))
+                if agg.get("task_success_rate") is not None
+                else None,
                 n=int(agg.get("n") or 0),
-                details={k: v for k, v in agg.items() if k not in ("task_success_rate", "statistical_accuracy", "evidence_coverage", "unsupported_claim_rate")},
+                details={
+                    k: v
+                    for k, v in agg.items()
+                    if k
+                    not in (
+                        "task_success_rate",
+                        "statistical_accuracy",
+                        "evidence_coverage",
+                        "unsupported_claim_rate",
+                    )
+                },
             )
         )
 
     # §33 frontier — rank by quality vs cost/latency/tokens (only for available records with numeric fields)
     def _frontier(key: str, label: str) -> list[dict[str, Any]]:
-        pts = [r for r in records if r.task_success is not None and getattr(r, key) is not None and r.available]
+        pts = [
+            r
+            for r in records
+            if r.task_success is not None and getattr(r, key) is not None and r.available
+        ]
         if not pts:
             return []
         # Sort by key ascending, keep Pareto frontier (max quality for increasing cost)
@@ -150,7 +200,14 @@ def build_cross_model_matrix(
             q = r.task_success or 0
             if q > best:
                 best = q
-                frontier.append({label: getattr(r, key), "quality": q, "model": r.model_id, "class": r.model_class})
+                frontier.append(
+                    {
+                        label: getattr(r, key),
+                        "quality": q,
+                        "model": r.model_id,
+                        "class": r.model_class,
+                    }
+                )
         return frontier
 
     return CrossModelMatrix(
@@ -159,5 +216,7 @@ def build_cross_model_matrix(
         frontier_quality_latency=_frontier("latency_ms", "latency_ms"),
         frontier_quality_tokens=_frontier("token_total", "token_total"),
         cost_model="stub heuristic: local 0, open_api 0.002/1k, frontier 0.01/1k — placeholder to demonstrate trade-off (§33); real costs require provider billing",
-        details={"policy": "§31–34: provider-agnostic, no fabricated scores; local-first stub is runnable; open/frontier require env keys"},
+        details={
+            "policy": "§31–34: provider-agnostic, no fabricated scores; local-first stub is runnable; open/frontier require env keys"
+        },
     )

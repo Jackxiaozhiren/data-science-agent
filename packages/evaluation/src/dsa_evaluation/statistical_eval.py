@@ -68,7 +68,9 @@ def evaluate_statistical(
 ) -> StatisticalEvaluation:
     task_id = getattr(task, "id", "unknown")
     criteria = getattr(task, "criteria", None)
-    statistical_required = bool(getattr(criteria, "statistical_accuracy", False)) if criteria else False
+    statistical_required = (
+        bool(getattr(criteria, "statistical_accuracy", False)) if criteria else False
+    )
 
     tcalls: list[dict[str, Any]] = []
     insights: list[dict[str, Any]] = []
@@ -92,15 +94,25 @@ def evaluate_statistical(
     statuses = [c.get("status", "") for c in tcalls]
     has_ok = any(s == "ok" for s in statuses)
 
-    def _score(d: Dimension, passed: bool | None, reason: str, codes: list[ErrorCode] | None = None) -> DimensionScore:
+    def _score(
+        d: Dimension, passed: bool | None, reason: str, codes: list[ErrorCode] | None = None
+    ) -> DimensionScore:
         sc = 1.0 if passed is True else (0.0 if passed is False else None)
-        return DimensionScore(dimension=d, score=sc, passed=passed, reason=reason, error_codes=codes or [])
+        return DimensionScore(
+            dimension=d, score=sc, passed=passed, reason=reason, error_codes=codes or []
+        )
 
     dims: dict[Dimension, DimensionScore] = {}
 
     # 1. Method selection: if statistical_accuracy required, tool should be correlation/hypothesis/regression/causal
     if statistical_required:
-        stats_tools = {"correlation_analysis", "hypothesis_test", "regression_analysis", "causal_check", "assumption_check"}
+        stats_tools = {
+            "correlation_analysis",
+            "hypothesis_test",
+            "regression_analysis",
+            "causal_check",
+            "assumption_check",
+        }
         used_stats = any(t in stats_tools for t in tool_names)
         dims["method_selection"] = _score(
             "method_selection",
@@ -113,11 +125,17 @@ def evaluate_statistical(
 
     # 2. Assumption validation: did an assumption_check or validator run, or are limitations noted?
     assump_tool = "assumption_check" in tool_names
-    has_assumptions = any((c.get("output") or {}).get("assumptions") for c in tcalls if isinstance(c.get("output"), dict))
+    has_assumptions = any(
+        (c.get("output") or {}).get("assumptions")
+        for c in tcalls
+        if isinstance(c.get("output"), dict)
+    )
     dims["assumption_validation"] = _score(
         "assumption_validation",
         True if (assump_tool or has_assumptions or not statistical_required) else False,
-        "assumption evidence present" if (assump_tool or has_assumptions) else "missing assumption check",
+        "assumption evidence present"
+        if (assump_tool or has_assumptions)
+        else "missing assumption check",
         [] if (assump_tool or has_assumptions or not statistical_required) else ["S02"],
     )
 
@@ -131,7 +149,11 @@ def evaluate_statistical(
 
     # 4. Parameter estimation: tool output has numeric params (r/statistic/coef etc.)
     has_params = any(
-        isinstance(c.get("output"), dict) and any(k in c["output"] for k in ("r", "statistic", "coef", "coefficients", "accuracy", "r2", "mae"))
+        isinstance(c.get("output"), dict)
+        and any(
+            k in c["output"]
+            for k in ("r", "statistic", "coef", "coefficients", "accuracy", "r2", "mae")
+        )
         for c in tcalls
     )
     dims["parameter_estimation"] = _score(
@@ -164,7 +186,11 @@ def evaluate_statistical(
     ci_pairs: list[tuple[float, float]] = []
     for c in tcalls:
         out = c.get("output") or {}
-        if isinstance(out, dict) and out.get("ci_low") is not None and out.get("ci_high") is not None:
+        if (
+            isinstance(out, dict)
+            and out.get("ci_low") is not None
+            and out.get("ci_high") is not None
+        ):
             try:
                 ci_pairs.append((float(out["ci_low"]), float(out["ci_high"])))
             except Exception:
@@ -182,7 +208,8 @@ def evaluate_statistical(
 
     # 7. Effect size: at least one tool reports effect_size / r2 / cohen_d etc.
     has_effect = any(
-        isinstance(c.get("output"), dict) and any(k in c["output"] for k in ("effect_size", "r", "r2", "cohen_d", "cramers_v"))
+        isinstance(c.get("output"), dict)
+        and any(k in c["output"] for k in ("effect_size", "r", "r2", "cohen_d", "cramers_v"))
         for c in tcalls
     )
     dims["effect_size"] = _score(
@@ -241,12 +268,20 @@ def evaluate_statistical(
     has_uncertainty_evidence = bool(ci_pairs) or any(
         isinstance(c.get("output"), dict) and c["output"].get("limitations") for c in tcalls
     )
-    unc_pass: bool | None = True if (uncertainty_flag or has_uncertainty_evidence or not statistical_required) else False
+    unc_pass: bool | None = (
+        True
+        if (uncertainty_flag or has_uncertainty_evidence or not statistical_required)
+        else False
+    )
     dims["uncertainty_communication"] = _score(
         "uncertainty_communication",
         unc_pass,
-        "uncertainty present" if (uncertainty_flag or has_uncertainty_evidence) else "uncertainty omitted",
-        [] if (uncertainty_flag or has_uncertainty_evidence or not statistical_required) else ["S10"],
+        "uncertainty present"
+        if (uncertainty_flag or has_uncertainty_evidence)
+        else "uncertainty omitted",
+        []
+        if (uncertainty_flag or has_uncertainty_evidence or not statistical_required)
+        else ["S10"],
     )
 
     # Aggregate: collect error codes

@@ -116,7 +116,11 @@ def sample_human_eval_tasks(
             tid = t.id if hasattr(t, "id") else t.get("id", "")
             question = t.question if hasattr(t, "question") else t.get("question", "")
             ds = t.dataset if hasattr(t, "dataset") else t.get("dataset", "")
-            gold = t.gold_method or t.expected_analysis if hasattr(t, "gold_method") else (t.get("gold_method") or t.get("expected_analysis", ""))
+            gold = (
+                t.gold_method or t.expected_analysis
+                if hasattr(t, "gold_method")
+                else (t.get("gold_method") or t.get("expected_analysis", ""))
+            )
             out.append(
                 HumanEvalSample(
                     task_id=tid,
@@ -173,7 +177,9 @@ def krippendorff_alpha(scores_matrix: list[list[int | None]], level: str = "ordi
     pairable: list[tuple[int, int]] = []
     all_vals: list[int] = []
     for j in range(n_items):
-        vals: list[int] = [int(scores_matrix[i][j]) for i in range(n_raters) if scores_matrix[i][j] is not None]  # type: ignore[arg-type]
+        vals: list[int] = [
+            int(scores_matrix[i][j]) for i in range(n_raters) if scores_matrix[i][j] is not None
+        ]  # type: ignore[arg-type]
         all_vals.extend(vals)
         for a in range(len(vals)):
             for b in range(a + 1, len(vals)):
@@ -236,21 +242,51 @@ def agreement_summary(
     reviewers = sorted({r.reviewer for r in reviews})
     task_ids = sorted(by_task)
     if len(reviewers) < 2 or not task_ids:
-        return AgreementReport(dimension=dimension, metric="agreement", value=float("nan"), n=0, notes="need >=2 reviewers and >=1 task")
+        return AgreementReport(
+            dimension=dimension,
+            metric="agreement",
+            value=float("nan"),
+            n=0,
+            notes="need >=2 reviewers and >=1 task",
+        )
     r_index = {name: i for i, name in enumerate(reviewers)}
     matrix: list[list[int | None]] = [[None for _ in task_ids] for _ in reviewers]
     for j, tid in enumerate(task_ids):
         for rev in by_task[tid]:
             i = r_index[rev.reviewer]
             matrix[i][j] = rev.scores.get(dimension)
-    n_paired = sum(1 for j in range(len(task_ids)) if sum(1 for i in range(len(reviewers)) if matrix[i][j] is not None) >= 2)
+    n_paired = sum(
+        1
+        for j in range(len(task_ids))
+        if sum(1 for i in range(len(reviewers)) if matrix[i][j] is not None) >= 2
+    )
     if len(reviewers) == 2:
-        a: list[int] = [int(matrix[0][j]) for j in range(len(task_ids)) if matrix[0][j] is not None and matrix[1][j] is not None]  # type: ignore[arg-type]
-        b: list[int] = [int(matrix[1][j]) for j in range(len(task_ids)) if matrix[0][j] is not None and matrix[1][j] is not None]  # type: ignore[arg-type]
+        a: list[int] = [
+            int(matrix[0][j])
+            for j in range(len(task_ids))
+            if matrix[0][j] is not None and matrix[1][j] is not None
+        ]  # type: ignore[arg-type]
+        b: list[int] = [
+            int(matrix[1][j])
+            for j in range(len(task_ids))
+            if matrix[0][j] is not None and matrix[1][j] is not None
+        ]  # type: ignore[arg-type]
         k = cohens_kappa_two_raters(a, b)
-        return AgreementReport(dimension=dimension, metric="cohens_kappa", value=round(k, 3) if k == k else float("nan"), n=n_paired, notes="Cohen's Kappa (2 raters, k=5)")
+        return AgreementReport(
+            dimension=dimension,
+            metric="cohens_kappa",
+            value=round(k, 3) if k == k else float("nan"),
+            n=n_paired,
+            notes="Cohen's Kappa (2 raters, k=5)",
+        )
     alpha = krippendorff_alpha(matrix, level=level)
-    return AgreementReport(dimension=dimension, metric="krippendorff_alpha", value=round(alpha, 3) if alpha == alpha else float("nan"), n=n_paired, notes=f"Krippendorff's Alpha ({level}, {len(reviewers)} raters)")
+    return AgreementReport(
+        dimension=dimension,
+        metric="krippendorff_alpha",
+        value=round(alpha, 3) if alpha == alpha else float("nan"),
+        n=n_paired,
+        notes=f"Krippendorff's Alpha ({level}, {len(reviewers)} raters)",
+    )
 
 
 def hash_human_eval_sample(samples: list[HumanEvalSample]) -> str:
