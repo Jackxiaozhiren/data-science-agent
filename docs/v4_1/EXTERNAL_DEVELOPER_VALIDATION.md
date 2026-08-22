@@ -77,7 +77,7 @@ uv run dsa demo        # → status ok, 4 tool_calls, 1 insight, 4 evidence, has
 | Install | `uv sync --dev` requires `uv` (documented in README, but not in `brew` on fresh Mac) | Low — `pip install uv` one-liner |
 | LLM | `LLM warn` on `doctor` — unclear if demo needs key (it doesn't, stub is fine) | Low — README says `Cloud $0` local-first |
 | Plugin | `dsa plugin` lists `dsa-time-series` but no `install` needed (local) — confusing if expecting marketplace | Low |
-| Jupyter | `pip install data-science-agent[jupyter]` not tested in fresh clone (only import) | Low — `dsa_jupyter` is workspace, needs `uv sync --dev` not `pip install` |
+| Jupyter | `pip install jack-data-science-agent[jupyter]` not tested in fresh clone (only import) | Low — `dsa_jupyter` is workspace, needs `uv sync --dev` not `pip install` |
 | MCP | `dsa mcp` lists 18 tools but App at `/mcp-app` requires `uv run uvicorn ...` — not obvious | Medium — `docs/v4/mcp.md` covers, but README could link |
 | Report | `report_markdown` is file in `artifacts/reports/<run_id>/` — not auto-opened | Low — `dsa demo` prints path |
 

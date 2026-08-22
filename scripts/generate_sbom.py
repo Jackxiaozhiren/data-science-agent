@@ -76,7 +76,7 @@ def main() -> None:
     except Exception:
         root_version = "4.1.0"
     root_license = parse_pyproject_license(ROOT / "pyproject.toml")
-    workspace_pkgs.append({"name": "data-science-agent", "version": root_version, "license": root_license, "source": "local:pyproject.toml"})
+    workspace_pkgs.append({"name": "jack-data-science-agent", "version": root_version, "license": root_license, "source": "local:pyproject.toml"})
     # workspace members
     for member in ["apps/api", "apps/jupyter", "packages/agent", "packages/datasets", "packages/evaluation", "packages/evidence", "packages/execution", "packages/llm", "packages/mcp", "packages/ml", "packages/plugins", "packages/reports", "packages/statistics", "packages/tools", "packages/visualization"]:
         p = ROOT / member / "pyproject.toml"
@@ -115,7 +115,7 @@ def main() -> None:
         "bomFormat": "CycloneDX",
         "specVersion": "1.4",
         "version": 1,
-        "metadata": {"component": {"name": "data-science-agent", "version": root_version, "type": "application"}},
+        "metadata": {"component": {"name": "jack-data-science-agent", "version": root_version, "type": "application"}},
         "components": [
             {"name": p["name"], "version": p["version"], "licenses": [{"license": {"id": p["license"]}}] if p["license"] != "Unknown" else [], "purl": f"pkg:pypi/{p['name']}@{p['version']}" if "pypi" in p["source"] else f"pkg:local/{p['name']}@{p['version']}", "source": p["source"]}
             for p in sorted(all_pkgs, key=lambda x: x["name"].lower())

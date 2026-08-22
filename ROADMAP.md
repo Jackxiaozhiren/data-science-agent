@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Source of truth for V3.0 workstreams** — see `DATA_SCIENCE_AGENT_V3_0.md` §7 and `docs/v3/V2_FINAL_BASELINE.md` §15.
+> **Source of truth for V3.0–V4.1 workstreams** — V4.1 at `docs/v4_1/release.md` + `CHANGELOG.md:4.1.1` — V4.2 at `DATA_SCIENCE_AGENT_V4_2.md` §7 and `docs/v4_2/V4_1_RELEASE_INTEGRITY_REPORT.md`. Original V3.0 see `DATA_SCIENCE_AGENT_V3_0.md` §7 and `docs/v3/V2_FINAL_BASELINE.md` §15.
 
 ## V2.0 Released — Research Grade (v2.0.0)
 
@@ -8,7 +8,7 @@
 
 ## V3.0 — Research Validation, External Reproducibility & Open-Source Release
 
-Status: **in progress** (W1–W8 done through this repo; W9–W12 remain per Phase gate).
+Status: **Released** `v3.0.0` (W1–W12 Done) — `docs/v3/V2_FINAL_BASELINE.md` + `research/V3_RESEARCH_REPORT.md` + `release/v3.0`.
 
 | Workstream | Status | Gate |
 |------------|--------|------|
@@ -24,6 +24,32 @@ Status: **in progress** (W1–W8 done through this repo; W9–W12 remain per Pha
 | W10 Documentation & Research Packaging | Next | `docs/` structure §48–50, diagrams §49 (Mermaid), `research/V3_RESEARCH_REPORT.md` §51 |
 | W11 Publication & Citation Infrastructure | After W10 | `research/technical-report/` versioning + figure/table reproducibility |
 | W12 V3 Release | Final | `v3.0.0` + `dsa verify-release v3.0.0` (§58–63) |
+
+
+## V4.0 — Open-Source Ecosystem, Developer Platform & Productization (Released v4.0.0 @ fbf6dd7, 2026-08-17)
+
+Status: **Released** `v4.0.0` — SDK (`Agent/Dataset/Benchmark/Repro` Stable), CLI (`dsa doctor/init/analyze`), Plugin Arch (`dsa-time-series` Experimental), MCP Tools/Resources (Stable/Experimental), Jupyter/VS Code (Stub→Experimental), Benchmark Leaderboard, Research Package — `docs/v4_1/V4_IMPLEMENTATION_TRUTH.md`, `docs/v4_1/RELEASE_MATRIX.md`.
+
+## V4.1 — Ecosystem Validation, Integration Hardening & Production Readiness (Released v4.1.0 @ 4a0158d, 2026-08-21; patch v4.1.1 @ 2026-08-22)
+
+Status: **Released v4.1.1** (patch 2026-08-22) — W1 Freeze + W2 SDK/CLI hardening (257 tests, 104 mypy, 13 routes, 12/12 verify) + W3 Plugin (24), W4 Jupyter (10, `dsa-jupyter 0.1.0`), W5 VS Code (7), W6 MCP App (18 tools, 5 resources, 6 acceptance), W7 Security (CodeQL, Review, Secrets, SBOM 193) + W8 External Validation (Fresh Clone 7/7) + W9 Performance + W10 Release — `CHANGELOG.md:4.1.0`, `CHANGELOG.md:4.1.1`, `docs/v4_1/release.md`, `docs/v4_2/V4_1_RELEASE_INTEGRITY_REPORT.md`.
+
+| Workstream | Gate (V4.1) |
+|------------|-------------|
+| W1 Freeze | `docs/v4_1/V4_IMPLEMENTATION_TRUTH.md` (157→257) |
+| W2 SDK/CLI | `tests/sdk 18 + CLI 13`, `API_STABILITY Stable` |
+| W3 Plugin | `dsa-time-series 1.0.0 Stable` |
+| W4 Jupyter | `dsa-jupyter 0.1.0 Experimental` |
+| W5 VS Code | `dsa-vscode 0.1.0 Experimental` |
+| W6 MCP App | `/mcp-app` real HTML |
+| W7 Security | `193 SBOM`, CodeQL, Review, Secrets |
+| W8 External | `EXTERNAL_DEVELOPER_VALIDATION.md` 7/7 |
+| W9 Perf | `performance.md` |
+| W10 Release | `v4.1.0` + `v4.1.1` patch |
+
+## V4.2 — Post-Release Integrity, Real-World Validation & Adoption (Next, see DATA_SCIENCE_AGENT_V4_2.md)
+
+Status: **Phase A complete** (`docs/v4_2/V4_1_RELEASE_INTEGRITY_REPORT.md` 2026-08-22), awaiting Phase B `Artifact / Metadata Sync` → `W3 Public Truth` → `W4 Case Studies` etc. per §71-72.
 
 ## Out of scope for V3.0 (per §4 Non-Goals)
 

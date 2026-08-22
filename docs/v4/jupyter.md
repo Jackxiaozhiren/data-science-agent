@@ -31,7 +31,7 @@
 ## Installation (§32)
 
 ```bash
-pip install "data-science-agent[jupyter]"  # or pip install dsa-jupyter
+pip install "jack-data-science-agent[jupyter]"  # or pip install dsa-jupyter
 ```
 
 Verified: `uv sync --dev` + `uv run python -c "import dsa_jupyter"` + `ipython -c "import dsa_jupyter"` (§32 clean-env via `uv build`).

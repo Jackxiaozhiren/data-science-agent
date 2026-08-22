@@ -10,7 +10,7 @@
 
 **Reproducibility (§31):** `collect_notebook_metadata` → `dataset_hash` (16hex, `sha256` of file), `agent_version`, `sdk_version`, `prompt_version` (12hex of task), `tool_version`, `experiment_id` (`run-*`) — shown in header, for `notebook.metadata` / `analysis.ipynb`.
 
-**Install (§32):** `pip install "data-science-agent[jupyter]"` (`dsa-jupyter 0.1.0` workspace, `ipython>=8.0`, `nest-asyncio`), `uv sync --dev` + `uv build --package dsa-jupyter` verified.
+**Install (§32):** `pip install "jack-data-science-agent[jupyter]"` (`dsa-jupyter 0.1.0` workspace, `ipython>=8.0`, `nest-asyncio`), `uv sync --dev` + `uv build --package dsa-jupyter` verified.
 
 **Tests:** `tests/jupyter` 10 (magic, profile/analyze, cell, await display, artifacts, metadata, formatter, pip install, error).
 

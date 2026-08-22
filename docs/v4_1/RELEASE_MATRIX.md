@@ -24,4 +24,4 @@
 
 **Maturity Gate (§58):** `Stable` = API frozen + tests + docs + compat (§15-20); `Experimental` = works but API may change (§28-36); no `Prototype`/`Stub` remains except `Tasks` (MCP L4, deferred).
 
-**Release:** `v4.1.0` (pyproject `4.1.0`, tag `v4.1.0`, `dsa verify-release v4.1.0` 12/12 PASS, `uv build` wheel `data_science_agent-4.1.0`).
+**Release:** `v4.1.1` (pyproject `4.1.1`, tag `v4.1.1`; `v4.1.0` was `4a0158d`), `dsa verify-release v4.1.1` 12/12 PASS, `uv build` wheel `jack_data_science_agent-4.1.1`).

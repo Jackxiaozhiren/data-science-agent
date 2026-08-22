@@ -22,7 +22,7 @@ To serve: `uv sync --dev && uv run mkdocs serve` (or `uv run mkdocs build --stri
 ## Quick Quality
 
 ```
-uv run pytest -q         # 86+ tests
+uv run pytest -q         # 257 passed (V4.1 live 2026-08-22; V1: 86+; V3.0: 155)
 uv run mypy packages apps/api --ignore-missing-imports
 uv run ruff check .
 uv run dsa --limit 50

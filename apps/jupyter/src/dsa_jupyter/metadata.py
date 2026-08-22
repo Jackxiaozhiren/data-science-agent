@@ -39,9 +39,15 @@ def collect_notebook_metadata(
 ) -> dict[str, Any]:
     """Collect §31 metadata: dataset_hash, agent_version, sdk_version, prompt_version, tool_version, experiment_id."""
     try:
-        sdk_version = importlib.metadata.version("data-science-agent")
+        try:
+            sdk_version = importlib.metadata.version("jack-data-science-agent")
+        except importlib.metadata.PackageNotFoundError:
+            try:
+                sdk_version = importlib.metadata.version("data-science-agent")
+            except importlib.metadata.PackageNotFoundError:
+                sdk_version = importlib.metadata.version("dsa-jupyter")
     except Exception:
-        sdk_version = "4.0.0"
+        sdk_version = "4.1.1"
     try:
         agent_version = importlib.metadata.version("dsa-agent")
     except Exception:

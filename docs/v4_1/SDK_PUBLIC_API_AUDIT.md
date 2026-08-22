@@ -86,7 +86,7 @@ Verified in `src/data_science_agent/sdk.py` docstrings (all classes + `Agent.ana
 
 - `pip install .` via `uv` workspace: `uv sync --dev` + `uv run python -c "from data_science_agent import Agent"` PASS
 - `uv run pip install -e .` equivalent verified via `tests/sdk/test_sdk_contract.py::test_sdk_public_surface_exports`
-- Real PyPI `pip install data-science-agent` is deferred (no publish in W2); local wheel build `uv build` not yet run — scheduled for W10 release gate.
+- Real PyPI `pip install jack-data-science-agent` is deferred (no publish in W2); local wheel build `uv build` not yet run — scheduled for W10 release gate.
 
 ## CLI Contract (§20) — Summary
 

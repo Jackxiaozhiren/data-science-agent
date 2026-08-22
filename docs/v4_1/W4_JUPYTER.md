@@ -57,7 +57,7 @@ uv run python -c "from dsa_jupyter.metadata import collect_notebook_metadata; pr
 # {'dataset_hash':'96fabf8340c8f6e1','agent_version':'0.1.0','sdk_version':'4.0.0','prompt_version':'53a1f8...','tool_version':'0.1.0','experiment_id':'run-123'}
 
 # Installation (§32)
-pip install "data-science-agent[jupyter]"  # via optional-dependencies jupyter = [dsa-jupyter,ipython,ipykernel,nest-asyncio]
+pip install "jack-data-science-agent[jupyter]"  # via optional-dependencies jupyter = [dsa-jupyter,ipython,ipykernel,nest-asyncio]
 uv sync --dev && uv run python -c "import dsa_jupyter; print('clean env ok')"
 uv build --package dsa-jupyter  # wheel dsa_jupyter-0.1.0-py3-none-any.whl
 

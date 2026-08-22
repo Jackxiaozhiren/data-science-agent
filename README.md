@@ -1,4 +1,4 @@
-# Data Science Agent — v4.1.0
+# Data Science Agent — v4.1.1
 
 > **An Evidence-Grounded Autonomous Data Science System.**
 > Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.
@@ -30,9 +30,9 @@ Next.js 15 + TypeScript + Tailwind + shadcn/ui · FastAPI + Pydantic v2 + SQLAlc
 ```bash
 # Python
 uv sync --dev
-uv run pytest -q          # ~86+ tests
+uv run pytest -q          # 257 passed (V4.1 live 2026-08-22 @ e8794c1; V3.0: 155; V1: ~86+)
 uv run ruff check .
-uv run mypy packages apps/api --ignore-missing-imports  # 81 source files clean
+uv run mypy packages apps/api --ignore-missing-imports  # 102 clean (packages+api) / 104 with src (V4.1 live; V2: 81)
 
 # API (port 8000) — local-first, no cloud required
 uv run uvicorn dsa_api.main:app --reload --port 8000 --app-dir apps/api/src
@@ -162,9 +162,9 @@ V4.0 Ecosystem ✓ `v4.0.0` (SDK + CLI + Plugins + MCP Apps + Jupyter/VS Code + 
 ## Testing
 
 ```bash
-uv run pytest -q           # 155 tests (unit + integration + security + evals)
-uv run pytest --cov --cov-report=term-missing  # 81% cov (4597 stmts)
-uv run mypy packages apps/api --ignore-missing-imports  # strict, 92 source files clean
+uv run pytest -q           # 257 passed (V4.1 live 2026-08-22 @ e8794c1; V3.0: 155; V1: ~86+)
+uv run pytest --cov --cov-report=term-missing  # 79% cov, 5140 stmts (V4.1 live; V3.0: 81% 4597)
+uv run mypy packages apps/api src --ignore-missing-imports  # strict, 104 clean (V4.1; V3.0: 92; V2: 81)
 uv run ruff check packages apps/api tests  # scoped per-file ignores
 uv run dsa --limit 50      # 50/50 @1.0 (benchmarks/ds-agent-benchmark, 8 cats)
 uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 100  # 100/100 @1.0 (11 cats)

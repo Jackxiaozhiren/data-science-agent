@@ -1,6 +1,6 @@
 # V4.1 Release — §56-57 (§71 Phase J)
 
-**Version:** `4.1.0` (pyproject `4.0.0→4.1.0`, tag `v4.1.0`, `dsa verify-release v4.1.0`)
+**Version:** `4.1.1` (pyproject `4.1.0→4.1.1`, tag `v4.1.1`, `dsa verify-release v4.1.1`; patch of `4.1.0` @ `4a0158d`)
 
 **Gate (§57) 12 + W2-W9:** `pytest 257 / mypy 104 clean / ruff pass / npm 13/13 / docker valid / security 11+23 / CodeQL ready / dependency-review ready / SDK 18+13 / Plugin 24 / MCP 13 / Jupyter 10 / VS Code 7 (compile) / Benchmark 1/1 @1.0 / External 5 / Demo PASS / Docs 11 (§61)`.
 

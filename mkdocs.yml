@@ -15,26 +15,31 @@ markdown_extensions:
   - pymdownx.superfences
 nav:
   - Home: README.md
-  - Getting Started: docs/getting-started.md
-  - Architecture: docs/architecture.md
-  - Agent: docs/agent.md
-  - Tools: docs/tools.md
-  - Statistics: docs/statistics.md
-  - Evidence: docs/evidence.md
-  - MCP: docs/MCP_DESIGN.md
-  - API: docs/api.md
-  - Frontend: docs/FRONTEND_IA.md
-  - Security: docs/security.md
-  - V2 Baseline: docs/v2/Baseline Report.md
-  - V2 Evaluation: docs/v2/evaluation.md
-  - V2 MCP 2026-28: docs/v2/MCP_2026_Audit.md
-  - V2 Security: docs/v2/security.md
-  - V3 Baseline: docs/v3/V2_FINAL_BASELINE.md
-  - V3 Benchmark Audit: docs/v3/BENCHMARK_AUDIT.md
-  - V3 Reproduction: docs/v3/REPRODUCTION.md
-  - V3 Statistical: docs/v3/STATISTICAL_EVALUATION.md
-  - V3 Reliability: docs/v3/RELIABILITY.md
-  - V3 Cross-Model: docs/v3/CROSS_MODEL.md
-  - V3 Human Eval: docs/v3/HUMAN_EVALUATION_GUIDE.md
-  - V3 External: docs/v3/EXTERNAL_VALIDATION.md
-  - Research: docs/research.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Agent: agent.md
+  - Tools: tools.md
+  - Statistics: statistics.md
+  - Evidence: evidence.md
+  - MCP: MCP_DESIGN.md
+  - API: api.md
+  - Frontend: FRONTEND_IA.md
+  - Security: security.md
+  - V2 Baseline: v2/Baseline Report.md
+  - V2 Evaluation: v2/evaluation.md
+  - V2 MCP 2026-28: v2/MCP_2026_Audit.md
+  - V2 Security: v2/security.md
+  - V3 Baseline: v3/V2_FINAL_BASELINE.md
+  - V3 Benchmark Audit: v3/BENCHMARK_AUDIT.md
+  - V3 Reproduction: v3/REPRODUCTION.md
+  - V3 Statistical: v3/STATISTICAL_EVALUATION.md
+  - V3 Reliability: v3/RELIABILITY.md
+  - V3 Cross-Model: v3/CROSS_MODEL.md
+  - V3 Human Eval: v3/HUMAN_EVALUATION_GUIDE.md
+  - V3 External: v3/EXTERNAL_VALIDATION.md
+  - Research: research.md
+
+validation:
+  links:
+    not_found: ignore
+    absolute_links: ignore

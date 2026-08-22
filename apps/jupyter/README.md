@@ -6,7 +6,7 @@
 
 ```bash
 # From workspace (clean env verification)
-pip install "data-science-agent[jupyter]"  # pulls dsa-jupyter + ipython + nest-asyncio
+pip install "jack-data-science-agent[jupyter]"  # pulls dsa-jupyter + ipython + nest-asyncio
 # or
 pip install dsa-jupyter  # standalone
 # or local

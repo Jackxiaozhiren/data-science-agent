@@ -32,10 +32,10 @@ ALLOWED_LICENSES = {"MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Proprietary"}
 ALLOWED_CAPABILITIES = {"forecast", "backtest", "metrics", "visualization", "evidence", "forecasting", "time_series"}
 
 # §45 supply-chain: popular packages for typosquatting detection
-POPULAR_PYPI = {"numpy", "pandas", "polars", "scikit-learn", "sklearn", "matplotlib", "scipy", "requests", "urllib3", "pyyaml", "yaml", "pydantic", "fastapi", "duckdb", "pyarrow", "openpyxl", "langgraph", "langchain", "dsa-time-series", "data-science-agent"}
-WORKSPACE_PACKAGES = {"dsa-agent", "dsa-api", "dsa-datasets", "dsa-evaluation", "dsa-evidence", "dsa-execution", "dsa-llm", "dsa-mcp", "dsa-ml", "dsa-plugins", "dsa-reports", "dsa-statistics", "dsa-tools", "dsa-visualization", "dsa-jupyter", "dsa-vscode", "data-science-agent"}
+POPULAR_PYPI = {"numpy", "pandas", "polars", "scikit-learn", "sklearn", "matplotlib", "scipy", "requests", "urllib3", "pyyaml", "yaml", "pydantic", "fastapi", "duckdb", "pyarrow", "openpyxl", "langgraph", "langchain", "dsa-time-series", "data-science-agent", "jack-data-science-agent"}
+WORKSPACE_PACKAGES = {"dsa-agent", "dsa-api", "dsa-datasets", "dsa-evaluation", "dsa-evidence", "dsa-execution", "dsa-llm", "dsa-mcp", "dsa-ml", "dsa-plugins", "dsa-reports", "dsa-statistics", "dsa-tools", "dsa-visualization", "dsa-jupyter", "dsa-vscode", "data-science-agent", "jack-data-science-agent"}
 
-CURRENT_DSA_VERSION = "4.1.0"
+CURRENT_DSA_VERSION = "4.1.1"
 
 
 def _levenshtein(a: str, b: str) -> int:

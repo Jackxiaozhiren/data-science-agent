@@ -6,11 +6,11 @@ authors:
   - family-names: "Data Science Agent Contributors"
     given-names: ""
     orcid: ""
-version: 4.0.0
-date-released: 2026-08-17
+version: 4.1.1
+date-released: 2026-08-22
 license: MIT
-repository-code: "https://github.com/your-org/data-science-agent"
-url: "https://github.com/your-org/data-science-agent"
+repository-code: "https://github.com/Jackxiaozhiren/data-science-agent"
+url: "https://github.com/Jackxiaozhiren/data-science-agent"
 keywords:
   - data-science
   - llm-agent
@@ -23,6 +23,6 @@ keywords:
   - duckdb
 references:
   - type: software
-    title: "Data Science Agent V4 — Open-Source Ecosystem, Developer Platform & Productization — Benchmark v2 (30 datasets / 100 tasks)"
-    version: 4.0.0
+    title: "Data Science Agent V4.1 — Open-Source Ecosystem, Developer Platform & Productization — Benchmark v2 (30 datasets / 100 tasks)"
+    version: 4.1.1
     year: 2026

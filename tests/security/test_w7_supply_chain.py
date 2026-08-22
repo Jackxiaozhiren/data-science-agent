@@ -59,7 +59,7 @@ def test_sbom_exists_and_has_required_fields() -> None:
 def test_sbom_includes_workspace_packages() -> None:
     data = json.loads(Path("release/sbom.json").read_text())
     names = {c["package"] for c in data["components"]}
-    for expected in ("data-science-agent", "dsa-agent", "dsa-tools", "dsa-jupyter"):
+    for expected in ("jack-data-science-agent", "dsa-agent", "dsa-tools", "dsa-jupyter"):
         assert expected in names, f"SBOM missing workspace {expected}"
 
 
