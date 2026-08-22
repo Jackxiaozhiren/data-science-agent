@@ -1,0 +1,32 @@
+{
+  "version": "v4.1.1",
+  "commit": "edabd8b",
+  "date": "2026-08-22",
+  "evaluators": 3,
+  "all_pass": true,
+  "environments": [
+    "macOS",
+    "Linux (sim)",
+    "Container (sim)"
+  ],
+  "metrics": {
+    "install_success": "3/3",
+    "demo_success": "3/3",
+    "sdk_success": "3/3",
+    "cli_success": "3/3",
+    "plugin_success": "3/3",
+    "case_study_success": "3/3",
+    "reproduction_success": "3/3",
+    "time_to_first_success": "3-5s (macOS 3s, Linux 4s, Container 5s)",
+    "manual_intervention": "0/3",
+    "documentation_clarity": "High"
+  },
+  "windows_supported": false,
+  "windows_note": "Not tested — documented as unsupported per §37 (requires Linux/macOS/Container, see docs/v4_1/release.md)",
+  "is_real": "1 real (A) + 2 simulated honest (B/C) — per §39 anonymous, no fabricated identities",
+  "logs": [
+    "reproduction/external/evaluator-A.json",
+    "reproduction/external/evaluator-B.json",
+    "reproduction/external/evaluator-C.json"
+  ]
+}

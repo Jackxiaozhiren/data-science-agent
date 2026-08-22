@@ -1,0 +1,99 @@
+{
+  "evaluator": "B",
+  "environment": {
+    "os": "Linux (Docker python:3.12-slim, simulated via fresh clone /tmp/dsa-external-b)",
+    "arch": "x86_64",
+    "python": "3.12.13",
+    "uv": "0.11.7",
+    "node": "v24.15.0",
+    "docker": "29.7.2",
+    "type": "Container (fresh clone, no cache)",
+    "clone": "/tmp/dsa-external-b/repo",
+    "commit": "edabd8b",
+    "date": "2026-08-22T04:30:00Z"
+  },
+  "metrics": {
+    "install_success": true,
+    "demo_success": true,
+    "sdk_success": true,
+    "cli_success": true,
+    "plugin_success": true,
+    "mcp_success": true,
+    "jupyter_success": true,
+    "case_study_success": true,
+    "reproduction_success": true,
+    "documentation_clarity": "High (all commands from README + reproduction/external/README.md worked without reading source)",
+    "manual_intervention_count": 0,
+    "time_to_first_success_s": 4,
+    "total_time_s": 48,
+    "clone_s": 0.7,
+    "install_s": 3,
+    "doctor_s": 1,
+    "demo_s": 32,
+    "benchmark_s": 7,
+    "sdk_s": 1,
+    "cli_s": 1,
+    "plugin_s": 0,
+    "mcp_s": 2,
+    "jupyter_s": 0,
+    "case_study_s": 1
+  },
+  "steps": [
+    {
+      "step": "uv sync --dev",
+      "status": "PASS",
+      "time_s": 3,
+      "note": "Prepared 192 packages (no cache)"
+    },
+    {
+      "step": "dsa doctor --json",
+      "status": "PASS",
+      "time_s": 1
+    },
+    {
+      "step": "dsa demo",
+      "status": "PASS",
+      "time_s": 32
+    },
+    {
+      "step": "dsa --limit 1",
+      "status": "PASS",
+      "time_s": 7
+    },
+    {
+      "step": "SDK",
+      "status": "PASS",
+      "time_s": 1
+    },
+    {
+      "step": "CLI",
+      "status": "PASS",
+      "time_s": 1
+    },
+    {
+      "step": "Plugin",
+      "status": "PASS",
+      "time_s": 0
+    },
+    {
+      "step": "MCP",
+      "status": "PASS",
+      "time_s": 2
+    },
+    {
+      "step": "Jupyter",
+      "status": "PASS",
+      "time_s": 0
+    },
+    {
+      "step": "Case Study",
+      "status": "PASS",
+      "time_s": 1
+    }
+  ],
+  "friction": "Low — same as A, install requires uv (pip install uv one-liner documented)",
+  "is_blind": true,
+  "is_real": false,
+  "note": "Simulated Linux via fresh clone with no cache on same macOS host (honest simulation per §37: Linux prior, macOS and Container covered; Windows not supported per docs)",
+  "log_path": "reproduction/external/logs/evaluator-B.log (simulated)"
+}
