@@ -1,0 +1,11 @@
+{
+  "run_id": "run-008a1531cf",
+  "status": "COMPLETED",
+  "elapsed_s": 1.33,
+  "n_evidence": 6,
+  "n_insights": 3,
+  "n_artifacts": 5,
+  "n_tool_calls": 6,
+  "dataset": "benchmarks/v2/datasets/sales.csv",
+  "task": "Analyze revenue trends by region and category, identify key drivers, correlations between price and revenue, and provide actionable insights."
+}

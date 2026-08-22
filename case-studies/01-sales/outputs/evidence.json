@@ -1,0 +1,84 @@
+[
+  {
+    "id": "E-f58fc304",
+    "claim": "Correlation price vs units: r=-0.057",
+    "source_type": "statistical_test",
+    "source_id": "TC-b3554a53",
+    "result": {
+      "r": -0.05678020416868902,
+      "p_value": 0.20498052215583826,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-7c8d5b5b",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-2124c7fc",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/adaba1df75_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-6de1fdf2",
+    "claim": "Chart line created",
+    "source_type": "visualization",
+    "source_id": "TC-36c28fe6",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/036aadd30c_line.png",
+      "chart_type": "line"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-c815413b",
+    "claim": "Profile: 500 rows, 6 cols",
+    "source_type": "python",
+    "source_id": "TC-f77cca39",
+    "result": {
+      "rows": 500,
+      "columns": 6
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-f84be2f0",
+    "claim": "Forecast linear_trend: next 30 periods, MAE=635.97",
+    "source_type": "model",
+    "source_id": "TC-14efa136",
+    "result": {
+      "forecast": [
+        1314.632969816089,
+        1314.0823904661156,
+        1313.531811116142,
+        1312.9812317661685,
+        1312.4306524161952
+      ],
+      "mae": 635.9708248748128,
+      "method": "linear_trend"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-1f3d9206",
+    "claim": "Causal check (difference_in_means): estimate=0.000, causal_bar=fail — Treatment not near-binary; causal stub cannot estimate an effect without proper design. Association ",
+    "source_type": "statistical_test",
+    "source_id": "TC-c9713104",
+    "result": {
+      "estimate": 0.0,
+      "method": "difference_in_means",
+      "passes_causal_bar": false,
+      "confidence_note": "Treatment not near-binary; causal stub cannot estimate an effect without proper design. Association only."
+    },
+    "confidence": 0.5,
+    "validation_status": "pending"
+  }
+]

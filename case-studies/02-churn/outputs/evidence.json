@@ -1,0 +1,39 @@
+[
+  {
+    "id": "E-6772f2b1",
+    "claim": "Correlation tenure vs monthly_charges: r=-0.011",
+    "source_type": "statistical_test",
+    "source_id": "TC-5f5596bf",
+    "result": {
+      "r": -0.01061954586103093,
+      "p_value": 0.7951803902661485,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-311f24e8",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-5260863a",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/63c2abde19_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-dfed9b5c",
+    "claim": "Profile: 600 rows, 5 cols",
+    "source_type": "python",
+    "source_id": "TC-e68bd3d0",
+    "result": {
+      "rows": 600,
+      "columns": 5
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  }
+]

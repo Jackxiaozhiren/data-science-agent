@@ -1,0 +1,52 @@
+[
+  {
+    "id": "A-5c9962b7",
+    "type": "report",
+    "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/report.md",
+    "metadata": {
+      "kind": "markdown"
+    },
+    "created_by": "agent",
+    "created_at": "2026-08-22 04:21:59.789504+00:00"
+  },
+  {
+    "id": "A-d4098aff",
+    "type": "report",
+    "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/experiment.json",
+    "metadata": {
+      "kind": "experiment"
+    },
+    "created_by": "agent",
+    "created_at": "2026-08-22 04:21:59.789508+00:00"
+  },
+  {
+    "id": "A-2ad5ea53",
+    "type": "evidence",
+    "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/evidence_graph.json",
+    "metadata": {
+      "kind": "evidence_graph"
+    },
+    "created_by": "agent",
+    "created_at": "2026-08-22 04:21:59.789753+00:00"
+  },
+  {
+    "id": "A-a25968de",
+    "type": "reproduce",
+    "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/reproduce.sh",
+    "metadata": {
+      "kind": "reproduce"
+    },
+    "created_by": "agent",
+    "created_at": "2026-08-22 04:21:59.794880+00:00"
+  },
+  {
+    "id": "A-14563134",
+    "type": "notebook",
+    "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/analysis.ipynb",
+    "metadata": {
+      "kind": "notebook"
+    },
+    "created_by": "agent",
+    "created_at": "2026-08-22 04:21:59.794885+00:00"
+  }
+]

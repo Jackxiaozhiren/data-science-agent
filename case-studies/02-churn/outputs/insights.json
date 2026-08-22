@@ -1,0 +1,12 @@
+[
+  {
+    "id": "I-5fe6ff03",
+    "finding": "Correlation tenure vs monthly_charges: r=-0.011",
+    "evidence_ids": [
+      "E-6772f2b1"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

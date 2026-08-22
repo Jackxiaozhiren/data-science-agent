@@ -1,0 +1,32 @@
+[
+  {
+    "id": "I-450fa717",
+    "finding": "Correlation price vs units: r=-0.057",
+    "evidence_ids": [
+      "E-f58fc304"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  },
+  {
+    "id": "I-4c5bf47e",
+    "finding": "Forecast linear_trend: next 30 periods, MAE=635.97",
+    "evidence_ids": [
+      "E-f84be2f0"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  },
+  {
+    "id": "I-ecfee616",
+    "finding": "Causal check (difference_in_means): estimate=0.000, causal_bar=fail — Treatment not near-binary; causal stub cannot estimate an effect without proper design. Association ",
+    "evidence_ids": [
+      "E-1f3d9206"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]
