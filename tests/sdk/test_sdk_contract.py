@@ -16,7 +16,7 @@ from data_science_agent.sdk import API_STABILITY, BenchmarkResult, Insight, Repo
 def test_sdk_public_surface_exports() -> None:
     from data_science_agent import __version__
 
-    assert __version__ == "4.1.1"
+    assert __version__ == "4.2.0"
     # Required §14 exports
     for name in ("Agent", "Dataset", "Analysis", "Evidence", "Artifact", "Benchmark", "Reproduction"):
         assert name in dir(__import__("data_science_agent")), f"missing {name}"
@@ -135,7 +135,7 @@ def test_agent_analyze_sync_separate() -> None:
 
 
 def test_agent_version_stable() -> None:
-    assert Agent().version == "4.1.1"
+    assert Agent().version == "4.2.0"
     assert API_STABILITY["Agent"] == "Stable"
 
 

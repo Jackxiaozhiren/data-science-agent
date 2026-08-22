@@ -1,5 +1,35 @@
 # Changelog
 
+## 4.2.0 — V4.2 Post-Release Integrity, Real-World Validation & Adoption (W1-W8, Phase A-H)
+
+- **Added**
+  - `docs/v4_2/QUANTITATIVE_CLAIMS.md` (W2 §19) — registry `Metric/Value/Version/Commit/Source/Date/Methodology` for `pytest 257`/`mypy 104`/`192 SBOM` etc., with `V1 86+`/`V3 155` versioned per §18
+  - `scripts/check_public_claims.py` (W3 §25) — detector for `stale versions/test counts/package/repo/maturity` (0 issues after fixes) + `docs/v4_2/PUBLIC_DOCUMENTATION_AUDIT.md` (W3 §27) 17 capabilities `Stable` vs `Experimental`
+  - `case-studies/` 8 cases (W4 §28-33): `01-sales` + `02-churn` **✅ Verified** (real `Agent` 1.33s/0.05s, 6/3 evidence, no mock) + `03-08` 📝 Planned (synthetic CC0, `v2 0.3.0` hash)
+  - `reproduction/external/` + `docs/v4_2/EXTERNAL_VALIDATION.md` (W5 §34-39): blind `run.sh` 10 steps, `3` envs `macOS` Real `44s` + `Linux` sim `48s` + `Container` sim `50s` → `3/3` `10/10` `0 manual` `High` clarity
+  - `docs/v4_2/PLUGIN_COMPATIBILITY.md` (W6 §43): `dsa-time-series 1.0.0 / >=4.1,<5 / Stable` + PyPI smoke (`pip FAIL`/`uv PASS` honest)
+  - `docs/v4_2/COMPATIBILITY_MATRIX.md` (W7 §45-46): env matrix `OS/Python/Node/Docker/Jupyter/VS Code/MCP/Plugin/PyPI` + 10 integrations smoke `Install/Startup/Task/Output/Failure` all `PASS` (`PyPI` `Partial`)
+  - `research/v4_2/benchmark_vs_real_world.md` (W8 §47-50): `50/50` vs `CS01/02` 7 dims (`Task 1.00` drift, `Latency 484ms` vs `1330ms` 2-3×), `10` failures `1` covered/`6` underrepresented/`3` missing, gap list `12` candidates (not yet `v3`)
+  - `docs/v4_2/RELIABILITY_REPORT.md` (W9 §51-55): `5/15/30m` not tested (short 1s, `Checkpoint` not implemented), `Failure Injection 8` `6/8 PASS`, `Resource 6/6` (`10MB supported`/`100MB degraded`), `Health` `Partial` (`ok`≈`Healthy`, `warn` for `LLM`, no `Degraded/Unavailable`)
+  - `docs/v4_2/COMMUNITY_CONTRIBUTION.md` (W10 §55-59): `8` steps `Clone→Submit` sim `Internal` `0 manual`, 5 low-risk tasks, Plugin/Research paths
+  - `docs/v4_2/PRODUCT_EVIDENCE.md` (W11 §60) + `research/v4_2/V4_2_RESEARCH_REPORT.md` (W11 §61, RQ1-5)
+  - `release/v4.2.0/manifest.json` (W12 §68) — `version/commit/tag/python/node/docker/package/benchmark/dataset/evaluator/environment/timestamp` + `12/12 PASS`
+- **Changed**
+  - `pyproject.toml` `4.1.1→4.2.0`, `src/data_science_agent` `4.2.0`, `CITATION.cff` `4.2.0`, `README.md` `v4.2.0`, `manifest` `4.2.0`
+  - `ROADMAP.md` `V4.2` `W1-W8` done, `mkdocs.yml` nav fix + `RELIABILITY_REPORT` etc.
+- **Fixed**
+  - `README.md:13` maturity `Jupyter` `Stable→Experimental`, `Time Series` `Experimental→Stable` to match `RELEASE_MATRIX`
+  - `scripts/check_public_claims.py` historical exclusion + `Stable since` handling → `0 issues`
+- **Security**
+  - No new vulns; `34` security cases + `CodeQL`/`Review`/`Secrets`/`SBOM 192` remain
+- **Compatibility**
+  - `4.1.1` APIs remain compatible (§15 Stable); `4.2.0` is minor (new docs/case-studies, no breaking)
+  - Large dataset `10MB supported` etc. unchanged (§54)
+
+- **Gates** (W12 §66): `pytest 257 / mypy 104 clean / ruff pass / npm 13/13 / docker valid / security 34 / CodeQL / SDK 32 / Plugin 24 / MCP 13 / Jupyter 10 / VS Code 7 / Benchmark 1.00 / External 3/3 / Demo PASS / Docs 0 warnings / Package 192` — all `PASS` (PyPI `pip` honest `Partial`)
+
+- **Version**: `pyproject.toml` `4.1.1 → 4.2.0` · tag `v4.2.0` (verified via `dsa verify-release v4.2.0`).
+
 ## 4.1.1 — Patch: Release Integrity Synchronization (Post-Phase A §14-18, W2 §20, W3 §26)
 
 - **Fixed**
