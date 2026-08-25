@@ -1,0 +1,71 @@
+[
+  {
+    "id": "E-261af4d5",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-e90fec65",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/e4d06375ed_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-b0e20417",
+    "claim": "Chart line created",
+    "source_type": "visualization",
+    "source_id": "TC-3f30910b",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/a9441add23_line.png",
+      "chart_type": "line"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-a0d4cae3",
+    "claim": "Profile: 300 rows, 2 cols",
+    "source_type": "python",
+    "source_id": "TC-b3726c25",
+    "result": {
+      "rows": 300,
+      "columns": 2
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-91e7a831",
+    "claim": "Forecast linear_trend: next 30 periods, MAE=34.83",
+    "source_type": "model",
+    "source_id": "TC-d762404c",
+    "result": {
+      "forecast": [
+        181.18857033856582,
+        181.22910684950713,
+        181.26964336044847,
+        181.31017987138978,
+        181.3507163823311
+      ],
+      "mae": 34.82799205598004,
+      "method": "linear_trend"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-225c595f",
+    "claim": "Causal check (difference_in_means): estimate=0.000, causal_bar=fail \u2014 Treatment not near-binary; causal stub cannot estimate an effect without proper design. Association ",
+    "source_type": "statistical_test",
+    "source_id": "TC-22fdf6dc",
+    "result": {
+      "estimate": 0.0,
+      "method": "difference_in_means",
+      "passes_causal_bar": false,
+      "confidence_note": "Treatment not near-binary; causal stub cannot estimate an effect without proper design. Association only."
+    },
+    "confidence": 0.5,
+    "validation_status": "pending"
+  }
+]

@@ -8,7 +8,7 @@ def test_sdk_stable_exports():
     assert callable(Benchmark)
     assert callable(Reproduction)
     a = Agent()
-    assert a.version == "4.2.0"
+    assert a.version == "4.2.1"
     ds = Dataset.from_path("sales.csv")
     assert ds.dataset_id == "sales"
 

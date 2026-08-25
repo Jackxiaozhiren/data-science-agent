@@ -1,0 +1,11 @@
+{
+  "run_id": "run-1c70a7896a",
+  "status": "COMPLETED",
+  "elapsed_s": 1.284,
+  "n_evidence": 5,
+  "n_insights": 2,
+  "n_artifacts": 5,
+  "n_tool_calls": 9,
+  "dataset": "benchmarks/v2/datasets/timeseries_trend.csv",
+  "task": "Forecast next 30 periods for timeseries_trend, evaluate holdout MAE, and visualize trend."
+}

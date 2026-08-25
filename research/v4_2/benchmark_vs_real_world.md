@@ -1,8 +1,8 @@
 # Benchmark-to-Real-World Gap Analysis — V4.2 W8 §47-50
 
 > **Objective (§47):** `50/50 @1.00` (`benchmarks/ds-agent-benchmark`, v1) + `100/100 @1.00` (`benchmarks/v2`, v2 0.3.0) are valuable but ≠ real-world usefulness. **Does benchmark performance predict real-world task success?** (§47)  
-> **Date:** 2026-08-22  
-> **Commit:** `b79610d` (v4.1.1) — live  
+> **Date:** 2026-08-22 → 2026-08-25 (8/8 case studies executed)  
+> **Commit:** `b79610d` (v4.1.1) → 2026-08-25 Phase D (HEAD) — live  
 > **Spec:** `DATA_SCIENCE_AGENT_V4_2.md` §47-50
 
 ---
@@ -73,8 +73,8 @@ Classify each real-world failure (observed or anticipated) as `Benchmark-covered
 **Count:**
 
 - **Benchmark-covered:** 1 (`correlation`)
-- **Benchmark-underrepresented:** 5 (`causal`, `imbalanced`, `missing_heavy`, `mixed_types`, `financial`, `wide_table` — actually 6) → **6**
-- **Benchmark-missing:** 3 (`open question`, `titanic target discovery`, `marketing ROI`) → **3**
+- **Benchmark-underrepresented:** 7 (original 6 + live `hypothesis_test` group<2 / categorical `sex` from CS06)
+- **Benchmark-missing:** 6 (original 3 + live `train_model`-on-forecast keyword greed, `causal_check` `DuplicateError`, schema-vs-question mismatch)
 
 **Total 10 failures analyzed (§49) — 1 covered, 6 underrepresented, 3 missing.**
 
@@ -103,7 +103,7 @@ Classify each real-world failure (observed or anticipated) as `Benchmark-covered
 | `Discovery 1` | `missing` | `titanic` target discovery | Low | `CS06` `profile` `potential_target` |
 | **Total** | | **12 tasks** → `v2` `100 → 112` or `v3` `0.4.0` | Medium | All via `case-studies/` real runs |
 
-**Not yet:** Benchmark `v3` only after **sufficient evidence** (§50) — current evidence is `2` case studies (`CS01`/`CS02`) + `10` gap classifications — **insufficient for `v3`**. Need `8` case studies fully executed (W4) + `W9` reliability + `W10` community.
+**Evidence status (2026-08-25):** `8` case studies are now **fully executed (real Agent, no mock)** + `14` gap classifications (7 underrepresented, 6 missing, 1 covered). Per §50 this **satisfies the evidence bar to PLAN `benchmark v3 0.4.0`** — still **do not modify** the frozen `v2 0.3.0`; any schema/benchmark change requires a V4 ADR (per §10) and should wait for `W9` reliability + `W10` community inputs.
 
 ---
 
@@ -115,8 +115,8 @@ Classify each real-world failure (observed or anticipated) as `Benchmark-covered
 - **Benchmark is useful for:** `regression` (prevent `50/50` → `40/50`), `unit` (tool `r` correctness), `evidence` (coverage).
 - **Benchmark is not useful for:** `business usefulness` (`Does this actually solve my data science problem?` §6) — needs `case-studies` + `human` + `external`.
 
-**Next (§50):** Keep `benchmark v2 0.3.0` frozen; run `CS03-08` fully, collect `gap list` evidence, then **plan** `benchmark v3 0.4.0` with `12` candidates above — **do not modify now**.
+**Next (§50):** Keep `benchmark v2 0.3.0` frozen (arch. freeze §8, ADR §10). With 8/8 case studies executed (2026-08-25), the `gap list` evidence is complete enough to **plan** `benchmark v3 0.4.0` — `12` candidates above plus the `6` live `Benchmark-missing` failure modes (`train_model` keyword greed, `causal_check` `DuplicateError`, schema-vs-question) — **do not modify the frozen benchmark yet**.
 
 ---
 
-*Generated: 2026-08-22 live — `b79610d` — `case-studies/01-sales` + `02-churn` (2 verified) + `benchmark v2 100/100` smoke — companion to `case-studies/README.md` + `docs/v4_2/EXTERNAL_VALIDATION.md`.*
+*Generated: 2026-08-22 (`b79610d`) + **2026-08-25 Phase D real runs** — 8/8 case studies executed (`CS01-08`), `benchmark v2 100/100` smoke — companion to `case-studies/README.md` + `docs/v4_2/PRODUCT_EVIDENCE.md`.*

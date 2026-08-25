@@ -1,5 +1,28 @@
 # Changelog
 
+## 4.2.1 — Post-Release Reconciliation (V4.3 W1)
+
+### Fixed
+
+- Restored strict mypy release gate: `packages/evaluation/src/dsa_evaluation/human_eval.py` + `cli.py` type-narrowing rewritten through guarded loops (no new `# type: ignore`); `mypy` → `104 clean`, `dsa verify-release v4.2.0` → `12/12 PASS`.
+- Corrected CS04/CS05 malformed dataset-schema note tables (`marketing`/`financial` are `sales.csv`-generator schema, **not** channel/OHLC) — described honestly per V4.3 §18.
+
+### Verified
+
+- CS03-08 executed with the real Agent pipeline (2026-08-25): all 8 case studies now `✅ Verified` with committed `outputs/` (`evidence.json`, `insights.json`, `report.md`, `summary.json`, `tool_calls.json`) — real Agent, no mock.
+- Real tool-call failures preserved as research evidence: 18 total across CS01-CS08 (`train_model` on forecast-style questions, `causal_check`/`correlation` `DuplicateError`, `hypothesis_test` group<2, non-numeric features) — recorded in each `outputs/tool_calls.json` + limitations + `research/v4_2/benchmark_vs_real_world.md` gap analysis (1 covered / 7 underrepresented / 6 missing).
+- Dataset semantic honesty: `marketing.csv`/`financial.csv` remain sales-like schema; retained with explicit limitation (not silently re-labeled).
+
+### Documentation
+
+- Reconciled `case-studies/README.md` index (8/8 verified), `docs/v4_2/PRODUCT_EVIDENCE.md`, `research/v4_2/V4_2_RESEARCH_REPORT.md`, `research/v4_2/benchmark_vs_real_world.md`.
+- Added `docs/v4_3/V4_2_1_CHANGESET_AUDIT.md` + `docs/v4_3/V4_2_1_RECONCILIATION.md`.
+- Preserved historical `docs/v4_3/V4_2_FINAL_TRUTH.md` v4.2.0 audit.
+
+### Version
+
+- Patch bump `4.2.0 → 4.2.1` (no breaking public API change).
+
 ## 4.2.0 — V4.2 Post-Release Integrity, Real-World Validation & Adoption (W1-W8, Phase A-H)
 
 - **Added**

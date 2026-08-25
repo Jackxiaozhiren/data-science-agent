@@ -47,7 +47,7 @@ def collect_notebook_metadata(
             except importlib.metadata.PackageNotFoundError:
                 sdk_version = importlib.metadata.version("dsa-jupyter")
     except Exception:
-        sdk_version = "4.2.0"
+        sdk_version = "4.2.1"
     try:
         agent_version = importlib.metadata.version("dsa-agent")
     except Exception:

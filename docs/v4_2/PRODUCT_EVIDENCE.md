@@ -1,8 +1,8 @@
 # Product Evidence — V4.2 W11 §60 (Real Facts Only)
 
 > **W11 §60 — Product Evidence** — Only real facts (`Installation / Demo / Case Studies / SDK / Plugin / MCP / Jupyter / VS Code / Performance / Reproducibility`) — per §64 no fabricated users/downloads/stars — all numbers from `Benchmark + Commit + Report` (§45)  
-> **Date:** 2026-08-22  
-> **Commit:** `b79610d` (v4.1.1) → `c6bccb9` (W9) — live  
+> **Date:** 2026-08-22 → 2026-08-25 (CS03-08 executed)  
+> **Commit:** `b79610d` (v4.1.1) → `c6bccb9` (W9) → 2026-08-25 Phase D (HEAD) — live  
 > **Spec:** `DATA_SCIENCE_AGENT_V4_2.md` §60-64
 
 ---
@@ -33,7 +33,12 @@
 |------|--------|----------|--------|
 | CS01 Sales | ✅ Verified `COMPLETED` 1.33s | 6 | `case-studies/01-sales/outputs/report.md` 3890 chars |
 | CS02 Churn | ✅ Verified `0.05s` | 3 | `2983 chars` |
-| CS03-08 | 📝 Planned (dataset+plan ready) | — | `case-studies/*/README.md` |
+| CS03 Time Series | ✅ Verified `1.28s` | 5 | `4526 chars` (`run-1c70a7896a`, 4 tool fails documented) |
+| CS04 Marketing | ✅ Verified `0.26s` | 5 | `2896 chars` (`run-0c004191b2`, 0 fails) |
+| CS05 Financial | ✅ Verified `0.09s` | 5 | `3330 chars` (`run-d1f43414f1`, 2 fails) |
+| CS06 Public Stats | ✅ Verified `0.06s` | 3 | `2525 chars` (`run-cd71ab4f39`, 4 fails) |
+| CS07 Data Quality | ✅ Verified `0.04s` | 3 | `2669 chars` (`run-9c943b40b5`, 2 fails) |
+| CS08 Classification | ✅ Verified `0.11s` | 5 | `3470 chars` (`run-e569d4141d`, 2 fails) |
 
 All `500` rows synthetic `seed 42` `MIT/CC0` + `hash` (see `case-studies/README.md`).
 

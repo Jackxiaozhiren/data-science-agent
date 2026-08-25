@@ -33,7 +33,7 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
 
     # Build a unified comparison for reviewer (§19–21)
     N = len(raw1)
-    per_task: list[dict[str, object]] = []
+    per_task: list[dict[str, Any]] = []
     exec_match = 0
     traj_match = 0
     for a, b in zip(raw1, raw2):
@@ -73,13 +73,13 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
             }
         )
 
-    overall = round(sum(float(t["score"]) for t in per_task) / N, 4) if N else 0.0  # type: ignore[arg-type,misc]
+    overall = round(sum(float(t["score"]) for t in per_task) / N, 4) if N else 0.0
     execution_rate = round(exec_match / N, 4) if N else 0.0
     trajectory_rate = round(traj_match / N, 4) if N else 0.0
     numerical_rate = (
         round(
             sum(1 for t in per_task if float(t.get("score", 0)) >= 0.5) / N,
-            4,  # type: ignore[arg-type,misc]
+            4,
         )
         if N
         else 0.0

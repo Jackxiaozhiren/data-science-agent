@@ -1,0 +1,12 @@
+[
+  {
+    "id": "I-2d2ead57",
+    "finding": "Correlation a vs b: r=-0.075",
+    "evidence_ids": [
+      "E-e711ead4"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

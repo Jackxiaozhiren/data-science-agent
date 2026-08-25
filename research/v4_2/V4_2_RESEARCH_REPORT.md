@@ -74,7 +74,7 @@ Per case study (§62): `analysis success / execution time / tool count / retry c
 
 ## 4. Limitations
 
-- **N=2** case studies (pilot) — not `8` fully verified (W4 §33) — limited power for RQ1/2.
+- **N=8** case studies executed (2026-08-25, `CS01-08`, real Agent — 18 tool failures across runs recorded honestly in each `outputs/tool_calls.json`). Power for RQ1/2 improved, but all datasets are synthetic and several questions are only approximately mapped to their schemas (CS04/CS05 sales-like schema, documented as limitations).
 - **Synthetic datasets** (seed 42) — not real `Business Analytics` with `dirty` data (W4 §29).
 - **No human study** for RQ3 — stub LLM, `Cloud $0`, no `trust` Likert.
 - **No causal design** for RQ3/RQ5 — correlational, not `RCT`.
@@ -83,7 +83,7 @@ Per case study (§62): `analysis success / execution time / tool count / retry c
 
 ## 5. Next Research
 
-- **W4 Full:** Execute `CS03-08` fully (8 verified) → power for RQ1/2.
+- **W4 Full:** DONE — `CS03-08` executed 2026-08-25 (8/8 verified). Follow-up: fold the `14` observed gap classifications (7 underrepresented / 6 missing) into `benchmark v3` candidate planning §5.
 - **W5 External:** `3` envs already `3/3` — add `human` `Kappa` for RQ3.
 - **W8 Full:** Run `12` benchmark candidates after evidence (per `benchmark_vs_real_world.md` §5).
 
@@ -91,8 +91,8 @@ Per case study (§62): `analysis success / execution time / tool count / retry c
 
 ## 6. No Fabricated Adoption (§64)
 
-Per §64 — `0` `users/downloads/stars` fabricated — only `pytest 257`/`SBOM 192`/`benchmark 1.00`/`case-studies 2`/`external 3/3`.
+Per §64 — `0` `users/downloads/stars` fabricated — only `pytest 257`/`SBOM 192`/`benchmark 1.00`/`case-studies 8` (2 → 8, 2026-08-25 Phase D)/`external 3/3`.
 
 ---
 
-*Generated: 2026-08-22 live — `b79610d` — companion to `research/v4_2/benchmark_vs_real_world.md` + `case-studies/` + `docs/v4_2/EXTERNAL_VALIDATION.md`.*
+*Generated: 2026-08-22 (`b79610d`) → **2026-08-25 (CS03-08 executed)** — companion to `research/v4_2/benchmark_vs_real_world.md` + `case-studies/` + `docs/v4_2/EXTERNAL_VALIDATION.md`.*

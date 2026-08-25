@@ -1,0 +1,12 @@
+[
+  {
+    "id": "I-5a412d17",
+    "finding": "Correlation price vs units: r=0.060",
+    "evidence_ids": [
+      "E-c4ab51fd"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

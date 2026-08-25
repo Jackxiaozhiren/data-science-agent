@@ -1,0 +1,11 @@
+{
+  "run_id": "run-e569d4141d",
+  "status": "COMPLETED",
+  "elapsed_s": 0.113,
+  "n_evidence": 5,
+  "n_insights": 2,
+  "n_artifacts": 5,
+  "n_tool_calls": 7,
+  "dataset": "benchmarks/v2/datasets/imbalanced.csv",
+  "task": "Train classification for imbalanced.csv, evaluate holdout, and report feature importance."
+}

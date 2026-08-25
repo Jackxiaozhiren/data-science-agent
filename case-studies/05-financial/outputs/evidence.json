@@ -1,0 +1,70 @@
+[
+  {
+    "id": "E-5d0f1634",
+    "claim": "Correlation price vs units: r=-0.005",
+    "source_type": "statistical_test",
+    "source_id": "TC-e2f36749",
+    "result": {
+      "r": -0.005375759068942075,
+      "p_value": 0.9045579020673234,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-aadb3a32",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-631c76cc",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/32201e77d3_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-28dbed07",
+    "claim": "Chart line created",
+    "source_type": "visualization",
+    "source_id": "TC-88657d58",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/759d5e9c75_line.png",
+      "chart_type": "line"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-6f8be548",
+    "claim": "Profile: 500 rows, 6 cols",
+    "source_type": "python",
+    "source_id": "TC-1bc2a18d",
+    "result": {
+      "rows": 500,
+      "columns": 6
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-d1d161d0",
+    "claim": "Forecast linear_trend: next 30 periods, MAE=818.03",
+    "source_type": "model",
+    "source_id": "TC-8bfdd0a0",
+    "result": {
+      "forecast": [
+        1389.956029405756,
+        1389.6207678264052,
+        1389.2855062470544,
+        1388.9502446677036,
+        1388.6149830883528
+      ],
+      "mae": 818.0329896194594,
+      "method": "linear_trend"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  }
+]

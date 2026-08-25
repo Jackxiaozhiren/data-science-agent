@@ -1,0 +1,22 @@
+[
+  {
+    "id": "I-09f3d294",
+    "finding": "Forecast linear_trend: next 30 periods, MAE=34.83",
+    "evidence_ids": [
+      "E-91e7a831"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  },
+  {
+    "id": "I-49dc059e",
+    "finding": "Causal check (difference_in_means): estimate=0.000, causal_bar=fail \u2014 Treatment not near-binary; causal stub cannot estimate an effect without proper design. Association ",
+    "evidence_ids": [
+      "E-225c595f"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

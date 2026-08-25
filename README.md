@@ -1,4 +1,4 @@
-# Data Science Agent — v4.2.0
+# Data Science Agent — v4.2.1
 
 > **An Evidence-Grounded Autonomous Data Science System.**
 > Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.

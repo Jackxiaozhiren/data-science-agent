@@ -1,0 +1,22 @@
+[
+  {
+    "id": "I-1cd6f252",
+    "finding": "Correlation x1 vs x2: r=0.304",
+    "evidence_ids": [
+      "E-c29fba18"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  },
+  {
+    "id": "I-1e289103",
+    "finding": "Top features for label: x2, x1",
+    "evidence_ids": [
+      "E-75fffe1b"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

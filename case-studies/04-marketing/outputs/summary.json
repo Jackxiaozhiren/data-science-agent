@@ -1,0 +1,11 @@
+{
+  "run_id": "run-0c004191b2",
+  "status": "COMPLETED",
+  "elapsed_s": 0.263,
+  "n_evidence": 5,
+  "n_insights": 1,
+  "n_artifacts": 5,
+  "n_tool_calls": 5,
+  "dataset": "benchmarks/v2/datasets/marketing.csv",
+  "task": "Which marketing channel has highest ROI? Correlation between spend and conversions?"
+}

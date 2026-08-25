@@ -1,0 +1,39 @@
+[
+  {
+    "id": "E-bc000647",
+    "claim": "Correlation pclass vs age: r=-0.022",
+    "source_type": "statistical_test",
+    "source_id": "TC-b2f74290",
+    "result": {
+      "r": -0.021524787719288025,
+      "p_value": 0.5291644942038389,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-fea8b80a",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-85cbf736",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/5da9ff0bf6_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-da2ccf19",
+    "claim": "Profile: 900 rows, 5 cols",
+    "source_type": "python",
+    "source_id": "TC-ffaee4a1",
+    "result": {
+      "rows": 900,
+      "columns": 5
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  }
+]

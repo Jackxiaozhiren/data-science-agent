@@ -1,0 +1,75 @@
+[
+  {
+    "id": "E-c29fba18",
+    "claim": "Correlation x1 vs x2: r=0.304",
+    "source_type": "statistical_test",
+    "source_id": "TC-96eeaac9",
+    "result": {
+      "r": 0.30411118717138436,
+      "p_value": 2.642587337948782e-14,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-566adb07",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-5b436bf2",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/c615f8cbf2_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-50bc4e58",
+    "claim": "Profile: 600 rows, 3 cols",
+    "source_type": "python",
+    "source_id": "TC-96e9d5e2",
+    "result": {
+      "rows": 600,
+      "columns": 3
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-892d7c30",
+    "claim": "Model logistic evaluated",
+    "source_type": "model",
+    "source_id": "TC-8b1e51cf",
+    "result": {
+      "metrics": [
+        0.97,
+        0.97,
+        0.95
+      ],
+      "model": "logistic"
+    },
+    "confidence": 0.75,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-75fffe1b",
+    "claim": "Top features for label: x2, x1",
+    "source_type": "model",
+    "source_id": "TC-570287b4",
+    "result": {
+      "top_features": [
+        {
+          "feature": "x2",
+          "importance": 0.5009798381813706
+        },
+        {
+          "feature": "x1",
+          "importance": 0.49902016181862946
+        }
+      ]
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  }
+]

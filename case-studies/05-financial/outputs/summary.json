@@ -1,0 +1,11 @@
+{
+  "run_id": "run-d1f43414f1",
+  "status": "COMPLETED",
+  "elapsed_s": 0.089,
+  "n_evidence": 5,
+  "n_insights": 2,
+  "n_artifacts": 5,
+  "n_tool_calls": 7,
+  "dataset": "benchmarks/v2/datasets/financial.csv",
+  "task": "Analyze financial.csv volatility, forecast 30 periods, and report risk metrics."
+}

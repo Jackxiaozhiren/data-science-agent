@@ -1,0 +1,12 @@
+[
+  {
+    "id": "I-6e5b8207",
+    "finding": "Correlation pclass vs age: r=-0.022",
+    "evidence_ids": [
+      "E-bc000647"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

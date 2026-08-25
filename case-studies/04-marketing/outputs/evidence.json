@@ -1,0 +1,94 @@
+[
+  {
+    "id": "E-c4ab51fd",
+    "claim": "Correlation price vs units: r=0.060",
+    "source_type": "statistical_test",
+    "source_id": "TC-6c1a2652",
+    "result": {
+      "r": 0.05956807927551924,
+      "p_value": 0.2345620698136366,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-0c5cbebd",
+    "claim": "SQL returned 84 rows",
+    "source_type": "sql",
+    "source_id": "TC-f01733e9",
+    "result": {
+      "columns": [
+        "date",
+        "cnt",
+        "avg_price"
+      ],
+      "row_count": 84,
+      "rows": [
+        [
+          "2024-01-09",
+          5,
+          75.016
+        ],
+        [
+          "2024-08-16",
+          5,
+          70.224
+        ],
+        [
+          "2024-08-28",
+          5,
+          59.248000000000005
+        ],
+        [
+          "2024-08-12",
+          4,
+          78.5575
+        ],
+        [
+          "2024-06-22",
+          4,
+          58.16
+        ]
+      ]
+    },
+    "confidence": 0.85,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-f596dae7",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-24428f1d",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/29ca4dd063_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-f408f836",
+    "claim": "Chart line created",
+    "source_type": "visualization",
+    "source_id": "TC-6265388a",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/d33647e1ea_line.png",
+      "chart_type": "line"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-86ef2be1",
+    "claim": "Profile: 400 rows, 6 cols",
+    "source_type": "python",
+    "source_id": "TC-e5c0ff7f",
+    "result": {
+      "rows": 400,
+      "columns": 6
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  }
+]

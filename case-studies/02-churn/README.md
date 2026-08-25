@@ -85,6 +85,7 @@ Bar/histogram + feature importance PNG in `artifacts/charts/`.
 - Synthetic churn, not real telco data; moderate class imbalance.
 - Model is baseline logistic, not tuned; no hyperparam search.
 - No external validation.
+- **Observed tool failures (live, honest):** `train_model` ×2 and `causal_check` ×2 failed in `outputs/tool_calls.json` (`status: error`) — model target/eval and duplicate-projection guards; pipeline still emitted evidence + report.
 
 ## Reproduction
 

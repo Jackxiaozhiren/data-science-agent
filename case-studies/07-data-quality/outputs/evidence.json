@@ -1,0 +1,39 @@
+[
+  {
+    "id": "E-e711ead4",
+    "claim": "Correlation a vs b: r=-0.075",
+    "source_type": "statistical_test",
+    "source_id": "TC-9a3f8e0d",
+    "result": {
+      "r": -0.07515111582688787,
+      "p_value": 0.22010047692738197,
+      "method": "pearson"
+    },
+    "confidence": 0.8,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-65253ee1",
+    "claim": "Chart histogram created",
+    "source_type": "visualization",
+    "source_id": "TC-ddc3cbe0",
+    "result": {
+      "artifact_path": "/Users/jackson/Data agent/packages/artifacts/charts/5aa5d9ef58_histogram.png",
+      "chart_type": "histogram"
+    },
+    "confidence": 0.7,
+    "validation_status": "pending"
+  },
+  {
+    "id": "E-839abe0c",
+    "claim": "Profile: 300 rows, 3 cols",
+    "source_type": "python",
+    "source_id": "TC-edc61e3b",
+    "result": {
+      "rows": 300,
+      "columns": 3
+    },
+    "confidence": 0.9,
+    "validation_status": "pending"
+  }
+]

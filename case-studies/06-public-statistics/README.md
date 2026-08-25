@@ -26,9 +26,9 @@ Public-style stats: Titanic survival analysis and health metrics; hypothesis tes
 
 ## Agent Trajectory (§31)
 
-**Planned:** `Agent().analyze_sync("<dataset>", "<question>")` — will generate `COMPLETED` with evidence (similar to CS01/CS02 live runs).  
-**Current status:** 📝 **Planned** — dataset + plan ready, execution queued for Phase D full. Outputs will be in `case-studies/06-public-statistics/outputs/` + `artifacts/reports/<runId>/` (real, not mock).  
-**Expected trajectory:** `profile_dataset` → `run_sql`/`forecast`/`train_model` → `create_visualization` → `get_evidence` → `generate_report` (via `dsa_tools` 18).
+**Run:** `Agent().analyze_sync("<dataset>", ...)` — **COMPLETED** `run-cd71ab4f39` in 0.06s, 3 evidence, 7 tool calls, 4 failed tool calls (2026-08-25 live).
+**Trajectory:** `profile_dataset` → `correlation_analysis`/`run_sql`/`train_model` → `create_visualization` → `get_evidence`/`generate_report` (via `dsa_tools` 18). Full trace in `outputs/tool_calls.json`.
+**Evidence:** `outputs/evidence.json` (3 items, real Agent output — no mock).
 
 ## Tools (§31)
 
@@ -57,6 +57,7 @@ Will be `outputs/report.md` + `artifacts/reports/<runId>/` (report.md, experimen
 - Synthetic data, not real-world distribution.
 - Single run, no external validation (Phase E).
 - No causal claim without `causal_check` bar.
+- **Observed tool failures (live, honest):** `hypothesis_test` failed (group <2 observations) and `train_model` failed (categorical `sex` string) — analysis fell back to correlation + visualization. Recorded in `outputs/tool_calls.json` (`status: error`).
 
 ## Reproduction (§31)
 
@@ -70,6 +71,6 @@ print(r.status, len(r.evidence))
 # Outputs: case-studies/06-public-statistics/outputs/ + artifacts/reports/<runId>/
 ```
 
-**Quality Gate (§33):** 📝 **Planned** — will be `✅ Verified` after real run (no mock). Current: dataset ready, plan ready.
+**Quality Gate (§33):** ✅ **Verified** — real run `run-cd71ab4f39` `COMPLETED` 0.06s, 3 evidence, 7 tool calls, failed tool calls 4. No mock / no hard-coded result.
 
-*Planned: 2026-08-22 — `b79610d`*
+*Planned: 2026-08-22 — `b79610d` → **Verified: 2026-08-25 — Phase D execution** (HEAD)*

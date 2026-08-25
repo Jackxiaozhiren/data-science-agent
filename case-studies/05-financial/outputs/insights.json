@@ -1,0 +1,22 @@
+[
+  {
+    "id": "I-ff62ab1e",
+    "finding": "Correlation price vs units: r=-0.005",
+    "evidence_ids": [
+      "E-5d0f1634"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  },
+  {
+    "id": "I-b43be314",
+    "finding": "Forecast linear_trend: next 30 periods, MAE=818.03",
+    "evidence_ids": [
+      "E-d1d161d0"
+    ],
+    "limitation": "Association does not imply causation.",
+    "magnitude": null,
+    "significance": null
+  }
+]

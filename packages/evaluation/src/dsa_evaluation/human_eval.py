@@ -177,16 +177,15 @@ def krippendorff_alpha(scores_matrix: list[list[int | None]], level: str = "ordi
     pairable: list[tuple[int, int]] = []
     all_vals: list[int] = []
     for j in range(n_items):
-        vals: list[int] = [
-            int(scores_matrix[i][j]) for i in range(n_raters) if scores_matrix[i][j] is not None
-        ]  # type: ignore[arg-type]
+        vals: list[int] = []
+        for i in range(n_raters):
+            s = scores_matrix[i][j]
+            if s is not None:
+                vals.append(s)
         all_vals.extend(vals)
         for a in range(len(vals)):
             for b in range(a + 1, len(vals)):
-                va = vals[a]
-                vb = vals[b]
-                assert va is not None and vb is not None
-                pairable.append((va, vb))
+                pairable.append((vals[a], vals[b]))
     if not pairable:
         return float("nan")
 
@@ -261,16 +260,14 @@ def agreement_summary(
         if sum(1 for i in range(len(reviewers)) if matrix[i][j] is not None) >= 2
     )
     if len(reviewers) == 2:
-        a: list[int] = [
-            int(matrix[0][j])
-            for j in range(len(task_ids))
-            if matrix[0][j] is not None and matrix[1][j] is not None
-        ]  # type: ignore[arg-type]
-        b: list[int] = [
-            int(matrix[1][j])
-            for j in range(len(task_ids))
-            if matrix[0][j] is not None and matrix[1][j] is not None
-        ]  # type: ignore[arg-type]
+        a: list[int] = []
+        b: list[int] = []
+        for j in range(len(task_ids)):
+            x = matrix[0][j]
+            y = matrix[1][j]
+            if x is not None and y is not None:
+                a.append(x)
+                b.append(y)
         k = cohens_kappa_two_raters(a, b)
         return AgreementReport(
             dimension=dimension,

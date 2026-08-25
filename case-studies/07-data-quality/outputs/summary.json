@@ -1,0 +1,11 @@
+{
+  "run_id": "run-9c943b40b5",
+  "status": "COMPLETED",
+  "elapsed_s": 0.037,
+  "n_evidence": 3,
+  "n_insights": 1,
+  "n_artifacts": 5,
+  "n_tool_calls": 5,
+  "dataset": "benchmarks/v2/datasets/data_quality.csv",
+  "task": "Profile data_quality.csv for missing/duplicates/outliers and recommend cleaning steps."
+}

@@ -8,7 +8,8 @@ Analyze marketing spend vs conversions/ROI; identify channel effectiveness and b
 
 | Field | Value |
 |-------|-------|
-| **File** | `benchmarks/v2/datasets/marketing.csv (synthetic, marketing spend, channel, conversions) + ads.csv` |
+| **Schema note** | `marketing.csv` columns are `date,region,category,price,units,revenue` (identical to `sales.csv` generator schema) — **not** `channel/spend/conversions`. The marketing-ROI question is therefore only approximately answerable: `run_sql`/`correlation` operate on `region/category/price/units/revenue`. See `outputs/tool_calls.json`. |
+| **File** | `benchmarks/v2/datasets/marketing.csv (synthetic; schema = sales-like, not channel/spend/conversions) + ads.csv` |
 | **Source** | Synthetic via `scripts/generate_benchmark_v2.py` seed 42 (public, CC0/MIT) |
 | **License** | MIT / CC0 (synthetic, no copyright) |
 | **Citation** | `benchmarks/v2/catalog.json` `0.3.0` + `DATA_SCIENCE_AGENT_V4_2.md` |
@@ -26,9 +27,9 @@ Analyze marketing spend vs conversions/ROI; identify channel effectiveness and b
 
 ## Agent Trajectory (§31)
 
-**Planned:** `Agent().analyze_sync("<dataset>", "<question>")` — will generate `COMPLETED` with evidence (similar to CS01/CS02 live runs).  
-**Current status:** 📝 **Planned** — dataset + plan ready, execution queued for Phase D full. Outputs will be in `case-studies/04-marketing/outputs/` + `artifacts/reports/<runId>/` (real, not mock).  
-**Expected trajectory:** `profile_dataset` → `run_sql`/`forecast`/`train_model` → `create_visualization` → `get_evidence` → `generate_report` (via `dsa_tools` 18).
+**Run:** `Agent().analyze_sync("<dataset>", ...)` — **COMPLETED** `run-0c004191b2` in 0.26s, 5 evidence, 5 tool calls, 0 failed tool calls (2026-08-25 live).
+**Trajectory:** `profile_dataset` → `correlation_analysis`/`run_sql`/`train_model` → `create_visualization` → `get_evidence`/`generate_report` (via `dsa_tools` 18). Full trace in `outputs/tool_calls.json`.
+**Evidence:** `outputs/evidence.json` (5 items, real Agent output — no mock).
 
 ## Tools (§31)
 
@@ -57,6 +58,7 @@ Will be `outputs/report.md` + `artifacts/reports/<runId>/` (report.md, experimen
 - Synthetic data, not real-world distribution.
 - Single run, no external validation (Phase E).
 - No causal claim without `causal_check` bar.
+- **Observed tool failures (live, honest):** none — all tool calls `ok`. Recorded in `outputs/tool_calls.json` (`status: error`).
 
 ## Reproduction (§31)
 
@@ -70,6 +72,6 @@ print(r.status, len(r.evidence))
 # Outputs: case-studies/04-marketing/outputs/ + artifacts/reports/<runId>/
 ```
 
-**Quality Gate (§33):** 📝 **Planned** — will be `✅ Verified` after real run (no mock). Current: dataset ready, plan ready.
+**Quality Gate (§33):** ✅ **Verified** — real run `run-0c004191b2` `COMPLETED` 0.26s, 5 evidence, 5 tool calls, failed tool calls 0. No mock / no hard-coded result.
 
-*Planned: 2026-08-22 — `b79610d`*
+*Planned: 2026-08-22 — `b79610d` → **Verified: 2026-08-25 — Phase D execution** (HEAD)*
