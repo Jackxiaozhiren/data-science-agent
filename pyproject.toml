@@ -129,6 +129,11 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+# Workspace is a multi-project src layout installed as PEP 660 editable shims;
+# mypy cannot statically follow the .pth-based editable installs, so resolve all
+# dsa_*/dsa_api packages deterministically from their source trees (fixes CI-only
+# `no-any-return` where `dsa_api.models.*` was seen as Any).
+mypy_path = "apps/api/src:apps/jupyter/src:packages/agent/src:packages/datasets/src:packages/evaluation/src:packages/evidence/src:packages/execution/src:packages/llm/src:packages/mcp/src:packages/ml/src:packages/plugins/src:packages/reports/src:packages/statistics/src:packages/tools/src:packages/visualization/src:src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "apps/api/tests"]
