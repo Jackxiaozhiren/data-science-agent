@@ -21,7 +21,7 @@ build/
 packages/artifacts/
 demo/reports/
 /reports/
-models/
+/models/
 logs/
 .DS_Store
 *.db
