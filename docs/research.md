@@ -1,4 +1,4 @@
-# Research — V3 W10 §48 · `research/V3_RESEARCH_REPORT.md` (§51)
+# Research
 
 > Report: `research/V3_RESEARCH_REPORT.md` (Abstract→Limitations) — `research/questions/RQs.md` (RQs 1–5) → `research/experiments/` (ablation A–F) → `research/figures/` + `research/tables/` + `research/paper/` (V2 draft preserved as history). Figures/tables are generated from raw results by `research/scripts/` (raw → script → artifact).
 

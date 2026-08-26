@@ -1,4 +1,4 @@
-# MCP — V3 W10 §48
+# MCP — Conformance & Integration
 
 > `docs/MCP_DESIGN.md` (design) + `docs/ADR/ADR-001-mcp-2026-07-28-stateless-core.md` + `packages/mcp/src/dsa_mcp/` — Stateless 2026-07-28.
 

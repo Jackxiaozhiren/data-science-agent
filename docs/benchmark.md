@@ -1,4 +1,4 @@
-# Benchmark — V3 W10 §48 · §50 Documentation
+# Benchmark
 
 > Head: `benchmarks/v2/README.md` + `benchmarks/v2/catalog.json 0.3.0` + `docs/evaluation.md`.
 

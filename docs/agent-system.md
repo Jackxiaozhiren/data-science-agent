@@ -1,4 +1,4 @@
-# Agent System — V3 W10 §48
+# Agent System
 
 > `docs/agent.md` (roles + graph) + `docs/architecture.md` (Agent Graph Mermaid) + `research/V3_RESEARCH_REPORT.md` (RQ1–RQ5).
 

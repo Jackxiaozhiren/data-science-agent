@@ -1,6 +1,6 @@
-# Architecture — V3 W10 §48–49
+# Architecture
 
-> **Version-controlled source (§49): Mermaid diagrams in this file. System + Agent + Tool + Evidence + Lineage + Evaluation + Reproduction are all derived from live code, not slides.**
+> **Version-controlled source: Mermaid diagrams in this file.** System + Agent + Tool + Evidence + Lineage + Evaluation + Reproduction are all derived from live code, not slides.
 
 ---
 

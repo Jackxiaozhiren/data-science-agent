@@ -1,4 +1,4 @@
-# MCP Design — Phase 10 (Adapter, Stateless 2026-07-28)
+# MCP Design — Stateless Adapter (2026-07-28)
 
 ## Principle
 MCP is an **adapter** over the Tool Layer. Core domain (dsa_agent / dsa_datasets / dsa_tools) does NOT import dsa_mcp.

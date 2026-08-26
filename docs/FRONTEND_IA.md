@@ -1,4 +1,4 @@
-# Frontend IA — Phase 7 (Decision)
+# Frontend Information Architecture
 
 ## Routes
 - /            Dashboard (recent analyses, quick upload)

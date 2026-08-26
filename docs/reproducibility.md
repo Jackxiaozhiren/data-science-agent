@@ -1,4 +1,4 @@
-# Reproducibility — V3 W10 §48
+# Reproducibility
 
 > `docs/architecture.md` (Reproduction Pipeline Mermaid) + `packages/evidence/src/dsa_evidence/reproducibility.py`.
 

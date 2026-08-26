@@ -1,4 +1,4 @@
-# Tools (Phase 3 / 5 / 6)
+# Tools
 
 All tools derive `BaseTool[Input, Output]` (`dsa_tools.base`) — Pydantic `Input` + `Output`, `bootstrap()` registry via `dsa_tools.__init__`.
 

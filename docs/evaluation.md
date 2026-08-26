@@ -1,4 +1,4 @@
-# Evaluation — V3 W10 §48
+# Evaluation
 
 > Canonical: `packages/evaluation/src/dsa_evaluation/` (evaluator_v2, 10 dims, S01–S10)
 

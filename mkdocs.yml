@@ -24,6 +24,7 @@ nav:
   - Evidence: evidence.md
   - MCP: MCP_DESIGN.md
   - MCP Conformance: mcp.md
+  - ADR: ADR/ADR-001-mcp-2026-07-28-stateless-core.md
   - API: api.md
   - Frontend: FRONTEND_IA.md
   - Security: security.md

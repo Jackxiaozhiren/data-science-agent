@@ -1,4 +1,4 @@
-# Contributing — V3 W10 §48
+# Contributing
 
 > See `CONTRIBUTING.md` (gated checklist) — phased, gate-controlled delivery.
 
