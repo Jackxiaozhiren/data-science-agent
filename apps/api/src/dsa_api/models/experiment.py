@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import String, Text
@@ -17,7 +17,7 @@ class ExperimentORM(Base):
     params_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     metrics_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     artifact_path: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
         import json

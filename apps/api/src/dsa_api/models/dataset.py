@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import String, Text
@@ -19,7 +19,7 @@ class DatasetORM(Base):
     rows: Mapped[int | None] = mapped_column(nullable=True)
     cols: Mapped[int | None] = mapped_column(nullable=True)
     profile_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
     meta_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
