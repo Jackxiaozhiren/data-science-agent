@@ -1,6 +1,6 @@
 # Agent
 
-## Roles (Phase 4)
+## Roles
 - **Planner** — heuristics over dataset path + column schema; no LLM required for MVP.
 - **Data Scientist** — sequential tool executor (profile → stats → viz → model).
 - **Critic** — evidence & assumption review (unsupported causal claims blocked, typed errors).

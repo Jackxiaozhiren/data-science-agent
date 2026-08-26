@@ -8,7 +8,7 @@
 - [Evidence](./evidence.md) — `Insight→Evidence→ToolCall→Dataset(hash)`, 4 checks, reproducibility bundle
 - [MCP Design](./MCP_DESIGN.md) — Stateless 2026-07-28 adapter over Tool Layer
 - [API](./api.md) — `/api/v1` endpoints incl. `/health /ready /version`
-- [Frontend IA](./FRONTEND_IA.md) — routes & data flow (Phase 7)
+- [Frontend IA](./FRONTEND_IA.md) — routes & data flow
 - [Benchmark README](../benchmarks/ds-agent-benchmark/README.md) — 20 datasets / 50 tasks / metrics + `dsa benchmark` CLI
 - [Security](./security.md) — file / SQL / Python / prompt / output guardrails
 - [Research](./research.md) — benchmark + report stub

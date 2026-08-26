@@ -4,11 +4,11 @@
 
 ---
 
-## 1. System Architecture (§49 Required)
+## 1. System Architecture
 
 ```mermaid
 flowchart TB
-    U[User / External Evaluator] --> WEB[Frontend<br/>Next.js 15 + TypeScript<br/>13 routes §48]
+    U[User / External Evaluator] --> WEB[Frontend<br/>Next.js 15 + TypeScript<br/>13 routes]
     U --> API[API Layer<br/>FastAPI + Pydantic v2 + SQLAlchemy<br/>/api/v1/datasets /analysis /artifacts /reports]
     WEB -->|HTTPS + SSE /events| API
     API --> G[Agent Runtime<br/>LangGraph Stateful Graph<br/>Planner → DataScientist → Critic → Report]
@@ -22,14 +22,14 @@ flowchart TB
     RL --> REP[Reproducibility<br/>artifacts/reports/runId + reproduction/ fresh clone]
     API --> MCP[MCP Adapter<br/>Stateless 2026-07-28<br/>tools/list + tools/call]
     MCP --> TL
-    DL --> STORE[(Storage<br/>data/ + artifacts/ + reproduction/<br/>Local-first, Cloud $0 §34)]
+    DL --> STORE[(Storage<br/>data/ + artifacts/ + reproduction/<br/>Local-first, Cloud-free)]
 ```
 
 **Roles**: Frontend (upload, profile, trace) → API (validation, rate limit, logging) → Agent Runtime (stateful graph, checkpoints, retry 3, `max_steps 20 / max_tool_calls 40`) → Tool Layer (17 tools) → Data/Stats/ML/Viz → Evidence → Validation → Reports/Repro. MCP is an adapter over the same Tool Layer, stateless.
 
 ---
 
-## 2. Agent Graph (§49 Required)
+## 2. Agent Graph
 
 ```mermaid
 stateDiagram-v2
@@ -49,7 +49,7 @@ Implementation: `packages/agent/src/dsa_agent/graph.py` (`run_analysis` MVP sequ
 
 ---
 
-## 3. Tool Architecture (§49 Required)
+## 3. Tool Architecture
 
 ```mermaid
 flowchart LR
@@ -91,7 +91,7 @@ All tools registered via `MCP_TOOL_MAP` (`packages/mcp/src/dsa_mcp/adapter.py`) 
 
 ---
 
-## 4. Evidence Graph (§49 Required)
+## 4. Evidence Graph
 
 ```mermaid
 flowchart LR
@@ -106,11 +106,11 @@ flowchart LR
     I & E & TC & DS --> VAL
 ```
 
-Model: `packages/evidence/src/dsa_evidence/models.py` (`EvidenceGraph`). Validation: `validator.py` (`§37` insight→evidence→tool→dataset chain + causal guard). Bundle: `artifacts/reports/<runId>/{report.md, experiment.json, reproduce.sh, analysis.ipynb, evidence_graph.json}`.
+Model: `packages/evidence/src/dsa_evidence/models.py` (`EvidenceGraph`). Validation: `validator.py` (insight→evidence→tool→dataset chain + causal guard). Bundle: `artifacts/reports/<runId>/{report.md, experiment.json, reproduce.sh, analysis.ipynb, evidence_graph.json}`.
 
 ---
 
-## 5. Data Lineage (§49 Required)
+## 5. Data Lineage
 
 ```mermaid
 flowchart TB
@@ -129,7 +129,7 @@ Lineage is hashed at `experiment.json` creation (dataset hash + schema + code/SQ
 
 ---
 
-## 6. Evaluation Pipeline (§49 Required)
+## 6. Evaluation Pipeline
 
 ```mermaid
 flowchart LR
@@ -138,7 +138,7 @@ flowchart LR
     MET[Metrics<br/>metrics.py TaskMetrics<br/>task_success / statistical / sql / evidence / unsupported / code]
     STAT[evaluator_v2<br/>statistical_eval.py 10 dims<br/>S01-S10 + causal + uncertainty]
     AGG[Aggregate<br/>by_category / by_difficulty<br/>bootstrap CI / McNemar]
-    REL[Reliability §27<br/>4 configs × 7 metrics]
+    REL[Reliability<br/>4 configs × 7 metrics]
     HUM[Human Eval<br/>11/100, Kappa/Alpha]
     CM[Cross-Model<br/>4 classes + 3 frontiers]
     CAT --> RUN --> MET --> AGG
@@ -150,13 +150,13 @@ Gates: `dsa --limit 50` (v1, 8 cats) + `dsa --catalog benchmarks/v2/... --limit 
 
 ---
 
-## 7. Reproduction Pipeline (§49 Required)
+## 7. Reproduction Pipeline
 
 ```mermaid
 flowchart LR
     DEV[Developer Run<br/>uv sync → dsa --limit 100<br/>out/results.json]
     ARC[Archive<br/>results/ CAPSULE + uv.lock<br/>commit + catalog_sha]
-    FRESH[Fresh Environment<br/>fresh clone + fresh install<br/>no private dataset/credential §39]
+    FRESH[Fresh Environment<br/>fresh clone + fresh install<br/>no private dataset/credential]
     CLONE[Fresh Clone<br/>git clone + uv sync]
     INST[Fresh Install<br/>uv sync --dev]
     RUN2[Run Benchmark<br/>dsa --reproduce v2<br/>reproduction/v2 first+second]

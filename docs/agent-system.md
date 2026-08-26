@@ -8,7 +8,7 @@
 
 ## Reliability (W5)
 
-`4 configs` (`Single / Planner+Agent / Planner+Agent+Critic / Full Evidence-Grounded`) × `7` §27 metrics + §28 `Critic Benefit` + §29 `Tool Selection Accuracy` + §30 `Agent Efficiency` — see `docs/evaluation.md` and `research/V3_RESEARCH_REPORT.md` (ablation A–F).
+`4 configs` (`Single / Planner+Agent / Planner+Agent+Critic / Full Evidence-Grounded`) × `7` metrics + `Critic Benefit` + `Tool Selection Accuracy` + `Agent Efficiency` — see `docs/evaluation.md` and `research/V3_RESEARCH_REPORT.md` (ablation A–F).
 
 ## Failures
 

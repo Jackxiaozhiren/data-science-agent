@@ -21,6 +21,6 @@
 - Trace is read-only; no chain-of-thought spill — concise agent messages only
 - Local-first: no external deps; Tailwind + shadcn-style cards; no Plotly CDN (charts are artifact PNGs + base64)
 
-## Phase 7 Scope (V0.1)
+## Scope
 - Implement: Dashboard, Datasets, Analysis workspace, Trace, Reports with SSE fallback to polling
 - Defer: auth, projects, streaming push (MVP sync)

@@ -4,7 +4,7 @@
 
 ## Full report
 
-See `research/V3_RESEARCH_REPORT.md` — Abstract, Introduction, Research Questions, System Architecture (§49 7 diagrams), Evaluation Methodology (§72–77 versioning + §45 traceability), Benchmark (§50 provenance), Experimental Setup (§56 manifests), Results (Ablation A–F + Cross-Model 4 classes + Statistical S01–S10 + Failures F01–F15 + Human 11/100), Reproducibility (§17–21 L0–L5), Limitations, Conclusion, Appendix (gates).
+See `research/V3_RESEARCH_REPORT.md` — Abstract, Introduction, Research Questions, System Architecture (7 diagrams), Evaluation Methodology (versioning + traceability), Benchmark (provenance), Experimental Setup (manifests), Results (Ablation A–F + Cross-Model 4 classes + Statistical S01–S10 + Failures F01–F15 + Human 11/100), Reproducibility (L0–L5), Limitations, Conclusion, Appendix (gates).
 
 ## DS-Agent-Benchmark (v1 + v2)
 
@@ -20,7 +20,7 @@ uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/dataset
 Metrics in `packages/evaluation/src/dsa_evaluation/metrics.py`: `task_success_rate / statistical_accuracy / sql_accuracy / code_execution / evidence_coverage / unsupported_claim_rate / mean_latency / by_category`.
 Statistical rigour: S01–S10 (see `docs/evaluation.md`).
 
-## Research packaging (§51–57)
+## Research packaging
 
-Figures/tables are `research/figures/` + `research/tables/` reproducible from `research/results/` + `benchmarks/v2` (`§54–57`: no hand-edited charts without script, raw→script→table). Every experiment emits `research/results/ablation_*.json` with `experiment_id/git_commit/benchmark_version/dataset_version/model/prompt_version/seed/timestamp` (§56) + `dsa research run/reproduce --experiment <id>` (§57).
+Figures/tables are `research/figures/` + `research/tables/` reproducible from `research/results/` + `benchmarks/v2` (no hand-edited charts without script, raw→script→table). Every experiment emits `research/results/ablation_*.json` with `experiment_id/git_commit/benchmark_version/dataset_version/model/prompt_version/seed/timestamp` + `dsa research run/reproduce --experiment <id>`.
 

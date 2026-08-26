@@ -6,7 +6,7 @@
 
 `EvaluationResultV2` — 10 dims (`task_success / statistical / tool / evidence / unsupported / code / sql / reproducibility / safety / latency`) × 6 levels (`Tool → Numerical → Statistical → Interpretation → Evidence → Report`), plus `by_category / by_difficulty` and significance helpers (`bootstrap_ci / mcnemar / wilcoxon`, see `significance.py`).
 
-Evaluator versioning (§73): `evaluator_v1` (pre-audit, keyword) vs `evaluator_v2` (10 dims + `S01–S10`, causal `S09`, uncertainty `S10`). Results must carry `evaluator_version` and not be compared across versions without annot.
+Evaluator versioning: `evaluator_v1` (pre-audit, keyword) vs `evaluator_v2` (10 dims + `S01–S10`, causal `S09`, uncertainty `S10`). Results must carry `evaluator_version` and not be compared across versions without annot.
 
 ## Statistical Rigour (W4)
 
@@ -14,9 +14,9 @@ Evaluator versioning (§73): `evaluator_v1` (pre-audit, keyword) vs `evaluator_v
 
 ## Reliability & Cross-Model
 
-- Reliability (§27–30, 4 configs `single/planner/planner+critic/full`): `research/V3_RESEARCH_REPORT.md` (Ablation A–F).
-- Cross-model (§31–34, 4 classes + 3 Pareto frontiers, no fabrication).
-- Human eval (§35–38, 11/100 stratified, 8 dims 1–5, Kappa/Alpha).
+- Reliability (4 configs `single/planner/planner+critic/full`): `research/V3_RESEARCH_REPORT.md` (Ablation A–F).
+- Cross-model (4 classes + 3 Pareto frontiers, no fabrication).
+- Human eval (11/100 stratified, 8 dims 1–5, Kappa/Alpha).
 
 ## Reproducibility of evaluation
 
@@ -26,4 +26,4 @@ uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/dataset
 uv run dsa --reproduce v2 --out reproduction/v2    # fresh twice + ReproductionScore 6-dim + L0..L5
 ```
 
-Scores are versioned (§72–74) and immutable under `release/` (see `research/V3_RESEARCH_REPORT.md` Appendix).
+Scores are versioned and immutable under `release/` (see `research/V3_RESEARCH_REPORT.md` Appendix).

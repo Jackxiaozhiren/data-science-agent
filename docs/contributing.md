@@ -16,8 +16,8 @@ uv run mypy packages apps/api --ignore-missing-imports
 uv run pytest -q
 uv run pytest --cov   # 81% gate
 uv run dsa --limit 5
-uv run dsa demo                  # one-command demo (§40/47)
-uv run dsa external-validation   # install metrics (§42)
+uv run dsa demo                  # one-command demo
+uv run dsa external-validation   # install metrics
 npm --prefix apps/web run build  # 13/13 routes
 docker compose config            # valid
 # optional: uv run python -m mkdocs build --strict  (see mkdocs.yml; W10 docs strict has pre-existing strict warnings outside reval scope)
