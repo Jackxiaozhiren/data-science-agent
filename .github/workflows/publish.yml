@@ -1,0 +1,39 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # Trusted Publishing (OIDC) — no long-lived token
+      contents: write   # attach artifacts to the GitHub release
+    steps:
+      - uses: actions/checkout@ec3a7ee113f3d593549bf8bf3a6ba6b610efcf7 # v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - run: pip install uv
+      - run: uv sync --dev
+      # Verify the full gate on the exact tagged commit before publishing.
+      - run: uv run mypy packages apps/api src --ignore-missing-imports
+      - run: uv run ruff check packages apps/api tests src apps/jupyter
+      - run: uv run pytest -q --cov --cov-report=term-missing
+      - run: uv build
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@a892a5a61159132606e93a2fa6f4358831b04d26 # v1.14.2
+        with:
+          packages-dir: dist/
+      - name: Attach artifacts to GitHub Release
+        uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
+        with:
+          files: dist/*
