@@ -1,14 +1,21 @@
 # Changelog
 
-## 4.2.4 — PyPI Publish Gate Fix
+## 4.2.5 — PyPI Publish Path Fix
 
 ### Fixed
 
-- **Publish workflow ran its full test gate without node deps**: `tests/vscode` shells out to `tsc`, which needs `apps/vscode/node_modules`; the `v4.2.3` tag run failed at pytest. Added `npm ci --legacy-peer-deps` for `apps/vscode` + `apps/web` before pytest (mirrors the main CI).
+- **Publish workflow test gate failed without node deps**: `tests/vscode` shells out to `tsc`, which needs `apps/vscode/node_modules`. Added `npm ci --legacy-peer-deps` for `apps/vscode` + `apps/web` before pytest (mirrors the main CI).
+- **Publish action image pull failed (`manifest unknown`)**: pinning `pypa/gh-action-pypi-publish` by commit SHA made GitHub pull a GHCR image tag that doesn't exist (`ghcr.io/pypa/gh-action-pypi-publish:<sha>`). The GHCR image is tagged by release, so pin to `@v1.14.2`.
 
 ### Verified
 
 - Full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass. PyPI publish is enabled via Trusted Publishing (OIDC) on version tags.
+
+## 4.2.4 — PyPI Publish Path Fix (v4.2.4 tag)
+
+### Fixed
+
+- Publish workflow image-pull failure corrected in 4.2.5; this tag carried the node-deps fix for the publish gate.
 
 ## 4.2.3 — Docs Cleanup & PyPI Publish Path
 

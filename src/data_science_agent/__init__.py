@@ -1,4 +1,4 @@
-__version__ = "4.2.4"
+__version__ = "4.2.5"
 
 from data_science_agent.sdk import (
     Agent,

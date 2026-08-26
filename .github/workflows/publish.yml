@@ -33,7 +33,7 @@ jobs:
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: uv build
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@a892a5a61159132606e93a2fa6f4358831b04d26 # v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.2 # release tag — GHCR image is tagged by release, not commit SHA
         with:
           packages-dir: dist/
       - name: Attach artifacts to GitHub Release

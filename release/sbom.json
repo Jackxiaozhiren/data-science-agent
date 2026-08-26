@@ -1,6 +1,6 @@
 {
-  "version": "4.2.4",
-  "generated": "2026-08-26T10:49:32.861586+00:00",
+  "version": "4.2.5",
+  "generated": "2026-08-26T10:58:29.877563+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -438,10 +438,10 @@
     },
     {
       "package": "jack-data-science-agent",
-      "version": "4.2.4",
+      "version": "4.2.5",
       "license": "MIT",
       "source": "local:pyproject.toml",
-      "purl": "pkg:local/jack-data-science-agent@4.2.4"
+      "purl": "pkg:local/jack-data-science-agent@4.2.5"
     },
     {
       "package": "jedi",
