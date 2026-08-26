@@ -16,7 +16,7 @@ jobs:
       id-token: write   # Trusted Publishing (OIDC) — no long-lived token
       contents: write   # attach artifacts to the GitHub release
     steps:
-      - uses: actions/checkout@ec3a7ee113f3d593549bf8bf3a6ba6b610efcf7 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6

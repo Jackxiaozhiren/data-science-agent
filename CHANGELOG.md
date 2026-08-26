@@ -1,5 +1,24 @@
 # Changelog
 
+## 4.2.3 — Docs Cleanup & PyPI Publish Path
+
+### Added
+
+- `.github/workflows/publish.yml` — PyPI **Trusted Publishing (OIDC)** on version tags: full gate (mypy/ruff/pytest) on the tagged commit, then publish the built wheel + sdist (actions pinned by SHA) and attach artifacts to the GitHub release. No long-lived PyPI token.
+- `SECURITY.md` **Publishing** section — documents the publish path; no PyPI credentials exist in the repository.
+
+### Changed
+
+- Stripped all remaining internal-era markers (`§NN`, `W# §`, `Phase N`) from the retained user docs, SECURITY, CONTRIBUTING, and the MCP ADR — the docs now read as stable product documentation.
+
+### Fixed
+
+- `publish.yml` checkout pinned to the correct `actions/checkout@v5` SHA (`fbc6f399…`).
+
+### Verified
+
+- Full pytest pass, mypy 104 clean, ruff pass, `mkdocs --strict` pass, CI green (main + tag runs).
+
 ## 4.2.2 — Repository Hygiene, CI Fixes & Docs Refresh
 
 ### Fixed

@@ -11,7 +11,7 @@ ROOT = Path(__file__).parents[1]
 
 # Expected current values (from pyproject/CITATION live)
 EXPECTED = {
-    "version": "4.2.2",
+    "version": "4.2.3",
     "prev_version": "4.1.1",
     "prev_versions": ["4.0.0", "3.0.0", "2.0.0"],
     "pytest": "257",
