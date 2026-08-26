@@ -22,7 +22,7 @@ from data_science_agent.sdk import (
 def test_sdk_public_surface_exports() -> None:
     from data_science_agent import __version__
 
-    assert __version__ == "4.2.1"
+    assert __version__ == "4.2.2"
     # Required §14 exports
     for name in (
         "Agent",
@@ -151,7 +151,7 @@ def test_agent_analyze_sync_separate() -> None:
 
 
 def test_agent_version_stable() -> None:
-    assert Agent().version == "4.2.1"
+    assert Agent().version == "4.2.2"
     assert API_STABILITY["Agent"] == "Stable"
 
 
