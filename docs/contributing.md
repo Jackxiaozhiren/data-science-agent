@@ -1,6 +1,6 @@
 # Contributing — V3 W10 §48
 
-> See `CONTRIBUTING.md` (gated checklist) and `ARCHITECTURE_FREEZE_V0.1.md` (phased delivery).
+> See `CONTRIBUTING.md` (gated checklist) — phased, gate-controlled delivery.
 
 ## Prerequisites
 
@@ -25,4 +25,4 @@ docker compose config            # valid
 
 Keep `uv.lock` pinned, no private dataset/credential, local-first (`stub LLM + DuckDB/Polars`, `Cloud $0`). Security: see `SECURITY.md`.
 
-V3.0 workstreams in `DATA_SCIENCE_AGENT_V3_0.md` §7 and `ROADMAP.md`; research packaging in `research/V3_RESEARCH_REPORT.md` (§51 Reports must keep provenance).
+Versioned workstream history lives in `CHANGELOG.md`; research packaging in `research/V3_RESEARCH_REPORT.md` (reports keep provenance: raw → script → artifact).

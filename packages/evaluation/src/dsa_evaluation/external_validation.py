@@ -244,7 +244,7 @@ def collect_installation_metrics(
         details={
             "root": str(ROOT),
             "demo_question": demo_question,
-            "cold_install_time_ms_note": "run `time uv sync --dev` on a fresh clone for cold install; see docs/v3/EXTERNAL_VALIDATION.md §39/41",
+            "cold_install_time_ms_note": "run `time uv sync --dev` on a fresh clone for cold install; see docs/getting-started.md",
             "fresh_machine_note": "Linux/macOS local-first (stub LLM + DuckDB/Polars, Cloud $0); Windows not tested — see §41",
         },
     )

@@ -114,7 +114,7 @@ Model: `packages/evidence/src/dsa_evidence/models.py` (`EvidenceGraph`). Validat
 
 ```mermaid
 flowchart TB
-    DS[Dataset CSV<br/>benchmarks/v2/datasets or demo/datasets<br/>sha256 + schema]
+    DS[Dataset CSV<br/>benchmarks/v2/datasets or examples/datasets<br/>sha256 + schema]
     DS --> P[Profiler<br/>rows/cols/missing/duplicates/cardinality]
     DS --> DU[DuckDB read-only<br/>SELECT/WITH/SHOW/DESCRIBE/EXPLAIN]
     DS --> SB[Python Sandbox<br/>AST allowlist]
@@ -165,15 +165,15 @@ flowchart LR
     DEV --> ARC --> FRESH --> CLONE --> INST --> RUN2 --> CMP --> SCO
 ```
 
-Commands: `dsa reproduce --benchmark v2` / `uv run dsa --reproduce v2 --out reproduction/v2` (see `docs/v3/REPRODUCTION.md`). Output `reproduction/{manifest.json, environment.json, results.json, comparison.json, logs/}` + per-task `L0..L5` via `compare_runs`.
+Commands: `dsa reproduce --benchmark v2` / `uv run dsa --reproduce v2 --out reproduction/v2`. Output `reproduction/{manifest.json, environment.json, results.json, comparison.json, logs/}` + per-task `L0..L5` via `compare_runs`.
 
 ---
 
 ## 8. References
 
-- Architecture Freeze: `ARCHITECTURE_FREEZE_V0.1.md` §1–12
-- Benchmark v2: `benchmarks/v2/catalog.json` + `benchmarks/v2/README.md` (+ `docs/v3/BENCHMARK_AUDIT.md` §13–17)
-- Evidence & Validation: `docs/evidence.md` / `docs/v3/V2_FINAL_BASELINE.md` §4–11
-- Evaluation & Significance: `docs/v3/STATISTICAL_EVALUATION.md` + `packages/evaluation/src/dsa_evaluation/significance.py`
-- Reproducibility: `docs/v3/REPRODUCTION.md` + `packages/evidence/src/dsa_evidence/reproducibility.py`
-- Security: `docs/v2/security.md` + `SECURITY.md` §78
+- Agent & Architecture: `docs/agent.md` + `docs/architecture.md`
+- Benchmark v2: `benchmarks/v2/catalog.json` + `benchmarks/v2/README.md` (+ `docs/benchmark.md`)
+- Evidence & Validation: `docs/evidence.md` / `docs/evaluation.md`
+- Evaluation & Significance: `docs/evaluation.md` + `packages/evaluation/src/dsa_evaluation/significance.py`
+- Reproducibility: `docs/reproducibility.md` + `packages/evidence/src/dsa_evidence/reproducibility.py`
+- Security: `docs/security.md` + `SECURITY.md`

@@ -32,6 +32,6 @@ Report privately via GitHub Security Advisories (preferred) or open a private Gi
 
 ## Known Limitations
 
-- Physical host compromise, upstream dependency supply-chain outside `uv.lock`, social engineering of reviewers, denial-of-wallet on paid LLM providers (local-first `stub` avoids this; see `docs/v3/CROSS_MODEL.md`).
+- Physical host compromise, upstream dependency supply-chain outside `uv.lock`, social engineering of reviewers, denial-of-wallet on paid LLM providers (local-first `stub` avoids this).
 
-Security boundary details: `ARCHITECTURE_FREEZE_V0.1.md` §10 and `docs/v2/security.md` / `docs/v3/V2_FINAL_BASELINE.md` §9.
+Security boundary details: see [`docs/security.md`](docs/security.md).

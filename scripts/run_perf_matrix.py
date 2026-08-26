@@ -115,9 +115,9 @@ def main():
         "cancellation": "start→cancel→timeout→recover without orphan (tested via asyncio.wait_for)",
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    out_path = Path("docs/v4_1/performance.md")
+    out_path = Path("research/tables/performance.md")
     # Also write JSON for machine
-    Path("docs/v4_1/performance.json").write_text(json.dumps(report, indent=2))
+    Path("research/tables/performance.json").write_text(json.dumps(report, indent=2))
     # Write markdown
     md = f"""# Performance / Compatibility / Reliability — W9 §51-55
 

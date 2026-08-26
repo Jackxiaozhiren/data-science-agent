@@ -1,9 +1,9 @@
 # Documentation Index
 
 - [Getting Started](./getting-started.md) — install, smoke, docker, benchmark, health
-- [Architecture Freeze](../ARCHITECTURE_FREEZE_V0.1.md) — system diagram, ERD, tool contracts, security boundary, TDR (Phase 0)
+- [Architecture](./architecture.md) — agent graph, tool layer, storage, security boundary
 - [Agent](./agent.md) — Planner / Data Scientist / Critic / Reporter, graph, evidence contract
-- [Tools](./tools.md) — 17-tool registry (Typed I/O)
+- [Tools](./tools.md) — 18-tool registry (Typed I/O)
 - [Statistics](./statistics.md) — correlation / tests / regression / guardrails
 - [Evidence](./evidence.md) — `Insight→Evidence→ToolCall→Dataset(hash)`, 4 checks, reproducibility bundle
 - [MCP Design](./MCP_DESIGN.md) — Stateless 2026-07-28 adapter over Tool Layer

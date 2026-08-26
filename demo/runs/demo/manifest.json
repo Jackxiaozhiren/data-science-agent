@@ -1,6 +1,0 @@
-{
-  "dataset": "/Users/jackson/Data agent/benchmarks/v2/datasets/sales.csv",
-  "question": "Analyze correlation between price and revenue",
-  "elapsed_ms": 848,
-  "workdir": "demo/runs/demo"
-}

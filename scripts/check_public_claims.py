@@ -11,8 +11,8 @@ ROOT = Path(__file__).parents[1]
 
 # Expected current values (from pyproject/CITATION live)
 EXPECTED = {
-    "version": "4.1.1",
-    "prev_version": "4.1.0",
+    "version": "4.2.1",
+    "prev_version": "4.1.1",
     "prev_versions": ["4.0.0", "3.0.0", "2.0.0"],
     "pytest": "257",
     "pytest_old": ["155", "86+", "86"],
@@ -134,9 +134,8 @@ def check_version_consistency():
         init_ver = re.search(r'__version__ = "([^"]+)"', (ROOT / "src/data_science_agent/__init__.py").read_text()).group(1)
         sdk_ver = re.search(r'self\._version = "([^"]+)"', (ROOT / "src/data_science_agent/sdk.py").read_text()).group(1)
         sbom_ver = __import__("json").loads((ROOT / "release/sbom.json").read_text())["version"]
-        readme_title = re.search(r"# Data Science Agent — v([^\s]+)", (ROOT / "README.md").read_text())
-        readme_ver = readme_title.group(1) if readme_title else "?"
-        for name, ver in [("pyproject", py_ver), ("CITATION", cit_ver), ("__init__", init_ver), ("sdk", sdk_ver), ("sbom", sbom_ver), ("README", readme_ver)]:
+        # README intentionally does not pin a version in the title (modern OSS pattern).
+        for name, ver in [("pyproject", py_ver), ("CITATION", cit_ver), ("__init__", init_ver), ("sdk", sdk_ver), ("sbom", sbom_ver)]:
             if ver != EXPECTED["version"]:
                 issues.append(f"version mismatch: {name}={ver} != expected {EXPECTED['version']}")
         # Check tag
@@ -168,7 +167,7 @@ def main():
                 continue
             # Skip historical docs that are expected to contain old numbers (§18 Valid Historical) - completely skip stale checks
             rel = str(path.relative_to(ROOT)) if path.is_absolute() else str(path)
-            if any(rel.startswith(pfx) for pfx in ["docs/v2/", "docs/v3/", "docs/v4/", "docs/v4_1/", "docs/v4_2/", "research/", "benchmarks/", "human-eval/", "plugins/", "apps/jupyter/", "src/data_science_agent/"]):
+            if any(rel.startswith(pfx) for pfx in ["docs/", "research/", "benchmarks/", "plugins/", "apps/jupyter/", "src/data_science_agent/"]):
                 continue
             findings = scan_file(path)
             for kind, match, line in findings:

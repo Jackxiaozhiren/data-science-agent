@@ -16,7 +16,7 @@ export default function ResearchPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Research</h1>
-      <p className="text-sm text-zinc-600">W2–W10 closure: EvaluationResultV2 (10-dim + 6-level), Benchmark v2 (100 tasks), Ablation A–F, Significance (bootstrap CI / McNemar / Wilcoxon), Reproducibility L0–L5, Failure F01–F15. See <code>docs/v2/Baseline Report.md</code> and <code>research/paper/V2_paper_draft.md</code>.</p>
+      <p className="text-sm text-zinc-600">W2–W10 closure: EvaluationResultV2 (10-dim + 6-level), Benchmark v2 (100 tasks), Ablation A–F, Significance (bootstrap CI / McNemar / Wilcoxon), Reproducibility L0–L5, Failure F01–F15. See <code>docs/benchmark.md</code> and <code>research/paper/V2_paper_draft.md</code>.</p>
       <div className="rounded border bg-white p-4">
         <div className="text-sm font-medium">Recent experiments</div>
         {exps.length ? (

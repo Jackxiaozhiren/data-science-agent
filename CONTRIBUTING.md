@@ -1,6 +1,6 @@
 # Contributing
 
-See `ARCHITECTURE_FREEZE_V0.1.md` — phased, gate-controlled delivery. V3.0 workstreams in `DATA_SCIENCE_AGENT_V3_0.md` §7.
+> Phased, gate-controlled delivery — each release lands only when its gates (tests, mypy, ruff, docs build, `dsa verify-release`) pass. See [`CHANGELOG.md`](./CHANGELOG.md) for the release history and [`docs/contributing.md`](docs/contributing.md) for conventions.
 
 Before PR:
 

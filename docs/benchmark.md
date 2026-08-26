@@ -1,6 +1,6 @@
 # Benchmark — V3 W10 §48 · §50 Documentation
 
-> Head: `benchmarks/v2/README.md` (§50 full) + `docs/v3/BENCHMARK_AUDIT.md` (Q1–Q10) + `benchmarks/v2/catalog.json 0.3.0` + `docs/v3/V2_FINAL_BASELINE.md` §7.
+> Head: `benchmarks/v2/README.md` + `benchmarks/v2/catalog.json 0.3.0` + `docs/evaluation.md`.
 
 ## Required documentation (§50)
 
@@ -9,7 +9,7 @@
 | Dataset Sources | `benchmarks/v2/README.md` + `scripts/generate_benchmark_v2.py` (synthetic, `seed 42`) + `benchmarks/v2/datasets/` 30 CSVs |
 | Dataset Licenses | `CC0` (synthetic) per-task `license` in `catalog.json` 0.3.0; real swaps record `THIRD_PARTY_LICENSES.md` |
 | Task Generation | `generate_benchmark_v2.py` — 50 v1 verbatim + 50 new across 3 categories |
-| Task Validation | `docs/v3/BENCHMARK_AUDIT.md` Q1–Q10 + `acceptable_* / forbidden_interpretation` per task (§16) |
+| Task Validation | `acceptable_* / forbidden_interpretation` per task (§16) |
 | Gold Standards | `acceptable_method/acceptable_metrics/acceptable_interpretation/acceptable_evidence/forbidden_interpretation/evaluation_function` (§16), versioned `evaluator_v2` |
 | Metrics / Scoring | `packages/evaluation/src/dsa_evaluation/metrics.py` + `statistical_eval.py` (10 dims S01–S10) |
 | Limitations | `research/V3_RESEARCH_REPORT.md` Limitations + audit `PENDING` reviewers |

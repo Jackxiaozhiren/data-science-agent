@@ -1,6 +1,6 @@
 # Evaluation — V3 W10 §48
 
-> Canonical: `docs/v2/evaluation.md` + `docs/v3/STATISTICAL_EVALUATION.md` + `packages/evaluation/src/dsa_evaluation/`
+> Canonical: `packages/evaluation/src/dsa_evaluation/` (evaluator_v2, 10 dims, S01–S10)
 
 ## Framework
 
@@ -10,13 +10,13 @@ Evaluator versioning (§73): `evaluator_v1` (pre-audit, keyword) vs `evaluator_v
 
 ## Statistical Rigour (W4)
 
-See `docs/v3/STATISTICAL_EVALUATION.md` — 10 dims + `S01–S10` taxonomy (`Wrong Test … Uncertainty Omission`).
+10 dims + `S01–S10` taxonomy (`Wrong Test … Uncertainty Omission`).
 
 ## Reliability & Cross-Model
 
-- Reliability (§27–30, 4 configs `single/planner/planner+critic/full`): `docs/v3/RELIABILITY.md` + `research/V3_RESEARCH_REPORT.md` (Ablation A–F).
-- Cross-model (§31–34, 4 classes + 3 Pareto frontiers, no fabrication): `docs/v3/CROSS_MODEL.md`.
-- Human eval (§35–38, 11/100 stratified, 8 dims 1–5, Kappa/Alpha): `human-eval/` + `docs/v3/HUMAN_EVALUATION_GUIDE.md`.
+- Reliability (§27–30, 4 configs `single/planner/planner+critic/full`): `research/V3_RESEARCH_REPORT.md` (Ablation A–F).
+- Cross-model (§31–34, 4 classes + 3 Pareto frontiers, no fabrication).
+- Human eval (§35–38, 11/100 stratified, 8 dims 1–5, Kappa/Alpha).
 
 ## Reproducibility of evaluation
 

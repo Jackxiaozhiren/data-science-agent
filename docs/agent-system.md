@@ -1,6 +1,6 @@
 # Agent System — V3 W10 §48
 
-> `docs/agent.md` (roles + graph) + `docs/architecture.md` (Agent Graph Mermaid) + `docs/v3/RELIABILITY.md` (§26–30) + `research/V3_RESEARCH_REPORT.md` (RQ1–RQ5).
+> `docs/agent.md` (roles + graph) + `docs/architecture.md` (Agent Graph Mermaid) + `research/V3_RESEARCH_REPORT.md` (RQ1–RQ5).
 
 ## Graph
 
@@ -8,7 +8,7 @@
 
 ## Reliability (W5)
 
-`4 configs` (`Single / Planner+Agent / Planner+Agent+Critic / Full Evidence-Grounded`) × `7` §27 metrics + §28 `Critic Benefit` + §29 `Tool Selection Accuracy` + §30 `Agent Efficiency` — see `docs/v3/RELIABILITY.md`.
+`4 configs` (`Single / Planner+Agent / Planner+Agent+Critic / Full Evidence-Grounded`) × `7` §27 metrics + §28 `Critic Benefit` + §29 `Tool Selection Accuracy` + §30 `Agent Efficiency` — see `docs/evaluation.md` and `research/V3_RESEARCH_REPORT.md` (ablation A–F).
 
 ## Failures
 

@@ -9,7 +9,7 @@ BASELINE_DIR = pathlib.Path("benchmarks/baseline")
 CATALOG = pathlib.Path("benchmarks/ds-agent-benchmark/catalog.json")
 DATASETS = pathlib.Path("benchmarks/ds-agent-benchmark/datasets")
 
-# W1 contract — mirrors docs/v2/Baseline Report.md §8.
+# W1 contract — mirrors the frozen v1 baseline.
 CONTRACT = {
     "task_success_rate": 1.0,
     "sql_accuracy": 1.0,

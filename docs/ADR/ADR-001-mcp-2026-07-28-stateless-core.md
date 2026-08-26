@@ -1,7 +1,7 @@
 # ADR-001 — MCP 2026-07-28 Stateless Core Alignment
 
 - Status: Accepted · Date: 2026-08-16 · Applies to: `packages/mcp`
-- Related: `docs/MCP_DESIGN.md` · V2 spec §39–44 · Baseline `docs/v2/Baseline Report.md §6`
+- Related: `docs/MCP_DESIGN.md` · MCP conformance status in `docs/mcp.md`
 
 ## Problem
 
