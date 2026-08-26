@@ -1,184 +1,168 @@
-# Data Science Agent — v4.2.1
+<div align="center">
 
-> **An Evidence-Grounded Autonomous Data Science System.**
-> Turn natural-language questions into reproducible statistical analysis, machine learning experiments, visualizations, and research reports.
+# Data Science Agent
 
-**What is it?** Autonomous data science agent with grounded evidence chains (Insight → Evidence → ToolCall → Dataset hash).
-**Why does it exist?** Turn NL questions into verifiable analyses rather than free-text LLM summaries.
-**Why is it different?** Evidence-grounded · Reproducible bundles (`reproduce.sh` + `analysis.ipynb`) · Formal evaluation (10 dims × 6 levels, statistical rigor S01–S10) · Local-first (no cloud required, `Cloud $0`) · MCP 2026-07-28 stateless.
-**How do I run it?** `uv sync --dev` → `uv run dsa demo` (one-command, see Quick Start).
-**How is it evaluated?** Benchmark v2: `30 datasets / 100 tasks / 11 categories, seed 42` via `dsa --catalog benchmarks/v2/catalog.json ...` — metrics: task success, statistical/tool/evidence, evaluator_v2.
-**How is it reproducible?** `dsa reproduce` ↔ `reproduction/{manifest,environment,results,comparison,logs}` + `ReproductionScore` (6-dim, L0–L5) — see `docs/v3/`.
+**From natural language to reproducible data science.**
 
-V2 adds: Evaluation Framework · Scientific Benchmark v2 (30/100/11) · Reliability & Reproducibility · Failure Taxonomy F01–F15 · Observability · MCP 2026-07-28 Stateless · Security Hardening · Research Package (RQs + ablation A–F). V3 adds: scientific audit (0.3.0, §13–17 versioned), independent reproduction, statistical upgrade (evaluator_v2), cross-model frontier, human evaluation (11/100, Kappa/Alpha), external validation (`dsa demo`). V4 adds: **Stable** — SDK (`from data_science_agent import Agent`), product CLI (`dsa doctor/init/analyze/profile/benchmark`), plugin architecture, MCP Tools (18 stateless `+analyze` §36, 12/12 PASS), MCP Resources (5 schemes §37), Time Series Plugin (`dsa-time-series 1.0.0` Stable §27) · **Experimental** — Jupyter (`%dsa` + rich `dsa-jupyter 0.1.0` §28-32), MCP App (`/mcp-app` Dataset→Question→Analysis→Evidence→Viz→Report §36, explicit handles §38), VS Code (`Dataset Explorer / Ask DSA` `dsa-vscode 0.1.0` §33-35) — see `docs/v4_1/RELEASE_MATRIX.md` (§58) + `docs/v4_1/MCP_COMPATIBILITY.md` (§40).
+Turns a question about your data into a completed analysis — with every claim traced
+back to an executable tool call, the underlying computation, and the dataset it was run on.
 
-**Quantitative claims (see §45):** Any number like `50/50 @1.0`, `100/100 @1.0`, `81% coverage`, `13 routes` must cite `Benchmark Version + Commit + Report` (e.g. `benchmarks/v2 0.3.0 + commit 1b6c3bf + docs/v3/V2_FINAL_BASELINE.md` or `benchmarks/baseline`). Avoid `State-of-the-art / Best / Enterprise-grade / Production-ready` without evidence.
+[Documentation](docs/getting-started.md) ·
+[SDK reference](docs/api.md) ·
+[CLI](docs/benchmark.md) ·
+[Changelog](CHANGELOG.md) ·
+[Citation](CITATION.cff)
 
-## Documentation
+[![CI](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions)
+[![PyPI version](https://img.shields.io/pypi/v/jack-data-science-agent)](https://pypi.org/project/jack-data-science-agent/)
+[![Python ≥ 3.12](https://img.shields.io/pypi/pyversions/jack-data-science-agent)](https://pypi.org/project/jack-data-science-agent/)
+[![License: MIT](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
 
-Docs: [Getting Started](./docs/getting-started.md) · [Agent](./docs/agent.md) · [Tools](./docs/tools.md) · [Evidence](./docs/evidence.md) · [API](./docs/api.md) · [MCP](./docs/MCP_DESIGN.md) · [Frontend IA](./docs/FRONTEND_IA.md) · [Research](./docs/research.md) · [Changelog](./CHANGELOG.md) · [Roadmap](./ROADMAP.md) · [Citation](./CITATION.cff)
-V2: [Baseline Report](./docs/v2/Baseline%20Report.md) · [Evaluation](./docs/v2/evaluation.md) · [MCP 2026-07-28](./docs/v2/MCP_2026_Audit.md) · [Security (W9)](./docs/v2/security.md) · [Benchmark v2](./benchmarks/v2/README.md) · Benchmark baseline: [benchmarks/baseline](./benchmarks/baseline/README.md)
-V3: [V2 Baseline Freeze](./docs/v3/V2_FINAL_BASELINE.md) · [Benchmark Audit](./docs/v3/BENCHMARK_AUDIT.md) · [Reproduction](./docs/v3/REPRODUCTION.md) · [Statistical Eval](./docs/v3/STATISTICAL_EVALUATION.md) · [Reliability](./docs/v3/RELIABILITY.md) · [Cross-Model](./docs/v3/CROSS_MODEL.md) · [Human Eval](./docs/v3/HUMAN_EVALUATION_GUIDE.md) · [External Validation](./docs/v3/EXTERNAL_VALIDATION.md) — `human-eval/` samples + `demo/` one-command
-MkDocs: `uv run mkdocs serve` / `uv run mkdocs build` (see [mkdocs.yml](./mkdocs.yml)) — Architecture Freeze at [ARCHITECTURE_FREEZE_V0.1.md](./ARCHITECTURE_FREEZE_V0.1.md)
+</div>
 
-## Stack
+## What is it?
 
-Next.js 15 + TypeScript + Tailwind + shadcn/ui · FastAPI + Pydantic v2 + SQLAlchemy · LangGraph · DuckDB + Polars + PyArrow · SQLite · LLM Abstraction (OpenAI/Anthropic/Google/OpenRouter/Ollama) · Scikit-learn + SciPy + Matplotlib
+**Data Science Agent is an evidence-grounded autonomous data science platform.** You ask
+a question in natural language — *"Does price predict revenue?"* — and it profiles your
+data, runs the analysis (SQL, statistics, forecasting, ML, visualization), and produces a
+report in which **every claim is linked to an evidence record**: a specific tool call, its
+result, and the `sha256` hash of the dataset it ran on. No anonymous numbers, no fabricated
+results.
 
-## Quick Start
+```python
+import asyncio
+from data_science_agent import Agent
+
+result = asyncio.run(Agent().analyze(
+    "sales.csv",
+    "Does price predict revenue, and is the effect statistically significant?",
+))
+print(result.report_markdown)   # prose + charts, every claim evidence-cited
+print(result.evidence)          # Insight → Evidence → ToolCall → Dataset (hash)
+```
+
+## The key features are
+
+- **Evidence-grounded output** — each insight traces the chain
+  `Insight → Evidence → ToolCall → Dataset(sha256)`, so results can be audited, not trusted on faith.
+- **Reproducible by default** — every run writes a bundle: `report.md`, `experiment.json`, `reproduce.sh`, `analysis.ipynb`, `evidence_graph.json`. Re-run it, get the same result.
+- **Local-first, no cloud required** — runs fully on your machine (DuckDB, Polars, Python). A stub LLM means even heavy features degrade gracefully offline.
+- **Benchmark-driven** — evaluated on two frozen internal benchmarks plus 8 real-world-style case studies, with results and limitations published.
+- **One SDK, many surfaces** — `dsa` CLI, Python SDK, FastAPI server with an **MCP** endpoint, Jupyter magic, VS Code extension, and a plugin runtime for custom tools.
+
+## Quickstart
 
 ```bash
-# Python
-uv sync --dev
-uv run pytest -q          # 257 passed (V4.1 live 2026-08-22 @ e8794c1; V3.0: 155; V1: ~86+)
-uv run ruff check .
-uv run mypy packages apps/api --ignore-missing-imports  # 102 clean (packages+api) / 104 with src (V4.1 live; V2: 81)
+# Install (Python ≥ 3.12)
+uv sync --dev            # or: pip install jack-data-science-agent
 
-# API (port 8000) — local-first, no cloud required
-uv run uvicorn dsa_api.main:app --reload --port 8000 --app-dir apps/api/src
+# One-command smoke run: demo dataset → analysis → evidence → report
+uv run dsa demo
 
-# Web (port 3000)
-cd apps/web && npm install --legacy-peer-deps && npm run dev
-# Build — V2: 13 routes (/benchmarks /evaluations /runs /runs/[id] /runs/[id]/replay /failures /research /mcp)
-npm run build --workspace=dsa-web  # 13 routes green
-
-# Benchmark v1 (20 datasets / 50 tasks) — frozen baseline: benchmarks/baseline — 50/50 @1.0
-# Benchmark v2 (30 datasets / 100 tasks) — benchmarks/v2 (Evaluation Framework + Evidence Validation)
-uv run dsa --help
-uv run dsa --limit 3
-uv run dsa --limit 50
-uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 50 --out /tmp/v2-bench
+# Your data, your question
+uv run dsa analyze sales.csv --task "Does price predict revenue?"
 ```
 
-## Demo (One-Command Smoke)
+`uv run dsa --help` exposes `profile`, `benchmark`, `init`, `reproduce`, `plugin`, and `mcp`.
+Prefer the SDK? `from data_science_agent import Agent` works in any script or notebook.
 
+## Using the SDK
+
+### Create it
+```python
+import asyncio
+from data_science_agent import Agent
+
+result = asyncio.run(Agent().analyze(
+    "sales.csv",
+    "Which region drives the most revenue, and is the trend significant?",
+))
+```
+
+### Run it
 ```bash
-# Start API
-uv run uvicorn dsa_api.main:app --host 127.0.0.1 --port 8000 --app-dir apps/api/src &
-
-# Upload sales.csv (note: explicit MIME needed with curl)
-curl -F "file=@examples/datasets/sales.csv;type=text/csv" http://127.0.0.1:8000/api/v1/datasets/
-# -> {"id": "<dataset_id>", "rows": 500, "cols": 6, ...}
-
-# Run analysis (numeric correlation + evidence)
-curl -X POST http://127.0.0.1:8000/api/v1/analysis/ \
-  -H 'Content-Type: application/json' \
-  -d '{"dataset_id": "<dataset_id>", "user_query": "Analyze correlation between price and revenue"}'
-# -> {"id": "run-...", "status": "COMPLETED", "state": {"evidence": [...], "report_markdown": "..."}}
-
-# Check report and SSE trace
-curl http://127.0.0.1:8000/api/v1/analysis/<run_id>/report?format=markdown
-curl -H "Accept: text/event-stream" http://127.0.0.1:8000/api/v1/analysis/<run_id>/events
-
-# Or via frontend: http://localhost:3000/datasets -> upload -> Analyze -> trace
+uv run dsa analyze benchmarks/v2/datasets/sales.csv \
+  --task "Which region drives the most revenue?"
 ```
 
-## API
-
-```
-POST /api/v1/datasets/              upload (multipart, 100MB, MIME sniff, traversal block)
-GET  /api/v1/datasets/{id}          profile + metadata
-POST /api/v1/analysis/              {dataset_id, user_query} -> run_id (Agent graph)
-GET  /api/v1/analysis/{id}          AnalysisState (polling)
-GET  /api/v1/analysis/{id}/events   SSE: agent/tool/validation/report/completed (JSON fallback via Accept)
-GET  /api/v1/analysis/{id}/progress progress_pct + counts
-GET  /api/v1/analysis/{id}/report   ?format=json|markdown
-GET  /api/v1/analysis/{id}/artifacts artifacts + tool_calls + progress
-GET  /api/v1/analysis/{id}/evidence/{evidence_id}  evidence → tool_call → insights → dataset trace
-POST /api/v1/analysis/{id}/approve  HUMAN_REVIEW approval (HITL)
-GET  /health  GET /ready  GET /version  GET /
-
-MCP (adapter over Tool Layer, stateless 2026-07-28):
-  GET  /mcp/tools  GET /mcp/resources  POST /mcp/call  POST /mcp (JSON-RPC: initialize/tools/list/tools/call/resources/list/resources/read)
-  Tools: 18 — profile_dataset, inspect_dataset, query_dataset, run_sql, run_python,
-         run_statistical_test, correlation_analysis, train_model, evaluate_model,
-         create_visualization, get_evidence, generate_report, save_artifact,
-         forecast, assumption_check, feature_importance, causal_check, analyze — see docs/MCP_DESIGN.md
-  Resources: 5 — dataset://, evidence://, report://, artifact://, analysis:// (§37, explicit handles §38)
-  App: /mcp-app/ — Dataset→Question→Analysis→Evidence→Viz→Report (§36) — see docs/v4_1/MCP_COMPATIBILITY.md
+### Check it
+```python
+print(result.status)               # "COMPLETED" | "FAILED"
+print(len(result.evidence))        # each evidence is traceable
+for e in result.evidence:
+    print(e.claim, "->", e.source_id, "->", e.result)
 ```
 
-## Frontend
+## How it works
 
 ```
- /              Dashboard (recent analyses)
- /datasets      Upload + list (drag-drop, 100MB guard)
- /datasets/[id] Profile (schema, missing, duplicates, cardinality)
- /analysis      Workspace (select dataset + natural language task)
- /analysis/[runId]  Trace (plan/tool calls/evidence/insights/validation/artifacts/report + evidence graph)
- /reports       Reports index
+your question ──▶ LangGraph agent ──▶ planner ──▶ data scientist ──▶ critic ──▶ reporter
+                        │                 ◀──────── tools (18) ────────
+                        ▼
+              DuckDB · Polars · SQL/Stats · ML · Visualization · Evidence
+                        │
+                        ▼
+      report.md + evidence graph + reproduce.sh + analysis.ipynb
 ```
 
-## Evidence & Reproducibility
+The runtime is a **LangGraph** orchestrator running over a typed tool layer: dataset
+profiling, read-only SQL on DuckDB, Python, statistical tests, forecasting, regression and
+classification, feature importance, and visualization. Every tool call may emit an
+`Evidence` record bound to the dataset hash, and a **critic** step rejects claims that
+outrun their evidence (e.g. causal language without a causal check). The API layer
+(see `apps/api`) wraps the same graph behind REST + **SSE streaming** + an MCP endpoint.
 
-Every important claim traces to executable computation:
+## Integrations
 
-```
-Insight → Evidence → ToolCall → Dataset (hash)
-```
+| Surface | Entry point |
+|---|---|
+| CLI | `uv run dsa <command>` — analyze, benchmark, reproduce, plugin, mcp |
+| Python SDK | `from data_science_agent import Agent` |
+| REST API | `apps/api` — FastAPI + Pydantic v2 + SQLAlchemy/SQLite, `/api/v1/analysis/...` |
+| MCP | stateless MCP server mounted at `/mcp` over the same tool layer |
+| Jupyter | `%load_ext dsa_jupyter` magic (see `apps/jupyter`) |
+| VS Code | extension w/ dataset explorer + analysis replay (see `apps/vscode`) |
+| Plugins | `dsa plugin install` — custom tool packages validated via `PluginManifest` |
 
-Artifacts under `artifacts/reports/<runId>/`: `report.md` (with `![chart]` embeds), `experiment.json`, `reproduce.sh`, `analysis.ipynb` (executable cells: profile + per-tool + `run_analysis`), `evidence_graph.json`.
-`uv run mkdocs serve` / `build --strict` · health: `GET /health → {status, details:{db,duckdb,polars,llm:{active,status}}, version}` + `GET /ready`.
+## Evaluation
 
-## Benchmark
+Numbers are what we measured on frozen benchmarks, with the version and commit recorded.
 
-```
-benchmarks/ds-agent-benchmark/
-  datasets/   20 synthetic CSVs (seed 42, 8,770 rows)
-  catalog.json  50 tasks (EDA 8 / SQL 7 / Statistics 8 / Regression 6 / Classification 6 / Time Series 5 / Visualization 5 / Data Quality 5)
-  results/    (generated via dsa benchmark)
-```
+- **Benchmark v1** (`benchmarks/ds-agent-benchmark`, frozen): **50 / 50 tasks** at
+  `task_success_rate = 1.0`, `1.0` statistical & SQL accuracy, `0.06` unsupported-claim rate.
+- **Benchmark v2** (`benchmarks/v2`, catalog `0.3.0`, seed 42): **100 tasks · 30 datasets · 11 categories**.
+- **8 case studies** (`case-studies/`) executed end-to-end; real tool failures are *kept* and
+  documented as limitations rather than hidden.
+- **Reproduction** harness: 6-dim `ReproductionScore` across execution / numerical / statistical
+  / evidence / semantic dimensions.
 
-```bash
-uv run dsa --limit 3 --out /tmp/bench
-cat benchmarks/ds-agent-benchmark/catalog.json | jq '.tasks | length'  # 50
-```
+A full, honest gap analysis (which failure modes the benchmarks *don't* cover) lives in
+[`docs/research.md`](docs/research.md) — see also [`docs/benchmark.md`](docs/benchmark.md)
+and [`docs/evaluation.md`](docs/evaluation.md).
 
-Metrics: Task Success Rate, Statistical Accuracy, SQL Accuracy, Code Execution Success, Evidence Coverage, Unsupported Claim Rate, Mean Latency, By-Category breakdown.
+## Why evidence-grounded?
 
-## Security Boundary
+Data-science outputs are only as trustworthy as the path from question to number. This
+project treats that path as a first-class artifact:
 
-File (MIME sniff + archive bomb guard), SQL (read-only allowlist + row limit), Python (AST allowlist + _safe_import, introspection block), Prompt Injection (dataset UNTRUSTED DATA, detection), Output (unsupported causal claim rewrite), Resource limits (tool call budget), HITL approval.
+- claims cite the exact computation and dataset (hash), not vibes;
+- every run is reproducible from a bundle, so "works on my machine" becomes verifiable;
+- the critic and evidence gates make the agent refuse claims it cannot back.
 
-## Project Structure
+## Resources
 
-```
-data-science-agent/ (monorepo)
-  apps/api   FastAPI
-  apps/web   Next.js 15
-  packages/agent, tools, execution, statistics, ml, visualization, evidence, reports, datasets, llm, mcp, evaluation
-  benchmarks/ds-agent-benchmark
-  tests/unit, integration, security
-  docs/
-```
+- [Documentation](docs/getting-started.md) — get started, architecture, tools, statistics, security
+- [SDK & API reference](docs/api.md)
+- [MCP design](docs/mcp.md)
+- [Contributing guide](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
+- [Cite this project](CITATION.cff)
 
-## Development Roadmap
+## Contributing
 
-Phase 0 Architecture Freeze ✓  Phase 1 Scaffold ✓  Phase 2 Data Layer ✓  Phase 3 Tool Layer ✓  Phase 4 Agent Graph ✓  Phase 5 Evidence ✓  Phase 6 API ✓  Phase 7 Frontend ✓  Phase 8 Security ✓  Phase 9 Benchmark ✓  Phase 10 MCP ✓  Phase 11 Docs ✓ — see `ROADMAP.md` for V3.0 W1–W12.
-V2.0 Research Grade ✓ `v2.0.0` (Evaluation 10×6 · Benchmark v2 30/100/11 · Reliability L0–L5/F01–F15 · MCP 2026-07-28 · Security 23) — `docs/v3/V2_FINAL_BASELINE.md`.
-V3.0 Release ✓ `v3.0.0` (12 workstreams, `docs/v3/V2_FINAL_BASELINE.md` + `research/V3_RESEARCH_REPORT.md`).
-V4.0 Ecosystem ✓ `v4.0.0` (SDK + CLI + Plugins + MCP Apps + Jupyter/VS Code + Community).
+Contributions are welcome — bug reports, docs, plugins, and benchmark tasks alike. Open an
+issue or PR; CI gates on tests, mypy, ruff, the docs build, and `dsa verify-release`. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Testing
+## License
 
-```bash
-uv run pytest -q           # 257 passed (V4.1 live 2026-08-22 @ e8794c1; V3.0: 155; V1: ~86+)
-uv run pytest --cov --cov-report=term-missing  # 79% cov, 5140 stmts (V4.1 live; V3.0: 81% 4597)
-uv run mypy packages apps/api src --ignore-missing-imports  # strict, 104 clean (V4.1; V3.0: 92; V2: 81)
-uv run ruff check packages apps/api tests  # scoped per-file ignores
-uv run dsa --limit 50      # 50/50 @1.0 (benchmarks/ds-agent-benchmark, 8 cats)
-uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 100  # 100/100 @1.0 (11 cats)
-uv run dsa demo            # one-command: demo dataset → evidence → report (§40/47)
-uv run dsa external-validation  # install + demo metrics (§42)
-docker compose config && npm --prefix apps/web run build  # compose healthcheck + 13 routes
-```
-
-## Docker
-
-```bash
-docker compose up  # api :8000, web :3000
-```
-
-## Contributing / Security
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) · [SECURITY.md](./SECURITY.md) · [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) · [LICENSE](./LICENSE) (MIT)
+[MIT](LICENSE)
