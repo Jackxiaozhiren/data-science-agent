@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.4 — PyPI Publish Gate Fix
+
+### Fixed
+
+- **Publish workflow ran its full test gate without node deps**: `tests/vscode` shells out to `tsc`, which needs `apps/vscode/node_modules`; the `v4.2.3` tag run failed at pytest. Added `npm ci --legacy-peer-deps` for `apps/vscode` + `apps/web` before pytest (mirrors the main CI).
+
+### Verified
+
+- Full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass. PyPI publish is enabled via Trusted Publishing (OIDC) on version tags.
+
 ## 4.2.3 — Docs Cleanup & PyPI Publish Path
 
 ### Added
