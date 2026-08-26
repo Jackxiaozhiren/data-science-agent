@@ -27,7 +27,7 @@ Non-compliance would break clients speaking MCP 2026-07-28; `--limit 50` still 5
 
 - Drop protocol-layer `initialize`/`initialized` (return `32601 Method not found`) while keeping app-level handles `analysis_id/dataset_id/run_id`.
 - Enrich `MCPToolDef` + `MCP_TOOL_CLASS/MCP_IDEMPOTENT/MCP_WRITE` maps; generate `output_schema`, `permissions`, `timeout_ms`, `cost_class`, `cache_hint` per tool.
-- Add `tests/mcp/conformance/test_mcp_conformance.py` (tool discovery, tools/list, tools/call, invalid schema/params, errors, stateless, repeated calls, tool caching) per V2 §44.
+- Add `tests/mcp/conformance/test_mcp_conformance.py` (tool discovery, tools/list, tools/call, invalid schema/params, errors, stateless, repeated calls, tool caching) per the MCP conformance spec.
 - No change to core domain imports (still adapter over `dsa_tools`).
 
 ## Migration Plan

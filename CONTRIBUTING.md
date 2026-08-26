@@ -18,9 +18,9 @@ docker compose config
 Also verify (when touching relevant areas):
 
 ```bash
-uv run dsa demo                         # W8 external validation (§40/47)
-uv run dsa external-validation          # W8 §42 installation metrics
-uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 5  # W3 v2 smoke
+uv run dsa demo                         # external validation smoke
+uv run dsa external-validation          # installation metrics
+uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 5  # benchmark smoke
 ```
 
 PRs must keep: `uv.lock` pinned, no private dataset/credential, local-first path (`stub LLM` + `DuckDB/Polars`) runnable (`Cloud $0`).
