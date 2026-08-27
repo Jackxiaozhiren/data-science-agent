@@ -96,7 +96,7 @@ def test_jupyter_direct_sdk_await_and_display() -> None:
             "benchmarks/v2/datasets/sales.csv", "Analyze revenue", r.run_id
         )
         assert meta["dataset_hash"] is not None
-        assert meta["sdk_version"] == "4.2.7"
+        assert meta["sdk_version"] == "4.2.8"
         assert meta["experiment_id"] == r.run_id
         assert meta["prompt_version"] is not None
         # display_analysis should not raise
@@ -142,7 +142,7 @@ def test_jupyter_reproducibility_metadata_all_fields() -> None:
     )
     assert meta["dataset_hash"] == h
     assert meta["agent_version"] is not None
-    assert meta["sdk_version"] == "4.2.7"
+    assert meta["sdk_version"] == "4.2.8"
     assert meta["prompt_version"] is not None and len(meta["prompt_version"]) == 12
     assert meta["tool_version"] is not None
     assert meta["experiment_id"] == "run-abc123"

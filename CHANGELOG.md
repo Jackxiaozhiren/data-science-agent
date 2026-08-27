@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.8 — Publish with skip-existing
+
+### Fixed
+
+- **Publish step now uses a single `packages-dir: dist/` with `skip-existing: true`** (replacing the per-package glob steps from 4.2.7, whose `dist/<name>-*` globs the publish action did not expand). Fail-isolated: already-published versions are skipped, and a project without a trusted publisher does not block the others. Version bump 4.2.7 → 4.2.8.
+
+### Verified
+
+- `uv build --all-packages` builds all 15 packages; full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass.
+
 ## 4.2.7 — Per-Package PyPI Publish
 
 ### Changed

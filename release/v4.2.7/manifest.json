@@ -1,0 +1,45 @@
+{
+    "version": "4.2.7",
+    "commit": "90f6493",
+    "tag": "v4.2.7",
+    "python": "Python 3.12.13",
+    "node": "v24.15.0",
+    "docker": "Docker version 29.7.2, build a7dcaa6",
+    "package": "jack-data-science-agent 4.2.7",
+    "benchmark_version": "0.3.0",
+    "dataset_version": "v2 0.3.0 (30 datasets)",
+    "evaluator_version": "evaluator_v2 (10 dims)",
+    "environment": {
+        "os": "macOS-26.6.2-arm64-arm-64bit",
+        "arch": "arm64",
+        "python": "Python 3.12.13",
+        "node": "v24.15.0",
+        "docker": "Docker version 29.7.2, build a7dcaa6"
+    },
+    "gates": {
+        "pytest": "257 passed",
+        "mypy": "104 clean (packages apps/api src)",
+        "ruff": "All checks passed",
+        "npm": "13/13 routes (npm ci --legacy-peer-deps; frozen next@15/react@19 peer pin)",
+        "docker": "valid",
+        "mkdocs_strict": "PASS",
+        "verify_release": "12/12 PASS",
+        "case_studies": "8/8 verified (real Agent, 18 tool failures preserved)",
+        "internal_benchmark": "50/50 @1.00 (v1 canonical)",
+        "check_public_claims": "0 issues",
+        "ci": "green — 18 steps, no Node-20 deprecation warnings"
+    },
+    "publish": {
+        "trusted_publishing": "OIDC on version tags",
+        "strategy": "one publish step per package (fail-isolated); each upload prints its digest",
+        "intended_packages": [
+            "jack-data-science-agent (umbrella, this version)",
+            "dsa-agent, dsa-api, dsa-datasets, dsa-evaluation, dsa-evidence, dsa-execution, dsa-jupyter, dsa-llm, dsa-mcp, dsa-ml, dsa-plugins, dsa-reports, dsa-statistics, dsa-tools, dsa-visualization (0.1.0)"
+        ]
+    },
+    "notes": [
+        "PATCH release — no breaking public API change.",
+        "Publish is fail-isolated per package; packages whose OIDC trusted publisher is configured will upload, others will be reported.",
+        "Tags v4.2.0 - v4.2.6 unchanged (release-truth rule: no tag rewrite)."
+    ]
+}
