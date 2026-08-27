@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.7 — Per-Package PyPI Publish
+
+### Changed
+
+- **Publish workflow publishes each package in its own step** (`publish.yml`): one step per `dsa-*` workspace package plus the umbrella `jack-data-science-agent`. A single project's OIDC trust gap or existing-version conflict no longer blocks the others — every uploaded artifact prints its digest for provenance. Version bump 4.2.6 → 4.2.7.
+
+### Verified
+
+- `uv build --all-packages` builds all 15 packages; full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass.
+
 ## 4.2.6 — Publish All Workspace Packages
 
 ### Changed

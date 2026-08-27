@@ -6,7 +6,7 @@ authors:
   - family-names: "Data Science Agent Contributors"
     given-names: ""
     orcid: ""
-version: 4.2.6
+version: 4.2.7
 date-released: 2026-08-26
 license: MIT
 repository-code: "https://github.com/Jackxiaozhiren/data-science-agent"

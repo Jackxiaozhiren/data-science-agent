@@ -35,10 +35,73 @@ jobs:
       # every workspace member (all are 0.1.0) plus the umbrella — otherwise
       # `pip install jack-data-science-agent` cannot resolve its dsa-* deps.
       - run: uv build --all-packages
-      - name: Publish all packages to PyPI (Trusted Publishing)
+      # Publish each package in its own step so a single project's OIDC trust
+      # gap (or an existing-version conflict) does not block the others. Each
+      # upload also prints the artifact digest for provenance.
+      - name: Publish jack-data-science-agent
         uses: pypa/gh-action-pypi-publish@v1.14.2 # release tag — GHCR image is tagged by release, not commit SHA
         with:
-          packages-dir: dist/
+          packages-dir: dist/jack_data_science_agent-*
+      - name: Publish dsa-agent
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_agent-*
+      - name: Publish dsa-datasets
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_datasets-*
+      - name: Publish dsa-evaluation
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_evaluation-*
+      - name: Publish dsa-evidence
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_evidence-*
+      - name: Publish dsa-execution
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_execution-*
+      - name: Publish dsa-llm
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_llm-*
+      - name: Publish dsa-mcp
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_mcp-*
+      - name: Publish dsa-ml
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_ml-*
+      - name: Publish dsa-plugins
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_plugins-*
+      - name: Publish dsa-reports
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_reports-*
+      - name: Publish dsa-statistics
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_statistics-*
+      - name: Publish dsa-tools
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_tools-*
+      - name: Publish dsa-visualization
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_visualization-*
+      - name: Publish dsa-jupyter
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_jupyter-*
+      - name: Publish dsa-api
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: dist/dsa_api-*
       - name: Attach artifacts to GitHub Release
         uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
         with:
