@@ -19,6 +19,10 @@ Get statistics, SQL, machine learning, visualizations, and reports — with **ev
 [![License](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Jackxiaozhiren/data-science-agent?style=flat&logo=github)](https://github.com/Jackxiaozhiren/data-science-agent/stargazers)
 
+<br />
+
+<img src="docs/assets/hero.svg" alt="Data Science Agent — Ask your data. Verify the answer." width="100%" />
+
 </div>
 
 ---
@@ -90,6 +94,18 @@ That's it.
 DSA profiles the dataset, plans the analysis, executes tools, evaluates the results, and produces an evidence-backed report.
 
 > Developing from source? Run `uv sync --dev`, then use `uv run dsa ...`.
+
+---
+
+## See It in Action
+
+<div align="center">
+
+<img src="docs/assets/demo.svg" alt="18-second Data Science Agent terminal demo: profile, plan, execute, build evidence, check claims, and generate a reproducible report" width="92%" />
+
+<sub>Question → profile → plan → tools → evidence → critic → reproducible report. The demo loops every 18 seconds.</sub>
+
+</div>
 
 ---
 
