@@ -1,4 +1,4 @@
-__version__ = "4.2.8"
+__version__ = "4.2.9"
 
 # Importing this package makes the vendored dsa_* sub-packages importable as
 # top-level names (they ship inside data_science_agent/_vendor). Must run before

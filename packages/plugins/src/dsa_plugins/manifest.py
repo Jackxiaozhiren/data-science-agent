@@ -84,7 +84,7 @@ WORKSPACE_PACKAGES = {
     "jack-data-science-agent",
 }
 
-CURRENT_DSA_VERSION = "4.2.8"
+CURRENT_DSA_VERSION = "4.2.9"
 
 
 def _levenshtein(a: str, b: str) -> int:

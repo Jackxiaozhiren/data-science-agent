@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.2.9 — Self-Contained Single-Package Publish
+
+### Changed
+
+- **`jack-data-science-agent` is now a self-contained wheel**: all `dsa_*` modules are vendored into `src/data_science_agent/_vendor/` (from `packages/*/src` + `apps/*/src`), and the 15 `dsa-*` runtime dependencies are removed. PyPI's Trusted Publishing binds one workflow file to one project, so publishing 15 separate `dsa-*` distributions from one `publish.yml` is impossible; vendoring makes `pip install jack-data-science-agent` work standalone. The `dsa` console script now ships with the umbrella.
+- `scripts/sync_vendor.py` keeps `_vendor` in sync with source; CI runs it with `--check`.
+- Dev group keeps `dsa-*` as editable workspace members so tests + CLI resolve from source.
+
+### Verified
+
+- Wheel installs with **zero** `dsa-*` Requires-Dist; end-to-end `Agent().analyze()` runs from the vendored copy in a clean venv; full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass.
+
 ## 4.2.8 — Publish with skip-existing
 
 ### Fixed
