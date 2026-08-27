@@ -21,20 +21,9 @@ classifiers = [
   "Framework :: FastAPI",
 ]
 dependencies = [
-    "dsa-agent",
-    "dsa-api",
-    "dsa-datasets",
-    "dsa-evaluation",
-    "dsa-evidence",
-    "dsa-execution",
-    "dsa-llm",
-    "dsa-mcp",
-    "dsa-ml",
-    "dsa-reports",
-    "dsa-statistics",
-    "dsa-tools",
-    "dsa-visualization",
-    "dsa-plugins",
+    # The dsa-* workspace packages are vendored into data_science_agent/_vendor
+    # (see src/data_science_agent/_vendor/__init__.py) and are no longer separate
+    # PyPI distributions, so they are intentionally NOT listed here.
     "fastapi>=0.110",
     "pydantic>=2.7",
     "pydantic-settings>=2.4",
@@ -57,13 +46,34 @@ dependencies = [
 ]
 urls = { Homepage = "https://github.com/Jackxiaozhiren/data-science-agent", Repository = "https://github.com/Jackxiaozhiren/data-science-agent", Documentation = "https://github.com/Jackxiaozhiren/data-science-agent/blob/main/docs/getting-started.md", Changelog = "https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md", Issues = "https://github.com/Jackxiaozhiren/data-science-agent/issues" }
 
+[project.scripts]
+dsa = "dsa_evaluation.cli:main"
+
 [project.optional-dependencies]
-jupyter = ["dsa-jupyter", "ipython>=8.0", "ipykernel>=6.0", "nest-asyncio>=1.5"]
+jupyter = ["ipython>=8.0", "ipykernel>=6.0", "nest-asyncio>=1.5"]
 time-series = ["statsmodels>=0.14"]
-dev-jupyter = ["dsa-jupyter", "ipython>=8.0", "ipykernel>=6.0", "jupyterlab>=4.0", "nest-asyncio>=1.5"]
+dev-jupyter = ["ipython>=8.0", "ipykernel>=6.0", "jupyterlab>=4.0", "nest-asyncio>=1.5"]
 
 [dependency-groups]
 dev = [
+    # Workspace members are installed editable in dev so the dsa_* packages, the
+    # `dsa` CLI, and tests resolve from source. In the published wheel they are
+    # vendored instead (see src/data_science_agent/_vendor).
+    "dsa-agent",
+    "dsa-api",
+    "dsa-datasets",
+    "dsa-evaluation",
+    "dsa-evidence",
+    "dsa-execution",
+    "dsa-jupyter",
+    "dsa-llm",
+    "dsa-mcp",
+    "dsa-ml",
+    "dsa-plugins",
+    "dsa-reports",
+    "dsa-statistics",
+    "dsa-tools",
+    "dsa-visualization",
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
@@ -73,7 +83,6 @@ dev = [
     "anyio>=4.4",
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
-    "dsa-jupyter",
     "ipython>=8.0",
     "nest-asyncio>=1.5",
 ]
@@ -101,6 +110,7 @@ dsa-plugins = { workspace = true }
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["src/data_science_agent/_vendor/"]  # vendored copy of dsa_* — linted at its source
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "S"]
@@ -129,6 +139,9 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+exclude = [
+    "src/data_science_agent/_vendor/",  # vendored copy of dsa_* — checked at its source
+]
 # Workspace is a multi-project src layout installed as PEP 660 editable shims;
 # mypy cannot statically follow the .pth-based editable installs, so resolve all
 # dsa_*/dsa_api packages deterministically from their source trees (fixes CI-only

@@ -19,6 +19,8 @@ build/
 /data/datasets/
 /artifacts/
 packages/artifacts/
+/src/artifacts/
+/src/data/
 demo/reports/
 /reports/
 /models/
