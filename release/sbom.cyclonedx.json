@@ -1,11 +1,11 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.4",
-  "version": "4.2.5",
+  "version": "4.2.6",
   "metadata": {
     "component": {
       "name": "jack-data-science-agent",
-      "version": "4.2.5",
+      "version": "4.2.6",
       "type": "application"
     }
   },
@@ -542,7 +542,7 @@
     },
     {
       "name": "jack-data-science-agent",
-      "version": "4.2.5",
+      "version": "4.2.6",
       "licenses": [
         {
           "license": {
@@ -550,7 +550,7 @@
           }
         }
       ],
-      "purl": "pkg:local/jack-data-science-agent@4.2.5",
+      "purl": "pkg:local/jack-data-science-agent@4.2.6",
       "source": "local:pyproject.toml"
     },
     {

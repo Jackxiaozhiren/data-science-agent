@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.6 — Publish All Workspace Packages
+
+### Changed
+
+- **Publish workflow now builds and publishes every workspace package** (`uv build --all-packages`): the 14 `dsa-*` libraries (0.1.0) plus the umbrella `jack-data-science-agent`. Previously only the umbrella was published, so `pip install jack-data-science-agent` could not resolve its `dsa-*` workspace dependencies. Version bump 4.2.5 → 4.2.6.
+
+### Verified
+
+- `uv build --all-packages` builds all 15 packages; full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass. First publish that makes the PyPI install standalone.
+
 ## 4.2.5 — PyPI Publish Path Fix
 
 ### Fixed

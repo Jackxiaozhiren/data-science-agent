@@ -31,8 +31,11 @@ jobs:
       - run: uv run mypy packages apps/api src --ignore-missing-imports
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run pytest -q --cov --cov-report=term-missing
-      - run: uv build
-      - name: Publish to PyPI (Trusted Publishing)
+      # The umbrella package depends on the dsa-* workspace packages, so build
+      # every workspace member (all are 0.1.0) plus the umbrella — otherwise
+      # `pip install jack-data-science-agent` cannot resolve its dsa-* deps.
+      - run: uv build --all-packages
+      - name: Publish all packages to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@v1.14.2 # release tag — GHCR image is tagged by release, not commit SHA
         with:
           packages-dir: dist/
