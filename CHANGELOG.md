@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.10 — Publish Umbrella Only
+
+### Fixed
+
+- **Publish workflow now builds and publishes only the self-contained umbrella**: `rm -rf dist && uv build` produces just `jack_data_science_agent` (dsa_* are vendored), and `packages-dir: dist/` uploads only it. The previous workflow built all workspace packages into `dist/`, so the publish step tried to upload the `dsa-*` distributions too — those have no trusted publisher, causing HTTP 400 and blocking the umbrella. Version bump 4.2.9 → 4.2.10.
+
+### Verified
+
+- `uv build` (no `--all-packages`) emits only `jack_data_science_agent-4.2.10.{whl,tar.gz}`; wheel has zero `dsa-*` Requires-Dist and the `dsa` console script; full pytest pass, mypy 104 clean, ruff pass, mkdocs --strict pass.
+
 ## 4.2.9 — Self-Contained Single-Package Publish
 
 ### Changed

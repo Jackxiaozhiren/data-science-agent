@@ -1233,7 +1233,7 @@ wheels = [
 
 [[package]]
 name = "jack-data-science-agent"
-version = "4.2.9"
+version = "4.2.10"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
