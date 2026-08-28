@@ -1,0 +1,37 @@
+{
+  "benchmark_name": "DataSciBench",
+  "benchmark_version": "1.0",
+  "benchmark_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+  "benchmark_commit_date": "2026-01-21",
+  "source": "https://github.com/THUDM/DataSciBench",
+  "paper": "https://arxiv.org/abs/2502.13897 (Findings of ACL 2026)",
+  "license": "NONE STATED upstream (citation requested); ground truth gated on HuggingFace (zd21/DataSciBench)",
+  "task_count": 222,
+  "task_count_by_category": {
+    "human_": 25,
+    "csv_excel_": 20,
+    "dl_": 10,
+    "bcb*": 167
+  },
+  "dataset_hashes": "per-task prompt.json sha256 recorded at run time via adapter.task_dir_sha256; see results/",
+  "evaluator_version": "original: experiments/evaluate.py (CREvaluator, TMC-list, Completion Rate) + evaluation_results/calculate_final_metric.py",
+  "environment": {
+    "usage": "adapter clones upstream at the pinned commit into .workspace/ (git-ignored); GT fetched from HF only when HF_TOKEN is set",
+    "python": "3.12 (DSA runtime); upstream evaluator run in its own checkout"
+  },
+  "dsa_commit": "see release manifest / git rev-parse HEAD",
+  "dsa_version": "see pyproject.toml",
+  "model": "per-run; recorded by RunConfig",
+  "prompt_versions": {
+    "adapter": "1.0-adapter"
+  },
+  "tool_versions": {},
+  "seed": null,
+  "integrity_notes": [
+    "§16: original evaluator used; adapter only converts DSA output into data/{task_id}/{model}_{run_id}/logs.txt plan-marker layout",
+    "§19: gold/ground-truth never enters AgentTaskView; assert_gold_isolation runs before every agent dispatch",
+    "§23: no DataSciBench content vendored into this repository (upstream has no LICENSE)",
+    "§26: dl_* unsupported (no GPU surface), bcb_* pending evaluate_tmc path — both reported with explicit reasons, never silently filtered",
+    "v1 adapter scope: human_*/csv_excel_* driven end-to-end; evaluator subprocess wiring lands with first real compute run"
+  ]
+}

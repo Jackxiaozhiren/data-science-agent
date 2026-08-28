@@ -1,0 +1,17 @@
+{
+  "benchmark_name": "DataSciBench",
+  "benchmark_version": "1.0",
+  "benchmark_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+  "source": "https://github.com/THUDM/DataSciBench",
+  "license": "NONE STATED upstream (citation requested); GT gated on HF",
+  "task_count": 4,
+  "dataset_hashes": {},
+  "evaluator_version": "TFC + Completion Rate (original)",
+  "environment": {},
+  "dsa_commit": "",
+  "dsa_version": "",
+  "model": "",
+  "prompt_versions": {},
+  "tool_versions": {},
+  "seed": null
+}

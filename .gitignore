@@ -41,3 +41,6 @@ site/
 apps/vscode/out/
 apps/vscode/node_modules/
 .mimosa/
+
+# DataSciBench adapter: upstream clone + gated GT never committed (§23)
+benchmarks/external/datascibench/.workspace/
