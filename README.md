@@ -9,7 +9,9 @@ Get statistics, SQL, machine learning, visualizations, and reports — with **ev
 
 [**Quickstart**](#-quickstart) ·
 [**Case Studies**](case-studies/) ·
+[**Leaderboard**](benchmarks/leaderboard/) ·
 [**Evaluation**](#-evaluation) ·
+[**Roadmap**](ROADMAP.md) ·
 [**Documentation**](docs/getting-started.md) ·
 [**Releases**](https://github.com/Jackxiaozhiren/data-science-agent/releases) ·
 [**Contributing**](CONTRIBUTING.md)
@@ -20,6 +22,7 @@ Get statistics, SQL, machine learning, visualizations, and reports — with **ev
 [![GitHub Release](https://img.shields.io/github/v/release/Jackxiaozhiren/data-science-agent?display_name=tag&sort=semver)](https://github.com/Jackxiaozhiren/data-science-agent/releases/latest)
 [![Python](https://img.shields.io/pypi/pyversions/jack-data-science-agent?logo=python&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
 [![License](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/Jackxiaozhiren/data-science-agent)](CONTRIBUTORS.md)
 
 [![Benchmark v2](https://img.shields.io/badge/benchmark%20v2-100%2F100-brightgreen)](docs/evaluation.md)
 [![Coverage gate](https://img.shields.io/badge/coverage%20gate-81%25-brightgreen)](docs/contributing.md)
@@ -400,6 +403,10 @@ fixed seed: 42
 
 The benchmark suite covers multiple categories of data-science work and is versioned so that changes can be evaluated against a stable reference.
 
+**[Open the validated public benchmark leaderboard →](benchmarks/leaderboard/)**
+
+The leaderboard is generated from structured JSON and CI-checked so public scores cannot drift away from their source data.
+
 ### Real-world case studies
 
 The repository contains **8 / 8 verified end-to-end case studies** spanning business analytics, churn, forecasting, marketing, financial data, public statistics, data quality, and classification.
@@ -554,10 +561,14 @@ Start here:
 - [Getting Started](docs/getting-started.md)
 - [SDK & API Reference](docs/api.md)
 - [Benchmarks](docs/benchmark.md)
+- [Public Benchmark Leaderboard](benchmarks/leaderboard/)
 - [Evaluation](docs/evaluation.md)
 - [MCP](docs/mcp.md)
 - [Research & Limitations](docs/research.md)
 - [Case Studies](case-studies/)
+- [Roadmap](ROADMAP.md)
+- [Contributors](CONTRIBUTORS.md)
+- [Release Announcements](docs/announcements/)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)
 - [Releases](https://github.com/Jackxiaozhiren/data-science-agent/releases)
@@ -620,10 +631,27 @@ Useful ways to contribute include:
 Before submitting a pull request, see:
 
 - [Contributing Guide](CONTRIBUTING.md)
+- [Roadmap](ROADMAP.md)
+- [Contributor Recognition](CONTRIBUTORS.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security Policy](SECURITY.md)
 
 The project uses automated quality gates including tests, coverage, Ruff, mypy, documentation checks, benchmark smoke tests, container builds, and release verification.
+
+---
+
+## Community
+
+The repository is structured so useful community activity feeds back into the product instead of becoming a disconnected issue queue.
+
+- **Direction:** [`ROADMAP.md`](ROADMAP.md) documents Now / Next / Later priorities and non-goals.
+- **Recognition:** [`CONTRIBUTORS.md`](CONTRIBUTORS.md) is refreshed automatically from GitHub contributor data, excluding bots.
+- **Triage:** issues and pull requests receive automated labels from their content or changed paths; manual labels are preserved.
+- **Maintenance:** inactive work is handled conservatively by the stale workflow, with bug, good-first-issue, security, and assigned work protected.
+- **Evaluation:** [`benchmarks/leaderboard/`](benchmarks/leaderboard/) provides a structured, CI-validated public submission surface.
+- **Releases:** [`docs/announcements/`](docs/announcements/) contains share-ready announcements derived from canonical GitHub Release notes.
+
+The best contribution signal is still a reproducible problem, a clear use case, a reviewed patch, or verifiable benchmark evidence.
 
 ---
 
@@ -657,7 +685,8 @@ Data Science Agent is released under the [MIT License](LICENSE).
 
 [Get Started](docs/getting-started.md) ·
 [Case Studies](case-studies/) ·
-[Releases](https://github.com/Jackxiaozhiren/data-science-agent/releases) ·
+[Leaderboard](benchmarks/leaderboard/) ·
+[Roadmap](ROADMAP.md) ·
 [Good First Issues](https://github.com/Jackxiaozhiren/data-science-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) ·
 [Contribute](CONTRIBUTING.md)
 
