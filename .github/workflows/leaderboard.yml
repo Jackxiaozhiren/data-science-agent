@@ -1,0 +1,27 @@
+name: Benchmark Leaderboard
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/leaderboard/**"
+      - "scripts/render_leaderboard.py"
+  push:
+    branches: [main]
+    paths:
+      - "benchmarks/leaderboard/**"
+      - "scripts/render_leaderboard.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Validate schema and generated table
+        run: python scripts/render_leaderboard.py --check
