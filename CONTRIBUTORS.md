@@ -10,8 +10,7 @@ This page is maintained automatically from GitHub's contributor data. Bot accoun
 
 | Contributor | GitHub commit contributions |
 |---|---:|
-| [@CommandCodeBot](https://github.com/CommandCodeBot) | 107 |
-| [@Jackxiaozhiren](https://github.com/Jackxiaozhiren) | 50 |
+| [@Jackxiaozhiren](https://github.com/Jackxiaozhiren) | 48 |
 
 <!-- contributors-table:end -->
 
