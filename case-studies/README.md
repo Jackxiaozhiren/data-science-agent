@@ -4,6 +4,18 @@
 
 Every case study runs the real agent, produces evidence-backed findings, records tool failures as limitations, and generates a reproduction package. No mock outputs or hard-coded success metrics.
 
+## Start with the flagship workflows
+
+If you only have a few minutes, these three cases show the core product surface most clearly:
+
+| Flagship | Question | Verified run | Why start here |
+|---|---|---:|---|
+| **[Business Analytics → CS01 Sales](01-sales/)** | What drives revenue across regions and categories? | `COMPLETED` · 1.33s · 6 evidence | Fastest path from a stakeholder question to SQL/statistics/evidence/report |
+| **[Forecasting → CS03 Time Series](03-time-series/)** | What are the next 30 values, and how well does the baseline forecast perform? | `COMPLETED` · 1.284s · 5 evidence | Shows temporal analysis, reproducibility, and honest recovery from tool failures |
+| **[Machine Learning → CS08 Classification](08-classification/)** | Can DSA train, evaluate, and explain an imbalanced classifier? | `COMPLETED` · 0.113s · 5 evidence | Shows model evaluation and feature importance inside the same provenance model |
+
+The other five cases broaden coverage across churn, marketing, finance, public statistics, and data quality. They remain important evaluation cases, especially where recorded failures expose capability boundaries.
+
 <div align="center">
 
 <a href="01-sales/"><img src="assets/cs01-sales.svg" alt="CS01 Sales Analysis" width="49%" /></a>
@@ -79,11 +91,11 @@ Do not contribute copyrighted or private datasets without explicit redistributio
 # CS01 — Sales
 uv run python -c "from data_science_agent import Agent; r=Agent().analyze_sync('benchmarks/v2/datasets/sales.csv', 'Analyze revenue trends by region and category'); print(r.status, len(r.evidence))"
 
-# CS02 — Churn
-uv run python -c "from data_science_agent import Agent; r=Agent().analyze_sync('benchmarks/v2/datasets/customer_churn.csv', 'Analyze churn'); print(r.status, len(r.evidence))"
+# CS03 — Forecasting
+uv run python -c "from data_science_agent import Agent; r=Agent().analyze_sync('benchmarks/v2/datasets/timeseries_trend.csv', 'Forecast next 30 periods for timeseries_trend, evaluate holdout MAE, and visualize trend.'); print(r.status, len(r.evidence))"
 
-# CLI
-uv run dsa analyze benchmarks/v2/datasets/sales.csv --task "Analyze revenue" --json
+# CS08 — Classification
+uv run python -c "from data_science_agent import Agent; r=Agent().analyze_sync('benchmarks/v2/datasets/imbalanced.csv', 'Train classification for imbalanced.csv, evaluate holdout, and report feature importance.'); print(r.status, len(r.evidence))"
 ```
 
 Case outputs live under `case-studies/<id>/outputs/`. Reproduction bundles include artifacts such as `report.md`, `evidence_graph.json`, `reproduce.sh`, and `analysis.ipynb` under the corresponding generated report directory.
