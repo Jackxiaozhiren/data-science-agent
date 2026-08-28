@@ -1,4 +1,13 @@
-# CS01 Sales Analysis — Business Analytics (W4 §28)
+# CS01 Sales Analysis — Business Analytics
+
+> **Flagship workflow:** turn a business question into SQL, statistics, evidence, visualization, and a reproducible report.
+
+| Verified status | Runtime | Evidence | Tool calls | Artifacts |
+|---|---:|---:|---:|---:|
+| `COMPLETED` | 1.33s | 6 | 6 | 5 |
+
+**Question →** Which regional and category patterns matter for revenue, and what evidence supports the conclusion?  
+**Why this case matters →** It is the shortest end-to-end demonstration of DSA's core promise: a business-facing answer whose important claims can be traced back to concrete computations and the hashed input dataset.
 
 ## Problem (§31)
 
@@ -25,7 +34,7 @@ Stakeholder: Sales/Business analyst. Decision: pricing and regional strategy.
 
 1. **Profile** (`profile_dataset`) — schema, missing, duplicates, cardinality
 2. **Correlation** (`correlation_analysis` price vs revenue, price vs units) — Pearson
-3. **SQL** (`run_sql`) — `SELECT region, category, SUM(revenue) GROUP BY` 
+3. **SQL** (`run_sql`) — `SELECT region, category, SUM(revenue) GROUP BY`
 4. **Hypothesis test** (`run_statistical_test`) — region effect via ANOVA
 5. **Visualization** (`create_visualization` histogram/bar/line) — revenue distribution
 6. **Evidence** (`get_evidence`) + **Report** (`generate_report`)
