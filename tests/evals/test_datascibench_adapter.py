@@ -145,32 +145,39 @@ def test_build_logs_txt_maps_tool_calls(dsc: Any) -> None:
     assert plan[1]["success"] is False and plan[1]["result"] == "bad sql"
 
 
-def test_prepare_without_token_writes_honest_marker(
-    dsc: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("HF_TOKEN", raising=False)
-    ws = tmp_path / "workspace"
-    ws.mkdir()
-    adapter = _adapter(dsc, ws)
-    adapter._fetch_ground_truth()
-    marker = ws / "GT_NOT_DOWNLOADED.txt"
-    assert marker.exists()
-    assert "HF_TOKEN" in marker.read_text(encoding="utf-8")
+def test_prepare_missing_workspace_raises_with_setup_instructions(dsc: Any, tmp_path: Path) -> None:
+    adapter = _adapter(dsc, tmp_path / "empty")
+    with pytest.raises(FileNotFoundError, match="Setup") as exc:
+        adapter.prepare()
+    msg = str(exc.value)
+    assert PINNED_COMMIT in msg
+    assert "codeload.github.com" in msg  # exact pinned tarball URL is documented
+    assert "huggingface.co/datasets/zd21/DataSciBench" in msg  # gated GT disclosed
 
 
-def test_prepare_is_idempotent_at_pinned_commit(
-    dsc: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_prepare_at_pinned_commit_is_idempotent_and_reports_gt_status(
+    dsc: Any, tmp_path: Path
 ) -> None:
     ws = _fake_workspace(tmp_path)
-    (ws / ".upstream_commit").write_text(PINNED_COMMIT + "\n", encoding="utf-8")
+    (ws / ".upstream_commit").write_text(PINNED_COMMIT + "\n.\n", encoding="utf-8")
     adapter = _adapter(dsc, ws)
+    adapter.prepare()  # marker matches: pure filesystem verification, no network
+    status = (ws / "GT_STATUS.txt").read_text(encoding="utf-8")
+    assert "ground_truth_present: false" in status  # honest — GT is gated, absent here
+    gt_dir = ws / "gt"
+    gt_dir.mkdir()
+    (gt_dir / "gt_human_2.json").write_text("{}", encoding="utf-8")  # operator placed GT
+    adapter.prepare()  # re-run refreshes the status honestly
+    status = (ws / "GT_STATUS.txt").read_text(encoding="utf-8")
+    assert "ground_truth_present: true" in status
 
-    def explode(*_a: object, **_k: object) -> None:  # pragma: no cover
-        raise AssertionError("must not re-clone when commit matches")
 
-    monkeypatch.setattr("subprocess.run", explode)
-    adapter.prepare()  # early-return path; no clone attempted
-    assert (ws / ".upstream_commit").read_text().strip() == PINNED_COMMIT
+def test_prepare_is_idempotent_at_pinned_commit(dsc: Any, tmp_path: Path) -> None:
+    ws = _fake_workspace(tmp_path)
+    (ws / ".upstream_commit").write_text(PINNED_COMMIT + "\n.\n", encoding="utf-8")
+    adapter = _adapter(dsc, ws)
+    adapter.prepare()  # marker matches: verification only, no fetch attempted
+    assert (ws / ".upstream_commit").read_text().splitlines()[0] == PINNED_COMMIT
 
 
 def test_manifest_json_is_complete_and_pinned() -> None:

@@ -5,12 +5,15 @@ original DataSciBench benchmark (THUDM/DataSciBench, arXiv:2502.13897).
 
 Integrity constraints honoured here (V4.3 §16, §19, §21, §23):
 
-- The upstream repository is cloned at a **pinned commit** into a git-ignored
-  workspace; **no DataSciBench content is ever vendored into the DSA repo**
-  (upstream ships no LICENSE — redistribution is not permitted).
-- Ground-truth material comes from the gated HF dataset only when
-  ``HF_TOKEN`` is present in the environment; the adapter never embeds
-  credentials and fails honestly when they are missing.
+- The upstream checkout is fetched **by the operator** at a **pinned commit**
+  into a git-ignored workspace (see ``prepare`` for the exact commands); **no
+  DataSciBench content is ever vendored into the DSA repo** (upstream ships no
+  LICENSE — redistribution is not permitted). The adapter performs only
+  local filesystem verification — it contains no network and no
+  credential-handling code by design.
+- Ground-truth material comes from the gated HF dataset and requires the
+  operator to accept its conditions; the adapter reports GT presence honestly
+  and never fabricates it.
 - Evaluation runs the benchmark's *original* evaluator scripts; this adapter
   only converts DSA run output into the input layout those scripts expect
   (``data/{task_id}/{model}_{run_id}/logs.txt`` with ``## Current Plan`` /
@@ -24,8 +27,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
-import subprocess
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -143,55 +144,58 @@ class DataSciBenchAdapter:
 
     # ------------------------------------------------------------------ §17
     def prepare(self) -> None:
-        """Clone upstream at the pinned commit; fetch gated GT when token exists.
+        """Verify the operator-prepared workspace is present at the pinned commit.
 
-        Idempotent: an existing workspace at the pinned commit is reused. GT is
-        fetched only via ``HF_TOKEN`` from the environment; absence is fine here
-        and surfaces later as an honest per-task error.
+        The fetch itself is an operator step — network access, HF condition
+        acceptance, and credentials never pass through this adapter. Setup
+        (documented in README.md):
+
+            mkdir -p <workspace>
+            curl -L <tarball url> | tar xz --strip-components=1 -C <workspace>
+            echo "<commit>" > <workspace>/.upstream_commit
+            # optional gated GT (after accepting conditions on HuggingFace):
+            # download zd21/DataSciBench ground truth into <workspace>/gt/
+
+        Idempotent: a workspace whose marker matches the pinned commit passes.
+        GT presence is reported honestly via a status file, never fabricated.
         """
         marker = self.workspace / ".upstream_commit"
-        if marker.exists() and marker.read_text(encoding="utf-8").strip() == UPSTREAM_COMMIT:
-            return
-        self.workspace.mkdir(parents=True, exist_ok=True)
-        git = shutil.which("git")
-        if git is None:
-            raise RuntimeError(
-                "git not found on PATH — required to clone the DataSciBench workspace"
-            )
-        subprocess.run(  # noqa: S603 — resolved executable, literal argv, no shell
-            [git, "clone", "--depth", "1", UPSTREAM_URL, str(self.workspace)],
-            check=True,
-            capture_output=True,
-            text=True,
+        if not (
+            marker.exists()
+            and marker.read_text(encoding="utf-8").splitlines()[:1] == [UPSTREAM_COMMIT]
+        ):
+            raise FileNotFoundError(self._setup_instructions())
+        self._write_gt_status()
+
+    def _setup_instructions(self) -> str:
+        tarball = f"https://codeload.github.com/THUDM/DataSciBench/tar.gz/{UPSTREAM_COMMIT}"
+        ws = self.workspace
+        return (
+            f"DataSciBench workspace missing or at the wrong commit: {ws}\n"
+            f"Setup (operator step — pinned upstream {UPSTREAM_COMMIT}):\n"
+            f"  mkdir -p '{ws}'\n"
+            f"  curl -L '{tarball}' | tar xz --strip-components=1 -C '{ws}'\n"
+            f"  printf '%s\\n' '{UPSTREAM_COMMIT}' > '{ws / '.upstream_commit'}'\n"
+            f"  # optional gated GT: accept https://huggingface.co/datasets/{HF_GT_DATASET}\n"
+            f"  # then place ground truth under '{ws / 'gt'}'"
         )
-        marker.write_text(UPSTREAM_COMMIT + "\n", encoding="utf-8")
-        self._fetch_ground_truth()
 
-    def _fetch_ground_truth(self) -> None:
-        """Download gated GT from HF when a token is configured; else report."""
-        token = os.environ.get("HF_TOKEN")
-        if not token:
-            (self.workspace / "GT_NOT_DOWNLOADED.txt").write_text(
-                "HF_TOKEN not set — gated ground truth not fetched. "
-                f"Accept conditions at https://huggingface.co/datasets/{HF_GT_DATASET} "
-                "and export HF_TOKEN to enable evaluation runs.",
-                encoding="utf-8",
-            )
-            return
-        from huggingface_hub import snapshot_download  # lazy: eval-only dependency
-
-        snapshot_download(
-            repo_id=HF_GT_DATASET,
-            token=token,
-            local_dir=str(self.workspace / "gt"),
+    def _write_gt_status(self) -> None:
+        """Record GT presence honestly — evaluation requires it, never fakes it."""
+        gt_dir = self.workspace / "gt"
+        present = gt_dir.is_dir() and any(gt_dir.iterdir())
+        status = self.workspace / "GT_STATUS.txt"
+        status.write_text(
+            f"ground_truth_present: {str(present).lower()}\n"
+            f"source: https://huggingface.co/datasets/{HF_GT_DATASET} (gated — "
+            "operator must accept conditions; download into workspace/gt/)\n",
+            encoding="utf-8",
         )
 
     def list_tasks(self) -> list[ExternalTask]:
-        data_dir = self.workspace / "data"
+        data_dir = self._upstream_root() / "data"
         if not data_dir.is_dir():
-            raise FileNotFoundError(
-                f"DataSciBench workspace not prepared at {self.workspace} — call prepare()"
-            )
+            raise FileNotFoundError(f"DataSciBench data/ not found under {self._upstream_root()}")
         tasks: list[ExternalTask] = []
         for task_dir in sorted(data_dir.iterdir()):
             prompt_file = task_dir / "prompt.json"
@@ -263,6 +267,24 @@ class DataSciBenchAdapter:
         return out
 
     # --------------------------------------------------------------- helpers
+    def _upstream_root(self) -> Path:
+        """Locate the extracted upstream checkout inside the workspace.
+
+        Authoritative source is the ``.upstream_commit`` marker (written by the
+        operator during setup); a workspace with ``data/`` at its root (manual
+        layout) is also accepted.
+        """
+        marker = self.workspace / ".upstream_commit"
+        if marker.exists():
+            lines = marker.read_text(encoding="utf-8").splitlines()
+            if len(lines) > 1:
+                return self.workspace / lines[1]
+        if (self.workspace / "data").is_dir():
+            return self.workspace
+        raise FileNotFoundError(
+            f"DataSciBench workspace not prepared at {self.workspace} — call prepare()"
+        )
+
     def _materialize_run_dir(self, run: ExternalRun) -> Path | None:
         """Write the converted run layout consumed by the original evaluator."""
         if not run.agent_view.dataset_path:

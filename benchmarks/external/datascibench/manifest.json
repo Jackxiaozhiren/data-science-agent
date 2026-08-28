@@ -16,7 +16,7 @@
   "dataset_hashes": "per-task prompt.json sha256 recorded at run time via adapter.task_dir_sha256; see results/",
   "evaluator_version": "original: experiments/evaluate.py (CREvaluator, TMC-list, Completion Rate) + evaluation_results/calculate_final_metric.py",
   "environment": {
-    "usage": "adapter clones upstream at the pinned commit into .workspace/ (git-ignored); GT fetched from HF only when HF_TOKEN is set",
+    "usage": "operator fetches upstream tarball at the pinned commit into .workspace/ (git-ignored, see README); gated GT downloaded by operator after accepting HF conditions; adapter itself has no network/credential code",
     "python": "3.12 (DSA runtime); upstream evaluator run in its own checkout"
   },
   "dsa_commit": "see release manifest / git rev-parse HEAD",

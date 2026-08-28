@@ -18,12 +18,13 @@
 ## Consequences for this repository (binding)
 
 - **No redistribution:** no DataSciBench prompt, metric, GT, or code file may be
-  committed into the DSA repository. The adapter clones upstream at the pinned
-  commit into a git-ignored `.workspace/` at run time.
+  committed into the DSA repository. The operator fetches the upstream tarball
+  at the pinned commit into a git-ignored `.workspace/` (see README); the
+  adapter itself contains no benchmark content and no network code.
 - **Use in place:** running the benchmark's original evaluator against the
-  cloned checkout in our environment for research evaluation is the intended
-  academic use and is what V4.3 §22-27 authorizes; results we publish are our
-  own measurements, not redistributed benchmark content.
+  operator-fetched checkout in our environment for research evaluation is the
+  intended academic use and is what V4.3 §22-27 authorizes; results we publish
+  are our own measurements, not redistributed benchmark content.
 - **Attribution:** any published results must cite the paper (BibTeX in the
   upstream README).
 - **Open question (tracked):** a polite upstream issue asking the authors to

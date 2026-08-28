@@ -13,22 +13,37 @@ pinned at upstream commit `84ef3d4d94d7362a5149cf14a73dc168fc4f2f33` (2026-01-21
 | `LICENSE_NOTES.md` | license findings and redistribution constraints (§23) |
 | `results/` | raw evaluator output lands here (§48: raw → analysis → artifact) |
 | `logs/` | adapter run logs |
-| `.workspace/` | git-ignored clone of upstream + gated GT (never committed) |
+| `.workspace/` | git-ignored pinned tarball extraction + gated GT (never committed) |
 
 ## Usage
 
-```bash
-export DSC_WORKSPACE=/path/for/upstream-clone   # optional override
-# optional, for gated ground truth (never commit it):
-export HF_TOKEN=...                             # from your HF account after accepting dataset conditions
+**Step 1 — operator setup** (network + license acceptance stay operator-side;
+the adapter itself contains no network or credential code):
 
-uv run python - <<'PY'
-from benchmarks_external.datascibench_adapter import load_adapter
-PY
+```bash
+export DSC_WORKSPACE="$PWD/benchmarks/external/datascibench/.workspace"
+mkdir -p "$DSC_WORKSPACE"
+curl -L "https://codeload.github.com/THUDM/DataSciBench/tar.gz/84ef3d4d94d7362a5149cf14a73dc168fc4f2f33" \
+  | tar xz --strip-components=1 -C "$DSC_WORKSPACE"
+printf '%s\n' "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33" > "$DSC_WORKSPACE/.upstream_commit"
+
+# optional — gated ground truth (never commit it):
+#   accept conditions at https://huggingface.co/datasets/zd21/DataSciBench
+#   then place the ground-truth files into "$DSC_WORKSPACE/gt/"
 ```
 
-The adapter is loaded via `tests/evals/test_datascibench_adapter.py` and the
-Phase B protocol — see `adapter.py` docstrings for the per-method contract.
+**Step 2 — run through the Phase B protocol** (`adapter.py` docstrings carry
+the per-method contract; `tests/evals/test_datascibench_adapter.py` shows the
+end-to-end flow):
+
+```python
+from pathlib import Path
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "datascibench_adapter",
+    Path("benchmarks/external/datascibench/adapter.py"),
+)
+```
 
 ## Task categories (222 total at pinned commit)
 
