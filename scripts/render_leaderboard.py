@@ -108,7 +108,7 @@ def replace_block(text: str, block: str) -> str:
         raise ValueError("README leaderboard markers are missing")
     before, rest = text.split(START, 1)
     _, after = rest.split(END, 1)
-    return before.rstrip() + "\n\n" + block + "\n" + after.lstrip("\n")
+    return before.rstrip() + "\n\n" + block + "\n\n" + after.lstrip("\n")
 
 
 def main() -> int:
