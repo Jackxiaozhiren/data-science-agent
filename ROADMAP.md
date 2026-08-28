@@ -19,6 +19,7 @@ This roadmap communicates project direction so contributors can see **what matte
 - Keep CI, CodeQL, dependency review, secret scanning, type checking, tests, docs, and release verification green.
 - Preserve PyPI Trusted Publishing and release attestations.
 - Treat reproducibility regressions as release-quality issues.
+- Track the next minor release through [v4.3.0 Release Readiness](docs/release-readiness-v4.3.md) and [issue #13](https://github.com/Jackxiaozhiren/data-science-agent/issues/13); no tag until the final candidate satisfies every release-critical gate.
 
 ### Contributor onboarding
 
@@ -32,6 +33,7 @@ This roadmap communicates project direction so contributors can see **what matte
 - Keep the [benchmark leaderboard](benchmarks/leaderboard/) generated from structured data rather than hand-edited scores.
 - Require exact version / commit / benchmark / model metadata for public benchmark submissions.
 - Keep the eight [verified case studies](case-studies/) reproducible and explicit about limitations.
+- Use CS01 Sales, CS03 Time Series, and CS08 Classification as the three flagship entry points; keep the remaining cases as broader capability and failure-mode evidence.
 
 ## Next
 
