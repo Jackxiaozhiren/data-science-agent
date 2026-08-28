@@ -27,9 +27,14 @@ curl -L "https://codeload.github.com/THUDM/DataSciBench/tar.gz/84ef3d4d94d7362a5
   | tar xz --strip-components=1 -C "$DSC_WORKSPACE"
 printf '%s\n' "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33" > "$DSC_WORKSPACE/.upstream_commit"
 
-# optional — gated ground truth (never commit it):
+# optional — gated distribution (never commit it):
 #   accept conditions at https://huggingface.co/datasets/zd21/DataSciBench
-#   then place the ground-truth files into "$DSC_WORKSPACE/gt/"
+#   then place, per the download's layout:
+#     - input datasets referenced by the prompts (e.g. campaign_data.csv)
+#     - ground truth into "$DSC_WORKSPACE/gt/"
+# NOTE: input datasets are NOT in the public GitHub repo — only prompt.json
+# per task. Without the gated download, runs complete mechanically but analyze
+# no data (honest failed outcome, adapter reports this rather than scoring).
 ```
 
 **Step 2 — run through the Phase B protocol** (`adapter.py` docstrings carry

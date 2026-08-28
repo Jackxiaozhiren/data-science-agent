@@ -216,6 +216,8 @@ def test_no_benchmark_content_vendored_into_repo() -> None:
         "results",
         "logs",
         "__pycache__",  # bytecode cache; globally gitignored, not repo content
+        ".workspace",  # operator fetch + gated GT; gitignored by design (§23)
+        ".mimosa",  # scanner hook state; matched by the global .mimosa/ ignore
     }
     assert {p.name for p in d.iterdir()} <= allowed
     assert (REPO / ".gitignore").read_text(encoding="utf-8").find(
