@@ -8,15 +8,22 @@ Ask questions about your data in natural language.
 Get statistics, SQL, machine learning, visualizations, and reports — with **every important claim traceable back to the computation and dataset that produced it**.
 
 [**Quickstart**](#-quickstart) ·
-[**How It Works**](#-how-it-works) ·
+[**Case Studies**](case-studies/) ·
 [**Evaluation**](#-evaluation) ·
 [**Documentation**](docs/getting-started.md) ·
+[**Releases**](https://github.com/Jackxiaozhiren/data-science-agent/releases) ·
 [**Contributing**](CONTRIBUTING.md)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/codeql.yml?label=CodeQL&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions/workflows/codeql.yml)
 [![PyPI](https://img.shields.io/pypi/v/jack-data-science-agent?logo=pypi&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
+[![GitHub Release](https://img.shields.io/github/v/release/Jackxiaozhiren/data-science-agent?display_name=tag&sort=semver)](https://github.com/Jackxiaozhiren/data-science-agent/releases/latest)
 [![Python](https://img.shields.io/pypi/pyversions/jack-data-science-agent?logo=python&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
 [![License](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
+
+[![Benchmark v2](https://img.shields.io/badge/benchmark%20v2-100%2F100-brightgreen)](docs/evaluation.md)
+[![Coverage gate](https://img.shields.io/badge/coverage%20gate-81%25-brightgreen)](docs/contributing.md)
+[![Case studies](https://img.shields.io/badge/case%20studies-8%2F8%20verified-brightgreen)](case-studies/)
 [![GitHub stars](https://img.shields.io/github/stars/Jackxiaozhiren/data-science-agent?style=flat&logo=github)](https://github.com/Jackxiaozhiren/data-science-agent/stargazers)
 
 <br />
@@ -384,7 +391,8 @@ unsupported-claim rate = 0.06
 ### Benchmark v2
 
 ```text
-100 tasks
+100 / 100 tasks
+task_success_rate = 1.0
 30 datasets
 11 categories
 fixed seed: 42
@@ -394,16 +402,17 @@ The benchmark suite covers multiple categories of data-science work and is versi
 
 ### Real-world case studies
 
-The repository also contains **8 end-to-end case studies**.
+The repository contains **8 / 8 verified end-to-end case studies** spanning business analytics, churn, forecasting, marketing, financial data, public statistics, data quality, and classification.
 
 Importantly, tool failures and limitations are preserved rather than silently removed from the reported results.
 
-See:
+**[Browse the visual Case Study Gallery →](case-studies/)**
+
+See also:
 
 - [`docs/benchmark.md`](docs/benchmark.md)
 - [`docs/evaluation.md`](docs/evaluation.md)
 - [`docs/research.md`](docs/research.md)
-- [`case-studies/`](case-studies/)
 
 ---
 
@@ -548,8 +557,10 @@ Start here:
 - [Evaluation](docs/evaluation.md)
 - [MCP](docs/mcp.md)
 - [Research & Limitations](docs/research.md)
+- [Case Studies](case-studies/)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)
+- [Releases](https://github.com/Jackxiaozhiren/data-science-agent/releases)
 
 ---
 
@@ -604,13 +615,15 @@ Useful ways to contribute include:
 - reporting reproducibility failures
 - fixing bugs
 
+**New contributor?** Start with the [`good first issue`](https://github.com/Jackxiaozhiren/data-science-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) queue.
+
 Before submitting a pull request, see:
 
 - [Contributing Guide](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security Policy](SECURITY.md)
 
-The project uses automated quality gates including tests, Ruff, mypy, documentation checks, and release verification.
+The project uses automated quality gates including tests, coverage, Ruff, mypy, documentation checks, benchmark smoke tests, container builds, and release verification.
 
 ---
 
@@ -643,8 +656,9 @@ Data Science Agent is released under the [MIT License](LICENSE).
 **Ask. Analyze. Verify. Reproduce.**
 
 [Get Started](docs/getting-started.md) ·
-[Documentation](docs/) ·
-[Report an Issue](https://github.com/Jackxiaozhiren/data-science-agent/issues) ·
+[Case Studies](case-studies/) ·
+[Releases](https://github.com/Jackxiaozhiren/data-science-agent/releases) ·
+[Good First Issues](https://github.com/Jackxiaozhiren/data-science-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) ·
 [Contribute](CONTRIBUTING.md)
 
 </div>
