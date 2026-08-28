@@ -20,6 +20,14 @@ API = "https://api.github.com"
 TARGET = "CONTRIBUTORS.md"
 
 
+class GitHubAPIError(RuntimeError):
+    """GitHub API error with the HTTP status preserved for retry decisions."""
+
+    def __init__(self, status: int, body: str) -> None:
+        super().__init__(f"GitHub API request failed ({status}): {body}")
+        self.status = status
+
+
 def request_json(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
     token = os.environ.get("GITHUB_TOKEN", "")
     headers = {
@@ -42,9 +50,7 @@ def request_json(method: str, path: str, payload: dict[str, Any] | None = None) 
             return json.loads(body) if body else None
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        error = RuntimeError(f"GitHub API request failed ({exc.code}): {body}")
-        error.status = exc.code  # type: ignore[attr-defined]
-        raise error from exc
+        raise GitHubAPIError(exc.code, body) from exc
 
 
 def fetch_contributors(repository: str) -> list[dict[str, Any]]:
@@ -143,8 +149,8 @@ def publish(repository: str, branch: str, content: str) -> None:
             request_json("PUT", f"/repos/{repository}/contents/{path}", payload)
             print(f"Updated {TARGET} on {branch}.")
             return
-        except RuntimeError as exc:
-            if getattr(exc, "status", None) not in {409, 422} or attempt == 3:
+        except GitHubAPIError as exc:
+            if exc.status not in {409, 422} or attempt == 3:
                 raise
             print(f"Concurrent update detected; retrying {TARGET} ({attempt}/3).")
             time.sleep(attempt)
