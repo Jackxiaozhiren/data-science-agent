@@ -1,0 +1,35 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: 🚀 Features
+      labels:
+        - enhancement
+        - feature
+    - title: 🐛 Fixes
+      labels:
+        - bug
+        - fix
+    - title: 📊 Evaluation & Benchmarks
+      labels:
+        - benchmark
+        - evaluation
+    - title: 🔌 Plugins & Integrations
+      labels:
+        - plugin
+        - integration
+    - title: 📚 Documentation
+      labels:
+        - documentation
+    - title: 🔐 Security & Dependencies
+      labels:
+        - security
+        - dependencies
+    - title: 🧰 Maintenance
+      labels:
+        - chore
+        - maintenance
+    - title: Other Changes
+      labels:
+        - "*"
