@@ -14,7 +14,7 @@ EXPECTED = {
     "version": "4.2.10",
     "prev_version": "4.1.1",
     "prev_versions": ["4.0.0", "3.0.0", "2.0.0"],
-    "pytest": "257",
+    "pytest": "253",  # live at HEAD post-82bb1a3 trim (257 was at tag v4.2.10, pre-trim)
     "pytest_old": ["155", "86+", "86"],
     "mypy": "104",  # with src
     "mypy_alt": "102",  # without src (also valid)

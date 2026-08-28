@@ -37,6 +37,7 @@
     "notes": [
         "PATCH release — no breaking public API change.",
         "Publish is now umbrella-only: `rm -rf dist && uv build` then publish dist/. The v4.2.9 attempt failed because all workspace packages were built into dist/ and the dsa-* distributions have no trusted publisher (HTTP 400).",
-        "Tags v4.2.0 - v4.2.9 unchanged (release-truth rule: no tag rewrite)."
+        "Tags v4.2.0 - v4.2.9 unchanged (release-truth rule: no tag rewrite).",
+        "ADDENDUM 2026-08-28 (V4.3 Phase A truth freeze): gates.pytest records '257 passed' as measured at tag v4.2.10 (pre-trim). Live HEAD collects '253 passed' — commit 82bb1a3 removed generated artifacts that had contributed 4 collected tests, so 253 is the correct count at HEAD. The drift is not a code regression. See docs/v4_3/V4_2_FINAL_TRUTH.md §2 and docs/v4_3/EXTERNAL_VALIDATION_HISTORY.md for the related reproduction/ trim."
     ]
 }

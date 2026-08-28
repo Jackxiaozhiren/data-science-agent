@@ -40,3 +40,4 @@ dist/
 site/
 apps/vscode/out/
 apps/vscode/node_modules/
+.mimosa/
