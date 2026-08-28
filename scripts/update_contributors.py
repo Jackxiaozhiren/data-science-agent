@@ -59,14 +59,18 @@ def fetch_contributors(repository: str) -> list[dict[str, Any]]:
     return contributors
 
 
+def is_bot(item: dict[str, Any]) -> bool:
+    login = str(item.get("login") or "")
+    normalized = login.lower()
+    return (
+        item.get("type") == "Bot"
+        or normalized.endswith("[bot]")
+        or normalized.endswith("bot")
+    )
+
+
 def render(repository: str, contributors: list[dict[str, Any]]) -> str:
-    humans = [
-        item
-        for item in contributors
-        if item.get("login")
-        and item.get("type") != "Bot"
-        and not str(item.get("login")).endswith("[bot]")
-    ]
+    humans = [item for item in contributors if item.get("login") and not is_bot(item)]
     humans.sort(key=lambda item: (-int(item.get("contributions") or 0), str(item["login"]).lower()))
 
     if humans:
