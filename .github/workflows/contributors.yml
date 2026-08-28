@@ -10,9 +10,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: contributor-recognition
+  cancel-in-progress: false
+
 jobs:
   update-contributors:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
