@@ -1,24 +1,26 @@
-"""Render CONTRIBUTORS.md from GitHub contributor data.
+"""Render and publish CONTRIBUTORS.md from GitHub contributor data.
 
-This script is designed for GitHub Actions and uses only the Python standard
-library. Bot accounts are excluded. It writes CONTRIBUTORS.md locally; the
-workflow is responsible for committing the file if it changed.
+The script uses only the Python standard library. Bot accounts are excluded.
+Updates go through the GitHub Contents API with a bounded retry on SHA conflicts,
+so concurrent pushes to ``main`` do not cause non-fast-forward failures.
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import os
+import time
 import urllib.error
+import urllib.parse
 import urllib.request
-from pathlib import Path
 from typing import Any
 
 API = "https://api.github.com"
-OUT = Path("CONTRIBUTORS.md")
+TARGET = "CONTRIBUTORS.md"
 
 
-def api_get(path: str) -> Any:
+def request_json(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
     token = os.environ.get("GITHUB_TOKEN", "")
     headers = {
         "Accept": "application/vnd.github+json",
@@ -28,19 +30,27 @@ def api_get(path: str) -> Any:
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    request = urllib.request.Request(f"{API}{path}", headers=headers)
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    request = urllib.request.Request(f"{API}{path}", data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+            body = response.read().decode("utf-8")
+            return json.loads(body) if body else None
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"GitHub API request failed ({exc.code}): {body}") from exc
+        error = RuntimeError(f"GitHub API request failed ({exc.code}): {body}")
+        error.status = exc.code  # type: ignore[attr-defined]
+        raise error from exc
 
 
 def fetch_contributors(repository: str) -> list[dict[str, Any]]:
     contributors: list[dict[str, Any]] = []
     for page in range(1, 11):
-        batch = api_get(f"/repos/{repository}/contributors?per_page=100&page={page}")
+        batch = request_json("GET", f"/repos/{repository}/contributors?per_page=100&page={page}")
         if not isinstance(batch, list):
             raise RuntimeError("GitHub contributors endpoint did not return a list")
         contributors.extend(item for item in batch if isinstance(item, dict))
@@ -100,14 +110,56 @@ Start with the [Contributing Guide](CONTRIBUTING.md) or browse [good first issue
 """
 
 
+def current_file(repository: str, branch: str) -> tuple[str, str]:
+    path = urllib.parse.quote(TARGET, safe="/")
+    current = request_json("GET", f"/repos/{repository}/contents/{path}?ref={urllib.parse.quote(branch)}")
+    if not isinstance(current, dict) or not current.get("sha") or not current.get("content"):
+        raise RuntimeError(f"Could not load {TARGET}")
+    existing = base64.b64decode(str(current["content"])).decode("utf-8")
+    return str(current["sha"]), existing
+
+
+def publish(repository: str, branch: str, content: str) -> None:
+    path = urllib.parse.quote(TARGET, safe="/")
+    encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+
+    for attempt in range(1, 4):
+        sha, existing = current_file(repository, branch)
+        if existing == content:
+            print(f"{TARGET} is already up to date.")
+            return
+
+        payload = {
+            "message": "docs: refresh contributor recognition [skip ci]",
+            "branch": branch,
+            "sha": sha,
+            "content": encoded,
+        }
+        try:
+            request_json("PUT", f"/repos/{repository}/contents/{path}", payload)
+            print(f"Updated {TARGET} on {branch}.")
+            return
+        except RuntimeError as exc:
+            if getattr(exc, "status", None) not in {409, 422} or attempt == 3:
+                raise
+            print(f"Concurrent update detected; retrying {TARGET} ({attempt}/3).")
+            time.sleep(attempt)
+
+    raise RuntimeError(f"Could not update {TARGET} after retries")
+
+
 def main() -> int:
     repository = os.environ.get("GITHUB_REPOSITORY")
     if not repository or "/" not in repository:
         raise RuntimeError("GITHUB_REPOSITORY must be set to owner/repo")
 
+    repo = request_json("GET", f"/repos/{repository}")
+    if not isinstance(repo, dict):
+        raise RuntimeError("Could not load repository metadata")
+    branch = str(repo.get("default_branch") or "main")
+
     content = render(repository, fetch_contributors(repository))
-    OUT.write_text(content, encoding="utf-8")
-    print(f"Rendered {OUT} for {repository}.")
+    publish(repository, branch, content)
     return 0
 
 
