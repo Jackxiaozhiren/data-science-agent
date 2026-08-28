@@ -8,7 +8,9 @@ This page is maintained automatically from GitHub's contributor data. Bot accoun
 
 <!-- contributors-table:start -->
 
-_The automated contributor workflow will populate this table._
+| Contributor | GitHub commit contributions |
+|---|---:|
+| [@Jackxiaozhiren](https://github.com/Jackxiaozhiren) | — |
 
 <!-- contributors-table:end -->
 
