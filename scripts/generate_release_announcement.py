@@ -10,12 +10,21 @@ from __future__ import annotations
 import base64
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
 
 API = "https://api.github.com"
+
+
+class GitHubAPIError(RuntimeError):
+    """GitHub API error with the HTTP status preserved for retry decisions."""
+
+    def __init__(self, status: int, body: str) -> None:
+        super().__init__(f"GitHub API request failed ({status}): {body}")
+        self.status = status
 
 
 def request_json(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
@@ -42,7 +51,7 @@ def request_json(method: str, path: str, payload: dict[str, Any] | None = None) 
         body = exc.read().decode("utf-8", errors="replace")
         if exc.code == 404:
             return None
-        raise RuntimeError(f"GitHub API request failed ({exc.code}): {body}") from exc
+        raise GitHubAPIError(exc.code, body) from exc
 
 
 def render(tag: str, release: dict[str, Any]) -> str:
@@ -83,15 +92,37 @@ This announcement is generated from the canonical GitHub Release. The release pa
 
 def upsert(repository: str, branch: str, path: str, content: str, tag: str) -> None:
     quoted_path = urllib.parse.quote(path, safe="/")
-    current = request_json("GET", f"/repos/{repository}/contents/{quoted_path}?ref={urllib.parse.quote(branch)}")
-    payload: dict[str, Any] = {
-        "message": f"docs: publish {tag} announcement [skip ci]",
-        "branch": branch,
-        "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
-    }
-    if isinstance(current, dict) and current.get("sha"):
-        payload["sha"] = current["sha"]
-    request_json("PUT", f"/repos/{repository}/contents/{quoted_path}", payload)
+    encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+
+    for attempt in range(1, 4):
+        current = request_json(
+            "GET",
+            f"/repos/{repository}/contents/{quoted_path}?ref={urllib.parse.quote(branch)}",
+        )
+        if isinstance(current, dict) and current.get("content"):
+            existing = base64.b64decode(str(current["content"])).decode("utf-8")
+            if existing == content:
+                print(f"{path} is already up to date.")
+                return
+
+        payload: dict[str, Any] = {
+            "message": f"docs: publish {tag} announcement [skip ci]",
+            "branch": branch,
+            "content": encoded,
+        }
+        if isinstance(current, dict) and current.get("sha"):
+            payload["sha"] = current["sha"]
+
+        try:
+            request_json("PUT", f"/repos/{repository}/contents/{quoted_path}", payload)
+            return
+        except GitHubAPIError as exc:
+            if exc.status not in {409, 422} or attempt == 3:
+                raise
+            print(f"Concurrent update detected; retrying {path} ({attempt}/3).")
+            time.sleep(attempt)
+
+    raise RuntimeError(f"Could not update {path} after retries")
 
 
 def main() -> int:
