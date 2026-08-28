@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write   # Trusted Publishing (OIDC) — no long-lived token
-      contents: write   # attach artifacts and publish announcement markdown
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -24,19 +24,14 @@ jobs:
           python-version: "3.12"
       - run: pip install uv
       - run: uv sync --dev
-      # Node deps: tests/vscode runs `npm run compile` (tsc) and needs node_modules.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
       - run: npm --prefix apps/web ci --legacy-peer-deps
-      # Verify the full gate on the exact tagged commit before publishing.
       - run: uv run mypy packages apps/api src --ignore-missing-imports
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run pytest -q --cov --cov-report=term-missing
-      # The umbrella is self-contained (dsa_* are vendored into the wheel), so
-      # build only jack-data-science-agent and publish it — no separate dsa-*
-      # distributions, and dist/ contains only the umbrella artifacts.
       - run: rm -rf dist && uv build
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@v1.14.2 # release tag — GHCR image is tagged by release, not commit SHA
+        uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
           packages-dir: dist/
       - name: Attach artifacts to GitHub Release
@@ -44,66 +39,9 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
-      - name: Generate shareable release announcement
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const tag = context.ref.replace('refs/tags/', '');
-            const branch = context.payload.repository.default_branch;
-            const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
-            const notes = (release.data.body || '').trim() || '_No release notes supplied._';
-            const highlights = notes.length > 1800 ? `${notes.slice(0, 1800)}\n\n…` : notes;
-            const published = (release.data.published_at || new Date().toISOString()).slice(0, 10);
-            const releaseUrl = release.data.html_url;
-
-            const announcement = `# Data Science Agent ${tag}
-
-> Released ${published} · Evidence-grounded autonomous data science, from natural-language questions to reproducible analysis.
-
-## Install or upgrade
-
-\`\`\`bash
-pip install -U jack-data-science-agent
-\`\`\`
-
-## Highlights
-
-${highlights}
-
-## Verify the release
-
-- [GitHub Release](${releaseUrl})
-- [PyPI](https://pypi.org/project/jack-data-science-agent/)
-- Inspect the attached wheel/sdist and publishing attestations on the release page.
-
-## Share-ready summary
-
-> Data Science Agent ${tag} is available: evidence-grounded autonomous data science with reproducible reports, claim-level provenance, benchmarks, and multiple interfaces. Release: ${releaseUrl}
-
----
-
-This announcement is generated from the canonical GitHub Release. The release page remains the source of truth for artifacts and full notes.
-`;
-
-            async function upsert(path, content) {
-              let sha;
-              try {
-                const current = await github.rest.repos.getContent({ owner, repo, path, ref: branch });
-                if (!Array.isArray(current.data) && current.data.type === 'file') sha = current.data.sha;
-              } catch (error) {
-                if (error.status !== 404) throw error;
-              }
-              await github.rest.repos.createOrUpdateFileContents({
-                owner,
-                repo,
-                path,
-                branch,
-                ...(sha ? { sha } : {}),
-                message: `docs: publish ${tag} announcement [skip ci]`,
-                content: Buffer.from(content).toString('base64'),
-              });
-            }
-
-            await upsert(`docs/announcements/${tag}.md`, announcement);
-            await upsert('docs/announcements/latest.md', announcement);
+      - name: Generate release announcement
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/generate_release_announcement.py
