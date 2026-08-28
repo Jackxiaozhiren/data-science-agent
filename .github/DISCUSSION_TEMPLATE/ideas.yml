@@ -1,0 +1,43 @@
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this category for early-stage product, research, benchmark, integration, or plugin ideas that benefit from discussion before becoming an issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What workflow, research gap, or user need are you trying to address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Describe the idea at a high level. Implementation details are optional.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Agent workflow
+        - Statistics / machine learning
+        - Evidence / reproducibility
+        - Benchmark / evaluation
+        - Plugin / integration
+        - CLI / SDK / API / MCP
+        - Jupyter / VS Code / Web
+        - Documentation / community
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and reproducibility considerations
+      description: If the idea produces analytical claims, how should they be traced and reproduced?
+    validations:
+      required: false
