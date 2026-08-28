@@ -1,0 +1,89 @@
+name: Contributor Recognition
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - CONTRIBUTORS.md
+      - docs/announcements/**
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-contributors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = context.payload.repository?.default_branch || 'main';
+
+            const contributors = await github.paginate(
+              github.rest.repos.listContributors,
+              { owner, repo, per_page: 100 }
+            );
+
+            const humans = contributors
+              .filter((c) => c.login && c.type !== 'Bot' && !c.login.endsWith('[bot]'))
+              .sort((a, b) => (b.contributions || 0) - (a.contributions || 0));
+
+            const rows = humans.length
+              ? humans.map((c) => `| [@${c.login}](https://github.com/${c.login}) | ${c.contributions || 0} |`).join('\n')
+              : '| _No human contributors discovered yet_ | — |';
+
+            const content = `# Contributors
+
+Data Science Agent is built by people who improve code, documentation, benchmarks, reproducibility, plugins, case studies, and community workflows.
+
+This page is maintained automatically from GitHub's contributor data. Bot accounts are excluded.
+
+> Contribution counts below are GitHub commit counts on the repository. They are a maintenance signal, **not a ranking of contribution value**.
+
+<!-- contributors-table:start -->
+
+| Contributor | GitHub commit contributions |
+|---|---:|
+${rows}
+
+<!-- contributors-table:end -->
+
+## Ways to be recognized
+
+Contributions that can become part of the project include:
+
+- code and bug fixes;
+- benchmark tasks and evaluation improvements;
+- reproducibility investigations;
+- documentation and examples;
+- plugins and integrations;
+- case studies and datasets with clear licensing;
+- issue triage and high-quality technical review.
+
+Start with the [Contributing Guide](CONTRIBUTING.md) or browse [good first issues](https://github.com/${owner}/${repo}/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+`;
+
+            const current = await github.rest.repos.getContent({ owner, repo, path: 'CONTRIBUTORS.md', ref: branch });
+            if (Array.isArray(current.data) || current.data.type !== 'file') {
+              throw new Error('CONTRIBUTORS.md did not resolve to a file');
+            }
+
+            const existing = Buffer.from(current.data.content, 'base64').toString('utf8');
+            if (existing === content) {
+              core.info('CONTRIBUTORS.md is already up to date.');
+              return;
+            }
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner,
+              repo,
+              path: 'CONTRIBUTORS.md',
+              branch,
+              sha: current.data.sha,
+              message: 'docs: refresh contributor recognition [skip ci]',
+              content: Buffer.from(content).toString('base64'),
+            });
