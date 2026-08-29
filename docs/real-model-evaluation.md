@@ -8,19 +8,45 @@ With `DSA_LLM_MODE=real`, the agent planner calls a real model through the OpenA
 
 If a requested real-model call fails, DSA raises the real error by default. It does **not** silently substitute the stub provider. An explicit `DSA_LLM_FALLBACK=heuristic` is available for product experimentation, but runs using that fallback should not be published as pure real-model benchmark results.
 
-## Run a real-model benchmark
+## Recommended: manual GitHub Actions matrix
+
+The repository includes `.github/workflows/real-model-evaluation.yml`, a `workflow_dispatch`-only workflow for running the four comparison variants under one pinned commit and model selection.
+
+Before the first run, configure `OPENAI_API_KEY` as a GitHub Actions repository or environment secret. Do not paste the key into an issue, pull request, workflow input, command line, or benchmark artifact.
+
+When dispatching **Real Model Evaluation**:
+
+1. enter the exact OpenAI model ID to use for every variant;
+2. keep `task_limit=5` for the first credentialed smoke test;
+3. use `task_limit=0` only when you intentionally want the full catalog;
+4. optionally enter the current input/output USD-per-million-token rates used for that run.
+
+The workflow runs these variants with `fail-fast: false` so one failed row does not hide the state of the others:
+
+- `dsa` with the evidence critic enabled;
+- `dsa-no-critic` with the critic disabled;
+- `llm-tools` with direct vanilla LLM + public analysis-tool execution;
+- `llm-only` with deterministic dataset context and no executable tools.
+
+Each matrix job pins `DSA_LLM_FALLBACK=error`, records the checked-out Git commit, and uploads its own artifact bundle. In addition to the normal benchmark files, `workflow_manifest.json` records the workflow run ID, exact model, variant, task limit, catalog SHA-256, aggregate dataset snapshot SHA-256, and explicit pricing inputs. Artifacts are retained for 30 days by default.
+
+A blank pricing input is allowed for smoke testing. In that case DSA deliberately leaves `cost_usd` as `null`; do not describe that run as cost-complete or publication-ready.
+
+## Run a real-model benchmark locally
+
+For local development, keep the model selection explicit rather than relying on a long-lived default:
 
 ```bash
 export OPENAI_API_KEY="..."
 export DSA_LLM_MODE=real
 export DSA_LLM_PROVIDER=openai
-export DSA_OPENAI_MODEL=gpt-5.6-luna
+export DSA_OPENAI_MODEL="<exact-model-id>"
 export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
 export DSA_EVIDENCE_CRITIC=on
-unset DSA_EVALUATION_VARIANT
+export DSA_EVALUATION_VARIANT=dsa
 
-dsa benchmark \
-  --limit 5 \
+dsa --limit 5 \
+  --out benchmarks/ds-agent-benchmark/results/dsa \
   --catalog benchmarks/ds-agent-benchmark/catalog.json \
   --datasets benchmarks/ds-agent-benchmark/datasets
 ```
@@ -35,7 +61,8 @@ The evidence critic is enabled by default. To measure its contribution without c
 export DSA_EVIDENCE_CRITIC=off
 export DSA_EVALUATION_VARIANT=dsa-no-critic
 
-dsa benchmark \
+dsa \
+  --out benchmarks/ds-agent-benchmark/results/dsa-no-critic \
   --catalog benchmarks/ds-agent-benchmark/catalog.json \
   --datasets benchmarks/ds-agent-benchmark/datasets
 ```
@@ -57,11 +84,12 @@ This baseline deliberately does **not** call DSA's planner, evidence critic, ret
 ```bash
 export DSA_LLM_MODE=real
 export DSA_LLM_PROVIDER=openai
-export DSA_OPENAI_MODEL=gpt-5.6-luna
+export DSA_OPENAI_MODEL="<exact-model-id>"
 export DSA_EVALUATION_VARIANT=llm-tools
 export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
 
-dsa benchmark \
+dsa \
+  --out benchmarks/ds-agent-benchmark/results/llm-tools \
   --catalog benchmarks/ds-agent-benchmark/catalog.json \
   --datasets benchmarks/ds-agent-benchmark/datasets
 ```
@@ -75,11 +103,12 @@ The LLM-only control receives the question plus a deterministic dataset context 
 ```bash
 export DSA_LLM_MODE=real
 export DSA_LLM_PROVIDER=openai
-export DSA_OPENAI_MODEL=gpt-5.6-luna
+export DSA_OPENAI_MODEL="<exact-model-id>"
 export DSA_EVALUATION_VARIANT=llm-only
 export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
 
-dsa benchmark \
+dsa \
+  --out benchmarks/ds-agent-benchmark/results/llm-only \
   --catalog benchmarks/ds-agent-benchmark/catalog.json \
   --datasets benchmarks/ds-agent-benchmark/datasets
 ```
@@ -125,6 +154,8 @@ A benchmark run writes the existing result files plus `run_manifest.json`. The m
 
 `results.json` also embeds the same execution metadata alongside aggregate metrics. `raw_runs.json` retains the baseline final answer, parsed tool plan, dataset context, and executed tool outputs when a baseline is used.
 
+The GitHub Actions workflow adds `workflow_manifest.json` so the catalog and dataset snapshot can be verified independently of mutable branch names.
+
 ## Publication rule
 
 A result may be described as a real-model DSA or baseline result only when:
@@ -136,10 +167,12 @@ A result may be described as a real-model DSA or baseline result only when:
 5. The evidence-critic setting and evaluation variant are disclosed.
 6. Baseline configuration is disclosed when the variant is `llm-only` or `llm-tools`.
 7. Raw benchmark artifacts and the Git commit are retained.
+8. The catalog and dataset snapshot are frozen or cryptographically identified.
+9. Cost claims include the explicit pricing assumptions used for that run.
 
 The existing `stub/small` registry entry remains a harness-validation result, not a real-model quality comparison.
 
-## Next comparison matrix
+## Comparison matrix
 
 Publish the following on the same frozen task set, evaluator, provider, exact model, and model configuration:
 
