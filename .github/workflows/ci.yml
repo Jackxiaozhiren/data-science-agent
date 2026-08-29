@@ -53,6 +53,7 @@ jobs:
       - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM
       - run: uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
       - run: docker build -f docker/Dockerfile.api -t dsa-api:ci .
+      - run: docker run --rm dsa-api:ci .venv/bin/dsa --help >/dev/null
       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
       - run: npm --prefix apps/web run build 2>&1 | tail -n 20
       - run: docker compose config 2>&1 | head -n 40

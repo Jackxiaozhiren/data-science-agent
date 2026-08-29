@@ -5,6 +5,7 @@ COPY pyproject.toml .python-version README.md LICENSE ./
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY packages ./packages
 COPY apps ./apps
+COPY src ./src
 RUN uv sync --no-dev
 EXPOSE 8000
 CMD [".venv/bin/uvicorn", "dsa_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
