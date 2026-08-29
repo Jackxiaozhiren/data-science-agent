@@ -1,6 +1,27 @@
 from __future__ import annotations
 
+import json
+import os
+
 from dsa_agent.state import AnalysisPlan, AnalysisStep
+
+_ALLOWED_LLM_TOOLS = {
+    "profile_dataset",
+    "run_sql",
+    "run_python",
+    "correlation_analysis",
+    "hypothesis_test",
+    "assumption_check",
+    "causal_check",
+    "regression_analysis",
+    "train_model",
+    "evaluate_model",
+    "feature_importance",
+    "forecast",
+    "create_chart",
+}
+_STUB_MODES = {"stub", "offline", "heuristic"}
+_REAL_MODES = {"real", "openai"}
 
 
 def _numeric_columns(dataset_path: str | None) -> list[str]:
@@ -324,7 +345,82 @@ def heuristics_plan(
     )
 
 
+async def _real_llm_plan(
+    user_query: str, dataset_path: str | None, columns: list[str] | None
+) -> AnalysisPlan:
+    from dsa_llm.providers import auto_provider
+
+    cols = columns or []
+    allowed_tools = sorted(_ALLOWED_LLM_TOOLS)
+    prompt = (
+        "You are the planning component of an evidence-grounded data science agent. "
+        "Create an executable analysis plan, not an answer to the user's question. "
+        "Never invent results or evidence. Use only the allowed tools. Prefer a small plan "
+        "that profiles the dataset, performs the minimum useful analysis, and creates evidence.\n\n"
+        f"User question: {user_query}\n"
+        f"Dataset columns: {json.dumps(cols, ensure_ascii=False)}\n"
+        f"Allowed tools: {json.dumps(allowed_tools)}\n\n"
+        "Requirements:\n"
+        "- Include profile_dataset as the first step.\n"
+        "- Use existing column names exactly when a tool needs a column.\n"
+        "- Use step ids s01, s02, ... and valid depends_on ids only.\n"
+        "- Use at most 10 steps.\n"
+        "- Do not put conclusions, p-values, model scores, or fabricated observations in the plan."
+    )
+    provider = auto_provider()
+    raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
+    plan = raw_plan if isinstance(raw_plan, AnalysisPlan) else AnalysisPlan.model_validate(raw_plan)
+
+    if not plan.steps:
+        raise RuntimeError("Real LLM planner returned an empty plan")
+    if len(plan.steps) > 10:
+        raise RuntimeError(f"Real LLM planner returned too many steps: {len(plan.steps)}")
+    if plan.steps[0].tool != "profile_dataset":
+        raise RuntimeError("Real LLM planner must start with profile_dataset")
+
+    seen_ids: set[str] = set()
+    for step in plan.steps:
+        if step.tool not in _ALLOWED_LLM_TOOLS:
+            raise RuntimeError(f"Real LLM planner selected unsupported tool: {step.tool}")
+        if step.id in seen_ids:
+            raise RuntimeError(f"Real LLM planner returned duplicate step id: {step.id}")
+        unknown_dependencies = [dep for dep in step.depends_on if dep not in seen_ids]
+        if unknown_dependencies:
+            raise RuntimeError(
+                f"Real LLM planner returned invalid dependencies for {step.id}: "
+                f"{unknown_dependencies}"
+            )
+        seen_ids.add(step.id)
+        if dataset_path:
+            if "dataset_path" in step.inputs:
+                step.inputs["dataset_path"] = dataset_path
+            if step.tool == "profile_dataset":
+                step.inputs["path"] = dataset_path
+
+    plan.required_tools = list(dict.fromkeys(step.tool for step in plan.steps))
+    if not plan.objective.strip():
+        plan.objective = user_query.strip()[:500] or "Exploratory analysis"
+    if "Correlation does not imply causation unless causal evidence exists" not in plan.assumptions:
+        plan.assumptions.append(
+            "Correlation does not imply causation unless causal evidence exists"
+        )
+    return plan
+
+
 async def plan_analysis(
     user_query: str, dataset_path: str | None = None, columns: list[str] | None = None
 ) -> AnalysisPlan:
-    return heuristics_plan(user_query, dataset_path, columns)
+    mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()
+    if mode in _STUB_MODES:
+        return heuristics_plan(user_query, dataset_path, columns)
+    if mode not in _REAL_MODES:
+        raise RuntimeError(
+            f"Unsupported DSA_LLM_MODE={mode!r}; use stub/offline/heuristic or real/openai"
+        )
+    try:
+        return await _real_llm_plan(user_query, dataset_path, columns)
+    except Exception:
+        fallback = os.getenv("DSA_LLM_FALLBACK", "error").strip().lower()
+        if fallback == "heuristic":
+            return heuristics_plan(user_query, dataset_path, columns)
+        raise

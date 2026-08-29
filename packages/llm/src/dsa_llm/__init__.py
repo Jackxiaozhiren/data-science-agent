@@ -4,6 +4,7 @@ import hashlib
 import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from collections.abc import AsyncIterator
 from typing import Any
 
 
@@ -15,7 +16,8 @@ class LLMProvider(ABC):
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any: ...
 
     @abstractmethod
-    async def stream(self, prompt: str, **kwargs: Any) -> Any: ...
+    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
+        raise NotImplementedError
 
 
 class CachedLLMProvider(LLMProvider):
@@ -47,5 +49,5 @@ class CachedLLMProvider(LLMProvider):
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any:
         return await self.inner.structured_output(prompt, schema, **kwargs)
 
-    def stream(self, prompt: str, **kwargs: Any) -> Any:
+    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
         return self.inner.stream(prompt, **kwargs)
