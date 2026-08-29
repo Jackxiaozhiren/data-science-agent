@@ -15,6 +15,8 @@ from dsa_evaluation.metrics import (
     evaluate_task,
 )
 
+_BASELINE_VARIANTS = {"llm-only", "llm-tools"}
+
 
 def _optional_float_env(name: str) -> float | None:
     raw = os.getenv(name)
@@ -24,6 +26,30 @@ def _optional_float_env(name: str) -> float | None:
         return float(raw)
     except ValueError:
         return None
+
+
+def _evaluation_variant() -> str:
+    from dsa_agent.critic import evidence_critic_enabled
+
+    requested = os.getenv("DSA_EVALUATION_VARIANT", "").strip().lower()
+    if requested in _BASELINE_VARIANTS:
+        return requested
+
+    dsa_variant = "dsa" if evidence_critic_enabled() else "dsa-no-critic"
+    if not requested:
+        return dsa_variant
+    if requested not in {"dsa", "dsa-no-critic"}:
+        raise RuntimeError(
+            "Unsupported DSA_EVALUATION_VARIANT="
+            f"{requested!r}; expected dsa, dsa-no-critic, llm-only, or llm-tools"
+        )
+    if requested != dsa_variant:
+        raise RuntimeError(
+            f"DSA_EVALUATION_VARIANT={requested!r} conflicts with "
+            f"DSA_EVIDENCE_CRITIC={os.getenv('DSA_EVIDENCE_CRITIC', 'on')!r}; "
+            f"the actual DSA variant is {dsa_variant!r}"
+        )
+    return dsa_variant
 
 
 def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
@@ -40,7 +66,10 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
         if provider == "openai"
         else "heuristic"
     )
-    critic_enabled = evidence_critic_enabled()
+    variant = _evaluation_variant()
+    is_baseline = variant in _BASELINE_VARIANTS
+    critic_enabled: bool | None = None if is_baseline else evidence_critic_enabled()
+    critic_setting = "not-applicable" if is_baseline else os.getenv("DSA_EVIDENCE_CRITIC", "on")
 
     input_tokens = 0
     output_tokens = 0
@@ -63,15 +92,15 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
             8,
         )
 
-    return {
+    metadata: dict[str, Any] = {
         "llm_mode": mode,
         "provider": provider,
         "model": model,
         "fallback": os.getenv("DSA_LLM_FALLBACK", "error"),
         "git_commit": os.getenv("DSA_GIT_COMMIT") or os.getenv("GITHUB_SHA"),
-        "evaluation_variant": "dsa" if critic_enabled else "dsa-no-critic",
+        "evaluation_variant": variant,
         "evidence_critic_enabled": critic_enabled,
-        "evidence_critic_setting": os.getenv("DSA_EVIDENCE_CRITIC", "on"),
+        "evidence_critic_setting": critic_setting,
         "call_count": len(llm_calls),
         "model_latency_ms": model_latency_ms,
         "token_usage": {
@@ -89,6 +118,11 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
         "cost_usd": cost_usd,
         "llm_calls": llm_calls,
     }
+    if is_baseline:
+        from dsa_evaluation.baselines import baseline_config
+
+        metadata["baseline_config"] = baseline_config()
+    return metadata
 
 
 async def _run_one(
@@ -99,6 +133,14 @@ async def _run_one(
         return None, 0, f"Dataset not found: {task.dataset}"
     t0 = time.perf_counter()
     try:
+        variant = _evaluation_variant()
+        if variant in _BASELINE_VARIANTS:
+            from dsa_evaluation.baselines import run_baseline
+
+            run_result = await run_baseline(variant, task, dataset_path)
+            elapsed = int((time.perf_counter() - t0) * 1000)
+            return run_result, elapsed, None
+
         # Lazily import to avoid heavy deps at import time
         from dsa_agent.graph import run_analysis
         from dsa_tools import bootstrap, list_tools
