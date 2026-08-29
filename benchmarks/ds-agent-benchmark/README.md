@@ -1,23 +1,43 @@
 # DS-Agent-Benchmark
 
-Evidence-grounded benchmark for the Data Science Agent.
+Evidence-grounded regression benchmark for Data Science Agent.
 
 ## Structure
-- `datasets/`  20 synthetic public-domain CSVs (seeded, deterministic)
-- `catalog.json`  50 tasks across 8 categories with ground truth + evaluation criteria
-- Runner: `packages/evaluation` (Python) + CLI `dsa benchmark`
+
+- `datasets/` — 20 synthetic public-domain CSVs (seeded, deterministic)
+- `catalog.json` — 50 tasks across 8 categories with ground truth and evaluation criteria
+- runner — `packages/evaluation` plus the `dsa` CLI
 
 ## Categories
-- EDA (8), SQL (7), Statistics (8), Regression (6), Classification (6), Time Series (5), Visualization (5), Data Quality (5) = 50
+
+EDA (8), SQL (7), Statistics (8), Regression (6), Classification (6), Time Series (5), Visualization (5), Data Quality (5) = 50 tasks.
 
 ## Metrics
-- Task Success Rate, Statistical Accuracy, Code Execution Success, SQL Accuracy, Evidence Coverage, Unsupported Claim Rate, Hallucination flags, Latency, Reproducibility
+
+The current runner records task success, statistical accuracy where configured, code execution success, SQL accuracy, evidence coverage, unsupported-claim checks, latency, and evaluator-v2 statistical-quality details.
 
 ## Run
+
 ```bash
-uv run dsa benchmark --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets --out benchmarks/ds-agent-benchmark/results
-# or via package
-uv run python -m dsa_evaluation --help
+uv run dsa \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets \
+  --limit 5 \
+  --out /tmp/dsa-bench
 ```
 
-Datasets are **synthetic and deterministic** (seed 42) — no external download, no copyrighted data.
+Run one task by ID:
+
+```bash
+uv run dsa \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets \
+  --task sql-03 \
+  --out /tmp/dsa-sql-03
+```
+
+## Contribute a task
+
+See [`docs/benchmark-task-contribution.md`](../../docs/benchmark-task-contribution.md) for the validated task schema, a complete example, current scoring semantics, single-task execution, and dataset licensing rules.
+
+The datasets in this directory are **synthetic and deterministic** (seed 42) and documented as CC0/public domain. Do not add private or unlicensed data; third-party public datasets must have source/license/citation recorded in `THIRD_PARTY_LICENSES.md`.
