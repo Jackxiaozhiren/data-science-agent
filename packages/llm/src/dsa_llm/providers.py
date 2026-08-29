@@ -73,8 +73,11 @@ class StubLLMProvider(LLMProvider):
             pass
         return {}
 
-    async def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
-        yield await self.generate(prompt, **kwargs)
+    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
+        async def _iter() -> AsyncIterator[str]:
+            yield await self.generate(prompt, **kwargs)
+
+        return _iter()
 
 
 class OpenAIResponsesProvider(LLMProvider):
@@ -174,10 +177,13 @@ class OpenAIResponsesProvider(LLMProvider):
         except ValidationError as exc:
             raise RuntimeError(f"Real LLM returned invalid structured output: {exc}") from exc
 
-    async def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
-        # The first real-provider milestone keeps the interface correct without adding
-        # a second SSE parser. True token streaming can be layered on independently.
-        yield await self.generate(prompt, **kwargs)
+    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
+        async def _iter() -> AsyncIterator[str]:
+            # The first real-provider milestone keeps the interface correct without
+            # adding a second SSE parser. True token streaming can be layered later.
+            yield await self.generate(prompt, **kwargs)
+
+        return _iter()
 
     def metadata(self) -> dict[str, Any]:
         return {
@@ -223,9 +229,8 @@ class EnvLLMProvider(LLMProvider):
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any:
         return await self.inner.structured_output(prompt, schema, **kwargs)
 
-    async def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
-        async for chunk in self.inner.stream(prompt, **kwargs):
-            yield chunk
+    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
+        return self.inner.stream(prompt, **kwargs)
 
     def metadata(self) -> dict[str, Any]:
         inner_metadata = getattr(self.inner, "metadata", None)
