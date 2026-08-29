@@ -169,6 +169,36 @@ A benchmark run writes the existing result files plus `run_manifest.json`. The m
 
 The GitHub Actions smoke workflow adds `workflow_manifest.json` so the catalog, dataset snapshot, pinned model, and pricing snapshot can be verified independently of mutable branch names.
 
+## Automated matrix validation
+
+The four variant directories can be checked as one comparison unit with the built-in validator:
+
+```bash
+uv run python -m dsa_evaluation.publication \
+  benchmark-artifacts \
+  --json \
+  --output benchmark-artifacts/matrix_validation.json
+```
+
+The validator checks that all four rows retain the required artifacts and agree on the workflow run, Git commit, exact model, catalog hash, dataset snapshot hash, task scope, task limit, and pricing snapshot. It also verifies real-model mode, provider, fallback policy, evaluation labels, critic state, positive call count, response IDs, latency, token usage, explicit pricing, computed cost, raw-run count, and baseline controls.
+
+The report intentionally separates two concepts:
+
+- `matrix_valid=true` means the four rows are internally consistent and suitable for smoke/reproducibility review;
+- `publication_ready=true` additionally requires a valid matrix with `scope=full`.
+
+Therefore the current five-task workflow can pass matrix validation while still returning `publication_ready=false`. That is expected and prevents smoke artifacts from being promoted to the public leaderboard.
+
+For a publication gate, use:
+
+```bash
+uv run python -m dsa_evaluation.publication \
+  benchmark-artifacts \
+  --require-publication-ready
+```
+
+The GitHub Actions smoke workflow runs the matrix validator automatically after all four rows, uploads `matrix_validation.json` as a separate artifact, and fails the workflow if either a comparison row or the validator fails.
+
 ## Publication rule
 
 A result may be described as a real-model DSA or baseline result only when:
@@ -183,6 +213,8 @@ A result may be described as a real-model DSA or baseline result only when:
 8. The catalog and dataset snapshot are frozen or cryptographically identified.
 9. Cost claims include the explicit pricing assumptions and pricing reference date used for that run.
 10. Public comparison rows use the full frozen task set; five-task smoke artifacts are labeled as smoke validation only.
+11. The four-row validator reports `matrix_valid=true`.
+12. Public leaderboard promotion additionally requires `publication_ready=true`.
 
 The existing `stub/small` registry entry remains a harness-validation result, not a real-model quality comparison.
 
