@@ -1,0 +1,168 @@
+name: Real Model Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Exact OpenAI model ID for all four variants"
+        required: true
+        type: string
+      task_limit:
+        description: "Tasks per variant; use 0 for the full catalog"
+        required: true
+        default: "5"
+        type: string
+      input_cost_per_million:
+        description: "Optional USD per 1M input tokens; leave blank to keep cost null"
+        required: false
+        type: string
+      output_cost_per_million:
+        description: "Optional USD per 1M output tokens; leave blank to keep cost null"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-model-evaluation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: dsa
+            critic: "on"
+          - variant: dsa-no-critic
+            critic: "off"
+          - variant: llm-tools
+            critic: "on"
+          - variant: llm-only
+            critic: "on"
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DSA_LLM_MODE: real
+      DSA_LLM_PROVIDER: openai
+      DSA_OPENAI_MODEL: ${{ inputs.model }}
+      DSA_LLM_FALLBACK: error
+      DSA_GIT_COMMIT: ${{ github.sha }}
+      DSA_EVALUATION_VARIANT: ${{ matrix.variant }}
+      DSA_EVIDENCE_CRITIC: ${{ matrix.critic }}
+      DSA_INPUT_COST_PER_MILLION: ${{ inputs.input_cost_per_million }}
+      DSA_OUTPUT_COST_PER_MILLION: ${{ inputs.output_cost_per_million }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install locked workspace
+        run: uv sync --dev --locked
+
+      - name: Validate manual inputs and secret
+        shell: bash
+        env:
+          TASK_LIMIT: ${{ inputs.task_limit }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+            echo "::error::OPENAI_API_KEY is not configured as a GitHub Actions secret."
+            exit 1
+          fi
+          if ! [[ "${TASK_LIMIT}" =~ ^[0-9]+$ ]]; then
+            echo "::error::task_limit must be a non-negative integer; use 0 for the full catalog."
+            exit 1
+          fi
+          if [[ -z "${DSA_OPENAI_MODEL:-}" ]]; then
+            echo "::error::model must be an explicit OpenAI model ID."
+            exit 1
+          fi
+
+      - name: Run benchmark variant
+        shell: bash
+        env:
+          TASK_LIMIT: ${{ inputs.task_limit }}
+          OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${OUT_DIR}"
+          cmd=(
+            uv run dsa
+            --catalog benchmarks/ds-agent-benchmark/catalog.json
+            --datasets benchmarks/ds-agent-benchmark/datasets
+            --out "${OUT_DIR}"
+          )
+          if [[ "${TASK_LIMIT}" != "0" ]]; then
+            cmd+=(--limit "${TASK_LIMIT}")
+          fi
+          "${cmd[@]}"
+
+      - name: Record workflow snapshot manifest
+        if: ${{ always() }}
+        shell: bash
+        env:
+          TASK_LIMIT: ${{ inputs.task_limit }}
+          OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
+          VARIANT: ${{ matrix.variant }}
+          MODEL: ${{ inputs.model }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${OUT_DIR}"
+          uv run python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          catalog = Path("benchmarks/ds-agent-benchmark/catalog.json")
+          datasets = Path("benchmarks/ds-agent-benchmark/datasets")
+          out = Path(os.environ["OUT_DIR"])
+
+          catalog_sha256 = hashlib.sha256(catalog.read_bytes()).hexdigest()
+          dataset_hasher = hashlib.sha256()
+          dataset_files = sorted(p for p in datasets.rglob("*") if p.is_file())
+          for path in dataset_files:
+              relative = path.relative_to(datasets).as_posix()
+              dataset_hasher.update(relative.encode("utf-8"))
+              dataset_hasher.update(b"\0")
+              dataset_hasher.update(hashlib.sha256(path.read_bytes()).digest())
+
+          manifest = {
+              "workflow": "Real Model Evaluation",
+              "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "git_commit": os.environ.get("GITHUB_SHA"),
+              "variant": os.environ["VARIANT"],
+              "model": os.environ["MODEL"],
+              "task_limit": int(os.environ["TASK_LIMIT"]),
+              "catalog": str(catalog),
+              "catalog_sha256": catalog_sha256,
+              "datasets_dir": str(datasets),
+              "datasets_sha256": dataset_hasher.hexdigest(),
+              "dataset_file_count": len(dataset_files),
+              "input_cost_per_million": os.environ.get("DSA_INPUT_COST_PER_MILLION") or None,
+              "output_cost_per_million": os.environ.get("DSA_OUTPUT_COST_PER_MILLION") or None,
+          }
+          (out / "workflow_manifest.json").write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+          )
+          PY
+
+      - name: Upload benchmark artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-model-${{ matrix.variant }}-${{ github.run_id }}
+          path: benchmark-artifacts/${{ matrix.variant }}/
+          if-no-files-found: error
+          retention-days: 30
