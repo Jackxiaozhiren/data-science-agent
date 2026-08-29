@@ -15,7 +15,25 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+
       - name: Build API image
         run: docker build -f docker/Dockerfile.api -t dsa-eval:verify .
+
       - name: Verify benchmark CLI
         run: docker run --rm dsa-eval:verify .venv/bin/dsa --help
+
+      - name: Verify mounted benchmark execution
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/eval-smoke
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/benchmarks:/benchmarks:ro" \
+            -v "/tmp/eval-smoke:/artifacts" \
+            dsa-eval:verify \
+            .venv/bin/dsa \
+            --limit 1 \
+            --catalog /benchmarks/ds-agent-benchmark/catalog.json \
+            --datasets /benchmarks/ds-agent-benchmark/datasets \
+            --out /artifacts
+          test -f /tmp/eval-smoke/run_manifest.json
+          test -f /tmp/eval-smoke/results.json
