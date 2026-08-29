@@ -16,6 +16,7 @@ export DSA_LLM_MODE=real
 export DSA_LLM_PROVIDER=openai
 export DSA_OPENAI_MODEL=gpt-5.6-luna
 export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
+export DSA_EVIDENCE_CRITIC=on
 
 dsa benchmark \
   --limit 5 \
@@ -24,6 +25,28 @@ dsa benchmark \
 ```
 
 For a publishable run, remove `--limit` after the smoke test succeeds.
+
+## Evidence-critic ablation
+
+The evidence critic is enabled by default. To measure its contribution without changing the planner, tools, evidence collection, or report pipeline, repeat the same benchmark with only this setting changed:
+
+```bash
+export DSA_EVIDENCE_CRITIC=off
+
+dsa benchmark \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets
+```
+
+For a fair A/B comparison, keep the provider, exact model, benchmark catalog, dataset snapshot, Git commit, model parameters, and pricing assumptions identical between the `on` and `off` runs. Do not mix heuristic fallback runs with pure real-model runs.
+
+The benchmark manifest records:
+
+- `evaluation_variant: dsa` when the critic is enabled;
+- `evaluation_variant: dsa-no-critic` when it is disabled;
+- `evidence_critic_enabled` and the raw `DSA_EVIDENCE_CRITIC` setting.
+
+Disabling the critic is intended for evaluation ablation only, not as the normal product configuration.
 
 ## Record cost without hard-coding stale prices
 
@@ -44,6 +67,7 @@ A benchmark run writes the existing result files plus `run_manifest.json`. The m
 - provider and model
 - optional Git commit
 - fallback policy
+- evaluation variant and evidence-critic setting
 - number of real model calls
 - per-call response IDs and latency
 - input, output, and total tokens
@@ -60,7 +84,8 @@ A result may be described as a real-model DSA result only when:
 2. `provider` and `model` identify the actual external model.
 3. `call_count` is greater than zero.
 4. The run does not use an undisclosed heuristic fallback.
-5. Raw benchmark artifacts and the Git commit are retained.
+5. The evidence-critic setting and evaluation variant are disclosed.
+6. Raw benchmark artifacts and the Git commit are retained.
 
 The existing `stub/small` registry entry remains a harness-validation result, not a real-model quality comparison.
 

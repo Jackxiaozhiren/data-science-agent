@@ -27,6 +27,8 @@ def _optional_float_env(name: str) -> float | None:
 
 
 def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
+    from dsa_agent.critic import evidence_critic_enabled
+
     mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()
     provider = (
         os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower()
@@ -38,6 +40,7 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
         if provider == "openai"
         else "heuristic"
     )
+    critic_enabled = evidence_critic_enabled()
 
     input_tokens = 0
     output_tokens = 0
@@ -66,6 +69,9 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
         "model": model,
         "fallback": os.getenv("DSA_LLM_FALLBACK", "error"),
         "git_commit": os.getenv("DSA_GIT_COMMIT") or os.getenv("GITHUB_SHA"),
+        "evaluation_variant": "dsa" if critic_enabled else "dsa-no-critic",
+        "evidence_critic_enabled": critic_enabled,
+        "evidence_critic_setting": os.getenv("DSA_EVIDENCE_CRITIC", "on"),
         "call_count": len(llm_calls),
         "model_latency_ms": model_latency_ms,
         "token_usage": {

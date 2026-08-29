@@ -12,6 +12,7 @@ def test_execution_metadata_records_real_model_usage(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("DSA_INPUT_COST_PER_MILLION", "2.0")
     monkeypatch.setenv("DSA_OUTPUT_COST_PER_MILLION", "10.0")
     monkeypatch.setenv("DSA_GIT_COMMIT", "abc123")
+    monkeypatch.delenv("DSA_EVIDENCE_CRITIC", raising=False)
 
     metadata = _execution_metadata(
         [
@@ -33,6 +34,8 @@ def test_execution_metadata_records_real_model_usage(monkeypatch: pytest.MonkeyP
     assert metadata["provider"] == "openai"
     assert metadata["model"] == "test-model"
     assert metadata["git_commit"] == "abc123"
+    assert metadata["evaluation_variant"] == "dsa"
+    assert metadata["evidence_critic_enabled"] is True
     assert metadata["call_count"] == 2
     assert metadata["model_latency_ms"] == 200
     assert metadata["token_usage"] == {
@@ -41,6 +44,16 @@ def test_execution_metadata_records_real_model_usage(monkeypatch: pytest.MonkeyP
         "total_tokens": 1800,
     }
     assert metadata["cost_usd"] == pytest.approx(0.006)
+
+
+def test_execution_metadata_records_no_critic_ablation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DSA_EVIDENCE_CRITIC", "off")
+
+    metadata = _execution_metadata([])
+
+    assert metadata["evaluation_variant"] == "dsa-no-critic"
+    assert metadata["evidence_critic_enabled"] is False
+    assert metadata["evidence_critic_setting"] == "off"
 
 
 def test_execution_metadata_does_not_invent_cost(monkeypatch: pytest.MonkeyPatch) -> None:
