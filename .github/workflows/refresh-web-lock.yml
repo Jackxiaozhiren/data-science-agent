@@ -1,0 +1,38 @@
+name: Refresh web lockfile
+
+on:
+  push:
+    branches:
+      - security/next-16.3.3-react-19.2.8-sharp-0.35.4
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lock:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20.19.0'
+      - name: Generate isolated audited lockfile
+        run: |
+          rm -rf /tmp/dsa-web-lock
+          mkdir -p /tmp/dsa-web-lock
+          cp apps/web/package.json /tmp/dsa-web-lock/package.json
+          cd /tmp/dsa-web-lock
+          npm install --package-lock-only --legacy-peer-deps
+          node -e "const l=require('./package-lock.json'); const d=l.packages[''].dependencies; if(d.next!=='16.3.3'||d.react!=='19.2.8'||d['react-dom']!=='19.2.8'||d.sharp!=='0.35.4') { console.error(d); process.exit(1); }"
+          npm audit --json > /tmp/web-audit.json || true
+          node -e "const a=require('/tmp/web-audit.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities || {}, null, 2)); if((a.metadata?.vulnerabilities?.high||0)>0 || (a.metadata?.vulnerabilities?.critical||0)>0) process.exit(1)"
+          cp package-lock.json "$GITHUB_WORKSPACE/apps/web/package-lock.json"
+      - name: Remove one-shot workflow and commit lockfile
+        run: |
+          rm .github/workflows/refresh-web-lock.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/package.json apps/web/package-lock.json .github/workflows/refresh-web-lock.yml
+          git commit -m "security: refresh web lockfile" || exit 0
+          git push
