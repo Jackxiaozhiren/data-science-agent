@@ -38,6 +38,7 @@ jobs:
       - run: uv sync --dev
       - run: uv lock --check  # §46 dependency pinning
       - run: uv run python scripts/sync_vendor.py --check  # vendored dsa_* must match source
+      - run: uv run python scripts/check_npm_workspace_lock.py  # root npm lock must match workspace manifests
       # Node deps: tests/vscode runs `npm run compile` (tsc) and the web build
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
