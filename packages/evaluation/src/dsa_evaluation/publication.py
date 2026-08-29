@@ -68,7 +68,7 @@ def _load_list(path: Path) -> list[Any]:
     data: object = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError(f"{path} must contain a JSON array")
-    return cast(list[Any], data)
+    return data
 
 
 def _number(value: Any) -> float | None:
