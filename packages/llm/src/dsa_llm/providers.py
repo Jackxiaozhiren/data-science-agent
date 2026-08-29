@@ -122,11 +122,15 @@ class OpenAIResponsesProvider(LLMProvider):
         }
         started = time.perf_counter()
         async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-            response = await client.post(f"{self.base_url}/responses", headers=headers, json=request)
+            response = await client.post(
+                f"{self.base_url}/responses", headers=headers, json=request
+            )
         self.last_latency_ms = int((time.perf_counter() - started) * 1000)
         if response.status_code >= 400:
             detail = response.text.replace("\n", " ")[:500]
-            raise RuntimeError(f"OpenAI Responses API returned HTTP {response.status_code}: {detail}")
+            raise RuntimeError(
+                f"OpenAI Responses API returned HTTP {response.status_code}: {detail}"
+            )
         payload = response.json()
         if not isinstance(payload, dict):
             raise RuntimeError("OpenAI Responses API returned a non-object payload")
