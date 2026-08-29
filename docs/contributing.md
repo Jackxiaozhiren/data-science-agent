@@ -10,7 +10,7 @@
 
 If you want to learn the evaluation system without changing the agent runtime, [Contribute a Benchmark Task](benchmark-task-contribution.md) walks through one task end to end: catalog schema, measurable criteria, single-task execution, evidence checks, and dataset licensing.
 
-For plugin work, use the existing plugin issue/tutorial track rather than adding tool code directly to the benchmark.
+If you want to learn the extension surface, [Build a Hello-World Plugin](plugin-walkthrough.md) provides an offline validate → install → discover → execute → evidence → remove example with an automated lifecycle test.
 
 ## Gate checklist (must pass before PR)
 
