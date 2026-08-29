@@ -16,7 +16,8 @@ class LLMProvider(ABC):
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any: ...
 
     @abstractmethod
-    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]: ...
+    def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
+        raise NotImplementedError
 
 
 class CachedLLMProvider(LLMProvider):
