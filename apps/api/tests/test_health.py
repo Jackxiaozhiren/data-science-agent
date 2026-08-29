@@ -26,3 +26,17 @@ async def test_root() -> None:
         r = await ac.get("/")
         assert r.status_code == 200
         assert "Data Science Agent" in r.json()["name"]
+
+
+@pytest.mark.asyncio
+async def test_local_web_origin_is_allowed_by_default() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        r = await ac.options(
+            "/health",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert r.status_code == 200
+        assert r.headers["access-control-allow-origin"] == "http://localhost:3000"
