@@ -4,41 +4,30 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: real-model-evaluation-smoke-${{ github.ref }}
+  group: real-model-evaluation-smoke
   cancel-in-progress: false
 
 jobs:
   benchmark:
-    name: ${{ matrix.variant.name }} / gpt-5.6-luna / smoke-5
+    name: dsa / gpt-5.6-luna / smoke-5
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        variant:
-          - name: dsa
-            critic: "on"
-          - name: dsa-no-critic
-            critic: "off"
-          - name: llm-tools
-            critic: "on"
-          - name: llm-only
-            critic: "on"
     env:
       DSA_LLM_MODE: real
       DSA_LLM_PROVIDER: openai
       DSA_LLM_FALLBACK: error
-      DSA_GIT_COMMIT: ${{ github.sha }}
-      DSA_EVALUATION_VARIANT: ${{ matrix.variant.name }}
-      DSA_EVIDENCE_CRITIC: ${{ matrix.variant.critic }}
+      DSA_EVALUATION_VARIANT: dsa
+      DSA_EVIDENCE_CRITIC: "on"
       DSA_OPENAI_MODEL: gpt-5.6-luna
       DSA_INPUT_COST_PER_MILLION: "0.20"
       DSA_OUTPUT_COST_PER_MILLION: "1.20"
       TASK_LIMIT: "5"
       RUN_SCOPE: smoke-5
       PRICING_REFERENCE_DATE: "2026-08-29"
+      OUT_DIR: benchmark-artifacts/dsa
+      VARIANT: dsa
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -58,7 +47,6 @@ jobs:
         shell: bash
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OUT_DIR: benchmark-artifacts/${{ matrix.variant.name }}
         run: |
           set -euo pipefail
           if [[ -z "${OPENAI_API_KEY:-}" ]]; then
@@ -66,6 +54,7 @@ jobs:
             exit 1
           fi
 
+          export DSA_GIT_COMMIT="${GITHUB_SHA}"
           mkdir -p "${OUT_DIR}"
           uv run dsa \
             --limit "${TASK_LIMIT}" \
@@ -76,9 +65,6 @@ jobs:
       - name: Record workflow snapshot manifest
         if: ${{ always() }}
         shell: bash
-        env:
-          OUT_DIR: benchmark-artifacts/${{ matrix.variant.name }}
-          VARIANT: ${{ matrix.variant.name }}
         run: |
           set -euo pipefail
           mkdir -p "${OUT_DIR}"
