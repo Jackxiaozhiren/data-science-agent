@@ -21,9 +21,6 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: read
-
 concurrency:
   group: real-model-evaluation-${{ github.ref }}
   cancel-in-progress: false
@@ -33,6 +30,8 @@ jobs:
     name: ${{ matrix.variant }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -57,6 +56,8 @@ jobs:
       DSA_OUTPUT_COST_PER_MILLION: ${{ inputs.output_cost_per_million }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
