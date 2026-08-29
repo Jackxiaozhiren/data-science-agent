@@ -401,7 +401,9 @@ async def _real_llm_plan(
     if not plan.objective.strip():
         plan.objective = user_query.strip()[:500] or "Exploratory analysis"
     if "Correlation does not imply causation unless causal evidence exists" not in plan.assumptions:
-        plan.assumptions.append("Correlation does not imply causation unless causal evidence exists")
+        plan.assumptions.append(
+            "Correlation does not imply causation unless causal evidence exists"
+        )
     return plan
 
 
