@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -59,15 +59,18 @@ def _dataset_context(dataset_path: Path) -> dict[str, Any]:
     df = load_dataframe(dataset_path, fmt)
     preview_rows = int(config["preview_rows"])
     preview = df.head(preview_rows).to_dicts()
-    return _json_safe(
-        {
-            "row_count": df.height,
-            "column_count": df.width,
-            "columns": [{"name": c, "dtype": str(df[c].dtype)} for c in df.columns],
-            "preview_rows": preview,
-            "preview_row_count": len(preview),
-            "preview_truncated": df.height > preview_rows,
-        }
+    return cast(
+        dict[str, Any],
+        _json_safe(
+            {
+                "row_count": df.height,
+                "column_count": df.width,
+                "columns": [{"name": c, "dtype": str(df[c].dtype)} for c in df.columns],
+                "preview_rows": preview,
+                "preview_row_count": len(preview),
+                "preview_truncated": df.height > preview_rows,
+            }
+        ),
     )
 
 
