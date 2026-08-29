@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Sequence
 
@@ -9,6 +10,17 @@ _CAUSAL_WORDS = re.compile(
     r"\b(cause[sd]?|caused by|impact(?:s|ed)?|effect(?: of)?|leads to|results in|due to|drives|driven by)\b",
     re.IGNORECASE,
 )
+_FALSE_ENV_VALUES = {"0", "false", "off", "no"}
+
+
+def evidence_critic_enabled() -> bool:
+    """Return whether the evidence critic stage should run.
+
+    The critic stays enabled by default. Disabling it is an explicit evaluation
+    ablation and should not change normal product or regression behavior.
+    """
+
+    return os.getenv("DSA_EVIDENCE_CRITIC", "on").strip().lower() not in _FALSE_ENV_VALUES
 
 
 def rewrite_unsupported_claim(text: str, has_causal_evidence: bool = False) -> str:
