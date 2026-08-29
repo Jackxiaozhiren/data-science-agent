@@ -28,7 +28,9 @@ nav:
   - API: api.md
   - Frontend: FRONTEND_IA.md
   - Security: security.md
-  - Benchmark: benchmark.md
+  - Benchmark:
+      - Overview: benchmark.md
+      - Contribute a Task: benchmark-task-contribution.md
   - Evaluation:
       - Overview: evaluation.md
       - Real-model Evaluation: real-model-evaluation.md
