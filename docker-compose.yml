@@ -10,6 +10,7 @@ services:
       PORT: "8000"
       DATABASE_URL: "sqlite+aiosqlite:///./data/api.db"
       ARTIFACTS_DIR: "./artifacts"
+      DSA_CORS_ORIGINS: "${DSA_CORS_ORIGINS:-http://localhost:3000}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3).read()"]
       interval: 15s
@@ -20,9 +21,11 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:8000}"
     ports: ["3000:3000"]
     depends_on:
       api:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: "http://api:8000"
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:8000}"
