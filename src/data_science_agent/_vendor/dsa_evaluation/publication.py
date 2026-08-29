@@ -270,9 +270,11 @@ def validate_real_model_matrix(root: Path) -> MatrixValidationReport:
                         f"{variant}: workflow {field} differs from {reference_variant}"
                     )
 
-    if set(baseline_configs) == {"llm-only", "llm-tools"}:
-        if baseline_configs["llm-only"] != baseline_configs["llm-tools"]:
-            errors.append("baseline controls differ between llm-only and llm-tools")
+    if (
+        set(baseline_configs) == {"llm-only", "llm-tools"}
+        and baseline_configs["llm-only"] != baseline_configs["llm-tools"]
+    ):
+        errors.append("baseline controls differ between llm-only and llm-tools")
 
     scope: str | None = None
     if workflow_manifests:
