@@ -266,9 +266,7 @@ def validate_real_model_matrix(root: Path) -> MatrixValidationReport:
             candidate = workflow_manifests[variant]
             for field in _SHARED_WORKFLOW_FIELDS:
                 if candidate.get(field) != reference.get(field):
-                    errors.append(
-                        f"{variant}: workflow {field} differs from {reference_variant}"
-                    )
+                    errors.append(f"{variant}: workflow {field} differs from {reference_variant}")
 
     if (
         set(baseline_configs) == {"llm-only", "llm-tools"}
