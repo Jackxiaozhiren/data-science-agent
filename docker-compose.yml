@@ -10,6 +10,7 @@ services:
       PORT: "8000"
       DATABASE_URL: "sqlite+aiosqlite:///./data/api.db"
       ARTIFACTS_DIR: "./artifacts"
+      DSA_CORS_ORIGINS: "${DSA_CORS_ORIGINS:-http://localhost:3000}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3).read()"]
       interval: 15s
