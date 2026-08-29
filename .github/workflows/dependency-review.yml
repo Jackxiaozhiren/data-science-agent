@@ -25,4 +25,8 @@ jobs:
           fail-on-severity: high
           fail-on-scopes: runtime
           comment-summary-in-pr: always
-          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, Python-2.0
+          # Runtime assets introduced by current web tooling include libvips
+          # (LGPL-3.0-or-later) and caniuse-lite browser data (CC-BY-4.0).
+          # Keep the vulnerability threshold unchanged; this only makes the
+          # license policy explicit for those audited transitive dependencies.
+          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0-or-later, CC-BY-4.0
