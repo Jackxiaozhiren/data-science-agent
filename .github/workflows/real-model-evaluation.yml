@@ -21,8 +21,5 @@ jobs:
       - name: Install uv
         run: pip install "uv==0.12.7"
 
-      - name: Install locked workspace
-        run: uv sync --dev --locked
-
       - name: Verify runner
-        run: uv run python --version
+        run: uv --version
