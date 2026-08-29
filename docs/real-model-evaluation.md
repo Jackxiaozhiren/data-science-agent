@@ -180,12 +180,14 @@ uv run python -m dsa_evaluation.publication \
   --output benchmark-artifacts/matrix_validation.json
 ```
 
-The validator checks that all four rows retain the required artifacts and agree on the workflow run, Git commit, exact model, catalog hash, dataset snapshot hash, task scope, task limit, and pricing snapshot. It also verifies real-model mode, provider, fallback policy, evaluation labels, critic state, positive call count, response IDs, latency, token usage, explicit pricing, computed cost, raw-run count, and baseline controls.
+The validator checks that all four rows retain the required artifacts and agree on the workflow run, Git commit, exact model, catalog hash, dataset snapshot hash, task scope, task limit, and pricing snapshot. It also verifies real-model mode, provider, fallback policy, evaluation labels, critic state, positive call count, response IDs, per-call latency and token usage, aggregate call rollups, explicit positive pricing, computed positive cost, raw-run count, and baseline controls.
+
+The task set is also treated as provenance, not just a count. Every row must contain non-empty, unique task IDs in `raw_runs.json`, and all four rows must contain the same ordered task-ID sequence and the same `n_tasks`. A `scope=full` matrix is valid only with `task_limit=0`; the pinned smoke scope is valid only with `task_limit=5`.
 
 The report intentionally separates two concepts:
 
 - `matrix_valid=true` means the four rows are internally consistent and suitable for smoke/reproducibility review;
-- `publication_ready=true` additionally requires a valid matrix with `scope=full`.
+- `publication_ready=true` additionally requires a valid matrix with `scope=full` and therefore an unlimited (`task_limit=0`) run over the frozen catalog.
 
 Therefore the current five-task workflow can pass matrix validation while still returning `publication_ready=false`. That is expected and prevents smoke artifacts from being promoted to the public leaderboard.
 
@@ -213,8 +215,10 @@ A result may be described as a real-model DSA or baseline result only when:
 8. The catalog and dataset snapshot are frozen or cryptographically identified.
 9. Cost claims include the explicit pricing assumptions and pricing reference date used for that run.
 10. Public comparison rows use the full frozen task set; five-task smoke artifacts are labeled as smoke validation only.
-11. The four-row validator reports `matrix_valid=true`.
-12. Public leaderboard promotion additionally requires `publication_ready=true`.
+11. All four rows contain the same unique ordered task-ID sequence and task count.
+12. Per-call model usage/latency reconciles with aggregate execution metadata.
+13. The four-row validator reports `matrix_valid=true`.
+14. Public leaderboard promotion additionally requires `publication_ready=true`, `scope=full`, and `task_limit=0`.
 
 The existing `stub/small` registry entry remains a harness-validation result, not a real-model quality comparison.
 
