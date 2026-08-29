@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -13,6 +14,15 @@ from dsa_llm import LLMProvider
 DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
 _REAL_MODES = {"real", "openai"}
 _STUB_MODES = {"stub", "offline", "heuristic"}
+_CALL_LOG: list[dict[str, Any]] = []
+
+
+def reset_call_log() -> None:
+    _CALL_LOG.clear()
+
+
+def get_call_log() -> list[dict[str, Any]]:
+    return [dict(item) for item in _CALL_LOG]
 
 
 def _strip_json_fence(text: str) -> str:
@@ -91,10 +101,14 @@ class OpenAIResponsesProvider(LLMProvider):
             or os.getenv("OPENAI_MODEL")
             or DEFAULT_OPENAI_MODEL
         )
-        self.base_url = (base_url or os.getenv("DSA_OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+        configured_base = (
+            base_url or os.getenv("DSA_OPENAI_BASE_URL") or "https://api.openai.com/v1"
+        )
+        self.base_url = configured_base.rstrip("/")
         self.timeout_s = timeout_s
         self.last_usage: dict[str, Any] = {}
         self.last_response_id: str | None = None
+        self.last_latency_ms: int | None = None
 
     async def _request(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         request: dict[str, Any] = {"model": self.model, "input": prompt}
@@ -106,8 +120,10 @@ class OpenAIResponsesProvider(LLMProvider):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        started = time.perf_counter()
         async with httpx.AsyncClient(timeout=self.timeout_s) as client:
             response = await client.post(f"{self.base_url}/responses", headers=headers, json=request)
+        self.last_latency_ms = int((time.perf_counter() - started) * 1000)
         if response.status_code >= 400:
             detail = response.text.replace("\n", " ")[:500]
             raise RuntimeError(f"OpenAI Responses API returned HTTP {response.status_code}: {detail}")
@@ -118,6 +134,15 @@ class OpenAIResponsesProvider(LLMProvider):
         self.last_response_id = response_id if isinstance(response_id, str) else None
         usage = payload.get("usage")
         self.last_usage = usage if isinstance(usage, dict) else {}
+        _CALL_LOG.append(
+            {
+                "provider": self.provider_name,
+                "model": self.model,
+                "response_id": self.last_response_id,
+                "latency_ms": self.last_latency_ms,
+                "usage": dict(self.last_usage),
+            }
+        )
         return payload
 
     async def generate(self, prompt: str, **kwargs: Any) -> str:
@@ -155,6 +180,7 @@ class OpenAIResponsesProvider(LLMProvider):
             "provider": self.provider_name,
             "model": self.model,
             "response_id": self.last_response_id,
+            "latency_ms": self.last_latency_ms,
             "usage": self.last_usage,
         }
 
