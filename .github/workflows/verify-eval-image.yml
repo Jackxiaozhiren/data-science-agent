@@ -1,0 +1,21 @@
+name: Verify Evaluation Image
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Build API image
+        run: docker build -f docker/Dockerfile.api -t dsa-eval:verify .
+      - name: Verify benchmark CLI
+        run: docker run --rm dsa-eval:verify .venv/bin/dsa --help
