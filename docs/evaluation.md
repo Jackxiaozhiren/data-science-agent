@@ -1,29 +1,87 @@
 # Evaluation
 
-> Canonical: `packages/evaluation/src/dsa_evaluation/` (evaluator_v2, 10 dims, S01–S10)
+> Canonical implementation: `packages/evaluation/src/dsa_evaluation/` (`evaluator_v2`, 10 dimensions, S01–S10)
+
+## What the evaluation is for
+
+DSA uses versioned, frozen benchmark suites to catch regressions and measure reproducibility across the analysis pipeline.
+
+A benchmark score must always be interpreted together with the **model/configuration that produced it**. Deterministic stub runs are useful for validating the evaluator and orchestration harness, but they are not independent evidence of real-LLM model quality.
+
+For public reporting, distinguish these two classes explicitly:
+
+1. **Harness-validation runs** — deterministic/stub configurations used to verify scoring, tools, evidence, and reproduction behavior.
+2. **Real-model evaluation runs** — runs backed by an identified provider/model/configuration with recorded cost, latency, commit, benchmark version, and raw artifacts.
+
+Do not compare the two as if they measured the same thing.
 
 ## Framework
 
-`EvaluationResultV2` — 10 dims (`task_success / statistical / tool / evidence / unsupported / code / sql / reproducibility / safety / latency`) × 6 levels (`Tool → Numerical → Statistical → Interpretation → Evidence → Report`), plus `by_category / by_difficulty` and significance helpers (`bootstrap_ci / mcnemar / wilcoxon`, see `significance.py`).
+`EvaluationResultV2` measures 10 dimensions:
 
-Evaluator versioning: `evaluator_v1` (pre-audit, keyword) vs `evaluator_v2` (10 dims + `S01–S10`, causal `S09`, uncertainty `S10`). Results must carry `evaluator_version` and not be compared across versions without annot.
+- task success
+- statistical quality
+- tool use
+- evidence quality
+- unsupported claims
+- code quality
+- SQL quality
+- reproducibility
+- safety
+- latency
 
-## Statistical Rigour (W4)
+The evaluator also tracks six analysis levels (`Tool → Numerical → Statistical → Interpretation → Evidence → Report`), category/difficulty breakdowns, and significance helpers such as `bootstrap_ci`, `mcnemar`, and `wilcoxon` in `significance.py`.
 
-10 dims + `S01–S10` taxonomy (`Wrong Test … Uncertainty Omission`).
+Evaluator versions must be recorded with every result. Results produced by different evaluator versions should not be compared without an explicit annotation and compatibility rationale.
 
-## Reliability & Cross-Model
+## Statistical rigour
 
-- Reliability (4 configs `single/planner/planner+critic/full`): `research/V3_RESEARCH_REPORT.md` (Ablation A–F).
-- Cross-model (4 classes + 3 Pareto frontiers, no fabrication).
-- Human eval (11/100 stratified, 8 dims 1–5, Kappa/Alpha).
+The v2 evaluator includes the S01–S10 taxonomy, covering failure modes from incorrect statistical testing through causal overreach and uncertainty omission.
 
-## Reproducibility of evaluation
+## Reliability and cross-model work
+
+Research artifacts include:
+
+- reliability configurations such as `single`, `planner`, `planner+critic`, and `full`;
+- ablation work in `research/V3_RESEARCH_REPORT.md`;
+- cross-model analysis and Pareto-frontier work;
+- human-evaluation methodology.
+
+Where those artifacts rely on synthetic, stubbed, historical, or otherwise non-current configurations, they should be labeled accordingly when surfaced in product-facing documentation.
+
+## Reproducing the evaluation harness
 
 ```bash
-uv run dsa --limit 50                              # v1, 50/50 @1.00 (8 cats)
-uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 100  # v2, 100/100 @1.00 (11 cats)
-uv run dsa --reproduce v2 --out reproduction/v2    # fresh twice + ReproductionScore 6-dim + L0..L5
+uv run dsa --limit 50
+uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 100
+uv run dsa --reproduce v2 --out reproduction/v2
 ```
 
-Scores are versioned and immutable under `release/` (see `research/V3_RESEARCH_REPORT.md` Appendix).
+The repository currently records deterministic benchmark-suite results such as `50/50` and `100/100`. These are useful for regression testing of the frozen suite and evaluator pipeline. **They should not be presented as real-model comparative performance unless the corresponding run identifies a real model/provider and reproducible configuration.**
+
+## Public result registry
+
+See [`benchmarks/leaderboard/`](../benchmarks/leaderboard/) for validated result records.
+
+The current `stub/small` entry should be read as a harness-validation result. The next public-evaluation milestone is to add real-model baselines on the same frozen benchmark version.
+
+Recommended minimum comparison matrix:
+
+| Configuration | Purpose |
+|---|---|
+| DSA + real LLM | End-to-end product quality |
+| Vanilla LLM + Python/tool execution | Incremental value of DSA orchestration |
+| LLM-only | Value of executed computation |
+| DSA without evidence critic | Contribution of evidence/critic safeguards |
+
+For every real-model run, preserve at least:
+
+- provider and exact model name;
+- model parameters (temperature, seed where supported, relevant tool settings);
+- DSA version and commit SHA;
+- benchmark/evaluator version;
+- token usage and cost;
+- latency;
+- raw outputs and evaluation artifacts.
+
+This makes future claims independently inspectable instead of relying on headline percentages alone.
