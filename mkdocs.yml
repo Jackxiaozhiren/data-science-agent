@@ -16,6 +16,7 @@ markdown_extensions:
 nav:
   - Home: README.md
   - Getting Started: getting-started.md
+  - Hosted Demo: hosted-demo.md
   - Architecture: architecture.md
   - Agent: agent.md
   - Agent System: agent-system.md
@@ -24,13 +25,14 @@ nav:
   - Evidence: evidence.md
   - MCP: MCP_DESIGN.md
   - MCP Conformance: mcp.md
-  - ADR: ADR/ADR-001-mcp-2026-07-28-stateless-core.md
   - API: api.md
   - Frontend: FRONTEND_IA.md
   - Security: security.md
   - Benchmark: benchmark.md
-  - Evaluation: evaluation.md
-  - Reproducibility: reproducibility.md
+  - Evaluation:
+      - Overview: evaluation.md
+      - Real-model Evaluation: real-model-evaluation.md
+      - Reproducibility: reproducibility.md
   - Research: research.md
   - Contributing: contributing.md
 
