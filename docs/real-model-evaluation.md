@@ -17,6 +17,7 @@ export DSA_LLM_PROVIDER=openai
 export DSA_OPENAI_MODEL=gpt-5.6-luna
 export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
 export DSA_EVIDENCE_CRITIC=on
+unset DSA_EVALUATION_VARIANT
 
 dsa benchmark \
   --limit 5 \
@@ -32,6 +33,7 @@ The evidence critic is enabled by default. To measure its contribution without c
 
 ```bash
 export DSA_EVIDENCE_CRITIC=off
+export DSA_EVALUATION_VARIANT=dsa-no-critic
 
 dsa benchmark \
   --catalog benchmarks/ds-agent-benchmark/catalog.json \
@@ -47,6 +49,52 @@ The benchmark manifest records:
 - `evidence_critic_enabled` and the raw `DSA_EVIDENCE_CRITIC` setting.
 
 Disabling the critic is intended for evaluation ablation only, not as the normal product configuration.
+
+## Vanilla LLM + tools baseline
+
+This baseline deliberately does **not** call DSA's planner, evidence critic, retry loop, evidence bundle, or multi-agent orchestration. One model call selects a small number of existing analysis tools from their public input schemas, the runner executes those calls directly, and a second model call writes the answer from the tool results.
+
+```bash
+export DSA_LLM_MODE=real
+export DSA_LLM_PROVIDER=openai
+export DSA_OPENAI_MODEL=gpt-5.6-luna
+export DSA_EVALUATION_VARIANT=llm-tools
+export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
+
+dsa benchmark \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets
+```
+
+The default baseline budget is three tool calls. Dataset-path inputs are injected by the runner rather than trusted from model output. Internal DSA-only tools such as evidence creation, critic validation, report generation, and artifact saving are not exposed to the baseline.
+
+## LLM-only baseline
+
+The LLM-only control receives the question plus a deterministic dataset context containing row/column counts, schema, and a fixed preview. It receives no Python, SQL, tool execution, retrieval, critic, or hidden ground truth.
+
+```bash
+export DSA_LLM_MODE=real
+export DSA_LLM_PROVIDER=openai
+export DSA_OPENAI_MODEL=gpt-5.6-luna
+export DSA_EVALUATION_VARIANT=llm-only
+export DSA_GIT_COMMIT="$(git rev-parse HEAD)"
+
+dsa benchmark \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets
+```
+
+The default preview is 20 rows. This is intentionally a non-executing control: execution-dependent benchmark metrics are not converted into synthetic successes just because the model returned prose. When publishing comparisons, describe this row as an LLM-only control rather than implying that agent execution metrics are semantic answer-accuracy metrics.
+
+## Baseline controls
+
+The following environment variables are recorded in `run_manifest.json` through `baseline_config` when a baseline is selected:
+
+- `DSA_BASELINE_PREVIEW_ROWS` — default `20`, capped at `100`;
+- `DSA_BASELINE_MAX_TOOL_CALLS` — default `3`, capped at `8`;
+- `DSA_BASELINE_MAX_TOOL_OUTPUT_CHARS` — default `12000`.
+
+For a fair matrix, hold these values fixed across repeated runs and publish them with the artifacts.
 
 ## Record cost without hard-coding stale prices
 
@@ -68,30 +116,32 @@ A benchmark run writes the existing result files plus `run_manifest.json`. The m
 - optional Git commit
 - fallback policy
 - evaluation variant and evidence-critic setting
+- baseline configuration, when applicable
 - number of real model calls
 - per-call response IDs and latency
 - input, output, and total tokens
 - explicit pricing assumptions, when supplied
 - calculated cost, when pricing assumptions are supplied
 
-`results.json` also embeds the same execution metadata alongside aggregate metrics.
+`results.json` also embeds the same execution metadata alongside aggregate metrics. `raw_runs.json` retains the baseline final answer, parsed tool plan, dataset context, and executed tool outputs when a baseline is used.
 
 ## Publication rule
 
-A result may be described as a real-model DSA result only when:
+A result may be described as a real-model DSA or baseline result only when:
 
 1. `llm_mode` is `real` or `openai`.
 2. `provider` and `model` identify the actual external model.
 3. `call_count` is greater than zero.
 4. The run does not use an undisclosed heuristic fallback.
 5. The evidence-critic setting and evaluation variant are disclosed.
-6. Raw benchmark artifacts and the Git commit are retained.
+6. Baseline configuration is disclosed when the variant is `llm-only` or `llm-tools`.
+7. Raw benchmark artifacts and the Git commit are retained.
 
 The existing `stub/small` registry entry remains a harness-validation result, not a real-model quality comparison.
 
 ## Next comparison matrix
 
-Once the first real DSA run is reproducible, publish the following on the same task set and evaluator:
+Publish the following on the same frozen task set, evaluator, provider, exact model, and model configuration:
 
 | Run | Purpose |
 | --- | --- |
