@@ -47,7 +47,7 @@ dependencies = [
 urls = { Homepage = "https://github.com/Jackxiaozhiren/data-science-agent", Repository = "https://github.com/Jackxiaozhiren/data-science-agent", Documentation = "https://github.com/Jackxiaozhiren/data-science-agent/blob/main/docs/getting-started.md", Changelog = "https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md", Issues = "https://github.com/Jackxiaozhiren/data-science-agent/issues" }
 
 [project.scripts]
-dsa = "dsa_evaluation.cli:main"
+dsa = "data_science_agent.cli:main"
 
 [project.optional-dependencies]
 jupyter = ["ipython>=8.0", "ipykernel>=6.0", "nest-asyncio>=1.5"]
