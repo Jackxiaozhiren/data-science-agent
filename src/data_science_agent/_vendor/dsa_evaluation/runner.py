@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,76 @@ from dsa_evaluation.metrics import (
     attach_statistical_eval,
     evaluate_task,
 )
+
+
+def _optional_float_env(name: str) -> float | None:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
+    mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()
+    provider = (
+        os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower()
+        if mode in {"real", "openai"}
+        else "stub"
+    )
+    model = (
+        os.getenv("DSA_OPENAI_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-5.6-luna"
+        if provider == "openai"
+        else "heuristic"
+    )
+
+    input_tokens = 0
+    output_tokens = 0
+    total_tokens = 0
+    model_latency_ms = 0
+    for call in llm_calls:
+        usage = call.get("usage")
+        if isinstance(usage, dict):
+            input_tokens += int(usage.get("input_tokens") or 0)
+            output_tokens += int(usage.get("output_tokens") or 0)
+            total_tokens += int(usage.get("total_tokens") or 0)
+        model_latency_ms += int(call.get("latency_ms") or 0)
+
+    input_rate = _optional_float_env("DSA_INPUT_COST_PER_MILLION")
+    output_rate = _optional_float_env("DSA_OUTPUT_COST_PER_MILLION")
+    cost_usd: float | None = None
+    if input_rate is not None and output_rate is not None:
+        cost_usd = round(
+            input_tokens * input_rate / 1_000_000
+            + output_tokens * output_rate / 1_000_000,
+            8,
+        )
+
+    return {
+        "llm_mode": mode,
+        "provider": provider,
+        "model": model,
+        "fallback": os.getenv("DSA_LLM_FALLBACK", "error"),
+        "git_commit": os.getenv("DSA_GIT_COMMIT") or os.getenv("GITHUB_SHA"),
+        "call_count": len(llm_calls),
+        "model_latency_ms": model_latency_ms,
+        "token_usage": {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+        },
+        "pricing": {
+            "input_cost_per_million": input_rate,
+            "output_cost_per_million": output_rate,
+            "source": "explicit environment rates"
+            if input_rate is not None and output_rate is not None
+            else None,
+        },
+        "cost_usd": cost_usd,
+        "llm_calls": llm_calls,
+    }
 
 
 async def _run_one(
@@ -48,6 +119,9 @@ def run_benchmark(
     limit: int | None = None,
     task_ids: list[str] | None = None,
 ) -> dict[str, Any]:
+    from dsa_llm.providers import get_call_log, reset_call_log
+
+    reset_call_log()
     catalog = Catalog.load(catalog_path)
     tasks = catalog.tasks
     if task_ids:
@@ -85,19 +159,35 @@ def run_benchmark(
     asyncio.run(_run_all())
 
     agg = aggregate_metrics(results)
+    llm_calls = get_call_log()
+    execution = _execution_metadata(llm_calls)
     payload = {
         "catalog": str(catalog_path),
         "datasets_dir": str(datasets_dir),
         "n_tasks": len(tasks),
+        "execution": execution,
         "aggregate": agg,
         "results": [r.model_dump(mode="json") for r in results],
     }
     (out_dir / "results.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    # also write lightweight summary
+    # Keep the lightweight aggregate summary backward compatible.
     summary = json.dumps(agg, indent=2)
     (out_dir / "summary.json").write_text(summary, encoding="utf-8")
+    (out_dir / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "catalog": str(catalog_path),
+                "datasets_dir": str(datasets_dir),
+                "n_tasks": len(tasks),
+                "execution": execution,
+            },
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     # raw for debugging
     (out_dir / "raw_runs.json").write_text(
         json.dumps(raw_runs, indent=2, ensure_ascii=False)[:10_000_000], encoding="utf-8"
