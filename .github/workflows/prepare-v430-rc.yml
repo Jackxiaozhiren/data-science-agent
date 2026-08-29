@@ -22,7 +22,9 @@ jobs:
       - name: Install uv
         run: pip install uv
       - name: Update canonical release surfaces
-        run: python scripts/prepare_v430_rc.py
+        run: |
+          python scripts/prepare_v430_rc.py
+          python scripts/patch_release_candidate_check.py
       - name: Regenerate lock, vendor, and SBOM
         shell: bash
         run: |
@@ -31,12 +33,14 @@ jobs:
           uv sync --dev --locked
           uv run python scripts/sync_vendor.py
           uv run python scripts/generate_sbom.py
-          uv run python scripts/check_public_claims.py
+          DSA_RELEASE_CANDIDATE=1 uv run python scripts/check_public_claims.py
       - name: Remove one-shot preparation files and commit candidate
         shell: bash
         run: |
           set -euo pipefail
-          rm .github/workflows/prepare-v430-rc.yml scripts/prepare_v430_rc.py
+          rm .github/workflows/prepare-v430-rc.yml \
+            scripts/prepare_v430_rc.py \
+            scripts/patch_release_candidate_check.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
