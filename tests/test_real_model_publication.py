@@ -64,9 +64,7 @@ def _write_row(
             "input_tokens": 100 * call_count,
             "output_tokens": 20 * call_count,
             "total_tokens": (
-                expected_total_tokens
-                if aggregate_total_tokens is None
-                else aggregate_total_tokens
+                expected_total_tokens if aggregate_total_tokens is None else aggregate_total_tokens
             ),
         },
         "pricing": {
@@ -228,4 +226,6 @@ def test_call_rollup_must_match_execution_totals(tmp_path: Path) -> None:
 
     assert report.matrix_valid is False
     assert report.publication_ready is False
-    assert any("aggregate total_tokens differs from llm_calls sum" in error for error in report.errors)
+    assert any(
+        "aggregate total_tokens differs from llm_calls sum" in error for error in report.errors
+    )
