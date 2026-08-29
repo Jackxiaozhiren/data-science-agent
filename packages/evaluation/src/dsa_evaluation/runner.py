@@ -56,8 +56,7 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
     cost_usd: float | None = None
     if input_rate is not None and output_rate is not None:
         cost_usd = round(
-            input_tokens * input_rate / 1_000_000
-            + output_tokens * output_rate / 1_000_000,
+            input_tokens * input_rate / 1_000_000 + output_tokens * output_rate / 1_000_000,
             8,
         )
 
