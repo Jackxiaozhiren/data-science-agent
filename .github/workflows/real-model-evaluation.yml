@@ -43,27 +43,7 @@ jobs:
       - name: Install locked workspace
         run: uv sync --dev --locked
 
-      - name: Run benchmark variant
-        shell: bash
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-            echo "::error::OPENAI_API_KEY is not configured as a GitHub Actions secret."
-            exit 1
-          fi
-
-          export DSA_GIT_COMMIT="${GITHUB_SHA}"
-          mkdir -p "${OUT_DIR}"
-          uv run dsa \
-            --limit "${TASK_LIMIT}" \
-            --catalog benchmarks/ds-agent-benchmark/catalog.json \
-            --datasets benchmarks/ds-agent-benchmark/datasets \
-            --out "${OUT_DIR}"
-
       - name: Record workflow snapshot manifest
-        if: ${{ always() }}
         shell: bash
         run: |
           set -euo pipefail
