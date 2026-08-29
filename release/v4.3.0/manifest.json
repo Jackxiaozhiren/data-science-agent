@@ -10,9 +10,9 @@
   "release_metadata_commit": null,
   "python_requires": ">=3.12",
   "real_model_publication_status": "execution-and-validation-ready; no credentialed comparative score published",
-  "excluded_open_runtime_updates": [
-    "#45 python 3.12-slim -> 3.14-slim",
-    "#46 node 20-alpine -> 26-alpine"
+  "excluded_runtime_updates": [
+    "#45 python 3.12-slim -> 3.14-slim (closed without merge; deferred to a dedicated compatibility cycle)",
+    "#46 node 20-alpine -> 26-alpine (closed without merge; deferred to a dedicated compatibility cycle)"
   ],
   "gates": {
     "ci": "pending",
