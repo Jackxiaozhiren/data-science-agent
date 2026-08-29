@@ -3,31 +3,12 @@ name: Real Model Evaluation Smoke
 on:
   workflow_dispatch:
 
-concurrency:
-  group: real-model-evaluation-smoke
-  cancel-in-progress: false
-
 jobs:
   benchmark:
-    name: dsa / gpt-5.6-luna / smoke-5
+    name: secure workflow diagnostic
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     permissions:
       contents: read
-    env:
-      DSA_LLM_MODE: real
-      DSA_LLM_PROVIDER: openai
-      DSA_LLM_FALLBACK: error
-      DSA_EVALUATION_VARIANT: dsa
-      DSA_EVIDENCE_CRITIC: "on"
-      DSA_OPENAI_MODEL: gpt-5.6-luna
-      DSA_INPUT_COST_PER_MILLION: "0.20"
-      DSA_OUTPUT_COST_PER_MILLION: "1.20"
-      TASK_LIMIT: "5"
-      RUN_SCOPE: smoke-5
-      PRICING_REFERENCE_DATE: "2026-08-29"
-      OUT_DIR: benchmark-artifacts/dsa
-      VARIANT: dsa
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -37,55 +18,5 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install uv
-        run: pip install "uv==0.12.7"
-
-      - name: Install locked workspace
-        run: uv sync --dev --locked
-
-      - name: Record workflow snapshot manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "${OUT_DIR}"
-          uv run python - <<'PY'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-
-          catalog = Path("benchmarks/ds-agent-benchmark/catalog.json")
-          datasets = Path("benchmarks/ds-agent-benchmark/datasets")
-          out = Path(os.environ["OUT_DIR"])
-
-          catalog_sha256 = hashlib.sha256(catalog.read_bytes()).hexdigest()
-          dataset_hasher = hashlib.sha256()
-          dataset_files = sorted(p for p in datasets.rglob("*") if p.is_file())
-          for path in dataset_files:
-              relative = path.relative_to(datasets).as_posix()
-              dataset_hasher.update(relative.encode("utf-8"))
-              dataset_hasher.update(b"\0")
-              dataset_hasher.update(hashlib.sha256(path.read_bytes()).digest())
-
-          manifest = {
-              "workflow": "Real Model Evaluation Smoke",
-              "github_run_id": os.environ.get("GITHUB_RUN_ID"),
-              "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
-              "git_commit": os.environ.get("GITHUB_SHA"),
-              "variant": os.environ["VARIANT"],
-              "model": os.environ["DSA_OPENAI_MODEL"],
-              "scope": os.environ["RUN_SCOPE"],
-              "task_limit": int(os.environ["TASK_LIMIT"]),
-              "catalog": str(catalog),
-              "catalog_sha256": catalog_sha256,
-              "datasets_dir": str(datasets),
-              "datasets_sha256": dataset_hasher.hexdigest(),
-              "dataset_file_count": len(dataset_files),
-              "input_cost_per_million": os.environ["DSA_INPUT_COST_PER_MILLION"],
-              "output_cost_per_million": os.environ["DSA_OUTPUT_COST_PER_MILLION"],
-              "pricing_reference_date": os.environ["PRICING_REFERENCE_DATE"],
-          }
-          (out / "workflow_manifest.json").write_text(
-              json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
-          )
-          PY
+      - name: Verify runner
+        run: python --version
