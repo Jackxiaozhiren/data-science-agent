@@ -25,6 +25,22 @@ dsa benchmark \
 
 For a publishable run, remove `--limit` after the smoke test succeeds.
 
+## Run from GitHub Actions
+
+The **Real-model Evaluation** workflow provides a guarded manual path for reproducible remote runs. Configure the repository Actions secret `OPENAI_API_KEY`, then trigger the workflow from the Actions tab.
+
+The workflow defaults to a 5-task smoke run and also offers a 10-task smoke run. A full-suite run requires an additional explicit confirmation because it may incur substantial model cost.
+
+Every successful run must pass a provenance check before it is treated as a real-model result. The check requires:
+
+- real/openai execution mode;
+- the requested OpenAI model;
+- at least one recorded external-model call;
+- `fallback=error`, so a failed real call cannot silently become a heuristic result;
+- the exact Git commit used by the workflow.
+
+The benchmark result directory is uploaded as a 30-day Actions artifact even when a run fails, when files are available, so partial diagnostics can be inspected without publishing them as results.
+
 ## Record cost without hard-coding stale prices
 
 Model pricing changes over time, so DSA does not embed a permanent price table in benchmark code. When publishing a run, record the price assumptions you used:
@@ -35,6 +51,8 @@ export DSA_OUTPUT_COST_PER_MILLION="<output price used for this run>"
 ```
 
 If both values are present, DSA computes `cost_usd` from actual API token usage. If they are absent, `cost_usd` remains `null` rather than inventing a number.
+
+The GitHub Actions workflow exposes the same two price assumptions as optional manual inputs. Leave both blank when you do not want to assert a cost figure.
 
 ## Artifacts
 
