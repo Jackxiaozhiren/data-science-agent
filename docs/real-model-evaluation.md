@@ -8,29 +8,38 @@ With `DSA_LLM_MODE=real`, the agent planner calls a real model through the OpenA
 
 If a requested real-model call fails, DSA raises the real error by default. It does **not** silently substitute the stub provider. An explicit `DSA_LLM_FALLBACK=heuristic` is available for product experimentation, but runs using that fallback should not be published as pure real-model benchmark results.
 
-## Recommended: manual GitHub Actions matrix
+## Recommended: manual GitHub Actions smoke
 
-The repository includes `.github/workflows/real-model-evaluation.yml`, a `workflow_dispatch`-only workflow for running the four comparison variants under one pinned commit and model selection.
+The repository includes `.github/workflows/real-model-evaluation.yml`, a `workflow_dispatch`-only workflow for the first credentialed four-way smoke test.
+
+The workflow intentionally has **no user-supplied workflow inputs**. The model, pricing assumptions, task limit, and comparison variants are pinned in version-controlled YAML so a benchmark run cannot be silently changed by free-form dispatch data.
 
 Before the first run, configure `OPENAI_API_KEY` as a GitHub Actions repository or environment secret. Do not paste the key into an issue, pull request, workflow input, command line, or benchmark artifact.
 
-When dispatching **Real Model Evaluation**:
-
-1. enter the exact OpenAI model ID to use for every variant;
-2. keep `task_limit=5` for the first credentialed smoke test;
-3. use `task_limit=0` only when you intentionally want the full catalog;
-4. optionally enter the current input/output USD-per-million-token rates used for that run.
-
-The workflow runs these variants with `fail-fast: false` so one failed row does not hide the state of the others:
+Then dispatch **Real Model Evaluation Smoke** from the Actions tab. One dispatch runs these four variants with `fail-fast: false`:
 
 - `dsa` with the evidence critic enabled;
 - `dsa-no-critic` with the critic disabled;
 - `llm-tools` with direct vanilla LLM + public analysis-tool execution;
 - `llm-only` with deterministic dataset context and no executable tools.
 
-Each matrix job pins `DSA_LLM_FALLBACK=error`, records the checked-out Git commit, and uploads its own artifact bundle. In addition to the normal benchmark files, `workflow_manifest.json` records the workflow run ID, exact model, variant, task limit, catalog SHA-256, aggregate dataset snapshot SHA-256, and explicit pricing inputs. Artifacts are retained for 30 days by default.
+The smoke workflow currently pins:
 
-A blank pricing input is allowed for smoke testing. In that case DSA deliberately leaves `cost_usd` as `null`; do not describe that run as cost-complete or publication-ready.
+- model: `gpt-5.6-luna`;
+- task limit: `5` tasks per variant;
+- input price assumption: `$0.20` per 1M tokens;
+- output price assumption: `$1.20` per 1M tokens;
+- pricing reference date: `2026-08-29`.
+
+Those rates match the OpenAI API model page on the pricing reference date: <https://developers.openai.com/api/docs/models/gpt-5.6-luna>.
+
+The workflow also pins the checkout and setup actions by commit SHA, disables persisted checkout credentials, uses `DSA_LLM_FALLBACK=error`, and exposes `OPENAI_API_KEY` only to the benchmark execution step.
+
+Each matrix job uploads its own artifact bundle. In addition to the normal benchmark files, `workflow_manifest.json` records the workflow run ID, exact Git commit, model, variant, task limit, catalog SHA-256, aggregate dataset snapshot SHA-256, pricing assumptions, and pricing reference date. Artifacts are retained for 30 days by default.
+
+This workflow is a **credentialed smoke test**, not a publishable leaderboard run. After all four smoke rows complete successfully and the artifacts are reviewed, add the full-catalog run in a separate reviewed change while keeping the same exact model, evaluator, dataset snapshot, and documented pricing assumptions.
+
+When OpenAI pricing or the chosen benchmark model changes, update the pinned workflow in a pull request before running new publication candidates. Do not retroactively rewrite the pricing assumptions of existing artifacts.
 
 ## Run a real-model benchmark locally
 
@@ -51,7 +60,7 @@ dsa --limit 5 \
   --datasets benchmarks/ds-agent-benchmark/datasets
 ```
 
-For a publishable run, remove `--limit` after the smoke test succeeds.
+For a publishable run, remove `--limit` only after the smoke test succeeds and retain the exact model and pricing assumptions used for the full run.
 
 ## Evidence-critic ablation
 
@@ -125,9 +134,11 @@ The following environment variables are recorded in `run_manifest.json` through 
 
 For a fair matrix, hold these values fixed across repeated runs and publish them with the artifacts.
 
-## Record cost without hard-coding stale prices
+## Pricing assumptions
 
-Model pricing changes over time, so DSA does not embed a permanent price table in benchmark code. When publishing a run, record the price assumptions you used:
+Model pricing changes over time. The benchmark code therefore does not embed a permanent provider price table.
+
+For local runs, explicitly record the rates used for that run:
 
 ```bash
 export DSA_INPUT_COST_PER_MILLION="<input price used for this run>"
@@ -135,6 +146,8 @@ export DSA_OUTPUT_COST_PER_MILLION="<output price used for this run>"
 ```
 
 If both values are present, DSA computes `cost_usd` from actual API token usage. If they are absent, `cost_usd` remains `null` rather than inventing a number.
+
+For the GitHub Actions smoke workflow, the exact model, rates, and pricing reference date are pinned in version control. Existing artifacts keep their historical assumptions even if provider pricing changes later.
 
 ## Artifacts
 
@@ -154,7 +167,7 @@ A benchmark run writes the existing result files plus `run_manifest.json`. The m
 
 `results.json` also embeds the same execution metadata alongside aggregate metrics. `raw_runs.json` retains the baseline final answer, parsed tool plan, dataset context, and executed tool outputs when a baseline is used.
 
-The GitHub Actions workflow adds `workflow_manifest.json` so the catalog and dataset snapshot can be verified independently of mutable branch names.
+The GitHub Actions smoke workflow adds `workflow_manifest.json` so the catalog, dataset snapshot, pinned model, and pricing snapshot can be verified independently of mutable branch names.
 
 ## Publication rule
 
@@ -168,7 +181,8 @@ A result may be described as a real-model DSA or baseline result only when:
 6. Baseline configuration is disclosed when the variant is `llm-only` or `llm-tools`.
 7. Raw benchmark artifacts and the Git commit are retained.
 8. The catalog and dataset snapshot are frozen or cryptographically identified.
-9. Cost claims include the explicit pricing assumptions used for that run.
+9. Cost claims include the explicit pricing assumptions and pricing reference date used for that run.
+10. Public comparison rows use the full frozen task set; five-task smoke artifacts are labeled as smoke validation only.
 
 The existing `stub/small` registry entry remains a harness-validation result, not a real-model quality comparison.
 
