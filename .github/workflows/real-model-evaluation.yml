@@ -7,7 +7,7 @@ permissions: {}
 
 jobs:
   diagnostic:
-    name: secure workflow dependency diagnostic
+    name: secure workflow locked-run diagnostic
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,8 +26,5 @@ jobs:
           version: "0.12.7"
           enable-cache: false
 
-      - name: Install locked workspace
-        run: uv sync --dev --locked
-
-      - name: Verify runner
-        run: uv --version
+      - name: Verify locked project environment
+        run: uv run --locked python -c "import dsa_evaluation; print('locked environment ready')"
