@@ -3,12 +3,13 @@ name: Real Model Evaluation Smoke
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   benchmark:
     name: secure workflow diagnostic
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -19,7 +20,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        run: pip install "uv==0.12.7"
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.7"
+          enable-cache: false
 
       - name: Verify runner
         run: uv --version
