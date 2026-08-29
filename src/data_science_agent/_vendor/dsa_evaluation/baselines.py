@@ -177,7 +177,11 @@ async def run_llm_tools_baseline(task: BenchmarkTask, dataset_path: Path) -> dic
     raw_plan = await provider.structured_output(
         planning_prompt, BaselineToolPlan, max_output_tokens=2500
     )
-    plan = raw_plan if isinstance(raw_plan, BaselineToolPlan) else BaselineToolPlan.model_validate(raw_plan)
+    plan = (
+        raw_plan
+        if isinstance(raw_plan, BaselineToolPlan)
+        else BaselineToolPlan.model_validate(raw_plan)
+    )
 
     tool_calls: list[dict[str, Any]] = []
     max_tool_calls = int(config["max_tool_calls"])
@@ -234,12 +238,12 @@ async def run_llm_tools_baseline(task: BenchmarkTask, dataset_path: Path) -> dic
     }
 
 
-async def run_baseline(
-    variant: str, task: BenchmarkTask, dataset_path: Path
-) -> dict[str, Any]:
+async def run_baseline(variant: str, task: BenchmarkTask, dataset_path: Path) -> dict[str, Any]:
     normalized = variant.strip().lower()
     if normalized == "llm-only":
         return await run_llm_only_baseline(task, dataset_path)
     if normalized == "llm-tools":
         return await run_llm_tools_baseline(task, dataset_path)
-    raise ValueError(f"Unsupported baseline variant: {variant!r}; expected {sorted(_BASELINE_VARIANTS)}")
+    raise ValueError(
+        f"Unsupported baseline variant: {variant!r}; expected {sorted(_BASELINE_VARIANTS)}"
+    )
