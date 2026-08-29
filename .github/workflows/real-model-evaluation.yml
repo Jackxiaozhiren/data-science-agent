@@ -21,6 +21,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 concurrency:
   group: real-model-evaluation-${{ github.ref }}
   cancel-in-progress: false
@@ -47,13 +50,10 @@ jobs:
     env:
       DSA_LLM_MODE: real
       DSA_LLM_PROVIDER: openai
-      DSA_OPENAI_MODEL: ${{ inputs.model }}
       DSA_LLM_FALLBACK: error
       DSA_GIT_COMMIT: ${{ github.sha }}
       DSA_EVALUATION_VARIANT: ${{ matrix.variant }}
       DSA_EVIDENCE_CRITIC: ${{ matrix.critic }}
-      DSA_INPUT_COST_PER_MILLION: ${{ inputs.input_cost_per_million }}
-      DSA_OUTPUT_COST_PER_MILLION: ${{ inputs.output_cost_per_million }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -64,39 +64,59 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        run: pip install uv
+        run: pip install "uv==0.12.7"
+
+      - name: Validate and normalize manual inputs
+        shell: bash
+        env:
+          MODEL_INPUT: ${{ inputs.model }}
+          TASK_LIMIT_INPUT: ${{ inputs.task_limit }}
+          INPUT_PRICE_INPUT: ${{ inputs.input_cost_per_million }}
+          OUTPUT_PRICE_INPUT: ${{ inputs.output_cost_per_million }}
+        run: |
+          set -euo pipefail
+
+          model_pattern='^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$'
+          integer_pattern='^[0-9]+$'
+          price_pattern='^[0-9]+([.][0-9]+)?$'
+
+          if ! [[ "${MODEL_INPUT}" =~ ${model_pattern} ]]; then
+            echo "::error::model contains unsupported characters or is too long."
+            exit 1
+          fi
+          if ! [[ "${TASK_LIMIT_INPUT}" =~ ${integer_pattern} ]]; then
+            echo "::error::task_limit must be a non-negative integer; use 0 for the full catalog."
+            exit 1
+          fi
+          if [[ -n "${INPUT_PRICE_INPUT}" ]] && ! [[ "${INPUT_PRICE_INPUT}" =~ ${price_pattern} ]]; then
+            echo "::error::input_cost_per_million must be a non-negative decimal number."
+            exit 1
+          fi
+          if [[ -n "${OUTPUT_PRICE_INPUT}" ]] && ! [[ "${OUTPUT_PRICE_INPUT}" =~ ${price_pattern} ]]; then
+            echo "::error::output_cost_per_million must be a non-negative decimal number."
+            exit 1
+          fi
+
+          printf 'DSA_OPENAI_MODEL=%s\n' "${MODEL_INPUT}" >> "${GITHUB_ENV}"
+          printf 'TASK_LIMIT=%s\n' "${TASK_LIMIT_INPUT}" >> "${GITHUB_ENV}"
+          printf 'DSA_INPUT_COST_PER_MILLION=%s\n' "${INPUT_PRICE_INPUT}" >> "${GITHUB_ENV}"
+          printf 'DSA_OUTPUT_COST_PER_MILLION=%s\n' "${OUTPUT_PRICE_INPUT}" >> "${GITHUB_ENV}"
 
       - name: Install locked workspace
         run: uv sync --dev --locked
 
-      - name: Validate manual inputs and secret
+      - name: Run benchmark variant
         shell: bash
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TASK_LIMIT: ${{ inputs.task_limit }}
+          OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
         run: |
           set -euo pipefail
           if [[ -z "${OPENAI_API_KEY:-}" ]]; then
             echo "::error::OPENAI_API_KEY is not configured as a GitHub Actions secret."
             exit 1
           fi
-          if ! [[ "${TASK_LIMIT}" =~ ^[0-9]+$ ]]; then
-            echo "::error::task_limit must be a non-negative integer; use 0 for the full catalog."
-            exit 1
-          fi
-          if [[ -z "${DSA_OPENAI_MODEL:-}" ]]; then
-            echo "::error::model must be an explicit OpenAI model ID."
-            exit 1
-          fi
 
-      - name: Run benchmark variant
-        shell: bash
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TASK_LIMIT: ${{ inputs.task_limit }}
-          OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
-        run: |
-          set -euo pipefail
           mkdir -p "${OUT_DIR}"
           cmd=(
             uv run dsa
@@ -113,10 +133,8 @@ jobs:
         if: ${{ always() }}
         shell: bash
         env:
-          TASK_LIMIT: ${{ inputs.task_limit }}
           OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
           VARIANT: ${{ matrix.variant }}
-          MODEL: ${{ inputs.model }}
         run: |
           set -euo pipefail
           mkdir -p "${OUT_DIR}"
@@ -145,7 +163,7 @@ jobs:
               "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
               "git_commit": os.environ.get("GITHUB_SHA"),
               "variant": os.environ["VARIANT"],
-              "model": os.environ["MODEL"],
+              "model": os.environ.get("DSA_OPENAI_MODEL"),
               "task_limit": int(os.environ["TASK_LIMIT"]),
               "catalog": str(catalog),
               "catalog_sha256": catalog_sha256,
