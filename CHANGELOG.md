@@ -1,5 +1,44 @@
 # Changelog
 
+## 4.3.0 — Adoption, Verifiable Evaluation & Project Reliability
+
+### Added
+
+- **Auditable real-model execution** via an explicit OpenAI Responses API path. Offline/stub execution remains the deterministic default; real calls require explicit opt-in and never silently substitute the stub provider.
+- **Four controlled evaluation variants** under one provenance model: full DSA, DSA without the evidence critic, vanilla LLM + tools, and an LLM-only control.
+- **Credentialed four-way smoke evaluation workflow** that is manual-only, accepts no dispatch inputs, fixes the first smoke to one model/task/pricing snapshot, scopes the API key to execution steps, uploads per-row artifacts, and fails if any row or the matrix-integrity validator fails.
+- **Publication-integrity validator** for four-way artifacts, including provider/model/call-count, task/catalog/dataset snapshot, baseline-control, critic-state, pricing, commit, and cross-row consistency checks.
+- **Adoption and contributor paths**: Windows PowerShell quickstart, benchmark-task contribution walkthrough, executable hello-world plugin walkthrough, structured issue/discussion templates, public roadmap, contributor recognition, and richer project automation.
+- **Case-study discovery improvements** with a visual gallery and three flagship workflows surfaced near the README demo.
+
+### Changed
+
+- Repositioned the project around **verifiable, reproducible AI data science**: claim-level evidence, inspectable artifacts, and explicit separation between deterministic harness validation and real-model comparative results.
+- Made hosted-demo frontend/backend boundaries configurable for cross-origin deployment and documented the verified launch sequence without advertising an unverified backend URL.
+- Hardened repository operations with actionlint, lock/vendor drift checks, dependency review, secret scanning, CodeQL, SonarQube quality gates, and reproducible leaderboard/contributor automation.
+
+### Security
+
+- Upgraded the web runtime to **Next.js 16.3.3**, **React/ReactDOM 19.2.8**, and **Sharp 0.35.4**, raised the PostCSS floor, and documented upstream license obligations.
+- Added a permanent `npm audit --audit-level=high` CI gate so High/Critical web dependency advisories cannot hide in install logs.
+- Kept real-model workflow permissions least-privilege, checkout credentials non-persistent, actions pinned by commit SHA, and credentials out of artifacts and repository content.
+
+### Fixed
+
+- Fixed the packaged `dsa` console bootstrap so vendored `dsa_*` aliases initialize before the evaluation CLI imports.
+- Fixed the API Docker image so the root `src/` package is present; CI now verifies the packaged/container CLI path.
+- Added a root npm workspace lock drift guard and corrected Dependabot's Docker update directory.
+
+### Evaluation integrity
+
+- The existing `stub/small` result remains **harness validation**, not a real-model leaderboard claim.
+- v4.3.0 ships the execution and validation machinery for a credible four-way comparison, but **does not claim comparative real-model scores until credentialed artifacts pass publication review**.
+
+### Compatibility
+
+- No intentional breaking change to the Stable public SDK surface.
+- Python **3.12+** remains the supported baseline for this release; the separate Python 3.14 and Node 26 base-image Dependabot proposals are intentionally excluded from this candidate and require independent review.
+
 ## 4.2.10 — Publish Umbrella Only
 
 ### Fixed

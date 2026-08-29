@@ -1,0 +1,34 @@
+{
+  "version": "4.3.0",
+  "release_tag": "v4.3.0",
+  "status": "release-candidate",
+  "theme": "Adoption, Verifiable Evaluation & Project Reliability",
+  "previous_tag": "v4.2.10",
+  "previous_release_commit": "ecf16d0dcef229e38094a853310dd4acd347419b",
+  "source_candidate_commit": "fcb98f455dff644ebd0e525083fd0f1d7e344369",
+  "commits_since_previous_release": 103,
+  "release_metadata_commit": null,
+  "python_requires": ">=3.12",
+  "real_model_publication_status": "execution-and-validation-ready; no credentialed comparative score published",
+  "excluded_open_runtime_updates": [
+    "#45 python 3.12-slim -> 3.14-slim",
+    "#46 node 20-alpine -> 26-alpine"
+  ],
+  "gates": {
+    "ci": "pending",
+    "dependency_review": "pending",
+    "secret_scan": "pending",
+    "codeql": "pending",
+    "sonarqube": "pending",
+    "wheel_sdist_build": "pending",
+    "clean_wheel_install": "pending",
+    "sdk_smoke": "pending",
+    "cli_smoke": "pending",
+    "release_verification": "pending"
+  },
+  "notes": [
+    "Manifest records the frozen source candidate rather than attempting a self-referential metadata commit SHA.",
+    "Do not create v4.3.0 tag until all release-critical gates are PASS on the final metadata commit.",
+    "No deterministic stub result is represented as real-model comparative quality."
+  ]
+}

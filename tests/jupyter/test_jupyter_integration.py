@@ -96,7 +96,7 @@ def test_jupyter_direct_sdk_await_and_display() -> None:
             "benchmarks/v2/datasets/sales.csv", "Analyze revenue", r.run_id
         )
         assert meta["dataset_hash"] is not None
-        assert meta["sdk_version"] == "4.2.10"
+        assert meta["sdk_version"] == "4.3.0"
         assert meta["experiment_id"] == r.run_id
         assert meta["prompt_version"] is not None
         # display_analysis should not raise

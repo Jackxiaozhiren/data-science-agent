@@ -24,7 +24,7 @@ body:
     attributes:
       label: DSA version
       description: Optional; include `dsa --version` when the question is version-specific.
-      placeholder: e.g. 4.2.10
+      placeholder: e.g. 4.3.0
     validations:
       required: false
   - type: checkboxes

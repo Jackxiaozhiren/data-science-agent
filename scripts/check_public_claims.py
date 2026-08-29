@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -11,7 +12,7 @@ ROOT = Path(__file__).parents[1]
 
 # Expected current values (from pyproject/CITATION live)
 EXPECTED = {
-    "version": "4.2.10",
+    "version": "4.3.0",
     "prev_version": "4.1.1",
     "prev_versions": ["4.0.0", "3.0.0", "2.0.0"],
     "pytest": "257",
@@ -123,6 +124,22 @@ def scan_file(path: Path):
             findings.append((name, m.group(0), line.strip()[:120]))
     return findings
 
+def _allow_release_candidate_tag(base_tag: str, expected_version: str) -> bool:
+    """Allow a forward same-major version only under explicit RC mode."""
+    if os.getenv("DSA_RELEASE_CANDIDATE", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+    }:
+        return False
+    try:
+        tagged = tuple(int(part) for part in base_tag.removeprefix("v").split("."))
+        expected = tuple(int(part) for part in expected_version.split("."))
+    except ValueError:
+        return False
+    return len(tagged) == 3 and len(expected) == 3 and tagged[0] == expected[0] and expected > tagged
+
+
 def check_version_consistency():
     issues = []
     # Check pyproject vs CITATION vs __init__ vs sdk vs sbom vs README title
@@ -143,7 +160,9 @@ def check_version_consistency():
         tag = subprocess.run(["git", "describe", "--tags", "--always"], capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
         # Allow HEAD ahead for dev (e.g., v4.1.1-1-g...), but pyproject version must match tag base
         base_tag = tag.split("-")[0] if "-" in tag else tag
-        if base_tag != f"v{EXPECTED['version']}":
+        if base_tag != f"v{EXPECTED['version']}" and not _allow_release_candidate_tag(
+            base_tag, EXPECTED["version"]
+        ):
             issues.append(f"git tag mismatch: {tag} base {base_tag} != v{EXPECTED['version']}")
     except Exception as e:
         issues.append(f"version check error: {e}")
