@@ -28,7 +28,11 @@ def _optional_float_env(name: str) -> float | None:
 
 def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
     mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()
-    provider = os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower() if mode in {"real", "openai"} else "stub"
+    provider = (
+        os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower()
+        if mode in {"real", "openai"}
+        else "stub"
+    )
     model = (
         os.getenv("DSA_OPENAI_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-5.6-luna"
         if provider == "openai"
