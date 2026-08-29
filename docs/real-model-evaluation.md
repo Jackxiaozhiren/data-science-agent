@@ -16,7 +16,7 @@ The workflow intentionally has **no user-supplied workflow inputs**. The model, 
 
 Before the first run, configure `OPENAI_API_KEY` as a GitHub Actions repository or environment secret. Do not paste the key into an issue, pull request, workflow input, command line, or benchmark artifact.
 
-Then dispatch **Real Model Evaluation Smoke** from the Actions tab. One dispatch runs these four variants with `fail-fast: false`:
+Then dispatch **Real Model Evaluation Smoke** from the Actions tab. One dispatch runs these four variants independently:
 
 - `dsa` with the evidence critic enabled;
 - `dsa-no-critic` with the critic disabled;
@@ -35,7 +35,7 @@ Those rates match the OpenAI API model page on the pricing reference date: <http
 
 The workflow also pins the checkout and setup actions by commit SHA, disables persisted checkout credentials, uses `DSA_LLM_FALLBACK=error`, and exposes `OPENAI_API_KEY` only to the benchmark execution step.
 
-Each matrix job uploads its own artifact bundle. In addition to the normal benchmark files, `workflow_manifest.json` records the workflow run ID, exact Git commit, model, variant, task limit, catalog SHA-256, aggregate dataset snapshot SHA-256, pricing assumptions, and pricing reference date. Artifacts are retained for 30 days by default.
+Each variant job uploads its own artifact bundle. In addition to the normal benchmark files, `workflow_manifest.json` records the workflow run ID, exact Git commit, model, variant, task limit, catalog SHA-256, aggregate dataset snapshot SHA-256, pricing assumptions, and pricing reference date. Artifacts are retained for 30 days by default.
 
 This workflow is a **credentialed smoke test**, not a publishable leaderboard run. After all four smoke rows complete successfully and the artifacts are reviewed, add the full-catalog run in a separate reviewed change while keeping the same exact model, evaluator, dataset snapshot, and documented pricing assumptions.
 
@@ -132,7 +132,7 @@ The following environment variables are recorded in `run_manifest.json` through 
 - `DSA_BASELINE_MAX_TOOL_CALLS` — default `3`, capped at `8`;
 - `DSA_BASELINE_MAX_TOOL_OUTPUT_CHARS` — default `12000`.
 
-For a fair matrix, hold these values fixed across repeated runs and publish them with the artifacts.
+For a fair comparison, hold these values fixed across repeated runs and publish them with the artifacts.
 
 ## Pricing assumptions
 
