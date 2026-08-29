@@ -25,4 +25,8 @@ jobs:
           fail-on-severity: high
           fail-on-scopes: runtime
           comment-summary-in-pr: always
+          # Sharp 0.35.x ships platform-specific libvips shared binaries under
+          # LGPL-3.0-or-later. Next 16's Browserslist data also includes
+          # caniuse-lite under CC-BY-4.0. Keep license enforcement enabled while
+          # explicitly documenting these required upstream runtime/data licenses.
           allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0-or-later, CC-BY-4.0
