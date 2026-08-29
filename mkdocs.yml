@@ -20,6 +20,7 @@ nav:
   - Agent: agent.md
   - Agent System: agent-system.md
   - Tools: tools.md
+  - Plugin Walkthrough: plugin-walkthrough.md
   - Statistics: statistics.md
   - Evidence: evidence.md
   - MCP: MCP_DESIGN.md

@@ -1,26 +1,47 @@
-# Plugins — V4 W3/W4 (§21–28)
+# Plugins
 
-Local plugin registry (no marketplace yet, §27).
+DSA currently uses a local plugin registry; there is no remote marketplace install path.
 
-```
+Installed plugins live under:
+
+```text
 plugins/
-├── my-plugin/
-│   ├── manifest.yaml   # or plugin.yaml (§25)
-│   ├── src/
-│   └── README.md
+├── <plugin-name>/
+│   ├── manifest.yaml   # plugin.yaml is also discovered
+│   └── src/
 └── ...
 ```
 
-Manifest example (§25):
+A manifest declares compatibility, entrypoint, permissions, dependencies, and capabilities. Permissions are deny-by-default and validated before installation.
+
+Example:
 
 ```yaml
-name: dsa-time-series
-version: 1.0.0
-type: [forecasting]
-requires: { dsa: ">=4.0,<5.0" }
+name: hello-metrics
+version: 0.1.0
+type: [metrics]
+dsa:
+  min_version: "4.0.0"
+  max_version: "5.0.0"
 license: MIT
-entrypoint: { python: dsa_time_series.plugin:register }
-permissions: [read, compute]
+entrypoint: { python: hello_metrics.plugin:register }
+permissions: [dataset.read, process]
+dependencies: []
+capabilities: [metrics, evidence]
 ```
 
-Discovery: `dsa plugin list` scans `plugins/**/manifest.yaml` (§27).
+Lifecycle commands:
+
+```bash
+uv run dsa plugin validate <manifest.yaml> --json
+uv run dsa plugin install <source-directory> --json
+uv run dsa plugin list --json
+uv run dsa plugin status <name> --json
+uv run dsa plugin disable <name> --json
+uv run dsa plugin enable <name> --json
+uv run dsa plugin remove <name> --json
+```
+
+Tool execution currently uses the Python SDK (`dsa_plugins.registry.execute_plugin_tool`) rather than accepting arbitrary tool arguments through the CLI.
+
+For a complete offline example with typed inputs/outputs, evidence provenance, exact lifecycle commands, and an automated round-trip test, see [`docs/plugin-walkthrough.md`](../docs/plugin-walkthrough.md).
