@@ -13,7 +13,9 @@ class _StructuredAnswer(BaseModel):
 
 
 @pytest.mark.asyncio
-async def test_default_mode_stays_stub_even_when_api_key_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_default_mode_stays_stub_even_when_api_key_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("DSA_LLM_MODE", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
@@ -59,7 +61,7 @@ async def test_openai_provider_validates_structured_output(monkeypatch: pytest.M
 
     async def fake_generate(prompt: str, **kwargs: Any) -> str:
         assert "JSON" in prompt
-        return "```json\n{\"answer\": \"verified\"}\n```"
+        return '```json\n{"answer": "verified"}\n```'
 
     monkeypatch.setattr(provider, "generate", fake_generate)
 
