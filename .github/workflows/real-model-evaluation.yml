@@ -222,8 +222,32 @@ jobs:
           include-hidden-files: false
           retention-days: 30
 
-      - name: Fail when any comparison row failed
-        if: ${{ always() && (steps.run_dsa.outcome != 'success' || steps.run_dsa_no_critic.outcome != 'success' || steps.run_llm_tools.outcome != 'success' || steps.run_llm_only.outcome != 'success') }}
+      - name: Validate four-way matrix integrity
+        id: validate_matrix
+        if: ${{ always() }}
+        continue-on-error: true
         run: |
-          echo "::error::At least one real-model comparison row failed. Review the per-row artifacts and logs."
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/benchmark-artifacts:/artifacts" \
+            dsa-eval:smoke \
+            .venv/bin/python \
+            -m dsa_evaluation.publication \
+            /artifacts \
+            --json \
+            --output /artifacts/matrix_validation.json
+
+      - name: Upload matrix validation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-model-matrix-validation-${{ github.run_id }}
+          path: benchmark-artifacts/matrix_validation.json
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Fail when any comparison row or matrix validation failed
+        if: ${{ always() && (steps.run_dsa.outcome != 'success' || steps.run_dsa_no_critic.outcome != 'success' || steps.run_llm_tools.outcome != 'success' || steps.run_llm_only.outcome != 'success' || steps.validate_matrix.outcome != 'success') }}
+        run: |
+          echo "::error::At least one real-model row or the matrix validator failed. Review artifacts and logs."
           exit 1
