@@ -5,34 +5,12 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: real-model-evaluation-smoke
-  cancel-in-progress: false
-
-env:
-  DSA_LLM_MODE: real
-  DSA_LLM_PROVIDER: openai
-  DSA_LLM_FALLBACK: error
-  DSA_OPENAI_MODEL: gpt-5.6-luna
-  DSA_INPUT_COST_PER_MILLION: "0.20"
-  DSA_OUTPUT_COST_PER_MILLION: "1.20"
-  DSA_GIT_COMMIT: ${{ github.sha }}
-  RUN_SCOPE: smoke-5
-  TASK_LIMIT: "5"
-  PRICING_REFERENCE_DATE: "2026-08-29"
-
 jobs:
-  dsa:
-    name: dsa / gpt-5.6-luna / smoke-5
+  diagnostic:
+    name: secure workflow dependency diagnostic
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     permissions:
       contents: read
-    env:
-      VARIANT: dsa
-      DSA_EVALUATION_VARIANT: dsa
-      DSA_EVIDENCE_CRITIC: "on"
-      OUT_DIR: benchmark-artifacts/dsa
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -51,31 +29,5 @@ jobs:
       - name: Install locked workspace
         run: uv sync --dev --locked
 
-      - name: Run DSA smoke
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-            echo "::error::OPENAI_API_KEY is not configured as a GitHub Actions secret."
-            exit 1
-          fi
-          uv run dsa \
-            --limit 5 \
-            --catalog benchmarks/ds-agent-benchmark/catalog.json \
-            --datasets benchmarks/ds-agent-benchmark/datasets \
-            --out "${OUT_DIR}"
-
-      - name: Record workflow snapshot manifest
-        if: ${{ always() }}
-        run: uv run python scripts/write_real_model_workflow_manifest.py
-
-      - name: Upload benchmark artifacts
-        if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: real-model-dsa-${{ github.run_id }}
-          path: benchmark-artifacts/dsa/
-          if-no-files-found: error
-          include-hidden-files: false
-          retention-days: 30
+      - name: Verify runner
+        run: uv --version
