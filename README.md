@@ -106,6 +106,18 @@ analysis run
 
 </div>
 
+### Start with 3 flagship workflows
+
+| Workflow | Ask DSA | What it demonstrates |
+|---|---|---|
+| **[Sales analytics](case-studies/01-sales/)** | What drives revenue across regions and categories? | SQL + statistics → evidence → reproducible report |
+| **[Time-series forecasting](case-studies/03-time-series/)** | What are the next 30 values, and how well does the baseline forecast perform? | Forecasting, holdout evaluation, reproducibility, and visible failure recovery |
+| **[ML classification](case-studies/08-classification/)** | Can DSA train, evaluate, and explain an imbalanced classifier? | Model evaluation + feature importance inside the same provenance trail |
+
+**[Browse all 8 verified case studies →](case-studies/)**
+
+These are verified repository workflows intended to show product behavior and evidence artifacts. They are **not** presented as independent real-LLM leaderboard results.
+
 ---
 
 ## What makes DSA different?
@@ -185,7 +197,7 @@ for evidence in result.evidence:
 
 ---
 
-## Real-world case studies
+## Case study gallery
 
 The repository includes verified end-to-end examples across business analytics, churn, forecasting, marketing, finance, public statistics, data quality, and classification.
 
@@ -208,7 +220,7 @@ The current public result registry includes a `stub/small` validation run. It is
 - [Reproducible result registry](benchmarks/leaderboard/)
 - [Research & limitations](docs/research.md)
 
-**Planned next step:** publish real-model baselines and ablations with model, provider, cost, latency, commit, seed, and raw artifacts recorded for each run.
+**Next evaluation gate:** run the merged credentialed four-way real-model smoke workflow, review all raw artifacts for reproducibility, and only then prepare any full-catalog comparative result for publication.
 
 ---
 
