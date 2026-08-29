@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: "Exact OpenAI model ID for all four variants"
+        description: "OpenAI model tier for all four variants"
         required: true
-        type: string
-      task_limit:
-        description: "Tasks per variant; use 0 for the full catalog"
+        default: gpt-5.6-luna
+        type: choice
+        options:
+          - gpt-5.6-luna
+          - gpt-5.6-terra
+          - gpt-5.6-sol
+      scope:
+        description: "smoke-5 runs 5 tasks per variant; full runs the entire catalog"
         required: true
-        default: "5"
-        type: string
-      input_cost_per_million:
-        description: "Optional USD per 1M input tokens; leave blank to keep cost null"
-        required: false
-        type: string
-      output_cost_per_million:
-        description: "Optional USD per 1M output tokens; leave blank to keep cost null"
-        required: false
-        type: string
+        default: smoke-5
+        type: choice
+        options:
+          - smoke-5
+          - full
 
 permissions:
   contents: read
@@ -30,7 +30,8 @@ concurrency:
 
 jobs:
   benchmark:
-    name: ${{ matrix.variant }}
+    name: ${{ matrix.variant.name }} / ${{ matrix.model.id }} / ${{ matrix.scope.name }}
+    if: ${{ matrix.model.id == inputs.model && matrix.scope.name == inputs.scope }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -38,22 +39,42 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - variant: dsa
+        variant:
+          - name: dsa
             critic: "on"
-          - variant: dsa-no-critic
+          - name: dsa-no-critic
             critic: "off"
-          - variant: llm-tools
+          - name: llm-tools
             critic: "on"
-          - variant: llm-only
+          - name: llm-only
             critic: "on"
+        model:
+          - id: gpt-5.6-luna
+            input_cost_per_million: "0.20"
+            output_cost_per_million: "1.20"
+          - id: gpt-5.6-terra
+            input_cost_per_million: "2.00"
+            output_cost_per_million: "12.00"
+          - id: gpt-5.6-sol
+            input_cost_per_million: "4.00"
+            output_cost_per_million: "20.00"
+        scope:
+          - name: smoke-5
+            task_limit: "5"
+          - name: full
+            task_limit: "0"
     env:
       DSA_LLM_MODE: real
       DSA_LLM_PROVIDER: openai
       DSA_LLM_FALLBACK: error
       DSA_GIT_COMMIT: ${{ github.sha }}
-      DSA_EVALUATION_VARIANT: ${{ matrix.variant }}
-      DSA_EVIDENCE_CRITIC: ${{ matrix.critic }}
+      DSA_EVALUATION_VARIANT: ${{ matrix.variant.name }}
+      DSA_EVIDENCE_CRITIC: ${{ matrix.variant.critic }}
+      DSA_OPENAI_MODEL: ${{ matrix.model.id }}
+      DSA_INPUT_COST_PER_MILLION: ${{ matrix.model.input_cost_per_million }}
+      DSA_OUTPUT_COST_PER_MILLION: ${{ matrix.model.output_cost_per_million }}
+      TASK_LIMIT: ${{ matrix.scope.task_limit }}
+      PRICING_REFERENCE_DATE: "2026-08-29"
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -66,44 +87,6 @@ jobs:
       - name: Install uv
         run: pip install "uv==0.12.7"
 
-      - name: Validate and normalize manual inputs
-        shell: bash
-        env:
-          MODEL_INPUT: ${{ inputs.model }}
-          TASK_LIMIT_INPUT: ${{ inputs.task_limit }}
-          INPUT_PRICE_INPUT: ${{ inputs.input_cost_per_million }}
-          OUTPUT_PRICE_INPUT: ${{ inputs.output_cost_per_million }}
-        run: |
-          set -euo pipefail
-
-          model_pattern='^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$'
-          integer_pattern='^[0-9]+$'
-          price_pattern='^[0-9]+([.][0-9]+)?$'
-
-          if ! [[ "${MODEL_INPUT}" =~ ${model_pattern} ]]; then
-            echo "::error::model contains unsupported characters or is too long."
-            exit 1
-          fi
-          if ! [[ "${TASK_LIMIT_INPUT}" =~ ${integer_pattern} ]]; then
-            echo "::error::task_limit must be a non-negative integer; use 0 for the full catalog."
-            exit 1
-          fi
-          if [[ -n "${INPUT_PRICE_INPUT}" ]] && ! [[ "${INPUT_PRICE_INPUT}" =~ ${price_pattern} ]]; then
-            echo "::error::input_cost_per_million must be a non-negative decimal number."
-            exit 1
-          fi
-          if [[ -n "${OUTPUT_PRICE_INPUT}" ]] && ! [[ "${OUTPUT_PRICE_INPUT}" =~ ${price_pattern} ]]; then
-            echo "::error::output_cost_per_million must be a non-negative decimal number."
-            exit 1
-          fi
-
-          {
-            printf 'DSA_OPENAI_MODEL=%s\n' "${MODEL_INPUT}"
-            printf 'TASK_LIMIT=%s\n' "${TASK_LIMIT_INPUT}"
-            printf 'DSA_INPUT_COST_PER_MILLION=%s\n' "${INPUT_PRICE_INPUT}"
-            printf 'DSA_OUTPUT_COST_PER_MILLION=%s\n' "${OUTPUT_PRICE_INPUT}"
-          } >> "${GITHUB_ENV}"
-
       - name: Install locked workspace
         run: uv sync --dev --locked
 
@@ -111,7 +94,7 @@ jobs:
         shell: bash
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
+          OUT_DIR: benchmark-artifacts/${{ matrix.variant.name }}
         run: |
           set -euo pipefail
           if [[ -z "${OPENAI_API_KEY:-}" ]]; then
@@ -135,8 +118,9 @@ jobs:
         if: ${{ always() }}
         shell: bash
         env:
-          OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
-          VARIANT: ${{ matrix.variant }}
+          OUT_DIR: benchmark-artifacts/${{ matrix.variant.name }}
+          VARIANT: ${{ matrix.variant.name }}
+          RUN_SCOPE: ${{ matrix.scope.name }}
         run: |
           set -euo pipefail
           mkdir -p "${OUT_DIR}"
@@ -166,14 +150,16 @@ jobs:
               "git_commit": os.environ.get("GITHUB_SHA"),
               "variant": os.environ["VARIANT"],
               "model": os.environ.get("DSA_OPENAI_MODEL"),
+              "scope": os.environ["RUN_SCOPE"],
               "task_limit": int(os.environ["TASK_LIMIT"]),
               "catalog": str(catalog),
               "catalog_sha256": catalog_sha256,
               "datasets_dir": str(datasets),
               "datasets_sha256": dataset_hasher.hexdigest(),
               "dataset_file_count": len(dataset_files),
-              "input_cost_per_million": os.environ.get("DSA_INPUT_COST_PER_MILLION") or None,
-              "output_cost_per_million": os.environ.get("DSA_OUTPUT_COST_PER_MILLION") or None,
+              "input_cost_per_million": os.environ.get("DSA_INPUT_COST_PER_MILLION"),
+              "output_cost_per_million": os.environ.get("DSA_OUTPUT_COST_PER_MILLION"),
+              "pricing_reference_date": os.environ["PRICING_REFERENCE_DATE"],
           }
           (out / "workflow_manifest.json").write_text(
               json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -184,7 +170,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: real-model-${{ matrix.variant }}-${{ github.run_id }}
-          path: benchmark-artifacts/${{ matrix.variant }}/
+          name: real-model-${{ matrix.variant.name }}-${{ matrix.model.id }}-${{ matrix.scope.name }}-${{ github.run_id }}
+          path: benchmark-artifacts/${{ matrix.variant.name }}/
           if-no-files-found: error
           retention-days: 30
