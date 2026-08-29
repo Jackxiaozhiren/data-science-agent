@@ -61,7 +61,7 @@ The repository currently records deterministic benchmark-suite results such as `
 
 ## Public result registry
 
-See [`benchmarks/leaderboard/`](../benchmarks/leaderboard/) for validated result records.
+See the [Reproducible Evaluation Registry](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/benchmarks/leaderboard) for validated result records and their provenance.
 
 The current `stub/small` entry should be read as a harness-validation result. The next public-evaluation milestone is to add real-model baselines on the same frozen benchmark version.
 

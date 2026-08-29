@@ -1,6 +1,5 @@
 site_name: Data Science Agent
 site_description: An Evidence-Grounded Autonomous Data Science System
-site_url: https://example.com/data-science-agent/
 theme:
   name: material
   features:
@@ -16,6 +15,7 @@ markdown_extensions:
 nav:
   - Home: README.md
   - Getting Started: getting-started.md
+  - Hosted Demo: hosted-demo.md
   - Architecture: architecture.md
   - Agent: agent.md
   - Agent System: agent-system.md
@@ -29,8 +29,10 @@ nav:
   - Frontend: FRONTEND_IA.md
   - Security: security.md
   - Benchmark: benchmark.md
-  - Evaluation: evaluation.md
-  - Reproducibility: reproducibility.md
+  - Evaluation:
+      - Overview: evaluation.md
+      - Real-model Evaluation: real-model-evaluation.md
+      - Reproducibility: reproducibility.md
   - Research: research.md
   - Contributing: contributing.md
 
