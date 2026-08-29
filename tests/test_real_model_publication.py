@@ -21,9 +21,14 @@ def _write_row(
     git_commit: str = "abc123",
     datasets_sha256: str = "dataset-sha",
     call_count: int = 1,
+    task_ids: list[str] | None = None,
+    aggregate_total_tokens: int | None = None,
 ) -> None:
     row = root / variant
-    n_tasks = 5 if task_limit == 0 else task_limit
+    selected_task_ids = task_ids or [
+        f"task-{index}" for index in range(5 if task_limit == 0 else task_limit)
+    ]
+    n_tasks = len(selected_task_ids)
     critic_enabled: bool | None
     critic_setting: str
     if variant == "dsa":
@@ -43,6 +48,7 @@ def _write_row(
         }
         for index in range(call_count)
     ]
+    expected_total_tokens = 120 * call_count
     execution: dict[str, Any] = {
         "llm_mode": "real",
         "provider": "openai",
@@ -57,7 +63,11 @@ def _write_row(
         "token_usage": {
             "input_tokens": 100 * call_count,
             "output_tokens": 20 * call_count,
-            "total_tokens": 120 * call_count,
+            "total_tokens": (
+                expected_total_tokens
+                if aggregate_total_tokens is None
+                else aggregate_total_tokens
+            ),
         },
         "pricing": {
             "input_cost_per_million": 0.2,
@@ -108,8 +118,8 @@ def _write_row(
         "results": [],
     }
     raw_runs = [
-        {"task_id": f"task-{index}", "elapsed_ms": 10, "run_result": {}, "error": None}
-        for index in range(n_tasks)
+        {"task_id": task_id, "elapsed_ms": 10, "run_result": {}, "error": None}
+        for task_id in selected_task_ids
     ]
 
     _write_json(row / "workflow_manifest.json", workflow)
@@ -147,6 +157,16 @@ def test_full_matrix_can_be_publication_ready(tmp_path: Path) -> None:
     assert report.warnings == ()
 
 
+def test_full_scope_requires_unlimited_task_limit(tmp_path: Path) -> None:
+    _write_matrix(tmp_path, scope="full", task_limit=5)
+
+    report = validate_real_model_matrix(tmp_path)
+
+    assert report.matrix_valid is False
+    assert report.publication_ready is False
+    assert "scope=full requires task_limit=0" in report.errors
+
+
 def test_snapshot_drift_invalidates_matrix(tmp_path: Path) -> None:
     _write_matrix(tmp_path)
     _write_row(tmp_path, "llm-only", datasets_sha256="different-dataset-sha")
@@ -156,6 +176,36 @@ def test_snapshot_drift_invalidates_matrix(tmp_path: Path) -> None:
     assert report.matrix_valid is False
     assert report.publication_ready is False
     assert any("datasets_sha256 differs" in error for error in report.errors)
+
+
+def test_task_id_drift_invalidates_matrix(tmp_path: Path) -> None:
+    _write_matrix(tmp_path)
+    _write_row(
+        tmp_path,
+        "llm-only",
+        task_ids=["task-0", "task-1", "task-2", "task-3", "different-task"],
+    )
+
+    report = validate_real_model_matrix(tmp_path)
+
+    assert report.matrix_valid is False
+    assert report.publication_ready is False
+    assert any("task_id sequence differs from dsa" in error for error in report.errors)
+
+
+def test_duplicate_task_ids_invalidate_row(tmp_path: Path) -> None:
+    _write_matrix(tmp_path)
+    _write_row(
+        tmp_path,
+        "dsa",
+        task_ids=["task-0", "task-1", "task-1", "task-3", "task-4"],
+    )
+
+    report = validate_real_model_matrix(tmp_path)
+
+    assert report.matrix_valid is False
+    assert report.publication_ready is False
+    assert any("duplicate task_id" in error for error in report.errors)
 
 
 def test_zero_real_model_calls_invalidates_row(tmp_path: Path) -> None:
@@ -168,3 +218,14 @@ def test_zero_real_model_calls_invalidates_row(tmp_path: Path) -> None:
     assert report.publication_ready is False
     assert any("call_count must be greater than zero" in error for error in report.errors)
     assert any("total token usage must be greater than zero" in error for error in report.errors)
+
+
+def test_call_rollup_must_match_execution_totals(tmp_path: Path) -> None:
+    _write_matrix(tmp_path)
+    _write_row(tmp_path, "dsa", aggregate_total_tokens=999)
+
+    report = validate_real_model_matrix(tmp_path)
+
+    assert report.matrix_valid is False
+    assert report.publication_ready is False
+    assert any("aggregate total_tokens differs from llm_calls sum" in error for error in report.errors)
