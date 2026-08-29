@@ -1,26 +1,69 @@
 # Benchmark
 
-> Head: `benchmarks/v2/README.md` + `benchmarks/v2/catalog.json 0.3.0` + `docs/evaluation.md`.
+DSA keeps its benchmark runner, task catalog, datasets, and evaluation artifacts in the repository so a result can be inspected against the exact task definition that produced it.
 
-## Required documentation
+## Active regression suite
 
-| Field | This repo |
-|-----------|-----------|
-| Dataset Sources | `benchmarks/v2/README.md` + `scripts/generate_benchmark_v2.py` (synthetic, `seed 42`) + `benchmarks/v2/datasets/` 30 CSVs |
-| Dataset Licenses | `CC0` (synthetic) per-task `license` in `catalog.json` 0.3.0; real swaps record `THIRD_PARTY_LICENSES.md` |
-| Task Generation | `generate_benchmark_v2.py` — 50 v1 verbatim + 50 new across 3 categories |
-| Task Validation | `acceptable_* / forbidden_interpretation` per task |
-| Gold Standards | `acceptable_method/acceptable_metrics/acceptable_interpretation/acceptable_evidence/forbidden_interpretation/evaluation_function`, versioned `evaluator_v2` |
-| Metrics / Scoring | `packages/evaluation/src/dsa_evaluation/metrics.py` + `statistical_eval.py` (10 dims S01–S10) |
-| Limitations | `research/V3_RESEARCH_REPORT.md` Limitations + audit `PENDING` reviewers |
-| Seed / HW / SW | `seed 42 / Python 3.12 / uv 0.11.7 / Node v24.15.0 / Darwin arm64 / uv.lock 114 / catalog sha c493bc69` |
+The default CLI and CI smoke run use:
 
-Versioning: `v2.0 → v2.1 → v3.0` (this is `0.3.0` catalog); results immutably tagged, `v3.0.1` for fixes.
+```text
+benchmarks/ds-agent-benchmark/
+├── README.md
+├── catalog.json
+└── datasets/
+```
 
-## Run
+The suite currently contains 50 tasks over synthetic, deterministic datasets. `catalog.json` is loaded through `dsa_evaluation.catalog.Catalog`, and scoring is implemented in `packages/evaluation/src/dsa_evaluation/`.
+
+The repository also contains larger/versioned research benchmark material under `benchmarks/v2/`. Keep the benchmark path and evaluator version attached to any reported result; do not compare outputs from different suites as if they were the same frozen evaluation.
+
+## Run the active suite
+
+Run a small deterministic smoke:
 
 ```bash
-uv run dsa --limit 50 --out /tmp/bench
-uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 100 --out /tmp/v2-100
-# 10 canonical tasks for README/docs showcase: see `research/V3_RESEARCH_REPORT.md`.
+uv run dsa \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets \
+  --limit 5 \
+  --out /tmp/dsa-bench
 ```
+
+Run one task by ID:
+
+```bash
+uv run dsa \
+  --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets \
+  --task sql-03 \
+  --out /tmp/dsa-sql-03
+```
+
+Run the whole active catalog by omitting `--limit` and `--task`.
+
+## What gets written
+
+A benchmark run produces:
+
+- `results.json` — per-task metrics plus aggregate metrics and execution metadata;
+- `summary.json` — lightweight aggregate summary;
+- `run_manifest.json` — catalog/dataset paths and execution provenance;
+- `raw_runs.json` — raw per-task execution results for debugging and audit.
+
+Real-model runs add provider/model call provenance through the same runner. See [Real-model Evaluation](real-model-evaluation.md) before treating a result as model-performance evidence.
+
+## How tasks are evaluated
+
+The lightweight evaluator records task success, code execution success, optional SQL/statistical accuracy, evidence coverage, unsupported-claim checks, and latency. A second statistical audit attaches evaluator-v2 quality dimensions to result details.
+
+The benchmark intentionally favors structural evidence from executed work over fuzzy prose matching. For example, SQL tasks can require SQL fragments; statistical tasks can compare supported numeric outputs against a value with tolerance; evidence tasks can require evidence coverage.
+
+See [Evaluation](evaluation.md) for interpretation rules and versioning requirements.
+
+## Contribute one task
+
+New contributors can add and run a single task without executing the entire suite. Follow [Contribute a Benchmark Task](benchmark-task-contribution.md) for the schema, a complete example, task-ID filtering, scoring behavior, and dataset licensing rules.
+
+## Dataset provenance
+
+The datasets currently shipped under `benchmarks/ds-agent-benchmark/datasets/` are synthetic, deterministic (seed 42), and documented as CC0/public domain. Third-party data must have verified redistribution rights and be recorded in `THIRD_PARTY_LICENSES.md` before it is added.
