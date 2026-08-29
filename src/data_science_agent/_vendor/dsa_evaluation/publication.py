@@ -110,6 +110,31 @@ def _dict_field(container: dict[str, Any], key: str) -> dict[str, Any] | None:
     return cast(dict[str, Any], value)
 
 
+def _task_ids(
+    variant: str, raw_runs: list[Any], errors: list[str]
+) -> tuple[str, ...] | None:
+    prefix = f"{variant}:"
+    task_ids: list[str] = []
+    seen: set[str] = set()
+    valid = True
+    for index, raw_run in enumerate(raw_runs):
+        if not isinstance(raw_run, dict):
+            errors.append(f"{prefix} raw_runs[{index}] is not an object")
+            valid = False
+            continue
+        task_id = raw_run.get("task_id")
+        if not isinstance(task_id, str) or not task_id.strip():
+            errors.append(f"{prefix} raw_runs[{index}] is missing a non-empty task_id")
+            valid = False
+            continue
+        if task_id in seen:
+            errors.append(f"{prefix} duplicate task_id {task_id!r} in raw_runs")
+            valid = False
+        seen.add(task_id)
+        task_ids.append(task_id)
+    return tuple(task_ids) if valid else None
+
+
 def _validate_execution(
     variant: str,
     workflow: dict[str, Any],
@@ -150,16 +175,23 @@ def _validate_execution(
 
     call_count = _integer(execution.get("call_count"))
     calls = execution.get("llm_calls")
+    call_input_tokens = 0
+    call_output_tokens = 0
+    call_total_tokens = 0
+    call_latency_ms = 0
+    call_rollup_complete = True
     if call_count is None or call_count <= 0:
         errors.append(f"{prefix} call_count must be greater than zero")
     if not isinstance(calls, list):
         errors.append(f"{prefix} llm_calls must be a list")
+        call_rollup_complete = False
     else:
         if call_count is not None and len(calls) != call_count:
             errors.append(f"{prefix} llm_calls length differs from call_count")
         for index, call in enumerate(calls):
             if not isinstance(call, dict):
                 errors.append(f"{prefix} llm_calls[{index}] is not an object")
+                call_rollup_complete = False
                 continue
             call_obj = cast(dict[str, Any], call)
             if call_obj.get("provider") != execution.get("provider"):
@@ -170,13 +202,72 @@ def _validate_execution(
             if not isinstance(response_id, str) or not response_id.strip():
                 errors.append(f"{prefix} llm_calls[{index}] is missing response_id")
 
+            per_call_latency = _integer(call_obj.get("latency_ms"))
+            if per_call_latency is None or per_call_latency <= 0:
+                errors.append(f"{prefix} llm_calls[{index}] latency_ms must be greater than zero")
+                call_rollup_complete = False
+            else:
+                call_latency_ms += per_call_latency
+
+            usage = _dict_field(call_obj, "usage")
+            if usage is None:
+                errors.append(f"{prefix} llm_calls[{index}] is missing usage metadata")
+                call_rollup_complete = False
+                continue
+            input_tokens = _integer(usage.get("input_tokens"))
+            output_tokens = _integer(usage.get("output_tokens"))
+            total_tokens = _integer(usage.get("total_tokens"))
+            if input_tokens is None or input_tokens < 0:
+                errors.append(f"{prefix} llm_calls[{index}] input_tokens is invalid")
+                call_rollup_complete = False
+            else:
+                call_input_tokens += input_tokens
+            if output_tokens is None or output_tokens < 0:
+                errors.append(f"{prefix} llm_calls[{index}] output_tokens is invalid")
+                call_rollup_complete = False
+            else:
+                call_output_tokens += output_tokens
+            if total_tokens is None or total_tokens <= 0:
+                errors.append(f"{prefix} llm_calls[{index}] total_tokens must be greater than zero")
+                call_rollup_complete = False
+            else:
+                call_total_tokens += total_tokens
+
     token_usage = _dict_field(execution, "token_usage")
+    aggregate_input_tokens = (
+        _integer(token_usage.get("input_tokens")) if token_usage is not None else None
+    )
+    aggregate_output_tokens = (
+        _integer(token_usage.get("output_tokens")) if token_usage is not None else None
+    )
     total_tokens = _integer(token_usage.get("total_tokens")) if token_usage is not None else None
+    if aggregate_input_tokens is None or aggregate_input_tokens < 0:
+        errors.append(f"{prefix} aggregate input token usage is invalid")
+    if aggregate_output_tokens is None or aggregate_output_tokens < 0:
+        errors.append(f"{prefix} aggregate output token usage is invalid")
     if total_tokens is None or total_tokens <= 0:
         errors.append(f"{prefix} total token usage must be greater than zero")
+
     latency_ms = _integer(execution.get("model_latency_ms"))
     if latency_ms is None or latency_ms <= 0:
         errors.append(f"{prefix} model latency must be greater than zero")
+
+    if call_rollup_complete:
+        if aggregate_input_tokens != call_input_tokens:
+            errors.append(f"{prefix} aggregate input_tokens differs from llm_calls sum")
+        if aggregate_output_tokens != call_output_tokens:
+            errors.append(f"{prefix} aggregate output_tokens differs from llm_calls sum")
+        if total_tokens != call_total_tokens:
+            errors.append(f"{prefix} aggregate total_tokens differs from llm_calls sum")
+        if latency_ms != call_latency_ms:
+            errors.append(f"{prefix} model_latency_ms differs from llm_calls sum")
+
+    workflow_input_rate = _number(workflow.get("input_cost_per_million"))
+    workflow_output_rate = _number(workflow.get("output_cost_per_million"))
+    if workflow_input_rate is None or workflow_input_rate <= 0:
+        errors.append(f"{prefix} workflow input-token price must be greater than zero")
+    if workflow_output_rate is None or workflow_output_rate <= 0:
+        errors.append(f"{prefix} workflow output-token price must be greater than zero")
 
     pricing = _dict_field(execution, "pricing")
     if pricing is None:
@@ -192,8 +283,9 @@ def _validate_execution(
             errors.append(f"{prefix} output-token price differs from workflow manifest")
         if pricing.get("source") != "explicit environment rates":
             errors.append(f"{prefix} pricing source is not explicit environment rates")
-    if _number(execution.get("cost_usd")) is None:
-        errors.append(f"{prefix} cost_usd is missing despite explicit pricing")
+    cost_usd = _number(execution.get("cost_usd"))
+    if cost_usd is None or cost_usd <= 0:
+        errors.append(f"{prefix} cost_usd must be greater than zero with explicit pricing")
 
     n_tasks = _integer(run_manifest.get("n_tasks"))
     results_n_tasks = _integer(results.get("n_tasks"))
@@ -229,6 +321,7 @@ def validate_real_model_matrix(root: Path) -> MatrixValidationReport:
     rows: dict[str, dict[str, Any]] = {}
     workflow_manifests: dict[str, dict[str, Any]] = {}
     baseline_configs: dict[str, dict[str, Any]] = {}
+    task_ids_by_variant: dict[str, tuple[str, ...]] = {}
 
     for variant in REQUIRED_VARIANTS:
         row_dir = root / variant
@@ -252,6 +345,9 @@ def validate_real_model_matrix(root: Path) -> MatrixValidationReport:
         rows[variant] = _validate_execution(
             variant, workflow, run_manifest, results, raw_runs, errors
         )
+        validated_task_ids = _task_ids(variant, raw_runs, errors)
+        if validated_task_ids is not None:
+            task_ids_by_variant[variant] = validated_task_ids
 
         execution = _dict_field(run_manifest, "execution")
         if execution is not None and variant in {"llm-only", "llm-tools"}:
@@ -267,6 +363,29 @@ def validate_real_model_matrix(root: Path) -> MatrixValidationReport:
             for field in _SHARED_WORKFLOW_FIELDS:
                 if candidate.get(field) != reference.get(field):
                     errors.append(f"{variant}: workflow {field} differs from {reference_variant}")
+
+        task_limit = _integer(reference.get("task_limit"))
+        raw_scope = reference.get("scope")
+        if raw_scope == "full":
+            if task_limit != 0:
+                errors.append("scope=full requires task_limit=0")
+        elif raw_scope == "smoke-5":
+            if task_limit != 5:
+                errors.append("scope=smoke-5 requires task_limit=5")
+        else:
+            errors.append(f"unsupported workflow scope {raw_scope!r}")
+
+    if set(rows) == set(REQUIRED_VARIANTS):
+        reference_n_tasks = rows["dsa"].get("n_tasks")
+        for variant in REQUIRED_VARIANTS[1:]:
+            if rows[variant].get("n_tasks") != reference_n_tasks:
+                errors.append(f"{variant}: n_tasks differs from dsa")
+
+    if set(task_ids_by_variant) == set(REQUIRED_VARIANTS):
+        reference_task_ids = task_ids_by_variant["dsa"]
+        for variant in REQUIRED_VARIANTS[1:]:
+            if task_ids_by_variant[variant] != reference_task_ids:
+                errors.append(f"{variant}: task_id sequence differs from dsa")
 
     if (
         set(baseline_configs) == {"llm-only", "llm-tools"}
