@@ -42,6 +42,9 @@ jobs:
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
       - run: npm --prefix apps/web ci --legacy-peer-deps
+      # `npm ci` reports vulnerabilities but exits successfully. Enforce the Web
+      # runtime policy explicitly so High/Critical advisories cannot hide in logs.
+      - run: npm --prefix apps/web audit --audit-level=high
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run ruff format --check packages apps/api tests src apps/jupyter
       - run: uv run mypy packages apps/api src --ignore-missing-imports
