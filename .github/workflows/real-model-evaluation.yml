@@ -1,0 +1,167 @@
+name: Real-model Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: OpenAI model ID used by the DSA planner
+        required: true
+        default: gpt-5.6-luna
+        type: string
+      scope:
+        description: Benchmark scope
+        required: true
+        default: smoke-5
+        type: choice
+        options:
+          - smoke-5
+          - smoke-10
+          - full
+      confirm_full:
+        description: Confirm potentially expensive full-suite run
+        required: true
+        default: false
+        type: boolean
+      input_cost_per_million:
+        description: Optional input-token USD price per 1M tokens
+        required: false
+        default: ""
+        type: string
+      output_cost_per_million:
+        description: Optional output-token USD price per 1M tokens
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DSA_LLM_MODE: real
+      DSA_LLM_PROVIDER: openai
+      DSA_OPENAI_MODEL: ${{ inputs.model }}
+      DSA_LLM_FALLBACK: error
+      DSA_GIT_COMMIT: ${{ github.sha }}
+      DSA_INPUT_COST_PER_MILLION: ${{ inputs.input_cost_per_million }}
+      DSA_OUTPUT_COST_PER_MILLION: ${{ inputs.output_cost_per_million }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install project
+        run: uv sync --dev
+
+      - name: Require explicit model credentials and full-run confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+            echo "::error::Configure the repository Actions secret OPENAI_API_KEY before running real-model evaluation."
+            exit 1
+          fi
+          if [[ "${{ inputs.scope }}" == "full" && "${{ inputs.confirm_full }}" != "true" ]]; then
+            echo "::error::Full-suite evaluation requires confirm_full=true because it may incur substantial model cost."
+            exit 1
+          fi
+
+      - name: Run real-model benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="benchmarks/ds-agent-benchmark/results"
+          rm -rf "$out"
+          mkdir -p "$out"
+
+          case "${{ inputs.scope }}" in
+            smoke-5)
+              limit_args=(--limit 5)
+              ;;
+            smoke-10)
+              limit_args=(--limit 10)
+              ;;
+            full)
+              limit_args=()
+              ;;
+            *)
+              echo "::error::Unsupported scope: ${{ inputs.scope }}"
+              exit 2
+              ;;
+          esac
+
+          uv run dsa benchmark \
+            "${limit_args[@]}" \
+            --catalog benchmarks/ds-agent-benchmark/catalog.json \
+            --datasets benchmarks/ds-agent-benchmark/datasets
+
+      - name: Validate real-model provenance
+        env:
+          EXPECTED_MODEL: ${{ inputs.model }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("benchmarks/ds-agent-benchmark/results/run_manifest.json")
+          if not path.exists():
+              raise SystemExit("run_manifest.json was not produced")
+
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          execution = manifest.get("execution") or {}
+          errors = []
+          if execution.get("llm_mode") not in {"real", "openai"}:
+              errors.append(f"unexpected llm_mode={execution.get('llm_mode')!r}")
+          if execution.get("provider") != "openai":
+              errors.append(f"unexpected provider={execution.get('provider')!r}")
+          if execution.get("model") != os.environ["EXPECTED_MODEL"]:
+              errors.append(
+                  f"model mismatch: manifest={execution.get('model')!r} expected={os.environ['EXPECTED_MODEL']!r}"
+              )
+          if int(execution.get("call_count") or 0) <= 0:
+              errors.append("real-model call_count must be greater than zero")
+          if execution.get("fallback") != "error":
+              errors.append(f"fallback must remain 'error', got {execution.get('fallback')!r}")
+          if execution.get("git_commit") != os.environ["EXPECTED_SHA"]:
+              errors.append(
+                  f"git commit mismatch: manifest={execution.get('git_commit')!r} expected={os.environ['EXPECTED_SHA']!r}"
+              )
+          if errors:
+              raise SystemExit("Invalid real-model provenance:\n- " + "\n- ".join(errors))
+
+          usage = execution.get("token_usage") or {}
+          summary = [
+              "## Real-model evaluation provenance",
+              "",
+              f"- Model: `{execution.get('model')}`",
+              f"- Tasks: `{manifest.get('n_tasks')}`",
+              f"- Model calls: `{execution.get('call_count')}`",
+              f"- Input tokens: `{usage.get('input_tokens')}`",
+              f"- Output tokens: `{usage.get('output_tokens')}`",
+              f"- Model latency: `{execution.get('model_latency_ms')} ms`",
+              f"- Cost: `{execution.get('cost_usd')}`",
+              f"- Commit: `{execution.get('git_commit')}`",
+          ]
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(summary) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-model-${{ inputs.model }}-${{ inputs.scope }}-${{ github.run_id }}
+          path: benchmarks/ds-agent-benchmark/results/
+          if-no-files-found: warn
+          retention-days: 30
