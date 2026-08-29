@@ -110,9 +110,7 @@ def _dict_field(container: dict[str, Any], key: str) -> dict[str, Any] | None:
     return cast(dict[str, Any], value)
 
 
-def _task_ids(
-    variant: str, raw_runs: list[Any], errors: list[str]
-) -> tuple[str, ...] | None:
+def _task_ids(variant: str, raw_runs: list[Any], errors: list[str]) -> tuple[str, ...] | None:
     prefix = f"{variant}:"
     task_ids: list[str] = []
     seen: set[str] = set()
