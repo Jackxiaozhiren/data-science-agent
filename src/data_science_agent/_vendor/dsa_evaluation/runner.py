@@ -141,11 +141,13 @@ async def _run_one(
             elapsed = int((time.perf_counter() - t0) * 1000)
             return run_result, elapsed, None
 
+        # Lazily import to avoid heavy deps at import time
         from dsa_agent.graph import run_analysis
         from dsa_tools import bootstrap, list_tools
 
         if not list_tools():
             bootstrap()
+        # Derive a dataset_id from filename
         dataset_id = task.dataset.replace(".csv", "").replace("/", "_")
         state = await run_analysis(
             dataset_path=str(dataset_path), dataset_id=dataset_id, user_query=task.question
@@ -188,6 +190,7 @@ def run_benchmark(
                 ev = evaluate_task(task, run_result, elapsed_ms=elapsed)
                 if err:
                     ev.error = err
+            # evaluator_v2 statistical dimensions (§22–25) — non-breaking, stored under details
             try:
                 from dsa_evaluation.statistical_eval import evaluate_statistical
 
@@ -216,6 +219,7 @@ def run_benchmark(
     (out_dir / "results.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    # Keep the lightweight aggregate summary backward compatible.
     summary = json.dumps(agg, indent=2)
     (out_dir / "summary.json").write_text(summary, encoding="utf-8")
     (out_dir / "run_manifest.json").write_text(
@@ -231,6 +235,7 @@ def run_benchmark(
         ),
         encoding="utf-8",
     )
+    # raw for debugging
     (out_dir / "raw_runs.json").write_text(
         json.dumps(raw_runs, indent=2, ensure_ascii=False)[:10_000_000], encoding="utf-8"
     )
