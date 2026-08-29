@@ -97,10 +97,12 @@ jobs:
             exit 1
           fi
 
-          printf 'DSA_OPENAI_MODEL=%s\n' "${MODEL_INPUT}" >> "${GITHUB_ENV}"
-          printf 'TASK_LIMIT=%s\n' "${TASK_LIMIT_INPUT}" >> "${GITHUB_ENV}"
-          printf 'DSA_INPUT_COST_PER_MILLION=%s\n' "${INPUT_PRICE_INPUT}" >> "${GITHUB_ENV}"
-          printf 'DSA_OUTPUT_COST_PER_MILLION=%s\n' "${OUTPUT_PRICE_INPUT}" >> "${GITHUB_ENV}"
+          {
+            printf 'DSA_OPENAI_MODEL=%s\n' "${MODEL_INPUT}"
+            printf 'TASK_LIMIT=%s\n' "${TASK_LIMIT_INPUT}"
+            printf 'DSA_INPUT_COST_PER_MILLION=%s\n' "${INPUT_PRICE_INPUT}"
+            printf 'DSA_OUTPUT_COST_PER_MILLION=%s\n' "${OUTPUT_PRICE_INPUT}"
+          } >> "${GITHUB_ENV}"
 
       - name: Install locked workspace
         run: uv sync --dev --locked
