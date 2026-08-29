@@ -10,10 +10,12 @@ from typing import Any
 
 class LLMProvider(ABC):
     @abstractmethod
-    async def generate(self, prompt: str, **kwargs: Any) -> str: ...
+    async def generate(self, prompt: str, **kwargs: Any) -> str:
+        raise NotImplementedError
 
     @abstractmethod
-    async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any: ...
+    async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any:
+        raise NotImplementedError
 
     @abstractmethod
     def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
