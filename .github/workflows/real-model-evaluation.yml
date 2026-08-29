@@ -3,9 +3,6 @@ name: Real Model Evaluation Smoke
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: real-model-evaluation-smoke-${{ github.ref }}
   cancel-in-progress: false
@@ -129,7 +126,7 @@ jobs:
 
       - name: Upload benchmark artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: real-model-${{ matrix.variant.name }}-gpt-5.6-luna-smoke-5-${{ github.run_id }}
           path: benchmark-artifacts/${{ matrix.variant.name }}/
