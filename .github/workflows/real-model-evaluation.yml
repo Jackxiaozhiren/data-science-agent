@@ -46,7 +46,6 @@ jobs:
           - variant: llm-only
             critic: "on"
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       DSA_LLM_MODE: real
       DSA_LLM_PROVIDER: openai
       DSA_OPENAI_MODEL: ${{ inputs.model }}
@@ -57,9 +56,9 @@ jobs:
       DSA_INPUT_COST_PER_MILLION: ${{ inputs.input_cost_per_million }}
       DSA_OUTPUT_COST_PER_MILLION: ${{ inputs.output_cost_per_million }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
@@ -72,6 +71,7 @@ jobs:
       - name: Validate manual inputs and secret
         shell: bash
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TASK_LIMIT: ${{ inputs.task_limit }}
         run: |
           set -euo pipefail
@@ -91,6 +91,7 @@ jobs:
       - name: Run benchmark variant
         shell: bash
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TASK_LIMIT: ${{ inputs.task_limit }}
           OUT_DIR: benchmark-artifacts/${{ matrix.variant }}
         run: |
@@ -160,7 +161,7 @@ jobs:
 
       - name: Upload benchmark artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: real-model-${{ matrix.variant }}-${{ github.run_id }}
           path: benchmark-artifacts/${{ matrix.variant }}/
