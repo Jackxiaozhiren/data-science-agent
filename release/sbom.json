@@ -1,6 +1,6 @@
 {
   "version": "4.3.0",
-  "generated": "2026-08-30T02:55:41.408065+00:00",
+  "generated": "2026-08-29T13:31:34.950120+00:00",
   "components": [
     {
       "package": "aiosqlite",

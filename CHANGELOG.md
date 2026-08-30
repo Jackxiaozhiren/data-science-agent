@@ -1,44 +1,44 @@
 # Changelog
 
-
-## 4.3.0 — Adoption, Verifiable Evaluation & Release Reliability
+## 4.3.0 — Adoption, Verifiable Evaluation & Project Reliability
 
 ### Added
 
-- **Real-model execution is explicit and auditable**: OpenAI Responses API support now records the actual provider/model, response IDs, latency, token usage, fallback policy, Git commit, and optional explicit pricing assumptions instead of silently reporting deterministic harness behavior as model quality.
-- **Four-way reproducible evaluation paths**: DSA, DSA without the evidence critic, vanilla LLM + tools, and LLM-only controls can run against the same frozen task/data configuration. A strict publication validator checks matrix completeness, snapshot identity, provider/model consistency, external call provenance, baseline controls, pricing metadata, and absence of heuristic fallback before results can be promoted.
-- **Secure credentialed smoke workflow**: a manual-only, input-free GitHub Actions workflow runs the four comparison rows on a low-cost fixed GPT-5.6 Luna smoke configuration and uploads per-row provenance/artifact bundles for review. No real-model score is claimed by this release without those artifacts.
-- **Contributor onboarding paths**: Windows PowerShell quickstart, benchmark-task contribution walkthrough, executable hello-world plugin example, structured issue/discussion templates, contributor recognition, roadmap, and growth/hosted-demo documentation.
-- **Repository presentation assets**: conversion-focused hero/demo graphics, social preview source, visual case-study gallery, and three flagship workflows surfaced near the README demo.
+- **Auditable real-model execution** via an explicit OpenAI Responses API path. Offline/stub execution remains the deterministic default; real calls require explicit opt-in and never silently substitute the stub provider.
+- **Four controlled evaluation variants** under one provenance model: full DSA, DSA without the evidence critic, vanilla LLM + tools, and an LLM-only control.
+- **Credentialed four-way smoke evaluation workflow** that is manual-only, accepts no dispatch inputs, fixes the first smoke to one model/task/pricing snapshot, scopes the API key to execution steps, uploads per-row artifacts, and fails if any row or the matrix-integrity validator fails.
+- **Publication-integrity validator** for four-way artifacts, including provider/model/call-count, task/catalog/dataset snapshot, baseline-control, critic-state, pricing, commit, and cross-row consistency checks.
+- **Adoption and contributor paths**: Windows PowerShell quickstart, benchmark-task contribution walkthrough, executable hello-world plugin walkthrough, structured issue/discussion templates, public roadmap, contributor recognition, and richer project automation.
+- **Case-study discovery improvements** with a visual gallery and three flagship workflows surfaced near the README demo.
 
 ### Changed
 
-- **README positioning** now leads with “The AI data scientist that shows its work,” a 60-second quickstart, claim-level evidence, reproducible artifacts, flagship case studies, and an explicit distinction between deterministic harness validation and real-model comparative evidence.
-- **Web deployment path** now uses a configurable API base URL, correct report/download endpoints, configurable backend CORS, and a hardened Next.js 16 / React 19 runtime suitable for a split frontend/backend deployment.
-- **Evaluation documentation and leaderboard semantics** now separate harness-validation runs from publishable real-model runs and require raw provenance before comparative claims.
-- **Project operations** now include actionlint, npm high-severity audit enforcement, lock/vendor drift checks, dependency review, CodeQL, secret scanning, automated labeling/stale/contributor workflows, deterministic leaderboard rendering, and release-announcement generation.
-
-### Fixed
-
-- **Packaged `dsa` CLI startup** now initializes vendored `dsa_*` aliases before importing the evaluation CLI, fixing the installed/container runtime path exposed by end-to-end real-model workflow verification.
-- **API Docker image** now includes the root `src/` package needed by the self-contained umbrella CLI.
-- **Dependabot Docker configuration** now points at the actual `docker/` directory.
-- **Root npm workspace lock drift** is checked so workspace manifests and the root lock cannot silently diverge.
+- Repositioned the project around **verifiable, reproducible AI data science**: claim-level evidence, inspectable artifacts, and explicit separation between deterministic harness validation and real-model comparative results.
+- Made hosted-demo frontend/backend boundaries configurable for cross-origin deployment and documented the verified launch sequence without advertising an unverified backend URL.
+- Hardened repository operations with actionlint, lock/vendor drift checks, dependency review, secret scanning, CodeQL, SonarQube quality gates, and reproducible leaderboard/contributor automation.
 
 ### Security
 
-- Upgraded the web runtime to patched Next.js 16.3.3, React/React DOM 19.2.8, Sharp 0.35.4, and a safe PostCSS floor; CI now fails on high/critical npm audit findings.
-- Real-model evaluation keeps the API key in GitHub Actions Secrets, uses least-privilege workflow permissions, does not persist checkout credentials, pins external actions by commit where appropriate, and fails closed instead of falling back to a heuristic result.
+- Upgraded the web runtime to **Next.js 16.3.3**, **React/ReactDOM 19.2.8**, and **Sharp 0.35.4**, raised the PostCSS floor, and documented upstream license obligations.
+- Added a permanent `npm audit --audit-level=high` CI gate so High/Critical web dependency advisories cannot hide in install logs.
+- Kept real-model workflow permissions least-privilege, checkout credentials non-persistent, actions pinned by commit SHA, and credentials out of artifacts and repository content.
+
+### Fixed
+
+- Fixed the packaged `dsa` console bootstrap so vendored `dsa_*` aliases initialize before the evaluation CLI imports.
+- Fixed the API Docker image so the root `src/` package is present; CI now verifies the packaged/container CLI path.
+- Added a root npm workspace lock drift guard and corrected Dependabot's Docker update directory.
+
+### Evaluation integrity
+
+- The existing `stub/small` result remains **harness validation**, not a real-model leaderboard claim.
+- v4.3.0 ships the execution and validation machinery for a credible four-way comparison, but **does not claim comparative real-model scores until credentialed artifacts pass publication review**.
 
 ### Compatibility
 
-- No intentional breaking change to the stable public `data_science_agent` SDK surface. The umbrella remains the published package and continues to vendor the internal `dsa_*` workspace modules.
-- Python 3.12+ remains required.
+- No intentional breaking change to the Stable public SDK surface.
+- Python **3.12+** remains the supported baseline for this release; the separate Python 3.14 and Node 26 base-image Dependabot proposals are intentionally excluded from this candidate and require independent review.
 
-### Release evidence
-
-- Release candidate baseline frozen from commit `fcb98f455dff644ebd0e525083fd0f1d7e344369`, 103 commits ahead of `v4.2.10` before release-formalization changes.
-- Final tag remains blocked until the v4.3.0 candidate passes full CI, CodeQL, secret scan, dependency review, SonarQube Quality Gate, benchmark smoke, Docker/Web/MkDocs gates, and a clean-environment install smoke using the wheel built from the candidate.
 ## 4.2.10 — Publish Umbrella Only
 
 ### Fixed

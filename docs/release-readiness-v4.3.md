@@ -1,99 +1,87 @@
 # v4.3.0 Release Readiness
 
-This document is the public release gate for the next Data Science Agent minor release.
-
-It exists to prevent a version tag from becoming the mechanism that decides whether a change set is ready. The release should happen **after** the candidate commit satisfies the evidence below.
+This document is the public release gate for Data Science Agent v4.3.0. A tag is the result of release readiness, not the mechanism that decides whether the release is ready.
 
 ## Candidate theme
 
-**v4.3.0 — Adoption, Community Reliability, and Verifiable Project Operations**
+**v4.3.0 — Adoption, Verifiable Evaluation & Project Reliability**
 
-Compared with `v4.2.10`, the current candidate line adds substantial public-project infrastructure without intentionally changing the stable core analysis API:
+The release combines public-project adoption work with a materially stronger evaluation and security story, while preserving the Stable SDK contract.
 
-- conversion-oriented README, hero, and executable-looking product demo surface;
-- eight visual case studies with three flagship workflows;
-- structured issue and discussion contribution routes;
-- contributor recognition, triage, stale management, and PR/issue labeling;
-- deterministic benchmark leaderboard generation and validation;
-- automated release announcements;
-- public roadmap and contributor pathways;
-- GitHub Actions hardening with concurrency, least-privilege permissions, timeouts, and `actionlint`;
-- tests for repository automation and conflict-safe GitHub Contents API writes.
+## Frozen source scope
 
-The release theme is therefore **adoption + operational reliability**, not a claim of a new core modeling architecture.
+- Previous release tag: `v4.2.10`
+- Previous release commit: `ecf16d0dcef229e38094a853310dd4acd347419b`
+- Frozen source candidate: `fcb98f455dff644ebd0e525083fd0f1d7e344369`
+- Commits in frozen diff: `103`
+- Canonical diff: `v4.2.10...fcb98f455dff644ebd0e525083fd0f1d7e344369`
 
-## Current evidence
+The frozen source candidate includes the real-model provider/provenance path, critic ablation, LLM baselines, secure four-way smoke workflow, publication validator, web security upgrades, contributor/adoption workflows, flagship case studies, Windows quickstart, benchmark contribution guide, and plugin walkthrough.
 
-Baseline hardening commit: `6ebfbe27b8a6ba287fa5b54f11649df280d7694a`
+The Docker base jumps to Python 3.14 and Node 26 are **not** part of v4.3.0. They were deferred to a dedicated compatibility cycle rather than mixed into this release.
 
-| Gate | Current state | Evidence / requirement |
+## Release-manifest semantics
+
+`release/v4.3.0/manifest.json` records the immutable **source candidate SHA** above. It does not attempt to embed the SHA of the commit that contains the manifest itself, which would be a self-reference. The final `v4.3.0` tag should point to the merged release commit only after the PR head has passed every release-critical gate.
+
+## Verified gate evidence
+
+Three evidence layers are retained for the release candidate:
+
+- Distribution CI run `33287733264` on candidate head `3e34b07549a1f9912dbf235255fdcda9cad57167` passed the complete repository CI, including wheel + sdist build, clean-wheel installation, public SDK import/version checks, installed `dsa --help`, API/Web Docker builds, container CLI smoke, Next production build, Compose, and MkDocs strict.
+- Historical clean-checkout release-verification run `33288208568` on candidate head `e87eecccdfaed1f8e0e995f95ea1d2553d7a339f` passed the then-current aggregate verifier at **14/14 gates**. Its report is retained as Actions artifact `9725134640` with artifact digest `sha256:48bfc019f982ff1753bda8a2bd1e2ebc63859becf45e51eb381e5816c37f8e63` through 2026-09-29. It is supporting historical evidence, not a substitute for final-head checks.
+- Final pre-metadata candidate head `3f6b184eb9f62baf14a4a6fb84898932b63f384e` passed CI run `33289287375`, Dependency Review, Secret Scan, both CodeQL language jobs, and the SonarQube Quality Gate. SonarQube reported **4 non-blocking new issues and 0 security hotspots**; the Quality Gate passed.
+
+The current `dsa verify-release` implementation is deliberately narrower and safer: it performs deterministic validation of retained release evidence, accepts only an explicitly supported static manifest path, and has no external-process execution capability. Tests, builds, package installation, containers, CodeQL, secret scanning, dependency review, and SonarQube remain independently executed gates. Compose declares the developer `.env` file optional (`required: false`) so validation remains read-only when that local file is absent.
+
+## Current gates
+
+| Gate | State | Evidence / requirement |
 |---|---|---|
-| GitHub Actions syntax | ✅ PASS | `actionlint 1.7.12` runs as the first CI quality gate with a pinned archive checksum |
-| Ruff | ✅ PASS | lint and formatting checks passed on the hardening run |
-| mypy | ✅ PASS | strict project type-check gate passed |
-| pytest + coverage gate | ✅ PASS | full test command passed, including repository automation tests |
-| Benchmark smoke | ✅ PASS | CI benchmark smoke passed |
-| API Docker image | ✅ PASS | image build passed |
-| Web Docker image | ✅ PASS | image build passed |
-| Web production build | ✅ PASS | build passed |
-| Docker Compose config | ✅ PASS | config validation passed |
-| MkDocs strict build | ✅ PASS | documentation build passed |
-| CodeQL Python | ✅ PASS | latest hardening run completed successfully |
-| CodeQL JavaScript | ✅ PASS | latest hardening run completed successfully |
-| Secret Scan | ✅ PASS | latest hardening run completed successfully |
-| Contributor Recognition | ✅ PASS | conflict-safe Contents API workflow completed successfully |
-| Package version | ❌ NOT READY | still `4.2.10`; bump only when the final candidate is frozen |
-| `CHANGELOG.md` v4.3.0 entry | ❌ NOT READY | write from the final diff, not from planned work |
-| v4.3 release manifest | ❌ NOT READY | generate from the final candidate SHA and gate results |
-| Fresh-wheel install smoke | ⏳ FINAL GATE | build the final candidate wheel, install in a clean environment, run SDK + CLI smoke |
-| Final candidate CI | ⏳ FINAL GATE | rerun all release-critical checks after version/changelog/manifest changes |
-| Tag / PyPI publish | ⛔ BLOCKED | do not tag until every required gate above is PASS |
+| Scope frozen | ✅ PASS | `v4.2.10...fcb98f455dff644ebd0e525083fd0f1d7e344369`, 103 commits |
+| Package/version surfaces | ✅ PASS | Canonical runtime/citation/test surfaces set to `4.3.0` |
+| Changelog | ✅ PASS | Entry derived from the frozen 103-commit diff |
+| Release manifest | ✅ PASS | Records the source candidate and evidence without self-referential SHA claims |
+| uv lock / vendored sources / SBOM | ✅ PASS | Regenerated and checked by CI |
+| Ruff / formatting | ✅ PASS | Repository CI |
+| mypy | ✅ PASS | Repository CI |
+| full pytest | ✅ PASS | Repository CI |
+| benchmark smoke | ✅ PASS | Repository CI |
+| API + Web Docker | ✅ PASS | Both images pass; packaged/container `dsa` CLI also passes |
+| Web production build | ✅ PASS | Next.js production build passes |
+| Compose / MkDocs strict | ✅ PASS | Both pass in final candidate CI |
+| Dependency Review / Secret Scan | ✅ PASS | GitHub security workflows green |
+| CodeQL Python + JavaScript | ✅ PASS | Both language jobs completed successfully |
+| SonarQube Quality Gate | ✅ PASS | Quality Gate passed; 4 non-blocking new issues, 0 security hotspots |
+| Wheel + sdist build | ✅ PASS | Umbrella distribution built successfully in CI |
+| Clean-wheel install smoke | ✅ PASS | Fresh venv import + SDK version + CLI smoke passed |
+| Current release evidence verification | ✅ PASS | Deterministic retained-evidence verifier passed in final candidate CI |
+| Historical clean-checkout verification | ✅ PASS | Earlier aggregate verifier: 14/14 PASS; artifact retained as supporting evidence |
+| Final PR-head checks | REQUIRED | The exact PR head merged to `main` must have a green required check set |
+| Tag / PyPI / GitHub Release | BLOCKED UNTIL MERGE | Create only from the verified merged commit |
 
-## Release blockers
+## Real-model reporting boundary
 
-The following conditions block `v4.3.0`:
-
-1. The package version is still `4.2.10`.
-2. There is no final `4.3.0` changelog section derived from the frozen diff.
-3. There is no `release/v4.3.0/manifest.json` tied to the final candidate commit.
-4. The final wheel has not yet been built and smoke-tested from a clean environment.
-5. Any CI, CodeQL, secret-scan, benchmark, docs, packaging, or reproduction regression on the final candidate blocks the tag.
-
-## Scope reconciliation
-
-Historical internal `docs/v4_3` material was intentionally removed during the 4.2.2 repository-hygiene cleanup. Therefore the public repository must not imply that an old internal v4.3 specification has automatically been completed.
-
-For the public release, the canonical scope is the **actual diff from `v4.2.10` to the frozen candidate commit**, summarized in the changelog and this gate.
-
-If a separate private/internal v4.3 specification contains additional product requirements, those requirements must be reconciled before the version bump; they should not be inferred from historical deleted files.
-
-## Final release procedure
-
-When the scope is frozen:
-
-1. Ensure no unrelated feature work is still entering `main`.
-2. Review `git diff v4.2.10...<candidate>` and classify every material change.
-3. Update `pyproject.toml` and all canonical version surfaces to `4.3.0`.
-4. Add the `4.3.0` changelog entry from the actual diff.
-5. Generate `release/v4.3.0/manifest.json` with the final commit and gate metadata.
-6. Run full CI, CodeQL, secret scan, benchmark, docs, Docker, and automation tests on the candidate.
-7. Build the wheel/sdist from the candidate.
-8. Install the wheel in a clean environment and run SDK + CLI smoke tests.
-9. Run the project's release verification command for `v4.3.0` if applicable to the final release configuration.
-10. Only after every release-critical gate is green, create tag `v4.3.0` and let Trusted Publishing perform the release.
-11. Verify the GitHub Release, PyPI artifacts, attestations, and generated release announcement.
+The code supports a controlled four-way real-model comparison and validates its artifacts. The release does **not** depend on publishing a benchmark score: `OPENAI_API_KEY` still has to be configured manually in GitHub Actions, and credentialed smoke artifacts must be reviewed before any comparative result is promoted to README or the leaderboard.
 
 ## Non-blocking adoption tasks
 
-These improve discoverability but should not hold the package release hostage:
+These improve discovery but do not hold the package release hostage:
 
-- enable GitHub Discussions in repository settings;
-- populate repository About description and Topics;
-- upload the prepared Social Preview image;
-- expand external community promotion after the release is verifiably published.
+- set the GitHub About description and Topics;
+- publish and verify the hosted demo, then set the Website field;
+- upload the prepared repository Social Preview;
+- enable/expand community promotion after the release is verifiably published.
+
+## Release procedure
+
+1. Keep the source scope frozen; only release-verification and metadata corrections belong in the RC.
+2. Run the complete repository check set on the exact final PR head.
+3. Merge the release candidate only after that head is green.
+4. Verify the merged `main` commit.
+5. Create tag `v4.3.0` only from the verified merged commit; let Trusted Publishing publish that exact tagged commit.
+6. Verify PyPI, GitHub Release assets, attestations, and the release announcement before closing the release issue.
 
 ## Release decision
 
-**Current decision: NOT READY TO TAG.**
-
-The engineering baseline is green. The remaining work is release formalization and final-candidate verification, not emergency CI repair.
+**READY TO MERGE WHEN THE CURRENT PR HEAD IS GREEN.** All functional, packaging, security, and release-verification gates have passed with retained evidence. The remaining condition is that the exact metadata-corrected PR head complete its required check set successfully.

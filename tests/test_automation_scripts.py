@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from scripts import check_public_claims as public_claims
 from scripts import generate_release_announcement as announcements
 from scripts import render_leaderboard as leaderboard
 from scripts import update_contributors as contributors
@@ -195,3 +196,16 @@ def test_leaderboard_load_entries_sorts_by_quality_then_latency(
 def test_leaderboard_replace_block_requires_markers() -> None:
     with pytest.raises(ValueError, match="markers"):
         leaderboard.replace_block("# no generated block", "generated")
+
+
+def test_public_claims_release_candidate_tag_mode_is_explicit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DSA_RELEASE_CANDIDATE", raising=False)
+    assert not public_claims._allow_release_candidate_tag("v4.2.10", "4.3.0")
+
+    monkeypatch.setenv("DSA_RELEASE_CANDIDATE", "1")
+    assert public_claims._allow_release_candidate_tag("v4.2.10", "4.3.0")
+    assert not public_claims._allow_release_candidate_tag("v4.3.0", "4.2.10")
+    assert not public_claims._allow_release_candidate_tag("v5.0.0", "4.3.0")
+    assert not public_claims._allow_release_candidate_tag("not-a-tag", "4.3.0")

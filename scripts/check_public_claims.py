@@ -56,20 +56,16 @@ PATTERNS = {
     "stale_version": re.compile(r"\b(4\.0\.0|3\.0\.0|2\.0\.0)\b(?!.*V(4\.0|3\.0|2\.0) Historical)"),
     "stale_test_counts": re.compile(r"(155 tests|86\+ tests|86 tests)"),
     "stale_mypy": re.compile(r"81 source files|92 source files"),
-    "stale_coverage": re.compile(r"81% cov \(4597"),  # only bare old without versioned annotation
+    "stale_coverage": re.compile(r"81% cov \(4597"),
     "stale_routes": re.compile(r"7 routes"),
     "old_package_pip": re.compile(r"pip install [\"\']?data-science-agent"),
     "old_package_import": re.compile(r"importlib\.metadata\.version\(\"data-science-agent\"\)"),
     "old_repo": re.compile(r"your-org/data-science-agent"),
-    # deprecated_cli removed - external-validation is still valid per CLI help
-    # old_benchmark - historical catalog 0.2.0 kept in CHANGELOG/docs for audit
 }
 
 
-# Maturity check: README V4 line should match RELEASE_MATRIX (§23)
 def check_maturity():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    # Find V4 line
     v4_line = ""
     for line in readme.splitlines():
         if "V4 adds:" in line:
@@ -78,11 +74,7 @@ def check_maturity():
     issues = []
     if not v4_line:
         return issues
-    # Check: Stable should contain Time Series, Experimental should contain Jupyter
-    # Use simple: if Jupyter appears before "Experimental" marker in v4_line, it's in Stable (wrong)
-    # Correct is: Stable ... Time Series ... · Experimental ... Jupyter
     if "Jupyter" in v4_line:
-        # Find positions
         stable_pos = v4_line.find("Stable")
         exp_pos = v4_line.find("Experimental")
         jupyter_pos = v4_line.find("Jupyter")
@@ -109,23 +101,19 @@ def scan_file(path: Path):
     except Exception:
         return []
     findings = []
-    # Check each pattern but allow historical versioned context
     for name, pat in PATTERNS.items():
         for m in pat.finditer(text):
-            # Skip if line contains versioned annotation like "V3.0: 155" or "V4.1 live"
             line = text[max(0, m.start() - 80) : m.end() + 80]
-            # Allow historical in CHANGELOG and report docs
             if path.name == "CHANGELOG.md":
-                continue  # CHANGELOG historical versions are expected per §18
+                continue
             if "MIGRATION" in str(path) or "migration.md" in str(path):
-                continue  # Migration guides intentionally mention old versions
+                continue
             if "V4_1_RELEASE_INTEGRITY_REPORT" in str(path):
                 continue
             if "QUANTITATIVE_CLAIMS" in str(path):
                 continue
             if "V4.1 live" in line or "V3.0:" in line or "V1:" in line or "Historical" in line:
                 continue
-            # For old package, allow in POPULAR_PYPI typosquat list and report
             if "POPULAR_PYPI" in line or "WORKSPACE_PACKAGES" in line:
                 continue
             if "your-org" in line and "report" in str(path).lower():
@@ -148,7 +136,6 @@ def _is_release_candidate_ref(version: str) -> bool:
 
 def check_version_consistency():
     issues = []
-    # Check pyproject vs CITATION vs __init__ vs sdk vs sbom vs README title
     try:
         py_ver = re.search(r'version = "([^"]+)"', (ROOT / "pyproject.toml").read_text()).group(1)
         cit_text = (ROOT / "CITATION.cff").read_text()
@@ -163,7 +150,6 @@ def check_version_consistency():
             (ROOT / "src/data_science_agent/sdk.py").read_text(),
         ).group(1)
         sbom_ver = __import__("json").loads((ROOT / "release/sbom.json").read_text())["version"]
-        # README intentionally does not pin a version in the title (modern OSS pattern).
         for name, ver in [
             ("pyproject", py_ver),
             ("CITATION", cit_ver),
@@ -173,12 +159,10 @@ def check_version_consistency():
         ]:
             if ver != EXPECTED["version"]:
                 issues.append(f"version mismatch: {name}={ver} != expected {EXPECTED['version']}")
-        # Check tag. Normal branches/tags remain strict. A frozen release-candidate
-        # branch may intentionally carry the next version before the final tag exists.
         import subprocess
 
         tag = subprocess.run(
-            ["git", "describe", "--tags", "--always"],  # noqa: S607 - fixed command/arguments
+            ["git", "describe", "--tags", "--always"],
             capture_output=True,
             text=True,
             cwd=str(ROOT),
@@ -194,16 +178,13 @@ def check_version_consistency():
 
 def main():
     all_findings = []
-    # Version consistency
     ver_issues = check_version_consistency()
     for iss in ver_issues:
         all_findings.append(("version_consistency", iss, ""))
 
-    # Maturity
     for iss in check_maturity():
         all_findings.append(("maturity", iss, ""))
 
-    # Scan files - exclude historical docs per §18 (V2/V3/V4 historical reports)
     for pattern in SCAN_GLOBS:
         for path in ROOT.glob(pattern):
             if any(
@@ -219,7 +200,6 @@ def main():
                 ]
             ):
                 continue
-            # Skip historical docs that are expected to contain old numbers (§18 Valid Historical) - completely skip stale checks
             rel = str(path.relative_to(ROOT)) if path.is_absolute() else str(path)
             if any(
                 rel.startswith(pfx)
@@ -237,7 +217,6 @@ def main():
             for kind, match, line in findings:
                 all_findings.append((f"{kind}:{path.relative_to(ROOT)}", match, line))
 
-    # Report
     if not all_findings:
         print("✓ No stale claims detected — 0 issues")
         return 0
@@ -246,13 +225,11 @@ def main():
     for kind, match, line in all_findings:
         print(f"  [{kind}] {match!r} — {line[:120]}")
 
-    # Fail if any high severity (version_consistency, old_package_pip, stale_test_counts without versioned annotation)
     high = [
         f
         for f in all_findings
         if f[0].startswith(("version_consistency", "old_package_pip", "old_repo"))
     ]
-    # stale_test_counts now versioned, so not high if annotated
     if high:
         print(f"\n✗ {len(high)} high-severity issues — requires fix (see §18, §26)")
         return 1

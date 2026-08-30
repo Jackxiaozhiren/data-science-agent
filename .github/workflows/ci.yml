@@ -1,4 +1,5 @@
 name: CI
+# v4.3.0 final release-head verification trigger.
 
 on:
   push:
@@ -51,24 +52,45 @@ jobs:
       - run: uv run mypy packages apps/api src --ignore-missing-imports
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM
-      - name: Build release wheel and sdist
-        run: rm -rf dist && uv build
-      - name: Fresh-wheel CLI and SDK smoke
+      - run: uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
+      - name: Build wheel and sdist
         shell: bash
         run: |
           set -euo pipefail
-          python -m venv /tmp/dsa-wheel-smoke
-          /tmp/dsa-wheel-smoke/bin/python -m pip install --upgrade pip
-          /tmp/dsa-wheel-smoke/bin/python -m pip install dist/*.whl
-          (
-            cd /tmp
-            /tmp/dsa-wheel-smoke/bin/dsa --help >/dev/null
-            /tmp/dsa-wheel-smoke/bin/python -c 'import importlib.metadata; import data_science_agent; installed = importlib.metadata.version("jack-data-science-agent"); assert data_science_agent.__version__ == installed; assert data_science_agent.Agent().version == installed; assert data_science_agent.Dataset.from_path("sales.csv").dataset_id == "sales"; print(f"fresh-wheel smoke: jack-data-science-agent {installed}")'
-          )
-      - run: uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
+          rm -rf dist
+          uv build --wheel --sdist
+          test "$(find dist -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -type f -name '*.tar.gz' | wc -l)" -eq 1
+      - name: Smoke-test clean wheel install
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_dir="$(mktemp -d "${RUNNER_TEMP:?}/dsa-wheel-smoke.XXXXXX")"
+          python -m venv "${smoke_dir}"
+          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          test -n "${wheel}"
+          "${smoke_dir}/bin/python" -m pip install --disable-pip-version-check "${wheel}"
+          "${smoke_dir}/bin/python" - <<'PY'
+          import importlib.metadata
+          import data_science_agent
+          from data_science_agent import Agent, Dataset
+
+          installed = importlib.metadata.version("jack-data-science-agent")
+          assert data_science_agent.__version__ == installed
+          assert Agent is not None
+          assert Dataset is not None
+          print(f"clean wheel import ok: {installed}")
+          PY
+          "${smoke_dir}/bin/dsa" --help >/dev/null
       - run: docker build -f docker/Dockerfile.api -t dsa-api:ci .
       - run: docker run --rm dsa-api:ci .venv/bin/dsa --help >/dev/null
       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
       - run: npm --prefix apps/web run build 2>&1 | tail -n 20
       - run: docker compose config 2>&1 | head -n 40
       - run: uv run python -m mkdocs build --strict 2>&1 | tail -n 50
+      - name: Verify v4.3.0 release candidate
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 47 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          .venv/bin/dsa verify-release v4.3.0 --json

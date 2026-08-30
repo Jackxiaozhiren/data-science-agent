@@ -5,7 +5,9 @@ services:
       dockerfile: docker/Dockerfile.api
     ports: ["8000:8000"]
     volumes: ["./data:/app/data", "./artifacts:/app/artifacts"]
-    env_file: [.env]
+    env_file:
+      - path: .env
+        required: false
     environment:
       PORT: "8000"
       DATABASE_URL: "sqlite+aiosqlite:///./data/api.db"

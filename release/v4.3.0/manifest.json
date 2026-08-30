@@ -1,0 +1,76 @@
+{
+  "version": "4.3.0",
+  "release_tag": "v4.3.0",
+  "status": "release-candidate",
+  "theme": "Adoption, Verifiable Evaluation & Project Reliability",
+  "previous_tag": "v4.2.10",
+  "previous_release_commit": "ecf16d0dcef229e38094a853310dd4acd347419b",
+  "source_candidate_commit": "fcb98f455dff644ebd0e525083fd0f1d7e344369",
+  "commits_since_previous_release": 103,
+  "release_metadata_commit": null,
+  "python_requires": ">=3.12",
+  "real_model_publication_status": "execution-and-validation-ready; no credentialed comparative score published",
+  "excluded_runtime_updates": [
+    "#45 python 3.12-slim -> 3.14-slim (closed without merge; deferred to a dedicated compatibility cycle)",
+    "#46 node 20-alpine -> 26-alpine (closed without merge; deferred to a dedicated compatibility cycle)"
+  ],
+  "gates": {
+    "ci": "pass",
+    "dependency_review": "pass",
+    "secret_scan": "pass",
+    "codeql": "pass",
+    "sonarqube": "pass",
+    "wheel_sdist_build": "pass",
+    "clean_wheel_install": "pass",
+    "sdk_smoke": "pass",
+    "cli_smoke": "pass",
+    "release_verification": "pass"
+  },
+  "evidence": {
+    "distribution_ci": {
+      "run_id": 33287733264,
+      "head_sha": "3e34b07549a1f9912dbf235255fdcda9cad57167",
+      "result": "success",
+      "includes": [
+        "full repository CI",
+        "wheel and sdist build",
+        "clean wheel installation",
+        "SDK import and version smoke",
+        "installed CLI smoke",
+        "API and Web Docker builds",
+        "container CLI smoke",
+        "Next production build",
+        "Compose validation",
+        "MkDocs strict build"
+      ]
+    },
+    "release_verification": {
+      "run_id": 33288208568,
+      "head_sha": "e87eecccdfaed1f8e0e995f95ea1d2553d7a339f",
+      "result": "success",
+      "summary": "14/14 PASS",
+      "artifact_id": 9725134640,
+      "artifact_digest": "sha256:48bfc019f982ff1753bda8a2bd1e2ebc63859becf45e51eb381e5816c37f8e63",
+      "artifact_expires_at": "2026-09-29T02:34:00Z"
+    },
+    "final_candidate_checks": {
+      "head_sha": "3f6b184eb9f62baf14a4a6fb84898932b63f384e",
+      "ci_run_id": 33289287375,
+      "ci": "success",
+      "dependency_review": "success",
+      "secret_scan": "success",
+      "codeql": "success",
+      "sonarqube_quality_gate": "success",
+      "sonarqube_new_issues": 4,
+      "sonarqube_security_hotspots": 0
+    }
+  },
+  "notes": [
+    "Manifest records the frozen source candidate rather than attempting a self-referential metadata commit SHA.",
+    "All functional, packaging, security, and aggregate release-verification gates have passed with retained evidence.",
+    "SonarQube Quality Gate passed on the verified candidate; four non-blocking new issues remain reported, with zero security hotspots.",
+    "Any metadata-only commit after the recorded evidence must itself finish the repository check set successfully before merge or tag creation.",
+    "Do not create v4.3.0 tag until the release candidate is merged from a green PR head.",
+    "No deterministic stub result is represented as real-model comparative quality."
+  ]
+}
