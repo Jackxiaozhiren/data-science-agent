@@ -4,25 +4,30 @@
 
 ### The AI data scientist that shows its work.
 
-Ask questions about CSV files and databases in natural language. DSA runs SQL, statistics, machine learning, and visualization, then returns **reproducible artifacts with claim-level evidence**.
+Ask questions about CSV files and databases in natural language. DSA runs SQL, statistics, machine learning, and visualization, then returns **claim-level evidence, a reproducible report, and the artifacts needed to inspect how each conclusion was produced**.
 
-[**Quickstart**](#-60-second-quickstart) ·
+[**60-second quickstart**](#-60-second-quickstart) ·
+[**Install from PyPI**](https://pypi.org/project/jack-data-science-agent/) ·
 [**See it in action**](#-see-it-in-action) ·
 [**Case studies**](case-studies/) ·
 [**Evaluation**](docs/evaluation.md) ·
 [**Docs**](docs/getting-started.md) ·
-[**Roadmap**](ROADMAP.md)
+[**v4.3.0**](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.3.0)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/codeql.yml?label=CodeQL&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions/workflows/codeql.yml)
 [![PyPI](https://img.shields.io/pypi/v/jack-data-science-agent?logo=pypi&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
+[![Latest release](https://img.shields.io/github/v/release/Jackxiaozhiren/data-science-agent?logo=github&label=release)](https://github.com/Jackxiaozhiren/data-science-agent/releases/latest)
 [![Python](https://img.shields.io/pypi/pyversions/jack-data-science-agent?logo=python&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
 [![License](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/Jackxiaozhiren/data-science-agent?style=flat&logo=github)](https://github.com/Jackxiaozhiren/data-science-agent/stargazers)
 
 <br />
 
 <img src="docs/assets/hero.svg" alt="Data Science Agent — Ask your data. Verify the answer." width="100%" />
+
+**For analysts, researchers, and ML engineers who need answers they can inspect, audit, reproduce, and challenge.**
+
+Fastest path: `pip install jack-data-science-agent` → `dsa demo` → inspect `report.md` and `evidence_graph.json`.
 
 </div>
 
@@ -93,6 +98,14 @@ analysis run
 | `evidence_graph.json` | Claim → evidence → computation lineage |
 | `analysis.ipynb` | Inspectable notebook representation |
 | `reproduce.sh` | Re-run the analysis |
+
+### Where DSA fits
+
+| You are... | DSA helps you... |
+|---|---|
+| **Analyst** | move from a natural-language question to SQL, statistics, plots, and an auditable report |
+| **Researcher** | preserve dataset hashes, evidence lineage, and reproduction artifacts alongside conclusions |
+| **ML engineer / data scientist** | run regression, classification, forecasting, and evaluation inside one inspectable workflow |
 
 ---
 
