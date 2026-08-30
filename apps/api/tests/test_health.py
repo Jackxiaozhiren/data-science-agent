@@ -11,10 +11,19 @@ async def test_health() -> None:
         assert r.status_code == 200
         body = r.json()
         assert body["status"] in ("ok", "degraded")
-        assert "details" in body
+        assert set(body["details"]) == {"process", "db"}
+        assert body["details"]["process"]["status"] == "ok"
+
         r2 = await ac.get("/ready")
         assert r2.status_code == 200
         assert r2.json()["status"] in ("ok", "degraded")
+
+        deep = await ac.get("/health/dependencies")
+        assert deep.status_code == 200
+        deep_body = deep.json()
+        assert deep_body["status"] in ("ok", "degraded")
+        assert set(deep_body["details"]) == {"duckdb", "polars", "llm"}
+
         rv = await ac.get("/version")
         assert rv.status_code == 200
         assert "version" in rv.json()
