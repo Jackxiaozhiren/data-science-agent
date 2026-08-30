@@ -40,9 +40,7 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
             details[name] = note
 
     # Prepare the Node workspaces used by the Python integration tests and Web build.
-    ok, out = _run(
-        ["npm", "--prefix", "apps/vscode", "ci", "--legacy-peer-deps"], timeout=90
-    )
+    ok, out = _run(["npm", "--prefix", "apps/vscode", "ci", "--legacy-peer-deps"], timeout=90)
     gate("VSCode dependencies", ok, out[:800] if not ok else "")
     ok, out = _run(["npm", "--prefix", "apps/web", "ci", "--legacy-peer-deps"], timeout=90)
     gate("Web dependencies", ok, out[:800] if not ok else "")
@@ -58,9 +56,7 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
     gate("ruff", ok, out[:800] if not ok else "")
     ok, out = _run(["npm", "--prefix", "apps/web", "run", "build"], timeout=90)
     gate("npm build", ok, out[:800] if not ok else "")
-    ok, out = _run(
-        ["docker", "compose", "--env-file", ".env.example", "config"], timeout=20
-    )
+    ok, out = _run(["docker", "compose", "--env-file", ".env.example", "config"], timeout=20)
     gate("docker validation", ok, out[:800] if not ok else "")
 
     # Security + MCP + benchmark + research + docs.
