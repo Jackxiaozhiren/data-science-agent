@@ -29,17 +29,25 @@ def _candidate_sha_is_valid(value: object) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
 
 
-def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
+def _supported_manifest_path(release_tag: str) -> Path | None:
+    """Return a static manifest path for a release explicitly supported by this verifier."""
+    if release_tag == "v4.3.0":
+        return ROOT / "release" / "v4.3.0" / "manifest.json"
+    return None
+
+
+def verify_release(version: str = "v4.3.0") -> dict[str, Any]:
     """Validate retained release-candidate evidence without executing external commands.
 
     CI is responsible for actually running tests, builds, security checks, package-install
     smoke tests, and container checks. This verifier only checks that the frozen release
     manifest records those independently executed gates under the expected candidate
-    identity, which keeps the CLI deterministic and free of process-execution capability.
+    identity. User input selects only an explicitly supported release identifier and never
+    contributes to a filesystem path.
     """
     release_tag = version if version.startswith("v") else f"v{version}"
     normalized_version = release_tag.removeprefix("v")
-    manifest_path = ROOT / "release" / normalized_version / "manifest.json"
+    manifest_path = _supported_manifest_path(release_tag)
 
     gates: dict[str, str] = {}
     details: dict[str, str] = {}
@@ -50,8 +58,7 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
             details[name] = note
 
     manifest: dict[str, Any] = {}
-    manifest_exists = manifest_path.is_file()
-    if manifest_exists:
+    if manifest_path is not None and manifest_path.is_file():
         try:
             raw = json.loads(manifest_path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
@@ -59,11 +66,13 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
         except (OSError, json.JSONDecodeError) as exc:
             details["manifest present"] = f"Could not read manifest: {exc}"
 
-    gate(
-        "manifest present",
-        bool(manifest),
-        details.get("manifest present", f"Missing or invalid manifest: {manifest_path}"),
-    )
+    if manifest_path is None:
+        manifest_note = f"Unsupported release identifier: {release_tag}"
+    else:
+        manifest_note = details.get(
+            "manifest present", f"Missing or invalid manifest: {manifest_path}"
+        )
+    gate("manifest present", bool(manifest), manifest_note)
     gate(
         "manifest version",
         manifest.get("version") == normalized_version,
@@ -100,7 +109,7 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
         "gates": gates,
         "details": details,
         "summary": f"{sum(1 for value in gates.values() if value == 'PASS')}/{len(gates)} PASS",
-        "manifest": str(manifest_path),
+        "manifest": str(manifest_path) if manifest_path is not None else None,
         "mode": "evidence-validation",
     }
 
@@ -109,7 +118,7 @@ def main() -> None:
     import argparse
 
     ap = argparse.ArgumentParser(description="Validate retained release-candidate evidence")
-    ap.add_argument("version", nargs="?", default="v3.0.0", help="Release version")
+    ap.add_argument("version", nargs="?", default="v4.3.0", help="Supported release version")
     ap.add_argument("--json", action="store_true", help="Output JSON")
     args = ap.parse_args()
     rep = verify_release(args.version)
