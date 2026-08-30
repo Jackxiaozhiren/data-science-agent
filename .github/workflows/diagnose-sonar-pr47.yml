@@ -1,0 +1,68 @@
+name: Diagnose Sonar PR 47
+
+on:
+  push:
+    branches: [diagnostics/sonar-pr47]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print Sonar annotations for PR 47
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repo = "Jackxiaozhiren/data-science-agent"
+          token = os.environ["GH_TOKEN"]
+
+          def get(url: str):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=20) as response:
+                  return json.load(response)
+
+          pr = get(f"https://api.github.com/repos/{repo}/pulls/47")
+          head = pr["head"]["sha"]
+          checks = get(f"https://api.github.com/repos/{repo}/commits/{head}/check-runs?per_page=100")
+          sonar = [item for item in checks["check_runs"] if item["name"] == "SonarCloud Code Analysis"]
+          print(f"PR_HEAD={head}")
+          if not sonar:
+              print("SONAR_CHECK_NOT_FOUND")
+              raise SystemExit(2)
+          check = sonar[0]
+          print(f"SONAR_CHECK_ID={check['id']}")
+          print(f"SONAR_STATUS={check['status']}")
+          print(f"SONAR_CONCLUSION={check['conclusion']}")
+          annotations = get(check["output"]["annotations_url"] + "?per_page=100")
+          print("SONAR_ANNOTATIONS_BEGIN")
+          for item in annotations:
+              print(json.dumps({
+                  "path": item.get("path"),
+                  "start_line": item.get("start_line"),
+                  "end_line": item.get("end_line"),
+                  "annotation_level": item.get("annotation_level"),
+                  "title": item.get("title"),
+                  "message": item.get("message"),
+                  "raw_details": item.get("raw_details"),
+              }, ensure_ascii=False))
+          print("SONAR_ANNOTATIONS_END")
+          PY
