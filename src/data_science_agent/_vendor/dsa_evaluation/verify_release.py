@@ -23,6 +23,7 @@ _REQUIRED_EVIDENCE_GATES = (
     "sdk_smoke",
     "cli_smoke",
 )
+_MANIFEST_PRESENT_GATE = "manifest present"
 
 
 def _candidate_sha_is_valid(value: object) -> bool:
@@ -64,15 +65,15 @@ def verify_release(version: str = "v4.3.0") -> dict[str, Any]:
             if isinstance(raw, dict):
                 manifest = raw
         except (OSError, json.JSONDecodeError) as exc:
-            details["manifest present"] = f"Could not read manifest: {exc}"
+            details[_MANIFEST_PRESENT_GATE] = f"Could not read manifest: {exc}"
 
     if manifest_path is None:
         manifest_note = f"Unsupported release identifier: {release_tag}"
     else:
         manifest_note = details.get(
-            "manifest present", f"Missing or invalid manifest: {manifest_path}"
+            _MANIFEST_PRESENT_GATE, f"Missing or invalid manifest: {manifest_path}"
         )
-    gate("manifest present", bool(manifest), manifest_note)
+    gate(_MANIFEST_PRESENT_GATE, bool(manifest), manifest_note)
     gate(
         "manifest version",
         manifest.get("version") == normalized_version,

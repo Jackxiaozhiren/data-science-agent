@@ -92,4 +92,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run dsa verify-release v4.3.0 --json
+          .venv/bin/dsa verify-release v4.3.0 --json
