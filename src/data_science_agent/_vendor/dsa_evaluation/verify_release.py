@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import subprocess
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,120 +12,119 @@ for _p in [Path(__file__).resolve()] + list(Path(__file__).resolve().parents):
         ROOT = _p
         break
 
-_ALLOWED_COMMANDS: frozenset[tuple[str, ...]] = frozenset(
-    {
-        ("npm", "--prefix", "apps/vscode", "ci", "--legacy-peer-deps"),
-        ("npm", "--prefix", "apps/web", "ci", "--legacy-peer-deps"),
-        ("uv", "run", "pytest", "-q"),
-        ("uv", "run", "mypy", "packages", "apps/api", "--ignore-missing-imports"),
-        ("uv", "run", "ruff", "check", "packages", "apps/api", "tests"),
-        ("npm", "--prefix", "apps/web", "run", "build"),
-        ("docker", "compose", "config"),
-        ("uv", "run", "pytest", "tests/security", "-q"),
-        ("uv", "run", "pytest", "tests/mcp", "-q"),
-        ("uv", "run", "dsa", "--limit", "5"),
-        ("uv", "run", "dsa", "demo"),
-        ("uv", "run", "python", "research/scripts/generate_tables.py"),
-        ("uv", "run", "python", "research/scripts/generate_figures.py"),
-        ("uv", "run", "python", "-m", "mkdocs", "build", "--strict"),
-    }
+_REQUIRED_EVIDENCE_GATES = (
+    "ci",
+    "dependency_review",
+    "secret_scan",
+    "codeql",
+    "sonarqube",
+    "wheel_sdist_build",
+    "clean_wheel_install",
+    "sdk_smoke",
+    "cli_smoke",
 )
 
 
-def _run(cmd: list[str], timeout: int = 300) -> tuple[bool, str]:
-    command = tuple(cmd)
-    if command not in _ALLOWED_COMMANDS:
-        return False, f"Blocked non-allowlisted release command: {command!r}"
-    try:
-        p = subprocess.run(
-            list(command),
-            cwd=str(ROOT),
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )  # noqa: S603
-        ok = p.returncode == 0
-        out = (p.stdout + p.stderr)[-4000:]
-        return ok, out
-    except Exception as e:
-        return False, f"{type(e).__name__}: {e}"
+def _candidate_sha_is_valid(value: object) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
 
 
 def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
-    """Run the aggregate release gates from a clean checkout."""
+    """Validate retained release-candidate evidence without executing external commands.
+
+    CI is responsible for actually running tests, builds, security checks, package-install
+    smoke tests, and container checks. This verifier only checks that the frozen release
+    manifest records those independently executed gates under the expected candidate
+    identity, which keeps the CLI deterministic and free of process-execution capability.
+    """
+    release_tag = version if version.startswith("v") else f"v{version}"
+    normalized_version = release_tag.removeprefix("v")
+    manifest_path = ROOT / "release" / normalized_version / "manifest.json"
+
     gates: dict[str, str] = {}
     details: dict[str, str] = {}
 
     def gate(name: str, ok: bool, note: str = "") -> None:
         gates[name] = "PASS" if ok else "FAIL"
-        if note:
+        if note and not ok:
             details[name] = note
 
-    # Prepare the Node workspaces used by the Python integration tests and Web build.
-    ok, out = _run(["npm", "--prefix", "apps/vscode", "ci", "--legacy-peer-deps"], timeout=90)
-    gate("VSCode dependencies", ok, out[:800] if not ok else "")
-    ok, out = _run(["npm", "--prefix", "apps/web", "ci", "--legacy-peer-deps"], timeout=90)
-    gate("Web dependencies", ok, out[:800] if not ok else "")
+    manifest: dict[str, Any] = {}
+    manifest_exists = manifest_path.is_file()
+    if manifest_exists:
+        try:
+            raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                manifest = raw
+        except (OSError, json.JSONDecodeError) as exc:
+            details["manifest present"] = f"Could not read manifest: {exc}"
 
-    # Required repository gates.
-    ok, out = _run(["uv", "run", "pytest", "-q"], timeout=180)
-    gate("pytest", ok, out[:800] if not ok else "")
-    ok, out = _run(
-        ["uv", "run", "mypy", "packages", "apps/api", "--ignore-missing-imports"], timeout=60
+    gate(
+        "manifest present",
+        bool(manifest),
+        details.get("manifest present", f"Missing or invalid manifest: {manifest_path}"),
     )
-    gate("mypy", ok, out[:800] if not ok else "")
-    ok, out = _run(["uv", "run", "ruff", "check", "packages", "apps/api", "tests"], timeout=30)
-    gate("ruff", ok, out[:800] if not ok else "")
-    ok, out = _run(["npm", "--prefix", "apps/web", "run", "build"], timeout=90)
-    gate("npm build", ok, out[:800] if not ok else "")
-    ok, out = _run(["docker", "compose", "config"], timeout=20)
-    gate("docker validation", ok, out[:800] if not ok else "")
+    gate(
+        "manifest version",
+        manifest.get("version") == normalized_version,
+        f"Expected version {normalized_version!r}, got {manifest.get('version')!r}",
+    )
+    gate(
+        "release tag",
+        manifest.get("release_tag") == release_tag,
+        f"Expected release_tag {release_tag!r}, got {manifest.get('release_tag')!r}",
+    )
+    gate(
+        "release-candidate status",
+        manifest.get("status") == "release-candidate",
+        f"Expected release-candidate status, got {manifest.get('status')!r}",
+    )
+    gate(
+        "source candidate SHA",
+        _candidate_sha_is_valid(manifest.get("source_candidate_commit")),
+        "source_candidate_commit must be a full lowercase 40-character Git SHA",
+    )
 
-    # Security + MCP + benchmark + research + docs.
-    ok, out = _run(["uv", "run", "pytest", "tests/security", "-q"], timeout=60)
-    gate("security suite", ok, out[:800] if not ok else "")
-    ok, out = _run(["uv", "run", "pytest", "tests/mcp", "-q"], timeout=30)
-    gate("MCP conformance", ok, out[:800] if not ok else "")
-    ok, out = _run(["uv", "run", "dsa", "--limit", "5"], timeout=60)
-    gate("benchmark v2 (smoke)", ok, out[:800] if not ok else "")
-    ok, out = _run(["uv", "run", "dsa", "demo"], timeout=60)
-    gate("research/demo (dsa demo)", ok, out[:800] if not ok else "")
-    ok, out = _run(["uv", "run", "python", "research/scripts/generate_tables.py"], timeout=20)
-    gate("research tables (generate_tables.py)", ok, out[:500] if not ok else "")
-    ok, out = _run(["uv", "run", "python", "research/scripts/generate_figures.py"], timeout=20)
-    gate("research figures (generate_figures.py)", ok, out[:500] if not ok else "")
-    ok, out = _run(["uv", "run", "python", "-m", "mkdocs", "build", "--strict"], timeout=45)
-    gate("documentation build (mkdocs strict)", ok, out[:800] if not ok else "")
+    evidence_gates = manifest.get("gates")
+    evidence = evidence_gates if isinstance(evidence_gates, dict) else {}
+    for key in _REQUIRED_EVIDENCE_GATES:
+        value = evidence.get(key)
+        gate(
+            f"evidence:{key}",
+            value == "pass",
+            f"Expected retained evidence gate {key!r} to be 'pass', got {value!r}",
+        )
 
-    report = {
-        "version": version,
+    return {
+        "version": release_tag,
         "gates": gates,
         "details": details,
-        "summary": f"{sum(1 for v in gates.values() if v == 'PASS')}/{len(gates)} PASS",
+        "summary": f"{sum(1 for value in gates.values() if value == 'PASS')}/{len(gates)} PASS",
+        "manifest": str(manifest_path),
+        "mode": "evidence-validation",
     }
-    return report
 
 
 def main() -> None:
     import argparse
 
-    ap = argparse.ArgumentParser(description="Verify release gates (§63 dsa verify-release)")
-    ap.add_argument("version", nargs="?", default="v3.0.0", help="Release version (default v3.0.0)")
+    ap = argparse.ArgumentParser(description="Validate retained release-candidate evidence")
+    ap.add_argument("version", nargs="?", default="v3.0.0", help="Release version")
     ap.add_argument("--json", action="store_true", help="Output JSON")
     args = ap.parse_args()
     rep = verify_release(args.version)
     if args.json:
         print(json.dumps(rep, indent=2, ensure_ascii=False))
     else:
-        print(f"=== Release Verification Report {rep['version']} ===")
-        for k, v in rep["gates"].items():
-            print(f"  {k}: {v}")
+        print(f"=== Release Evidence Verification {rep['version']} ===")
+        for key, value in rep["gates"].items():
+            print(f"  {key}: {value}")
         print(f"Summary: {rep['summary']}")
         if rep["details"]:
             print("\nDetails (failures):")
-            for k, v in rep["details"].items():
-                print(f"  {k}: {v[:300]}")
-    if any(v == "FAIL" for v in rep["gates"].values()):
+            for key, value in rep["details"].items():
+                print(f"  {key}: {value[:300]}")
+    if any(value == "FAIL" for value in rep["gates"].values()):
         sys.exit(1)
 
 
