@@ -10,6 +10,53 @@
 
 ---
 
+## 0.0 Refresh — 2026-08-30 (Post-Phase-A Progress, Read This First)
+
+> The 2026-08-27 freeze below is **still the true V4.2 snapshot** (its verdict, release
+> identity, 8/8 case-study verification, external-validation framing, and supply-chain
+> classification all remain **accurate and re-verified live on 2026-08-30**). However, the
+> repository has since advanced through **Phases B–E of V4.3** (9 commits, `c8903d4` →
+> `a26d56a`), which **supersede several "NOT IMPLEMENTED / Phase-A-scope" statements** in
+> this report. Read this refresh block before trusting the historical wording below.
+
+### 0.0.1 What changed since the 2026-08-27 freeze (`c8903d4` → `a26d56a`, 9 commits)
+
+| Commit | Phase | Work |
+|--------|-------|------|
+| `4f47a51` | A follow-up | manifest pytest-count addendum + `docs/v4_3/EXTERNAL_VALIDATION_HISTORY.md` (§16 Medium #2 **CLOSED**) |
+| `23bd7c4` `820dba3` | B, C | **`ExternalBenchmarkAdapter` Protocol + `AgentBackedRunner`** in `packages/evaluation/src/dsa_evaluation/external_benchmark.py` + vendored copy; DataSciBench feasibility audit |
+| `9dd0b4c` `f7005a1` | C | **DataSciBench adapter v1** at `benchmarks/external/datascibench/` (adapter, manifest, README, LICENSE_NOTES) + smoke validation |
+| `b8bcbf6` | D | **DSAgentBench feasibility audit** → `docs/v4_3/DSAGENTBENCH_FEASIBILITY.md`: **NOT CURRENTLY SUPPORTED** (§28-32) |
+| `103be35` `a26d56a` | C, E | **Full 45-task DataSciBench run** (5.8s, 45/45 `COMPLETED`, 321 tool calls, honest no-GT `failed` outcomes) + `research/external/{DATASCIBENCH_REPORT.md,datascibench_results.json}` + `research/v4_3/CROSS_BENCHMARK_MATRIX.md` (Phase E §35) |
+
+### 0.0.2 Superseded statements (this report's historical wording → what is true now at HEAD)
+
+| Report statement (2026-08-27) | Status now (2026-08-30, HEAD `a26d56a`) |
+|--------------------------------|------------------------------------------|
+| "external benchmark adapters **NOT IMPLEMENTED** (V4.3 scope, §15)" (§0.1, §3.2, §15 table) | **SUPERSEDED** — `ExternalBenchmarkAdapter` Protocol, `AgentBackedRunner`, gold firewall (`AgentTaskView` + `assert_gold_isolation`), `§26` taxonomy, and `benchmarks/external/datascibench/` all exist and ran a full 45-task evaluation. No benchmark *score* exists yet (GT absent) — the honest §89 posture (honest execution + failure reporting) was delivered instead. |
+| "HEAD 1 ahead is **manifest-only** … `HEAD = tag + manifest`" (§1.2) | **SUPERSEDED** — `git describe` → `v4.2.10-9-ga26d56a`; HEAD now carries Phase B–E code + research artifacts (23 files / 4117 insertions vs `v4.2.10`). This is expected V4.3 progress, not drift. |
+| "Phase B … do not integrate DataSciBench yet" (§17 immediate fix #3) | **SUPERSEDED** — Phase B/C executed; the immediate fixes #1 (manifest addendum) and #2 (`EXTERNAL_VALIDATION_HISTORY.md`) are **CLOSED** at HEAD. |
+| "`ls docs/v4_3/ → V4_2_FINAL_TRUTH.md` only" (§13, §14) | **SUPERSEDED** — `docs/v4_3/` now also holds `EXTERNAL_VALIDATION_HISTORY.md`, `PHASE_B_ADAPTER_ARCHITECTURE.md`, `DATASCIBENCH_FEASIBILITY.md`, `DSAGENTBENCH_FEASIBILITY.md`. |
+
+### 0.0.3 Corrections to the 2026-08-27 wording (factual errors found by 2026-08-30 audit)
+
+| Report statement (2026-08-27) | Correction (verified live 2026-08-30) |
+|--------------------------------|----------------------------------------|
+| "`research/v4_2/*` … **TRIMMED at HEAD** (see §11)" (§14) | **WRONG** — `research/v4_2/V4_2_RESEARCH_REPORT.md` + `benchmark_vs_real_world.md` **exist at HEAD** and are git-tracked (blobs unchanged since `bf8d176`; `82bb1a3` never touched them). They are the canonical V4.2 research reports; §11/§14 should read **PRESENT at HEAD**. |
+| "`ls reproduction/` → `research/reproduction-showcase.md` only" (§5.2) | **WRONG** — `reproduction/` now contains *untracked* `external/logs/` + `v2/` leftovers (gitignored). The substantive claim (6 evidence files absent from working tree; `bash reproduction/external/run.sh` impossible without `git show bf8d176:…`) **still holds**. |
+| pytest **`253 passed, 1 warning`**; mypy **104**; mkdocs nav **18** (§2, §14) | **COUNT DRIFT** — now **`276 collected`** (Phase B/C added `tests/evals/test_external_benchmark.py` + `test_datascibench_adapter.py`), mypy **105 source files**, mkdocs nav **19** (report missed `- MCP Conformance: mcp.md`). All gates still **PASS** (pytest exit 0, `check_public_claims` 0 issues). |
+
+### 0.0.4 Still accurate at HEAD (re-verified 2026-08-30, no change)
+
+- **V4.2 truth verdict**: `V4.2 TRUTH GAPS DETECTED — No Critical Blocker to Platform Operation`.
+- **8/8 case studies VERIFIED** (all `outputs/` complete, `status=COMPLETED`, run ids + evidence counts match §4.3, 18 tool failures preserved; `case-studies/` untouched since `bf8d176`).
+- **Release identity 4.2.10** intact (pyproject / `__version__` / `CITATION.cff` / SBOM 192 / wheel self-contained).
+- **External validation = environment replication** (1 real macOS + 2 honest simulated), **NOT independent human validation**; `human-eval/` NOT CONDUCTED.
+- **Supply-chain**: Trusted Publishing OIDC implemented; PyPI/GitHub attestations + Scorecard + `docs/security/VERIFY_RELEASE.md` still **NOT IMPLEMENTED** (Phase H scope).
+- **Live gates PASS**: `dsa verify-release v4.2.10` → **12/12 PASS**; `mypy packages apps/api src` clean; `ruff` pass; `npm build` 13/13; `docker compose config` valid; `check_public_claims` → 0 issues.
+
+---
+
 ## 0. Verdict
 
 ```
@@ -430,15 +477,15 @@ At HEAD `c8903d4`, `reproduction/external/` is **not in the working tree** (trim
 
 | Artifact | Location (HEAD vs History) | Status | RQs | Evidence |
 |----------|-----------------------------|--------|-----|----------|
-| `V4_2_RESEARCH_REPORT.md` | Historical `research/v4_2/V4_2_RESEARCH_REPORT.md` at `bf8d176` (trim status: file trimmed at `82bb1a3`, not in HEAD working tree; preserved via `git show`) | Live `2026-08-22` (`b79610d`) era: RQ1-5 candidate (RQ1 Benchmark vs Real no direct correlation, RQ2 10 failures 1/6/3, RQ3 not measured, RQ4 Low friction 3-5s, RQ5 plugin 1.05× anecdotal) — proper design, no causal overclaim (§61) | — | `benchmark_vs_real_world.md` §47-50 |
-| `benchmark_vs_real_world.md` | Same — trimmed at `82bb1a3`, `git show bf8d176:research/v4_2/benchmark_vs_real_world.md` | Gap Analysis §47-50 (7 dims, 10 failures classified: 1 covered, 6 underrepresented, 3 missing) + 12 candidates for v3 `0.4.0` (Long-tail 4, Open 4, Financial 2, Large 1, Discovery 1) — **do not modify now** (§50) | — | `benchmarks/v2` 30/100 vs `case-studies` 8/8 (now) |
+| `V4_2_RESEARCH_REPORT.md` | `research/v4_2/V4_2_RESEARCH_REPORT.md` **PRESENT at HEAD** (git-tracked, blob unchanged since `bf8d176`; **NOT trimmed** — §0.0.3 correction) | Live `2026-08-22` (`b79610d`) era: RQ1-5 candidate (RQ1 Benchmark vs Real no direct correlation, RQ2 10 failures 1/6/3, RQ3 not measured, RQ4 Low friction 3-5s, RQ5 plugin 1.05× anecdotal) — proper design, no causal overclaim (§61) | — | `benchmark_vs_real_world.md` §47-50 |
+| `benchmark_vs_real_world.md` | `research/v4_2/benchmark_vs_real_world.md` **PRESENT at HEAD** (git-tracked; **NOT trimmed** — §0.0.3 correction) | Gap Analysis §47-50 (7 dims, 10 failures classified: 1 covered, 6 underrepresented, 3 missing) + 12 candidates for v3 `0.4.0` (Long-tail 4, Open 4, Financial 2, Large 1, Discovery 1) — **do not modify now** (§50) | — | `benchmarks/v2` 30/100 vs `case-studies` 8/8 (now) |
 | `claim-evidence-matrix.md` | `research/claim-evidence-matrix.md` **exists at HEAD** (13 sections, no SOTA without metric) | V3 §66: 13 claims → evidence → commit | — | `research/` |
 | `experiments/` | `research/experiments/` at HEAD | V3: Ablation L0-L5 configs | — | `research/results/ablation_*.json` era |
 | `figures/` / `tables/` | `research/figures/` / `research/tables/` at HEAD | Generated via `research/scripts/generate_*` (must be reproducible) | — | `dsa verify-release` checks `generate_tables.py` + `generate_figures.py` PASS at HEAD |
 | `HUMAN_EVALUATION_GUIDE` | Historical `docs/v3/HUMAN_EVALUATION_GUIDE.md` at `f24be10` era (trimmed at `82bb1a3`) | 11 samples, `cohens_kappa` / `krippendorff_alpha` | — | `human-eval/samples.json` 11 tasks at `bf8d176` (now trimmed) |
 | `V3_RESEARCH_REPORT.md` | `research/V3_RESEARCH_REPORT.md` at HEAD | V3 baseline | — | `research/` |
 
-**Current research at HEAD:** `research/claim-evidence-matrix.md` + `research/V3_RESEARCH_REPORT.md` + `research/figures/`/`tables/` + `research/results/` (ablation) are the durable commits. V4.2-specific `research/v4_2/*` (V4_2_RESEARCH_REPORT, benchmark_vs_real_world) are **not in HEAD working tree** (trimmed), but `case-studies/README.md` (8/8 verified at HEAD) supersedes their `N=8` gap analysis. For V4.3, research claims must be regenerated from `case-studies/8` + benchmark smoke (see §15/§17), not from the trimmed `research/v4_2/` history.
+**Current research at HEAD:** `research/claim-evidence-matrix.md` + `research/V3_RESEARCH_REPORT.md` + `research/v4_2/` (V4_2_RESEARCH_REPORT.md + benchmark_vs_real_world.md — **PRESENT, NOT trimmed**, §0.0.3) + `research/figures/`/`tables/` + `research/results/` (ablation) are the durable commits. `case-studies/README.md` (8/8 verified at HEAD) supersedes the older `N=8` gap analysis gap. For V4.3, research claims are now regenerated from `case-studies/8` + benchmark smoke + `research/external/DATASCIBENCH_REPORT.md` (Phase C §27, at HEAD since `a26d56a`).
 
 **Human eval status:** `human-eval/agreement.json` at `f24be10` era → `pending human reviews` (template `reviews.template.json` 8-dim Likert: Correctness, Statistical Validity, Evidence Quality, Clarity, Uncertainty, Usefulness, Trust). At HEAD, `human-eval/` is **deleted** (trimmed), so **NOT CONDUCTED** for V4.2 at HEAD (honest per §54). Must not invent evaluator identities.
 
@@ -545,7 +592,7 @@ Do NOT display a badge until actually obtained per §63.
 | `docs/v4_3/*` | `docs/v4_3/V4_2_FINAL_TRUTH.md` (this file) + historical `V4_2_1_*` via `git show` | **THIS PHASE A REPORT** (replaces trimmed `docs/v4_3/V4_2_FINAL_TRUTH.md` at `bf8d176`) | Phase A truth freeze | `docs/v4_3/` directory recreated at HEAD |
 | `case-studies/README.md` | `case-studies/README.md:1` | ✅ | `8/8 verified (real Agent, 18 tool failures preserved, no mock)` + table with `COMPLETED` runs | `case-studies/README.md` 8 rows |
 | `research/claim-evidence-matrix.md` | `research/claim-evidence-matrix.md:1` | ✅ | 13 sections claim→evidence→commit, no SOTA without metric | `research/claim-evidence-matrix.md` |
-| `research/v4_2/*` | `research/v4_2/` | **TRIMMED at HEAD** (see §11) | Historical via `git show` | `ls research/v4_2/` at HEAD → not found |
+| `research/v4_2/*` | `research/v4_2/` | **PRESENT at HEAD** (git-tracked: `V4_2_RESEARCH_REPORT.md`, `benchmark_vs_real_world.md`; **NOT trimmed** — §0.0.3 correction) | Read directly | `ls research/v4_2/` → both files |
 | `release/v4.2.10/manifest.json` | `release/v4.2.10/manifest.json:1` | ✅ | W12 §68 manifest (version/commit/tag/python/node/docker/package/benchmark 0.3.0/dataset v2/evaluator v2/environment/timestamp + 12/12 PASS at tag + publish OIDC) | `release/v4.2.10/manifest.json` |
 | `docs/getting-started.md` | `docs/getting-started.md:1` | ✅ | `uv sync --dev` + `pip install jack-data-science-agent` + `uv run dsa demo` + `examples/datasets/sales.csv` path | `docs/getting-started.md` 92 lines |
 | `scripts/check_public_claims.py` | `scripts/check_public_claims.py:1` | ✅ | `EXPECTED version 4.2.10, prev_version 4.1.1, pytest 253 (with drift note), mypy 104, sbom 192` | `.venv/bin/python scripts/check_public_claims.py → 0 issues` |
@@ -575,6 +622,8 @@ Before building adapters (Phase B-F), inspect whether current architecture suppo
 
 **V4.3 W2 design constraint (§16):** Future adapter must maintain `Original Benchmark → Adapter → DSA → Original Evaluator` (not `Modified Tasks → Custom Easier Evaluator`). Current internal flow violates §16 gold-isolation for external use — Phase B must add a `gold-isolation firewall` (task input is the only agent input; gold lives behind `Evaluation Boundary`).
 
+> **2026-08-30 refresh (§0.0):** every `NOT IMPLEMENTED` row above was **superseded by Phase B–E** (commits `23bd7c4`–`a26d56a`). At HEAD the Protocol (`ExternalBenchmarkAdapter` + `AgentBackedRunner`), §19 gold firewall (`AgentTaskView` + `assert_gold_isolation`), §26 taxonomy (UNSUPPORTED/FAILED/EXECUTION_ERROR), §18-versioned `benchmarks/external/datascibench/manifest.json` (task_count 222, dataset hashes, pinned commit `84ef3d4d`), result conversion (`export_results` → `results/datascibench_results.json`) and `benchmarks/external/datascibench/{adapter,run_eval,README,LICENSE_NOTES}` all exist and executed a **full 45-task run** (honest no-GT `failed` outcomes, `research/external/DATASCIBENCH_REPORT.md`). The one row still UNIMPLEMENTED: **process-level `Environment isolation`** (§20 subprocess separation) — module seam exists, subprocess split deferred. `docs/v4_3/DATASCIBENCH_FEASIBILITY.md` (`PARTIALLY SUPPORTED`) and `DSAGENTBENCH_FEASIBILITY.md` (`NOT CURRENTLY SUPPORTED`) record the remaining readiness posture.
+
 ---
 
 ## 16. Blocking Issues (Phase A → Phase B Gate)
@@ -589,14 +638,14 @@ Before building adapters (Phase B-F), inspect whether current architecture suppo
 
 ### Medium (Honest Gaps to Record as `PARTIAL`/`NOT IMPLEMENTED`, Not Blockers)
 
-1. **Pytest count drift `257 → 253` (Medium).** Manifest says `257 passed`, live HEAD collects `253 passed`. Root cause is `82bb1a3` trim (4 artifact-dependent tests now correctly not collected). **Not a regression** — but the next patch or `release/v4.2.10/manifest.json` addendum must note `253 @ HEAD (post-trim)` to avoid `257` being quoted as live HEAD count. `scripts/check_public_claims.py` already expects `253` (± drift) at HEAD; CI `verify_release` passes because it checks boolean `PASS`, not exact count.
-2. **External validation artifacts not at HEAD working tree (Medium).** `reproduction/external/` exists only in git history (`bf8d176` `reproduction/external/summary.json` etc., honest `1 real + 2 sim`), not at `HEAD` (`ls reproduction/` → `research/reproduction-showcase.md` only, `.gitignore: reproduction/`). Fresh-clone `HEAD` cannot `ls reproduction/external/` without `git show bf8d176:reproduction/external/summary.json`. **Fix:** either `git checkout bf8d176 -- reproduction/external/` (restore the 5 files with `-f`), or add a `docs/v4_3/EXTERNAL_VALIDATION_HISTORY.md` pointer to the git-history hashes, or explicitly document `NOT VERIFIED at HEAD — see history` per §103 note. Do not fabricate 3 independent humans.
+1. **Pytest count drift `257 → 253` (Medium) — CLOSED 2026-08-28, then drifted again.** Manifest says `257 passed`, live HEAD collects `253 passed` (at freeze). Root cause is `82bb1a3` trim (4 artifact-dependent tests now correctly not collected). **Not a regression**. Addendum applied at `4f47a51` (`release/v4.2.10/manifest.json` notes `Live HEAD collects '253 passed'`). **2026-08-30 refresh:** Phase B/C then added `tests/evals/test_external_benchmark.py` (11) + `test_datascibench_adapter.py` (12) → live collection now **276**, manifest still says `257`, `check_public_claims.py` expects `253` (all three lag; every gate still PASSes — boolean, not exact count). This drift remains **Medium/informational**, not a regression.
+2. **External validation artifacts not at HEAD working tree (Medium) — CLOSED 2026-08-28.** `reproduction/external/` exists only in git history (`bf8d176` `reproduction/external/summary.json` etc., honest `1 real + 2 sim`), not at `HEAD` (`.gitignore: reproduction/`). **Fix applied:** `docs/v4_3/EXTERNAL_VALIDATION_HISTORY.md` (commit `4f47a51`) restores provenance (hashes, `git show` retrieval commands) and honestly labels A=real macOS + B/C=simulated. Do not fabricate 3 independent humans (unchanged).
 3. **Supply-chain attestations pending (Medium, V4.3 scope).** Trusted Publishing is live (`publish.yml` OIDC succeeded for `4.2.10`), but `PyPI attestations`, `GitHub artifact attestations`, `docs/security/VERIFY_RELEASE.md`, `OpenSSF Scorecard`, `Best Practices` remain NOT IMPLEMENTED. **Not a Phase A blocker** — these are Phase H (W8 §55-64). Do not claim `verifiably produced package` until attestations land.
 
 ### Low (Polish, Not Release-Blocking)
 
-- **`docs/DEVELOPMENT_STATUS.md` missing**, `AGENTS.md` missing, `research/v4_2/` + `docs/v4_2/` trimmed at HEAD (historical via `git show`). All are documentation-reference gaps, not code gaps. `mkdocs` strict passes via `validation.links.not_found: ignore`.
-- `mypy .` shows `230 errors in 36 files` in `tests/` mocks (pre-existing, never the release gate `mypy packages apps/api src` which is `104 clean`).
+- **`docs/DEVELOPMENT_STATUS.md` missing**, `AGENTS.md` missing, `docs/v4_2/` trimmed at HEAD (historical via `git show`). All are documentation-reference gaps, not code gaps. `mkdocs` strict passes via `validation.links.not_found: ignore`. (`research/v4_2/` is **PRESENT** at HEAD, not trimmed — §0.0.3.)
+- `mypy .` shows `230 errors in 36 files` in `tests/` mocks (pre-existing, never the release gate `mypy packages apps/api src` which is `105 clean` at HEAD — see §0.0.3 count drift).
 - PyPI `jack-data-science-agent` `releases` history shows `4.1.0, 4.2.5, 4.2.10` only (missing `4.2.0-4.2.4` due to vendoring publish fixes — honest per `CHANGELOG.md` `4.2.6-4.2.10`).
 
 ---
@@ -605,18 +654,17 @@ Before building adapters (Phase B-F), inspect whether current architecture suppo
 
 **Phase A is now COMPLETE.** Do NOT automatically continue to Phase B — per §98 `STOP` after each Phase. Below is the **recommended work order** for the next phases (not executed in this freeze):
 
+> **2026-08-30 refresh (§0.0):** Phases **B, C, D, E are now EXECUTED** at HEAD (`23bd7c4`–`a26d56a`); Phase A's three immediate fixes are **CLOSED**. The `STOP` after each phase was honored. Next untaken phase: **F (Publication Statistics)** — needs real-model runs + GT; then G–L. The table below is preserved as the Phase-A-era plan.
+
 ```text
 Phase A  V4.2 Truth Freeze                    ✅ COMPLETE (this report, 2026-08-27)
          ↓ (STOP — this document is the gate)
-Phase B  External Benchmark Architecture      W2  §15-21  (add ExternalBenchmarkAdapter Protocol, gold isolation firewall, evaluation boundary, unsupported reporting, manifest versioning — additive, no rewrite per Architecture Freeze §7)
-         ↓ Inspect→Plan→Implement→Execute→Test→Evaluate→Document→Commit→STOP
-Phase C  DataSciBench                        W3  §22-27  (feasibility audit → benchmarks/external/datascibench/ adapter/manifest/README/LICENSE_NOTES/results/logs, honest UNSUPPORTED vs Failed vs Error)
+Phase B  External Benchmark Architecture      ✅ COMPLETE 2026-08-28 (`23bd7c4`) — ExternalBenchmarkAdapter Protocol + AgentBackedRunner + §19 gold firewall + §26 taxonomy (additive, no rewrite)
+Phase C  DataSciBench                        ✅ COMPLETE 2026-08-28→30 (`9dd0b4c`/`820dba3` adapter, `103be35`/`a26d56a` full 45-task run) — benchmarks/external/datascibench/ with manifest/README/LICENSE_NOTES/results
+Phase D  DSAgentBench / Real-Computer        ✅ FEASIBILITY COMPLETE (`b8bcbf6`) — **NOT CURRENTLY SUPPORTED** (artifacts unreleased, real-computer surface exceeds DSA; DOCUMENTED, not faked)
+Phase E  Cross-Benchmark Scientific Eval     ✅ MATRIX CREATED 2026-08-30 (`a26d56a`) — research/v4_3/CROSS_BENCHMARK_MATRIX.md; Generalization Gap uncomputed until GT-driven DataSciBench score exists
          ↓ STOP
-Phase D  DSAgentBench / Real-Computer        W4  §28-32  (feasibility audit LICENSE_NOTES; if infeasible report FULLY/PARTIALLY/NOT SUPPORTED, do not fake)
-         ↓ STOP
-Phase E  Cross-Benchmark Scientific Eval     W5  §33-37  (research/v4_3/CROSS_BENCHMARK_MATRIX.md, Generalization Gap = Internal - External, paired CI, failure transfer matrix)
-         ↓ STOP
-Phase F  Publication Statistics              W6  §38-48  (RQ1-5, ablation A-F, ≥3 seeds, bootstrap CI, paired tests, Holm/BH, effect sizes, research/v4_3/results/ raw→analysis→figures/tables, no manual edits)
+Phase F  Publication Statistics              W6  §38-48  (NEXT: RQ1-5, ablation A-F, ≥3 seeds, bootstrap CI, paired tests, Holm/BH, effect sizes, research/v4_3/results/ raw→analysis→figures/tables, no manual edits)
          ↓ STOP
 Phase G  Independent Validation              W7  §49-54  (distinguish environment replication vs independent human validation; human protocol blind 8-dim Likert + Kappa/Alpha if reviewers exist; else NOT CONDUCTED)
          ↓ STOP
@@ -633,9 +681,9 @@ Phase L  V4.3 Release Certification          W12 §87-96  (gates §88-94: pytest
 
 **Immediate fix order (this week, before Phase B):**
 
-1. **Add a one-line addendum** to `release/v4.2.10/manifest.json` notes: `pytest 253 @ HEAD (post-trim) vs 257 @ tag (pre-trim)` — or `CHANGELOG.md` `4.2.11` patch note.
-2. **Restore or pointer `reproduction/external/`:** either `git show bf8d176:reproduction/external/` → `docs/v4_3/EXTERNAL_VALIDATION_HISTORY.md` with hashes/commands, or `git checkout -f bf8d176 -- reproduction/external/` (adding the 5 files despite `.gitignore`).
-3. **Proceed to Phase B only after this freeze is committed** — do not integrate DataSciBench yet (§99).
+1. ✅ **DONE 2026-08-28 (`4f47a51`)** — `release/v4.2.10/manifest.json` addendum record `253 @ HEAD (post-trim) vs 257 @ tag`.
+2. ✅ **DONE 2026-08-28 (`4f47a51`)** — `docs/v4_3/EXTERNAL_VALIDATION_HISTORY.md` created (hashes/`git show` commands, honest `1 real + 2 sim` labels).
+3. ✅ **SUPERSEDED 2026-08-28→30** — Phase B/C then proceeded (freeze was committed first), then Phase D/E. Next phase is **F** (see refresh note above).
 
 ---
 
