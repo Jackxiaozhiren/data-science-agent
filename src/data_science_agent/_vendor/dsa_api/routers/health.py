@@ -28,22 +28,30 @@ async def _database_status() -> dict[str, Any]:
 
 @router.get("/health")
 async def health() -> dict[str, Any]:
-    """Fast liveness check suitable for platform health probes.
+    """Minimal process liveness check for hosting-platform probes.
 
-    Do not import the dataframe/LLM stacks here: Render expects HTTP health
-    checks to answer within a few seconds, and importing optional scientific
-    dependencies during every liveness probe defeats lazy startup on small
-    instances. Use /health/dependencies for the deeper diagnostic instead.
+    This route intentionally avoids database I/O and optional scientific/LLM
+    imports so a small demo instance can prove that the web process is alive
+    immediately. Use /ready for database readiness and /health/dependencies for
+    the deeper optional-dependency diagnostic.
     """
-    db = await _database_status()
-    details: dict[str, Any] = {"process": {"status": "ok"}, "db": db}
-    overall = "ok" if db.get("status") == "ok" else "degraded"
-    return {"status": overall, "details": details, "version": settings.version}
+    return {
+        "status": "ok",
+        "details": {"process": {"status": "ok"}},
+        "version": settings.version,
+    }
 
 
 @router.get("/ready")
 async def ready() -> dict[str, Any]:
-    return await health()
+    """Readiness check that verifies the configured database."""
+    db = await _database_status()
+    overall = "ok" if db.get("status") == "ok" else "degraded"
+    return {
+        "status": overall,
+        "details": {"process": {"status": "ok"}, "db": db},
+        "version": settings.version,
+    }
 
 
 @router.get("/health/dependencies")
