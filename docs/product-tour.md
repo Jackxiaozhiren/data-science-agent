@@ -34,7 +34,7 @@ The repository contains eight verified end-to-end case studies. These three are 
 
 The verified CS01 run completed in **1.33 s**, produced **6 evidence items**, **6 tool calls**, and **5 artifacts**. It demonstrates profiling, correlation analysis, SQL aggregation, a statistical test, visualization, evidence capture, and report generation on a versioned synthetic dataset.
 
-[Open CS01 Sales on GitHub](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/01-sales){ .md-button .md-button--primary }
+**[Open CS01 Sales on GitHub](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/01-sales)**
 
 ### 2. Time-series forecasting — evidence plus visible failure recovery
 
@@ -42,7 +42,7 @@ The verified CS01 run completed in **1.33 s**, produced **6 evidence items**, **
 
 The verified CS03 run completed in about **1.28 s** with **5 evidence items**. The case intentionally keeps recorded tool failures visible instead of removing them from the demo record, so the workflow also shows capability boundaries and recovery behavior.
 
-[Open CS03 Time Series on GitHub](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/03-time-series){ .md-button }
+**[Open CS03 Time Series on GitHub](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/03-time-series)**
 
 ### 3. ML classification — model evaluation in the same provenance trail
 
@@ -50,7 +50,7 @@ The verified CS03 run completed in about **1.28 s** with **5 evidence items**. T
 
 The verified CS08 run completed in about **0.11 s** with **5 evidence items**. It demonstrates classification, evaluation, feature importance, evidence capture, and explicit limitations in one reproducibility-oriented workflow.
 
-[Open CS08 Classification on GitHub](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/08-classification){ .md-button }
+**[Open CS08 Classification on GitHub](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/08-classification)**
 
 ## What the eight-case suite covers
 
@@ -65,7 +65,7 @@ The verified CS08 run completed in about **0.11 s** with **5 evidence items**. I
 | CS07 | Data quality | `COMPLETED` | 3 | Profiling / quality investigation |
 | CS08 | Machine learning | `COMPLETED` | 5 | Classification + feature importance |
 
-[Browse all eight case studies](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies){ .md-button .md-button--primary }
+**[Browse all eight case studies](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies)**
 
 ## What counts as verified here
 
@@ -86,7 +86,7 @@ For the flagship sales case, the recorded trajectory includes:
 
 Each evidence item links a claim to a source/tool call and ultimately to the hashed input dataset. The repository keeps the generated report and evidence files under the corresponding case-study output directories.
 
-[Inspect CS01 evidence and outputs](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/01-sales/outputs){ .md-button }
+**[Inspect CS01 evidence and outputs](https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/01-sales/outputs)**
 
 ## Run it yourself
 
