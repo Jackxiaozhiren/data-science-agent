@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Data Science Agent — verified product tour for evidence-grounded data analysis." />
+  <title>Data Science Agent — Verified Product Tour</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2f;--panel2:#0f172a;--text:#eef2ff;--muted:#aab4cf;--line:#263250;--accent:#8ab4ff;--accent2:#b8f2d2;--warn:#ffd48a;--shadow:0 18px 60px rgba(0,0,0,.32)}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,#172342 0,#0b1020 38%,#090d19 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6}
+    a{color:inherit;text-decoration:none}.wrap{max-width:1120px;margin:auto;padding:28px 24px 72px}.nav{display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font-weight:800;letter-spacing:-.02em}.navlinks{display:flex;gap:10px;flex-wrap:wrap}.pill,.btn{border:1px solid var(--line);border-radius:999px;padding:9px 14px;background:rgba(18,26,47,.72)}
+    .hero{padding:88px 0 54px}.kicker{display:inline-block;border:1px solid #31507f;background:#10213f;color:#cfe0ff;border-radius:999px;padding:7px 12px;font-size:.9rem;font-weight:700}.hero h1{font-size:clamp(2.65rem,7vw,5.7rem);line-height:.96;letter-spacing:-.06em;margin:22px 0 20px;max-width:950px}.hero p{font-size:clamp(1.05rem,2vw,1.35rem);color:var(--muted);max-width:820px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.btn{font-weight:750;padding:12px 18px}.btn.primary{background:var(--text);color:#0b1020;border-color:var(--text)}.btn.secondary:hover,.pill:hover{border-color:#53668f}.note{margin-top:26px;border-left:3px solid var(--warn);padding:12px 16px;background:rgba(255,212,138,.07);color:#e9ddc4;max-width:850px}
+    .flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:42px 0}.step{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 12px;text-align:center;font-weight:700}.arrow{display:none}
+    section{padding:34px 0}.eyebrow{color:var(--accent2);font-weight:800;text-transform:uppercase;letter-spacing:.12em;font-size:.78rem}.section-title{font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-.04em;margin:8px 0 20px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:linear-gradient(180deg,rgba(18,26,47,.96),rgba(15,23,42,.96));border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}.card h3{font-size:1.25rem;margin:4px 0 8px}.card p{color:var(--muted)}.metric{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.metric span{font-size:.85rem;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#dce6ff}.link{display:inline-block;margin-top:8px;color:var(--accent);font-weight:800}
+    .evidence{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.code{background:#070b14;border:1px solid var(--line);border-radius:18px;padding:22px;overflow:auto;color:#d8e4ff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92rem;white-space:pre-wrap}.facts{display:grid;gap:12px}.fact{border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(18,26,47,.7)}.fact strong{display:block;color:var(--accent2)}
+    .install{display:grid;grid-template-columns:1fr 1fr;gap:16px}.cta{margin-top:40px;background:linear-gradient(135deg,#18335d,#173f35);border:1px solid #385b72;border-radius:26px;padding:32px}.cta h2{margin:0 0 10px;font-size:2rem}.footer{padding-top:42px;color:#8591ad;font-size:.9rem;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    @media(max-width:850px){.grid,.evidence,.install{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}.hero{padding-top:58px}.nav{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <div class="brand">Data Science Agent</div>
+      <div class="navlinks">
+        <a class="pill" href="https://github.com/Jackxiaozhiren/data-science-agent">GitHub</a>
+        <a class="pill" href="https://pypi.org/project/jack-data-science-agent/">PyPI</a>
+        <a class="pill" href="https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.3.0">v4.3.0</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <span class="kicker">Verified repository-artifact tour</span>
+      <h1>The AI data scientist that shows its work.</h1>
+      <p>Data Science Agent turns questions about CSV files and databases into SQL, statistics, machine learning, visualization, claim-level evidence, and reproducible artifacts that can be inspected instead of merely trusted.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://pypi.org/project/jack-data-science-agent/">Install from PyPI</a>
+        <a class="btn secondary" href="https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies">Explore verified cases</a>
+      </div>
+      <div class="note"><strong>Boundary:</strong> this is a static product tour built from recorded, verified DSA runs. It does not upload files, execute a new browser-side analysis, or call a live model/API.</div>
+    </header>
+
+    <div class="flow" aria-label="Evidence path">
+      <div class="step">Question</div><div class="step">Plan</div><div class="step">Tools</div><div class="step">Evidence</div><div class="step">Claim</div><div class="step">Artifacts</div>
+    </div>
+
+    <section>
+      <div class="eyebrow">Three flagship workflows</div>
+      <h2 class="section-title">See the evidence path in real runs</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="eyebrow">CS01 · Business analytics</div>
+          <h3>Sales analysis</h3>
+          <p>From a stakeholder question to profiling, correlation, SQL aggregation, statistical testing, visualization, evidence capture, and a reproducible report.</p>
+          <div class="metric"><span>1.33 s</span><span>6 evidence</span><span>6 tool calls</span><span>5 artifacts</span></div>
+          <a class="link" href="https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/01-sales">Inspect CS01 →</a>
+        </article>
+        <article class="card">
+          <div class="eyebrow">CS03 · Forecasting</div>
+          <h3>Time-series workflow</h3>
+          <p>A temporal workflow that preserves recorded tool failures instead of polishing them away, making recovery behavior and capability boundaries inspectable.</p>
+          <div class="metric"><span>~1.28 s</span><span>5 evidence</span><span>failures retained</span></div>
+          <a class="link" href="https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/03-time-series">Inspect CS03 →</a>
+        </article>
+        <article class="card">
+          <div class="eyebrow">CS08 · Machine learning</div>
+          <h3>Imbalanced classification</h3>
+          <p>Classification, evaluation, feature importance, evidence capture, and explicit limitations inside the same provenance-oriented workflow.</p>
+          <div class="metric"><span>~0.11 s</span><span>5 evidence</span><span>ML evaluation</span></div>
+          <a class="link" href="https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies/08-classification">Inspect CS08 →</a>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">What makes it different</div>
+      <h2 class="section-title">A claim should trace back to computation and data</h2>
+      <div class="evidence">
+        <div class="code">Question
+  ↓
+Executed analysis
+  ↓
+Tool call / statistical result / model output
+  ↓
+Evidence item
+  ↓
+Claim
+  ↓
+report.md + experiment.json + evidence_graph.json
++ analysis.ipynb + reproduce.sh</div>
+        <div class="facts">
+          <div class="fact"><strong>Inspectable</strong>Important claims are linked to concrete analysis outputs rather than existing only as prose.</div>
+          <div class="fact"><strong>Reproducible</strong>Completed runs can include reports, experiment metadata, evidence graphs, notebooks, and reproduction scripts.</div>
+          <div class="fact"><strong>Failure-visible</strong>The verified case-study suite keeps recorded tool failures and limitations instead of deleting them from the demo record.</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Run it yourself</div>
+      <h2 class="section-title">From install to inspectable output</h2>
+      <div class="install">
+        <div class="code">pip install jack-data-science-agent
+
+dsa demo</div>
+        <div class="code">dsa analyze sales.csv \
+  --task "Which factors explain revenue, and are the effects statistically significant?"</div>
+      </div>
+      <p style="color:var(--muted);margin-top:14px">Python 3.12+ is the supported baseline.</p>
+    </section>
+
+    <section class="cta">
+      <div class="eyebrow">Eight verified workflows</div>
+      <h2>Business analytics, churn, forecasting, marketing, finance, public statistics, data quality, and classification.</h2>
+      <p style="color:#d9e4ee;max-width:850px">The current suite uses versioned synthetic datasets with a fixed seed and is intended as product-behavior and reproducibility evidence—not as an independent real-LLM leaderboard.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/Jackxiaozhiren/data-science-agent/tree/main/case-studies">Browse all case studies</a>
+        <a class="btn secondary" href="https://github.com/Jackxiaozhiren/data-science-agent/blob/main/docs/product-tour.md">Read the full Product Tour</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Data Science Agent · verified static Product Tour</span>
+      <span><a href="https://github.com/Jackxiaozhiren/data-science-agent">Source</a> · <a href="https://pypi.org/project/jack-data-science-agent/">PyPI</a> · <a href="https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.3.0">Release v4.3.0</a></span>
+    </footer>
+  </div>
+</body>
+</html>
