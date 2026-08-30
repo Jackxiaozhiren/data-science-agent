@@ -117,8 +117,9 @@ jobs:
           from pathlib import Path
 
           body = json.loads(Path("/tmp/render-health.json").read_text(encoding="utf-8"))
-          assert body["status"] in {"ok", "degraded"}
-          assert set(body["details"]) == {"process", "db"}
+          assert body["status"] == "ok"
+          assert set(body["details"]) == {"process"}
+          assert "db" not in body["details"]
           assert "duckdb" not in body["details"]
           assert "polars" not in body["details"]
           PY
