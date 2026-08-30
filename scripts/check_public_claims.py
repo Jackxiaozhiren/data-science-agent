@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -64,6 +65,7 @@ PATTERNS = {
     # old_benchmark - historical catalog 0.2.0 kept in CHANGELOG/docs for audit
 }
 
+
 # Maturity check: README V4 line should match RELEASE_MATRIX (§23)
 def check_maturity():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -87,11 +89,16 @@ def check_maturity():
         ts_pos = v4_line.find("Time Series")
         if stable_pos != -1 and exp_pos != -1 and jupyter_pos != -1:
             if stable_pos < jupyter_pos < exp_pos:
-                issues.append("README V4 line lists Jupyter as Stable but RELEASE_MATRIX says Experimental — maturity mismatch (§23)")
+                issues.append(
+                    "README V4 line lists Jupyter as Stable but RELEASE_MATRIX says Experimental — maturity mismatch (§23)"
+                )
         if stable_pos != -1 and exp_pos != -1 and ts_pos != -1:
             if exp_pos < ts_pos:
-                issues.append("README V4 line lists Time Series as Experimental but RELEASE_MATRIX says Stable (§23)")
+                issues.append(
+                    "README V4 line lists Time Series as Experimental but RELEASE_MATRIX says Stable (§23)"
+                )
     return issues
+
 
 def scan_file(path: Path):
     try:
@@ -103,7 +110,7 @@ def scan_file(path: Path):
     for name, pat in PATTERNS.items():
         for m in pat.finditer(text):
             # Skip if line contains versioned annotation like "V3.0: 155" or "V4.1 live"
-            line = text[max(0, m.start()-80):m.end()+80]
+            line = text[max(0, m.start() - 80) : m.end() + 80]
             # Allow historical in CHANGELOG and report docs
             if path.name == "CHANGELOG.md":
                 continue  # CHANGELOG historical versions are expected per §18
@@ -113,7 +120,12 @@ def scan_file(path: Path):
                 continue
             if "QUANTITATIVE_CLAIMS" in str(path):
                 continue
-            if "V4.1 live" in line or "V3.0:" in line or "V1:" in line or "Historical" in line:
+            if (
+                "V4.1 live" in line
+                or "V3.0:" in line
+                or "V1:" in line
+                or "Historical" in line
+            ):
                 continue
             # For old package, allow in POPULAR_PYPI typosquat list and report
             if "POPULAR_PYPI" in line or "WORKSPACE_PACKAGES" in line:
@@ -123,31 +135,66 @@ def scan_file(path: Path):
             findings.append((name, m.group(0), line.strip()[:120]))
     return findings
 
+
+def _is_release_candidate_ref(version: str) -> bool:
+    """Allow a frozen release branch to lead the latest tag before final tagging.
+
+    On pull_request runs GitHub exposes the source branch as GITHUB_HEAD_REF;
+    on branch pushes it is GITHUB_REF_NAME. The exception is deliberately narrow:
+    only release/v<expected>-rc or release/v<expected>-rcN is accepted.
+    """
+
+    ref = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME") or ""
+    return bool(re.fullmatch(rf"release/v{re.escape(version)}-rc\d*", ref))
+
+
 def check_version_consistency():
     issues = []
     # Check pyproject vs CITATION vs __init__ vs sdk vs sbom vs README title
     try:
-        py_ver = re.search(r'version = "([^"]+)"', (ROOT / "pyproject.toml").read_text()).group(1)
+        py_ver = re.search(
+            r'version = "([^"]+)"', (ROOT / "pyproject.toml").read_text()
+        ).group(1)
         cit_text = (ROOT / "CITATION.cff").read_text()
-        m = re.search(r'^version: ([0-9.]+)', cit_text, re.MULTILINE)
+        m = re.search(r"^version: ([0-9.]+)", cit_text, re.MULTILINE)
         cit_ver = m.group(1) if m else "?"
-        init_ver = re.search(r'__version__ = "([^"]+)"', (ROOT / "src/data_science_agent/__init__.py").read_text()).group(1)
-        sdk_ver = re.search(r'self\._version = "([^"]+)"', (ROOT / "src/data_science_agent/sdk.py").read_text()).group(1)
+        init_ver = re.search(
+            r'__version__ = "([^"]+)"',
+            (ROOT / "src/data_science_agent/__init__.py").read_text(),
+        ).group(1)
+        sdk_ver = re.search(
+            r'self\._version = "([^"]+)"',
+            (ROOT / "src/data_science_agent/sdk.py").read_text(),
+        ).group(1)
         sbom_ver = __import__("json").loads((ROOT / "release/sbom.json").read_text())["version"]
         # README intentionally does not pin a version in the title (modern OSS pattern).
-        for name, ver in [("pyproject", py_ver), ("CITATION", cit_ver), ("__init__", init_ver), ("sdk", sdk_ver), ("sbom", sbom_ver)]:
+        for name, ver in [
+            ("pyproject", py_ver),
+            ("CITATION", cit_ver),
+            ("__init__", init_ver),
+            ("sdk", sdk_ver),
+            ("sbom", sbom_ver),
+        ]:
             if ver != EXPECTED["version"]:
                 issues.append(f"version mismatch: {name}={ver} != expected {EXPECTED['version']}")
-        # Check tag
+        # Check tag. Normal branches/tags remain strict. A frozen release-candidate
+        # branch may intentionally carry the next version before the final tag exists.
         import subprocess
-        tag = subprocess.run(["git", "describe", "--tags", "--always"], capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
-        # Allow HEAD ahead for dev (e.g., v4.1.1-1-g...), but pyproject version must match tag base
+
+        tag = subprocess.run(
+            ["git", "describe", "--tags", "--always"],
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+        ).stdout.strip()
         base_tag = tag.split("-")[0] if "-" in tag else tag
-        if base_tag != f"v{EXPECTED['version']}":
-            issues.append(f"git tag mismatch: {tag} base {base_tag} != v{EXPECTED['version']}")
+        expected_tag = f"v{EXPECTED['version']}"
+        if base_tag != expected_tag and not _is_release_candidate_ref(EXPECTED["version"]):
+            issues.append(f"git tag mismatch: {tag} base {base_tag} != {expected_tag}")
     except Exception as e:
         issues.append(f"version check error: {e}")
     return issues
+
 
 def main():
     all_findings = []
@@ -163,11 +210,32 @@ def main():
     # Scan files - exclude historical docs per §18 (V2/V3/V4 historical reports)
     for pattern in SCAN_GLOBS:
         for path in ROOT.glob(pattern):
-            if any(x in str(path) for x in [".venv", "node_modules", ".git", "site", "dist", ".mypy_cache", ".ruff_cache"]):
+            if any(
+                x in str(path)
+                for x in [
+                    ".venv",
+                    "node_modules",
+                    ".git",
+                    "site",
+                    "dist",
+                    ".mypy_cache",
+                    ".ruff_cache",
+                ]
+            ):
                 continue
             # Skip historical docs that are expected to contain old numbers (§18 Valid Historical) - completely skip stale checks
             rel = str(path.relative_to(ROOT)) if path.is_absolute() else str(path)
-            if any(rel.startswith(pfx) for pfx in ["docs/", "research/", "benchmarks/", "plugins/", "apps/jupyter/", "src/data_science_agent/"]):
+            if any(
+                rel.startswith(pfx)
+                for pfx in [
+                    "docs/",
+                    "research/",
+                    "benchmarks/",
+                    "plugins/",
+                    "apps/jupyter/",
+                    "src/data_science_agent/",
+                ]
+            ):
                 continue
             findings = scan_file(path)
             for kind, match, line in findings:
@@ -183,13 +251,18 @@ def main():
         print(f"  [{kind}] {match!r} — {line[:120]}")
 
     # Fail if any high severity (version_consistency, old_package_pip, stale_test_counts without versioned annotation)
-    high = [f for f in all_findings if f[0].startswith(("version_consistency", "old_package_pip", "old_repo"))]
+    high = [
+        f
+        for f in all_findings
+        if f[0].startswith(("version_consistency", "old_package_pip", "old_repo"))
+    ]
     # stale_test_counts now versioned, so not high if annotated
     if high:
         print(f"\n✗ {len(high)} high-severity issues — requires fix (see §18, §26)")
         return 1
     print("\n⚠ Low/medium issues — review recommended")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
