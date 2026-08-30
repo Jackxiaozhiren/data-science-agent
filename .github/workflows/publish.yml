@@ -35,6 +35,18 @@ jobs:
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: rm -rf dist && uv build
+      - name: Fresh-wheel CLI and SDK smoke before publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/dsa-publish-smoke
+          /tmp/dsa-publish-smoke/bin/python -m pip install --upgrade pip
+          /tmp/dsa-publish-smoke/bin/python -m pip install dist/*.whl
+          (
+            cd /tmp
+            /tmp/dsa-publish-smoke/bin/dsa --help >/dev/null
+            /tmp/dsa-publish-smoke/bin/python -c 'import importlib.metadata; import data_science_agent; installed = importlib.metadata.version("jack-data-science-agent"); assert data_science_agent.__version__ == installed; assert data_science_agent.Agent().version == installed; print(f"publish wheel smoke: jack-data-science-agent {installed}")'
+          )
       - name: Publish to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
