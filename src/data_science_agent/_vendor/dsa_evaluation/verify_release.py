@@ -12,11 +12,33 @@ for _p in [Path(__file__).resolve()] + list(Path(__file__).resolve().parents):
         ROOT = _p
         break
 
+_ALLOWED_COMMANDS: frozenset[tuple[str, ...]] = frozenset(
+    {
+        ("npm", "--prefix", "apps/vscode", "ci", "--legacy-peer-deps"),
+        ("npm", "--prefix", "apps/web", "ci", "--legacy-peer-deps"),
+        ("uv", "run", "pytest", "-q"),
+        ("uv", "run", "mypy", "packages", "apps/api", "--ignore-missing-imports"),
+        ("uv", "run", "ruff", "check", "packages", "apps/api", "tests"),
+        ("npm", "--prefix", "apps/web", "run", "build"),
+        ("docker", "compose", "config"),
+        ("uv", "run", "pytest", "tests/security", "-q"),
+        ("uv", "run", "pytest", "tests/mcp", "-q"),
+        ("uv", "run", "dsa", "--limit", "5"),
+        ("uv", "run", "dsa", "demo"),
+        ("uv", "run", "python", "research/scripts/generate_tables.py"),
+        ("uv", "run", "python", "research/scripts/generate_figures.py"),
+        ("uv", "run", "python", "-m", "mkdocs", "build", "--strict"),
+    }
+)
+
 
 def _run(cmd: list[str], timeout: int = 300) -> tuple[bool, str]:
+    command = tuple(cmd)
+    if command not in _ALLOWED_COMMANDS:
+        return False, f"Blocked non-allowlisted release command: {command!r}"
     try:
         p = subprocess.run(
-            cmd,
+            list(command),
             cwd=str(ROOT),
             capture_output=True,
             text=True,
