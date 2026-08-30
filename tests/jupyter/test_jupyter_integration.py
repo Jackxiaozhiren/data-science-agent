@@ -142,7 +142,7 @@ def test_jupyter_reproducibility_metadata_all_fields() -> None:
     )
     assert meta["dataset_hash"] == h
     assert meta["agent_version"] is not None
-    assert meta["sdk_version"] == "4.2.10"
+    assert meta["sdk_version"] == "4.3.0"
     assert meta["prompt_version"] is not None and len(meta["prompt_version"]) == 12
     assert meta["tool_version"] is not None
     assert meta["experiment_id"] == "run-abc123"
