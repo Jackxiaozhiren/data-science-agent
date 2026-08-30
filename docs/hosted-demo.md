@@ -17,7 +17,9 @@ The public demo runs in deterministic offline/heuristic mode so a visitor can co
 
 ## Deploy the API on Render
 
-Use the repository's **Deploy to Render** button, or create a new Blueprint from this repository in the Render dashboard.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Jackxiaozhiren/data-science-agent)
+
+Use the button above, or create a new Blueprint from this repository in the Render dashboard.
 
 The Blueprint creates one Docker Web Service with:
 
