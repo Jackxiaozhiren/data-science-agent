@@ -9,12 +9,15 @@ services:
     autoDeploy: false
     dockerfilePath: ./docker/Dockerfile.api
     dockerContext: .
-    dockerCommand: /bin/sh -c '.venv/bin/uvicorn dsa_api.main:app --host 0.0.0.0 --port ${PORT:-10000}'
     healthCheckPath: /health
     envVars:
       - key: DSA_LLM_MODE
         value: heuristic
       - key: DSA_LLM_FALLBACK
         value: heuristic
+      - key: DSA_DATABASE_URL
+        value: sqlite+aiosqlite:////tmp/dsa.db
+      - key: PYTHONUNBUFFERED
+        value: "1"
       - key: DSA_CORS_ORIGINS
         sync: false
