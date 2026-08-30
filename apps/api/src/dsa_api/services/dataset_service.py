@@ -11,9 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dsa_api.models.dataset import DatasetORM
 from dsa_datasets.hash_utils import sha256_file
-from dsa_datasets.loader import load_dataframe
 from dsa_datasets.models import DatasetFormat
-from dsa_datasets.profiler import build_profile
 from dsa_datasets.validate import validate_file
 
 
@@ -47,6 +45,11 @@ async def save_dataset(
     safe_name = f"{dataset_id}_{filename}"
     dest = storage / safe_name
     shutil.copyfile(tmp_path, dest)
+
+    # Keep the scientific dataframe stack off the API import path so lightweight
+    # health checks can start reliably on memory-constrained demo instances.
+    from dsa_datasets.loader import load_dataframe
+    from dsa_datasets.profiler import build_profile
 
     # load + profile (raises DatasetError -> caller maps to 400)
     df = load_dataframe(dest, fmt)
