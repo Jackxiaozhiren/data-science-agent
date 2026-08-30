@@ -15,7 +15,13 @@ for _p in [Path(__file__).resolve()] + list(Path(__file__).resolve().parents):
 
 def _run(cmd: list[str], timeout: int = 300) -> tuple[bool, str]:
     try:
-        p = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True, timeout=timeout)  # noqa: S603
+        p = subprocess.run(
+            cmd,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )  # noqa: S603
         ok = p.returncode == 0
         out = (p.stdout + p.stderr)[-4000:]
         return ok, out
@@ -24,7 +30,7 @@ def _run(cmd: list[str], timeout: int = 300) -> tuple[bool, str]:
 
 
 def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
-    """Run §59–62 + §63 release gates (§58 v3.0.0). Each item PASS/FAIL/NOT VERIFIED."""
+    """Run the aggregate release gates from a clean checkout."""
     gates: dict[str, str] = {}
     details: dict[str, str] = {}
 
@@ -33,8 +39,16 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
         if note:
             details[name] = note
 
-    # §59 required gates
-    ok, out = _run(["uv", "run", "pytest", "-q"], timeout=120)
+    # Prepare the Node workspaces used by the Python integration tests and Web build.
+    ok, out = _run(
+        ["npm", "--prefix", "apps/vscode", "ci", "--legacy-peer-deps"], timeout=90
+    )
+    gate("VSCode dependencies", ok, out[:800] if not ok else "")
+    ok, out = _run(["npm", "--prefix", "apps/web", "ci", "--legacy-peer-deps"], timeout=90)
+    gate("Web dependencies", ok, out[:800] if not ok else "")
+
+    # Required repository gates.
+    ok, out = _run(["uv", "run", "pytest", "-q"], timeout=180)
     gate("pytest", ok, out[:800] if not ok else "")
     ok, out = _run(
         ["uv", "run", "mypy", "packages", "apps/api", "--ignore-missing-imports"], timeout=60
@@ -44,42 +58,27 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
     gate("ruff", ok, out[:800] if not ok else "")
     ok, out = _run(["npm", "--prefix", "apps/web", "run", "build"], timeout=90)
     gate("npm build", ok, out[:800] if not ok else "")
-    ok, out = _run(["docker", "compose", "config"], timeout=20)
+    ok, out = _run(
+        ["docker", "compose", "--env-file", ".env.example", "config"], timeout=20
+    )
     gate("docker validation", ok, out[:800] if not ok else "")
-    # Security + MCP + benchmark + repro + research + docs (best-effort, non-fatal if missing)
+
+    # Security + MCP + benchmark + research + docs.
     ok, out = _run(["uv", "run", "pytest", "tests/security", "-q"], timeout=60)
     gate("security suite", ok, out[:800] if not ok else "")
     ok, out = _run(["uv", "run", "pytest", "tests/mcp", "-q"], timeout=30)
     gate("MCP conformance", ok, out[:800] if not ok else "")
     ok, out = _run(["uv", "run", "dsa", "--limit", "5"], timeout=60)
     gate("benchmark v2 (smoke)", ok, out[:800] if not ok else "")
-    # Reproduction smoke — `dsa --reproduce` already validates fresh-twice pipeline
     ok, out = _run(["uv", "run", "dsa", "demo"], timeout=60)
     gate("research/demo (dsa demo)", ok, out[:800] if not ok else "")
-    # figure/table scripts runnable
     ok, out = _run(["uv", "run", "python", "research/scripts/generate_tables.py"], timeout=20)
     gate("research tables (generate_tables.py)", ok, out[:500] if not ok else "")
     ok, out = _run(["uv", "run", "python", "research/scripts/generate_figures.py"], timeout=20)
     gate("research figures (generate_figures.py)", ok, out[:500] if not ok else "")
-    # docs — non-strict build (strict has README cross-file link warnings, not release-blocking)
-    ok2, out2 = _run(
-        [
-            "uv",
-            "run",
-            "--with",
-            "mkdocs",
-            "--with",
-            "mkdocs-material",
-            "python",
-            "-m",
-            "mkdocs",
-            "build",
-        ],
-        timeout=30,
-    )
-    gate("documentation build (mkdocs)", ok2, out2[:800] if not ok2 else "")
+    ok, out = _run(["uv", "run", "python", "-m", "mkdocs", "build", "--strict"], timeout=45)
+    gate("documentation build (mkdocs strict)", ok, out[:800] if not ok else "")
 
-    # Compose §59 report
     report = {
         "version": version,
         "gates": gates,
@@ -108,7 +107,6 @@ def main() -> None:
             print("\nDetails (failures):")
             for k, v in rep["details"].items():
                 print(f"  {k}: {v[:300]}")
-    # Exit non-zero only if a required gate FAIL (not NOT VERIFIED)
     if any(v == "FAIL" for v in rep["gates"].values()):
         sys.exit(1)
 
