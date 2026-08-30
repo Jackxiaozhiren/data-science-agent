@@ -64,8 +64,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          smoke_dir="/tmp/dsa-wheel-smoke"
-          rm -rf "${smoke_dir}"
+          smoke_dir="$(mktemp -d "${RUNNER_TEMP:?}/dsa-wheel-smoke.XXXXXX")"
           python -m venv "${smoke_dir}"
           wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
           test -n "${wheel}"
@@ -93,4 +92,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run dsa verify-release v4.3.0 --json | tee /tmp/v4.3.0-verification.json
+          uv run dsa verify-release v4.3.0 --json
