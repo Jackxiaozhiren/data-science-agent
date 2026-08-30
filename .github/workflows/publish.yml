@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
@@ -91,13 +92,10 @@ jobs:
           if-no-files-found: error
           include-hidden-files: false
           retention-days: 90
-      # This action is a generated Docker action. Using its commit SHA as the
-      # action ref makes it look for a non-existent GHCR image tagged by SHA;
-      # the upstream release tag is therefore required here.
+      - name: Generate PEP 740 publish attestations
+        uses: astral-sh/attest-action@f589a42a7efb6fe400b4f400de60b4bc90390027 # v0.0.6
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@v1.14.2
-        with:
-          packages-dir: dist/
+        run: uv publish
       - name: Verify published version on PyPI
         shell: bash
         run: |
