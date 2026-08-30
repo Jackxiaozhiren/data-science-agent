@@ -1,0 +1,17 @@
+name: Actions Healthcheck
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Confirm runner startup
+        run: echo "GitHub Actions runner started successfully"
