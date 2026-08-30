@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
-      - run: pip install uv
+      - run: pip install "uv==0.12.7"
       - run: uv sync --dev
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
       - run: npm --prefix apps/web ci --legacy-peer-deps
@@ -47,15 +47,32 @@ jobs:
             /tmp/dsa-publish-smoke/bin/dsa --help >/dev/null
             /tmp/dsa-publish-smoke/bin/python -c 'import importlib.metadata; import data_science_agent; installed = importlib.metadata.version("jack-data-science-agent"); assert data_science_agent.__version__ == installed; assert data_science_agent.Agent().version == installed; print(f"publish wheel smoke: jack-data-science-agent {installed}")'
           )
+      - name: Preserve built distributions as workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-dist-${{ github.ref_name }}
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 90
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: dist/
-      - name: Attach artifacts to GitHub Release
+      - name: Attach distributions to mutable GitHub Release
+        id: release_assets
+        continue-on-error: true
         uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
         with:
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
           generate_release_notes: true
+      - name: Explain immutable GitHub Release fallback
+        if: ${{ steps.release_assets.outcome == 'failure' }}
+        run: echo "::notice::GitHub Release assets could not be attached (for example, because the release is immutable). The verified distributions remain available from PyPI and the release-dist workflow artifact."
       - name: Generate release announcement
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
