@@ -52,13 +52,25 @@
       "artifact_id": 9725134640,
       "artifact_digest": "sha256:48bfc019f982ff1753bda8a2bd1e2ebc63859becf45e51eb381e5816c37f8e63",
       "artifact_expires_at": "2026-09-29T02:34:00Z"
+    },
+    "final_candidate_checks": {
+      "head_sha": "3f6b184eb9f62baf14a4a6fb84898932b63f384e",
+      "ci_run_id": 33289287375,
+      "ci": "success",
+      "dependency_review": "success",
+      "secret_scan": "success",
+      "codeql": "success",
+      "sonarqube_quality_gate": "success",
+      "sonarqube_new_issues": 4,
+      "sonarqube_security_hotspots": 0
     }
   },
   "notes": [
     "Manifest records the frozen source candidate rather than attempting a self-referential metadata commit SHA.",
     "All functional, packaging, security, and aggregate release-verification gates have passed with retained evidence.",
-    "The final metadata-only PR head must still finish its GitHub check set successfully before merge or tag creation.",
-    "Do not create v4.3.0 tag until the release candidate is merged from a fully green final head.",
+    "SonarQube Quality Gate passed on the verified candidate; four non-blocking new issues remain reported, with zero security hotspots.",
+    "Any metadata-only commit after the recorded evidence must itself finish the repository check set successfully before merge or tag creation.",
+    "Do not create v4.3.0 tag until the release candidate is merged from a green PR head.",
     "No deterministic stub result is represented as real-model comparative quality."
   ]
 }
