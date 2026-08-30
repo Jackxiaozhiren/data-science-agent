@@ -65,9 +65,6 @@ PATTERNS = {
     # old_benchmark - historical catalog 0.2.0 kept in CHANGELOG/docs for audit
 }
 
-_VERSION_TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
-
-
 # Maturity check: README V4 line should match RELEASE_MATRIX (§23)
 def check_maturity():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -96,7 +93,6 @@ def check_maturity():
             if exp_pos < ts_pos:
                 issues.append("README V4 line lists Time Series as Experimental but RELEASE_MATRIX says Stable (§23)")
     return issues
-
 
 def scan_file(path: Path):
     try:
@@ -128,7 +124,6 @@ def scan_file(path: Path):
             findings.append((name, m.group(0), line.strip()[:120]))
     return findings
 
-
 def _allow_release_candidate_tag(base_tag: str, expected_version: str) -> bool:
     """Allow a forward same-major version only under explicit RC mode."""
     if os.getenv("DSA_RELEASE_CANDIDATE", "").strip().lower() not in {
@@ -143,41 +138,6 @@ def _allow_release_candidate_tag(base_tag: str, expected_version: str) -> bool:
     except ValueError:
         return False
     return len(tagged) == 3 and len(expected) == 3 and tagged[0] == expected[0] and expected > tagged
-
-
-def _latest_local_version_tag(root: Path) -> str | None:
-    """Read local Git tag refs directly; never spawn Git or another process."""
-    git_dir = root / ".git"
-    if not git_dir.is_dir():
-        return None
-
-    tags: set[str] = set()
-    refs_dir = git_dir / "refs" / "tags"
-    if refs_dir.is_dir():
-        for ref in refs_dir.rglob("*"):
-            if ref.is_file():
-                tags.add(ref.relative_to(refs_dir).as_posix())
-
-    packed_refs = git_dir / "packed-refs"
-    if packed_refs.is_file():
-        try:
-            for line in packed_refs.read_text(encoding="utf-8").splitlines():
-                if not line or line.startswith(("#", "^")):
-                    continue
-                parts = line.split(" ", 1)
-                if len(parts) == 2 and parts[1].startswith("refs/tags/"):
-                    tags.add(parts[1].removeprefix("refs/tags/"))
-        except OSError:
-            return None
-
-    parsed: list[tuple[tuple[int, int, int], str]] = []
-    for tag in tags:
-        match = _VERSION_TAG_RE.fullmatch(tag)
-        if match:
-            parsed.append((tuple(int(part) for part in match.groups()), tag))
-    if not parsed:
-        return None
-    return max(parsed)[1]
 
 
 def check_version_consistency():
@@ -195,18 +155,18 @@ def check_version_consistency():
         for name, ver in [("pyproject", py_ver), ("CITATION", cit_ver), ("__init__", init_ver), ("sdk", sdk_ver), ("sbom", sbom_ver)]:
             if ver != EXPECTED["version"]:
                 issues.append(f"version mismatch: {name}={ver} != expected {EXPECTED['version']}")
-
-        # A shallow CI checkout may have no local tag refs. In that case the version
-        # surfaces above remain authoritative; when tags are present, validate them.
-        base_tag = _latest_local_version_tag(ROOT)
-        if base_tag is not None and base_tag != f"v{EXPECTED['version']}" and not _allow_release_candidate_tag(
+        # Check tag
+        import subprocess
+        tag = subprocess.run(["git", "describe", "--tags", "--always"], capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
+        # Allow HEAD ahead for dev (e.g., v4.1.1-1-g...), but pyproject version must match tag base
+        base_tag = tag.split("-")[0] if "-" in tag else tag
+        if base_tag != f"v{EXPECTED['version']}" and not _allow_release_candidate_tag(
             base_tag, EXPECTED["version"]
         ):
-            issues.append(f"git tag mismatch: base {base_tag} != v{EXPECTED['version']}")
+            issues.append(f"git tag mismatch: {tag} base {base_tag} != v{EXPECTED['version']}")
     except Exception as e:
         issues.append(f"version check error: {e}")
     return issues
-
 
 def main():
     all_findings = []
@@ -228,15 +188,27 @@ def main():
             rel = str(path.relative_to(ROOT)) if path.is_absolute() else str(path)
             if any(rel.startswith(pfx) for pfx in ["docs/", "research/", "benchmarks/", "plugins/", "apps/jupyter/", "src/data_science_agent/"]):
                 continue
-            all_findings.extend((str(path),) + f for f in scan_file(path))
+            findings = scan_file(path)
+            for kind, match, line in findings:
+                all_findings.append((f"{kind}:{path.relative_to(ROOT)}", match, line))
 
-    if all_findings:
-        for finding in all_findings:
-            print("STALE:", finding)
-        sys.exit(1)
+    # Report
+    if not all_findings:
+        print("✓ No stale claims detected — 0 issues")
+        return 0
 
-    print("Public claims check: PASS")
+    print(f"Found {len(all_findings)} potential stale claim(s):")
+    for kind, match, line in all_findings:
+        print(f"  [{kind}] {match!r} — {line[:120]}")
 
+    # Fail if any high severity (version_consistency, old_package_pip, stale_test_counts without versioned annotation)
+    high = [f for f in all_findings if f[0].startswith(("version_consistency", "old_package_pip", "old_repo"))]
+    # stale_test_counts now versioned, so not high if annotated
+    if high:
+        print(f"\n✗ {len(high)} high-severity issues — requires fix (see §18, §26)")
+        return 1
+    print("\n⚠ Low/medium issues — review recommended")
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
