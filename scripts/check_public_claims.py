@@ -184,8 +184,8 @@ def check_version_consistency():
         # branch may intentionally carry the next version before the final tag exists.
         import subprocess
 
-        tag = subprocess.run(  # noqa: S607 - fixed git command, no user-controlled arguments
-            ["git", "describe", "--tags", "--always"],
+        tag = subprocess.run(
+            ["git", "describe", "--tags", "--always"],  # noqa: S607 - fixed command/arguments
             capture_output=True,
             text=True,
             cwd=str(ROOT),
