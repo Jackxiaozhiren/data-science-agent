@@ -123,12 +123,7 @@ def scan_file(path: Path):
                 continue
             if "QUANTITATIVE_CLAIMS" in str(path):
                 continue
-            if (
-                "V4.1 live" in line
-                or "V3.0:" in line
-                or "V1:" in line
-                or "Historical" in line
-            ):
+            if "V4.1 live" in line or "V3.0:" in line or "V1:" in line or "Historical" in line:
                 continue
             # For old package, allow in POPULAR_PYPI typosquat list and report
             if "POPULAR_PYPI" in line or "WORKSPACE_PACKAGES" in line:
@@ -155,9 +150,7 @@ def check_version_consistency():
     issues = []
     # Check pyproject vs CITATION vs __init__ vs sdk vs sbom vs README title
     try:
-        py_ver = re.search(
-            r'version = "([^"]+)"', (ROOT / "pyproject.toml").read_text()
-        ).group(1)
+        py_ver = re.search(r'version = "([^"]+)"', (ROOT / "pyproject.toml").read_text()).group(1)
         cit_text = (ROOT / "CITATION.cff").read_text()
         m = re.search(r"^version: ([0-9.]+)", cit_text, re.MULTILINE)
         cit_ver = m.group(1) if m else "?"
