@@ -51,11 +51,13 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
           packages-dir: dist/
-      - name: Attach artifacts to GitHub Release
-        uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
-        with:
-          files: dist/*
-          generate_release_notes: true
+      - name: Record immutable GitHub Release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PyPI is the canonical wheel/sdist distribution channel."
+          echo "Published GitHub Releases in this repository are immutable, so post-publish binary asset uploads are intentionally skipped."
+          echo "GitHub continues to provide immutable source archives for the tag."
       - name: Generate release announcement
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
