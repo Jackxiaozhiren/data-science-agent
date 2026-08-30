@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -28,25 +27,6 @@ def _run(cmd: list[str], timeout: int = 300) -> tuple[bool, str]:
         return ok, out
     except Exception as e:
         return False, f"{type(e).__name__}: {e}"
-
-
-def _docker_compose_config() -> tuple[bool, str]:
-    """Validate Compose without overwriting a developer's existing .env file."""
-    env_path = ROOT / ".env"
-    env_example = ROOT / ".env.example"
-    created_env = False
-
-    if not env_path.exists():
-        if not env_example.exists():
-            return False, ".env is missing and .env.example is unavailable"
-        shutil.copyfile(env_example, env_path)
-        created_env = True
-
-    try:
-        return _run(["docker", "compose", "config"], timeout=20)
-    finally:
-        if created_env:
-            env_path.unlink(missing_ok=True)
 
 
 def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
@@ -76,7 +56,7 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
     gate("ruff", ok, out[:800] if not ok else "")
     ok, out = _run(["npm", "--prefix", "apps/web", "run", "build"], timeout=90)
     gate("npm build", ok, out[:800] if not ok else "")
-    ok, out = _docker_compose_config()
+    ok, out = _run(["docker", "compose", "config"], timeout=20)
     gate("docker validation", ok, out[:800] if not ok else "")
 
     # Security + MCP + benchmark + research + docs.
