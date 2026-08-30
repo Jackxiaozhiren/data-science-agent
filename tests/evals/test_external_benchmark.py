@@ -250,3 +250,36 @@ def test_agent_backed_runner_maps_completed_result() -> None:
     assert run.run_id == "run-x"
     assert run.latency_s == 0.5
     assert_gold_isolation(run.agent_view)
+
+
+def test_agent_backed_runner_converts_dataclass_evidence_to_dicts() -> None:
+    """Runner must tolerate dataclass Evidence objects (as returned by the SDK),
+    converting them to plain dicts for the JSON-safe ExternalRun (§18/§48)."""
+    from dataclasses import dataclass, field as dc_field
+
+    @dataclass
+    class FakeEvidence:
+        id: str
+        claim: str
+        source_id: str
+        result: dict = dc_field(default_factory=dict)
+
+    class FakeResult:
+        status = "COMPLETED"
+        run_id = "run-y"
+        report_markdown = "# Report"
+        tool_calls = [{"tool": "profile_dataset", "ok": True}]
+        evidence = [FakeEvidence(id="ev-1", claim="mean x = 3.14", source_id="tc-1")]
+
+    class FakeAgent:
+        def analyze_sync(self, dataset: str, question: str) -> FakeResult:
+            return FakeResult()
+
+    task = ExternalTask(task_id="t2", question="q?", dataset_path="d.csv", benchmark_name="b")
+    run = AgentBackedRunner(agent_factory=FakeAgent).run(task, RunConfig())
+    assert run.report == "# Report"
+    assert run.tool_calls == [{"tool": "profile_dataset", "ok": True}]
+    assert run.evidence == [
+        {"id": "ev-1", "claim": "mean x = 3.14", "source_id": "tc-1", "result": {}}
+    ]
+    assert_gold_isolation(run.agent_view)

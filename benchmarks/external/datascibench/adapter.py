@@ -24,6 +24,7 @@ Integrity constraints honoured here (V4.3 §16, §19, §21, §23):
 
 from __future__ import annotations
 
+import datetime as _dt
 import hashlib
 import json
 import os
@@ -141,6 +142,8 @@ class DataSciBenchAdapter:
             )
         )
         self._runner = runner or AgentBackedRunner()
+        #: task_id → upstream task directory (run-dir base for the evaluator)
+        self._task_dirs: dict[str, Path] = {}
 
     # ------------------------------------------------------------------ §17
     def prepare(self) -> None:
@@ -207,11 +210,14 @@ class DataSciBenchAdapter:
             question = str(payload.get("prompt", "")).strip()
             if not question:
                 continue
+            self._task_dirs[task_id] = task_dir
             tasks.append(
                 ExternalTask(
                     task_id=task_id,
                     question=question,
-                    dataset_path=str(task_dir),
+                    # §25 task mapping: the agent consumes the task's primary
+                    # input file (task dir itself when no data file is shipped).
+                    dataset_path=str(_pick_primary_input(task_dir) or task_dir),
                     benchmark_name=self.name,
                     benchmark_task_ref=f"DataSciBench@{UPSTREAM_COMMIT[:8]}#{task_id}",
                     gold={},  # GT stays behind the boundary; applied inside evaluate()
@@ -286,16 +292,69 @@ class DataSciBenchAdapter:
         )
 
     def _materialize_run_dir(self, run: ExternalRun) -> Path | None:
-        """Write the converted run layout consumed by the original evaluator."""
-        if not run.agent_view.dataset_path:
+        """Write the converted run layout consumed by the original evaluator.
+
+        Run dirs live at ``data/{task_id}/dsa_{run_id}/`` (upstream contract);
+        DSA artifacts (report/evidence JSON) are copied alongside ``logs.txt``
+        for auditability.
+        """
+        task_dir = self._task_dirs.get(run.task_id)
+        if task_dir is None:
             return None
-        run_dir = Path(run.agent_view.dataset_path) / f"dsa_{run.run_id or '0'}"
+        run_dir = task_dir / f"dsa_{run.run_id or '0'}"
         run_dir.mkdir(parents=True, exist_ok=True)
         (run_dir / "logs.txt").write_text(build_logs_txt(run), encoding="utf-8")
+        if run.report:
+            (run_dir / "dsa_report.md").write_text(run.report, encoding="utf-8")
+        if run.evidence:
+            (run_dir / "dsa_evidence.json").write_text(
+                json.dumps(run.evidence, ensure_ascii=False, indent=1, default=_json_default),
+                encoding="utf-8",
+            )
         return run_dir
+
+
+#: Preferred input-file extensions for the §25 task mapping (order matters).
+_INPUT_PRIORITY = (".csv", ".xlsx", ".xls", ".npy", ".txt", ".data", ".names", ".test")
+
+
+def _pick_primary_input(task_dir: Path) -> Path | None:
+    """Deterministically choose the task's primary input data file.
+
+    Preference: extension priority (csv first — DSA's strongest surface), then
+    largest size, then name. Returns ``None`` when the task ships no data file
+    (upstream publishes prompts separately from the gated inputs).
+    """
+    candidates = [
+        f
+        for f in task_dir.iterdir()
+        if f.is_file() and f.name != "prompt.json" and not f.name.startswith(".")
+    ]
+    if not candidates:
+        return None
+
+    def rank(f: Path) -> tuple[int, int, str]:
+        ext = f.suffix.lower()
+        prio = _INPUT_PRIORITY.index(ext) if ext in _INPUT_PRIORITY else len(_INPUT_PRIORITY)
+        return (prio, -f.stat().st_size, f.name)
+
+    return sorted(candidates, key=rank)[0]
 
 
 def task_dir_sha256(task_dir: Path) -> str:
     """sha256 over a task's prompt.json — fills §18 dataset_hashes."""
     prompt = task_dir / "prompt.json"
     return hashlib.sha256(prompt.read_bytes()).hexdigest()
+
+
+def _json_default(o: object) -> object:
+    """Serialize non-JSON-native evidence values (date/datetime, sets, Path)."""
+    if isinstance(o, (_dt.datetime, _dt.date)):
+        return o.isoformat()
+    if isinstance(o, Path):
+        return str(o)
+    if isinstance(o, (set, frozenset, tuple)):
+        return list(o)
+    if isinstance(o, bytes):
+        return o.decode("utf-8", errors="replace")
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")

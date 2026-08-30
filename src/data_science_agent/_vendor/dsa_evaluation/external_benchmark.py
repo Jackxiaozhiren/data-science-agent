@@ -20,6 +20,7 @@ three invariants the spec makes non-negotiable:
 from __future__ import annotations
 
 import hashlib
+from dataclasses import asdict
 from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -185,6 +186,37 @@ def dataset_sha256(path: str | Path) -> str:
     return h.hexdigest()
 
 
+def _as_seconds(value: Any) -> float | None:
+    """Coerce an elapsed-time value to seconds, tolerating None/0."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _evidence_to_dicts(evidence: Any) -> list[dict[str, Any]]:
+    """Normalise agent ``Evidence`` records into plain dicts.
+
+    ``Agent.analyze_sync`` returns dataclass ``Evidence`` objects; the §18
+    manifest and ``ExternalRun`` carry JSON-serialisable dicts, so each record
+    is converted (dataclass ``asdict``, or ``model_dump`` for pydantic-backed
+    objects) rather than letting pydantic reject the objects.
+    """
+    out: list[dict[str, Any]] = []
+    for item in evidence or []:
+        if isinstance(item, dict):
+            out.append(item)
+        elif hasattr(item, "model_dump"):
+            out.append(item.model_dump())
+        elif hasattr(item, "__dataclass_fields__"):
+            out.append(asdict(item))
+        else:
+            out.append({"value": item})
+    return out
+
+
 def assert_gold_isolation(view: AgentTaskView | str) -> None:
     """Raise if any gold material is detectable in the agent-visible payload (§19).
 
@@ -286,7 +318,8 @@ class AgentBackedRunner:
             agent_view=view,
             status=str(getattr(result, "status", "unknown")),
             run_id=str(getattr(result, "run_id", "") or "") or None,
-            evidence=list(getattr(result, "evidence", []) or []),
-            report=getattr(result, "report", None),
-            latency_s=float(getattr(result, "elapsed_s", 0.0) or 0.0),
+            evidence=_evidence_to_dicts(getattr(result, "evidence", [])),
+            tool_calls=list(getattr(result, "tool_calls", []) or []),
+            report=getattr(result, "report_markdown", None),
+            latency_s=_as_seconds(getattr(result, "elapsed_s", None)),
         )
