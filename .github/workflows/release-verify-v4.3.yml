@@ -25,7 +25,6 @@ jobs:
           python-version: "3.12"
       - run: pip install "uv==0.8.14"
       - run: uv sync --dev --locked
-      - run: npm --prefix apps/web ci --legacy-peer-deps
       - name: Run final release verifier
         shell: bash
         run: |
