@@ -87,16 +87,19 @@ def check_maturity():
         exp_pos = v4_line.find("Experimental")
         jupyter_pos = v4_line.find("Jupyter")
         ts_pos = v4_line.find("Time Series")
-        if stable_pos != -1 and exp_pos != -1 and jupyter_pos != -1:
-            if stable_pos < jupyter_pos < exp_pos:
-                issues.append(
-                    "README V4 line lists Jupyter as Stable but RELEASE_MATRIX says Experimental — maturity mismatch (§23)"
-                )
-        if stable_pos != -1 and exp_pos != -1 and ts_pos != -1:
-            if exp_pos < ts_pos:
-                issues.append(
-                    "README V4 line lists Time Series as Experimental but RELEASE_MATRIX says Stable (§23)"
-                )
+        if (
+            stable_pos != -1
+            and exp_pos != -1
+            and jupyter_pos != -1
+            and stable_pos < jupyter_pos < exp_pos
+        ):
+            issues.append(
+                "README V4 line lists Jupyter as Stable but RELEASE_MATRIX says Experimental — maturity mismatch (§23)"
+            )
+        if stable_pos != -1 and exp_pos != -1 and ts_pos != -1 and exp_pos < ts_pos:
+            issues.append(
+                "README V4 line lists Time Series as Experimental but RELEASE_MATRIX says Stable (§23)"
+            )
     return issues
 
 
@@ -181,7 +184,7 @@ def check_version_consistency():
         # branch may intentionally carry the next version before the final tag exists.
         import subprocess
 
-        tag = subprocess.run(
+        tag = subprocess.run(  # noqa: S607 - fixed git command, no user-controlled arguments
             ["git", "describe", "--tags", "--always"],
             capture_output=True,
             text=True,
