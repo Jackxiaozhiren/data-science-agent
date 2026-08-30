@@ -88,3 +88,9 @@ jobs:
       - run: npm --prefix apps/web run build 2>&1 | tail -n 20
       - run: docker compose config 2>&1 | head -n 40
       - run: uv run python -m mkdocs build --strict 2>&1 | tail -n 50
+      - name: Verify v4.3.0 release candidate
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 47 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run dsa verify-release v4.3.0 --json | tee /tmp/v4.3.0-verification.json
