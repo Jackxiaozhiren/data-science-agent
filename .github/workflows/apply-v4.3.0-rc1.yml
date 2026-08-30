@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
+          python - <<'PY_RELEASE_APPLY'
           from pathlib import Path
 
           replacements = {
@@ -164,7 +164,7 @@ jobs:
           publish_smoke = "\n".join(line[10:] if line.startswith("          ") else line for line in publish_smoke.splitlines()) + "\n"
           text = text.replace(needle, needle + publish_smoke, 1)
           publish.write_text(text, encoding="utf-8")
-          PY
+          PY_RELEASE_APPLY
 
           uv lock
           uv sync --dev
