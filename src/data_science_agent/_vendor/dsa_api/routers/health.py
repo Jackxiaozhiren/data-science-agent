@@ -17,27 +17,27 @@ def _probe_import(name: str) -> dict[str, Any]:
         return {"status": "error", "error": str(e)[:200]}
 
 
-@router.get("/health")
-async def health() -> dict[str, Any]:
-    db: dict[str, Any] = {"status": "unknown"}
+async def _database_status() -> dict[str, Any]:
     try:
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
-        db = {"status": "ok"}
+        return {"status": "ok"}
     except Exception as e:
-        db = {"status": "error", "error": str(e)[:300]}
-    duck = _probe_import("duckdb")
-    polars = _probe_import("polars")
-    llm: dict[str, Any] = {}
-    try:
-        from dsa_llm.providers import EnvLLMProvider
+        return {"status": "error", "error": str(e)[:300]}
 
-        prov = EnvLLMProvider()
-        llm = {"active": prov.active_provider, "status": "ok"}
-    except Exception as e:
-        llm = {"status": "error", "error": str(e)[:300]}
-    details: dict[str, Any] = {"db": db, "duckdb": duck, "polars": polars, "llm": llm}
-    overall = "ok" if all(v.get("status") == "ok" for v in details.values()) else "degraded"
+
+@router.get("/health")
+async def health() -> dict[str, Any]:
+    """Fast liveness check suitable for platform health probes.
+
+    Do not import the dataframe/LLM stacks here: Render expects HTTP health
+    checks to answer within a few seconds, and importing optional scientific
+    dependencies during every liveness probe defeats lazy startup on small
+    instances. Use /health/dependencies for the deeper diagnostic instead.
+    """
+    db = await _database_status()
+    details: dict[str, Any] = {"process": {"status": "ok"}, "db": db}
+    overall = "ok" if db.get("status") == "ok" else "degraded"
     return {"status": overall, "details": details, "version": settings.version}
 
 
@@ -46,11 +46,29 @@ async def ready() -> dict[str, Any]:
     return await health()
 
 
+@router.get("/health/dependencies")
+async def dependency_health() -> dict[str, Any]:
+    """Deep dependency diagnostic, intentionally separate from liveness."""
+    duck = _probe_import("duckdb")
+    polars = _probe_import("polars")
+    llm: dict[str, Any]
+    try:
+        from dsa_llm.providers import EnvLLMProvider
+
+        prov = EnvLLMProvider()
+        llm = {"active": prov.active_provider, "status": "ok"}
+    except Exception as e:
+        llm = {"status": "error", "error": str(e)[:300]}
+    details: dict[str, Any] = {"duckdb": duck, "polars": polars, "llm": llm}
+    overall = "ok" if all(v.get("status") == "ok" for v in details.values()) else "degraded"
+    return {"status": overall, "details": details, "version": settings.version}
+
+
 _STARTED = __import__("time").monotonic()
 
 
 @router.get("/version")
-async def version() -> dict[str, Any]:
+async def version() -> dict[str, str]:
     return {"version": settings.version}
 
 
