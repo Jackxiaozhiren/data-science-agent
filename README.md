@@ -6,6 +6,7 @@
 
 Ask questions about CSV files and databases in natural language. DSA runs SQL, statistics, machine learning, and visualization, then returns **claim-level evidence, a reproducible report, and the artifacts needed to inspect how each conclusion was produced**.
 
+[**Try Product Tour**](https://jackxiaozhiren.github.io/data-science-agent/) ·
 [**60-second quickstart**](#-60-second-quickstart) ·
 [**Install from PyPI**](https://pypi.org/project/jack-data-science-agent/) ·
 [**See it in action**](#-see-it-in-action) ·
@@ -14,8 +15,6 @@ Ask questions about CSV files and databases in natural language. DSA runs SQL, s
 [**Docs**](docs/getting-started.md) ·
 [**v4.3.0**](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.3.0)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/codeql.yml?label=CodeQL&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions/workflows/codeql.yml)
 [![PyPI](https://img.shields.io/pypi/v/jack-data-science-agent?logo=pypi&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
 [![Latest release](https://img.shields.io/github/v/release/Jackxiaozhiren/data-science-agent?logo=github&label=release)](https://github.com/Jackxiaozhiren/data-science-agent/releases/latest)
 [![Python](https://img.shields.io/pypi/pyversions/jack-data-science-agent?logo=python&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
@@ -27,7 +26,7 @@ Ask questions about CSV files and databases in natural language. DSA runs SQL, s
 
 **For analysts, researchers, and ML engineers who need answers they can inspect, audit, reproduce, and challenge.**
 
-Fastest path: `pip install jack-data-science-agent` → `dsa demo` → inspect `report.md` and `evidence_graph.json`.
+Browser preview: [open the verified Product Tour](https://jackxiaozhiren.github.io/data-science-agent/) → then `pip install jack-data-science-agent` → `dsa demo` → inspect `report.md` and `evidence_graph.json`.
 
 </div>
 
@@ -110,6 +109,10 @@ analysis run
 ---
 
 ## See it in action
+
+**Fastest browser preview: [open the verified Product Tour →](https://jackxiaozhiren.github.io/data-science-agent/)**
+
+The Product Tour is a static view of repository artifacts from verified DSA runs. It does not accept uploads or pretend to be a live hosted model/API service.
 
 <div align="center">
 
@@ -279,6 +282,7 @@ Its focus is **verifiable, reproducible AI data science**.
 
 Start here:
 
+- [Product Tour](https://jackxiaozhiren.github.io/data-science-agent/)
 - [Getting Started](docs/getting-started.md)
 - [SDK & API Reference](docs/api.md)
 - [Evaluation](docs/evaluation.md)
@@ -340,6 +344,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [ROADMAP.md](ROADMAP.md), and [CODE_OF_C
 
 ### Ask. Analyze. Verify. Reproduce.
 
+[Product Tour](https://jackxiaozhiren.github.io/data-science-agent/) ·
 [Get Started](docs/getting-started.md) ·
 [Case Studies](case-studies/) ·
 [Evaluation](docs/evaluation.md) ·
