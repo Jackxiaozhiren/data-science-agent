@@ -198,14 +198,25 @@ def test_leaderboard_replace_block_requires_markers() -> None:
         leaderboard.replace_block("# no generated block", "generated")
 
 
-def test_public_claims_release_candidate_tag_mode_is_explicit(
+def test_public_claims_release_candidate_ref_is_narrow(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("DSA_RELEASE_CANDIDATE", raising=False)
-    assert not public_claims._allow_release_candidate_tag("v4.2.10", "4.3.0")
+    monkeypatch.delenv("GITHUB_HEAD_REF", raising=False)
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    assert not public_claims._is_release_candidate_ref("4.3.0")
 
-    monkeypatch.setenv("DSA_RELEASE_CANDIDATE", "1")
-    assert public_claims._allow_release_candidate_tag("v4.2.10", "4.3.0")
-    assert not public_claims._allow_release_candidate_tag("v4.3.0", "4.2.10")
-    assert not public_claims._allow_release_candidate_tag("v5.0.0", "4.3.0")
-    assert not public_claims._allow_release_candidate_tag("not-a-tag", "4.3.0")
+    monkeypatch.setenv("GITHUB_HEAD_REF", "release/v4.3.0-rc")
+    assert public_claims._is_release_candidate_ref("4.3.0")
+
+    monkeypatch.setenv("GITHUB_HEAD_REF", "release/v4.3.0-rc2")
+    assert public_claims._is_release_candidate_ref("4.3.0")
+
+    monkeypatch.setenv("GITHUB_HEAD_REF", "release/v4.4.0-rc")
+    assert not public_claims._is_release_candidate_ref("4.3.0")
+
+    monkeypatch.setenv("GITHUB_HEAD_REF", "feature/v4.3.0-rc")
+    assert not public_claims._is_release_candidate_ref("4.3.0")
+
+    monkeypatch.delenv("GITHUB_HEAD_REF", raising=False)
+    monkeypatch.setenv("GITHUB_REF_NAME", "release/v4.3.0-rc1")
+    assert public_claims._is_release_candidate_ref("4.3.0")
