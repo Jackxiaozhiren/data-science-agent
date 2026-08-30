@@ -27,6 +27,28 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
+      - name: Verify release ref and package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE_VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+          print(project["version"])
+          PY
+          )"
+          if [[ "${TAG_VERSION}" != "${PACKAGE_VERSION}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${PACKAGE_VERSION}."
+            exit 1
+          fi
+          git fetch origin main --prune
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "::error::Release tag ${GITHUB_REF_NAME} (${GITHUB_SHA}) is not reachable from origin/main."
+            exit 1
+          fi
       - run: pip install "uv==0.12.7"
       - run: uv sync --dev
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
@@ -35,6 +57,18 @@ jobs:
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: rm -rf dist && uv build
+      - name: Verify release distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          if (( ${#wheels[@]} != 1 || ${#sdists[@]} != 1 )); then
+            echo "::error::Expected exactly one wheel and one sdist; found ${#wheels[@]} wheel(s) and ${#sdists[@]} sdist(s)."
+            printf 'dist/%s\n' "${wheels[@]##*/}" "${sdists[@]##*/}"
+            exit 1
+          fi
       - name: Fresh-wheel CLI and SDK smoke before publish
         shell: bash
         run: |
@@ -57,22 +91,88 @@ jobs:
           if-no-files-found: error
           include-hidden-files: false
           retention-days: 90
+      # This action is a generated Docker action. Using its commit SHA as the
+      # action ref makes it look for a non-existent GHCR image tagged by SHA;
+      # the upstream release tag is therefore required here.
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
           packages-dir: dist/
-      - name: Attach distributions to mutable GitHub Release
-        id: release_assets
-        continue-on-error: true
-        uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
-        with:
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-          generate_release_notes: true
-      - name: Explain immutable GitHub Release fallback
-        if: ${{ steps.release_assets.outcome == 'failure' }}
-        run: echo "::notice::GitHub Release assets could not be attached (for example, because the release is immutable). The verified distributions remain available from PyPI and the release-dist workflow artifact."
+      - name: Verify published version on PyPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          url = f"https://pypi.org/pypi/jack-data-science-agent/{version}/json"
+          last_error: Exception | None = None
+          for attempt in range(1, 13):
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as response:
+                      payload = json.load(response)
+                  published = payload.get("info", {}).get("version")
+                  if published != version:
+                      raise RuntimeError(f"PyPI returned version {published!r}, expected {version!r}")
+                  print(f"Verified jack-data-science-agent {version} on PyPI.")
+                  break
+              except (OSError, RuntimeError, urllib.error.URLError) as exc:
+                  last_error = exc
+                  if attempt == 12:
+                      raise SystemExit(f"PyPI verification failed after {attempt} attempts: {exc}")
+                  time.sleep(5)
+          else:
+              raise SystemExit(f"PyPI verification failed: {last_error}")
+          PY
+      - name: Attach distributions to GitHub Release safely
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          release_files=(dist/*.whl dist/*.tar.gz dist/*.publish.attestation)
+          if (( ${#release_files[@]} < 2 )); then
+            echo "::error::Expected release distributions after PyPI publish."
+            exit 1
+          fi
+
+          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" 2>/dev/null || true)"
+          if [[ -z "${release_json}" ]]; then
+            echo "No GitHub Release exists yet; creating a draft so assets are uploaded before immutable publication."
+            gh release create "${RELEASE_TAG}" "${release_files[@]}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --verify-tag \
+              --generate-notes \
+              --draft \
+              --title "${RELEASE_TAG}"
+            gh release edit "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft=false
+            exit 0
+          fi
+
+          immutable="$(jq -r '.immutable // false' <<<"${release_json}")"
+          draft="$(jq -r '.draft // false' <<<"${release_json}")"
+          if [[ "${immutable}" == "true" ]]; then
+            echo "::notice::GitHub Release ${RELEASE_TAG} is already immutable. PyPI publishing succeeded; release assets cannot be added after publication. The wheel and sdist remain in the release-dist workflow artifact."
+            exit 0
+          fi
+
+          gh release upload "${RELEASE_TAG}" "${release_files[@]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
+          if [[ "${draft}" == "true" ]]; then
+            gh release edit "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft=false
+          fi
       - name: Generate release announcement
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
