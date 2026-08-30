@@ -1,4 +1,5 @@
 name: Docs Pages
+# Repository Pages source is configured for GitHub Actions.
 
 on:
   push:
