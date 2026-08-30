@@ -1,5 +1,5 @@
 name: CI
-# v4.3.0 final release-head verification trigger.
+# Actions permissions recovery verification trigger.
 
 on:
   push:
