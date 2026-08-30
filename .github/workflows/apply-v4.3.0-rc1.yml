@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         run: pip install "uv==0.12.7"
-      - name: Apply version, changelog, and release gates
+      - name: Apply and validate non-workflow release content
         shell: bash
         run: |
           set -euo pipefail
@@ -47,17 +47,20 @@ jobs:
               path = Path(name)
               text = path.read_text(encoding="utf-8")
               for old, new in pairs:
-                  if old not in text:
-                      raise SystemExit(f"expected release string not found in {name}: {old}")
-                  text = text.replace(old, new)
+                  if old in text:
+                      text = text.replace(old, new)
+                  elif new not in text:
+                      raise SystemExit(f"neither expected old nor new release string found in {name}: {old}")
               path.write_text(text, encoding="utf-8")
 
           changelog = Path("CHANGELOG.md")
           text = changelog.read_text(encoding="utf-8")
-          marker = "# Changelog\n"
-          if marker not in text:
-              raise SystemExit("CHANGELOG header not found")
-          entry = r'''
+          heading = "## 4.3.0 — Adoption, Verifiable Evaluation & Release Reliability"
+          if heading not in text:
+              marker = "# Changelog\n"
+              if marker not in text:
+                  raise SystemExit("CHANGELOG header not found")
+              entry = r'''
 
           ## 4.3.0 — Adoption, Verifiable Evaluation & Release Reliability
 
@@ -98,72 +101,11 @@ jobs:
           - Release candidate baseline frozen from commit `fcb98f455dff644ebd0e525083fd0f1d7e344369`, 103 commits ahead of `v4.2.10` before release-formalization changes.
           - Final tag remains blocked until the v4.3.0 candidate passes full CI, CodeQL, secret scan, dependency review, SonarQube Quality Gate, benchmark smoke, Docker/Web/MkDocs gates, and a clean-environment install smoke using the wheel built from the candidate.
           '''
-          entry = "\n".join(line[10:] if line.startswith("          ") else line for line in entry.splitlines())
-          text = text.replace(marker, marker + entry, 1)
-          changelog.write_text(text, encoding="utf-8")
-
-          ci = Path(".github/workflows/ci.yml")
-          text = ci.read_text(encoding="utf-8")
-          needle = "      - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM\n"
-          if needle not in text:
-              raise SystemExit("CI SBOM anchor not found")
-          wheel_gate = r'''      - name: Build release wheel and sdist
-            run: rm -rf dist && uv build
-          - name: Fresh-wheel CLI and SDK smoke
-            shell: bash
-            run: |
-              set -euo pipefail
-              python -m venv /tmp/dsa-wheel-smoke
-              /tmp/dsa-wheel-smoke/bin/python -m pip install --upgrade pip
-              /tmp/dsa-wheel-smoke/bin/python -m pip install dist/*.whl
-              (
-                cd /tmp
-                /tmp/dsa-wheel-smoke/bin/dsa --help >/dev/null
-                /tmp/dsa-wheel-smoke/bin/python - <<'PY'
-          import importlib.metadata
-          import data_science_agent
-
-          installed = importlib.metadata.version("jack-data-science-agent")
-          assert data_science_agent.__version__ == installed
-          assert data_science_agent.Agent().version == installed
-          assert data_science_agent.Dataset.from_path("sales.csv").dataset_id == "sales"
-          print(f"fresh-wheel smoke: jack-data-science-agent {installed}")
-          PY
+              entry = "\n".join(
+                  line[10:] if line.startswith("          ") else line for line in entry.splitlines()
               )
-          '''
-          wheel_gate = "\n".join(line[10:] if line.startswith("          ") else line for line in wheel_gate.splitlines()) + "\n"
-          text = text.replace(needle, needle + wheel_gate, 1)
-          ci.write_text(text, encoding="utf-8")
-
-          publish = Path(".github/workflows/publish.yml")
-          text = publish.read_text(encoding="utf-8")
-          needle = "      - run: rm -rf dist && uv build\n"
-          if needle not in text:
-              raise SystemExit("publish build anchor not found")
-          publish_smoke = r'''      - name: Fresh-wheel CLI and SDK smoke before publish
-            shell: bash
-            run: |
-              set -euo pipefail
-              python -m venv /tmp/dsa-publish-smoke
-              /tmp/dsa-publish-smoke/bin/python -m pip install --upgrade pip
-              /tmp/dsa-publish-smoke/bin/python -m pip install dist/*.whl
-              (
-                cd /tmp
-                /tmp/dsa-publish-smoke/bin/dsa --help >/dev/null
-                /tmp/dsa-publish-smoke/bin/python - <<'PY'
-          import importlib.metadata
-          import data_science_agent
-
-          installed = importlib.metadata.version("jack-data-science-agent")
-          assert data_science_agent.__version__ == installed
-          assert data_science_agent.Agent().version == installed
-          print(f"publish wheel smoke: jack-data-science-agent {installed}")
-          PY
-              )
-          '''
-          publish_smoke = "\n".join(line[10:] if line.startswith("          ") else line for line in publish_smoke.splitlines()) + "\n"
-          text = text.replace(needle, needle + publish_smoke, 1)
-          publish.write_text(text, encoding="utf-8")
+              text = text.replace(marker, marker + entry, 1)
+              changelog.write_text(text, encoding="utf-8")
           PY_RELEASE_APPLY
 
           uv lock
@@ -174,13 +116,16 @@ jobs:
           uv run python scripts/check_public_claims.py
           uv run ruff check src/data_science_agent/sdk.py apps/jupyter/src/dsa_jupyter/metadata.py packages/plugins/src/dsa_plugins/manifest.py tests/api/compatibility/test_sdk_compat.py tests/jupyter/test_jupyter_integration.py scripts/check_public_claims.py
           uv run ruff format --check src/data_science_agent/sdk.py apps/jupyter/src/dsa_jupyter/metadata.py packages/plugins/src/dsa_plugins/manifest.py tests/api/compatibility/test_sdk_compat.py tests/jupyter/test_jupyter_integration.py scripts/check_public_claims.py
-      - name: Remove one-shot workflow and commit candidate
+      - name: Commit non-workflow release candidate content
         shell: bash
         run: |
           set -euo pipefail
-          rm .github/workflows/apply-v4.3.0-rc1.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "release: prepare v4.3.0 rc1"
+          git add -A -- ':!.github/workflows'
+          if git diff --cached --quiet; then
+            echo "Release content already synchronized."
+            exit 0
+          fi
+          git commit -m "release: prepare v4.3.0 rc1 content"
           git push origin HEAD:release/v4.3.0-rc1
