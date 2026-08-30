@@ -82,7 +82,7 @@ jobs:
             /tmp/dsa-publish-smoke/bin/python -c 'import importlib.metadata; import data_science_agent; installed = importlib.metadata.version("jack-data-science-agent"); assert data_science_agent.__version__ == installed; assert data_science_agent.Agent().version == installed; print(f"publish wheel smoke: jack-data-science-agent {installed}")'
           )
       - name: Preserve built distributions as workflow artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-dist-${{ github.ref_name }}
           path: |
@@ -91,11 +91,10 @@ jobs:
           if-no-files-found: error
           include-hidden-files: false
           retention-days: 90
-      # This action is a generated Docker action. Using its commit SHA as the
-      # action ref makes it look for a non-existent GHCR image tagged by SHA;
-      # the upstream release tag is therefore required here.
+      # PyPA publishes commit-SHA-tagged container images, so a full action SHA
+      # remains both supported and preferable for reproducible supply-chain pins.
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: dist/
       - name: Verify published version on PyPI
