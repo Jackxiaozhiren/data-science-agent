@@ -19,5 +19,3 @@ services:
         value: sqlite+aiosqlite:////tmp/dsa.db
       - key: PYTHONUNBUFFERED
         value: "1"
-      - key: DSA_CORS_ORIGINS
-        sync: false
