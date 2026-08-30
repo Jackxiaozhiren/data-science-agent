@@ -32,7 +32,7 @@ Two independent layers were used before finalizing this metadata:
 - Clean-checkout release-verification run `33288208568` on candidate head `e87eecccdfaed1f8e0e995f95ea1d2553d7a339f` passed `dsa verify-release v4.3.0` at **14/14 gates**. Its report is retained as Actions artifact `9725134640` with artifact digest `sha256:48bfc019f982ff1753bda8a2bd1e2ebc63859becf45e51eb381e5816c37f8e63` through 2026-09-29.
 - The same candidate line passed Dependency Review, Secret Scan, CodeQL Python + JavaScript, and SonarQube Quality Gate with 0 new issues and 0 security hotspots.
 
-The release verifier was hardened during this process so it can run from a clean checkout: it prepares the VSCode/Web Node dependencies itself and validates Compose without overwriting an existing developer `.env`.
+The release verifier was hardened during this process so it can run from a clean checkout: it prepares the VSCode/Web Node dependencies itself, while Compose declares the developer `.env` file optional (`required: false`) so validation remains read-only when that local file is absent.
 
 ## Current gates
 
@@ -52,12 +52,12 @@ The release verifier was hardened during this process so it can run from a clean
 | Compose / MkDocs strict | ✅ PASS | Both pass from clean release verification |
 | Dependency Review / Secret Scan | ✅ PASS | GitHub security workflows green |
 | CodeQL Python + JavaScript | ✅ PASS | Both languages green with no new alerts |
-| SonarQube Quality Gate | ✅ PASS | Quality Gate passed; 0 new issues / 0 security hotspots |
+| SonarQube Quality Gate | ✅ PASS | Quality Gate passed; 0 new issues / 0 security hotspots on verified candidate code |
 | Wheel + sdist build | ✅ PASS | Umbrella distribution built successfully in CI |
 | Clean-wheel install smoke | ✅ PASS | Fresh venv import + SDK version + CLI smoke passed |
 | Final release verification | ✅ PASS | `dsa verify-release v4.3.0`: 14/14 PASS; artifact retained |
-| Final metadata-head checks | ⏳ PENDING | This evidence-only metadata update must itself finish green before merge |
-| Tag / PyPI / GitHub Release | ⛔ BLOCKED | Only after the final metadata head is green and the RC is merged |
+| Final metadata-head checks | ⏳ PENDING | This metadata + clean-Compose update must itself finish green before merge |
+| Tag / PyPI / GitHub Release | ⛔ BLOCKED | Only after the final head is green and the RC is merged |
 
 ## Real-model reporting boundary
 
