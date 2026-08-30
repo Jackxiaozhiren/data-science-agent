@@ -11,7 +11,7 @@ The recommended public-demo shape for this repository is:
 
 The full DSA Python package is intentionally not treated as a lightweight serverless function: the scientific stack is substantially larger than typical function bundles. Keep the Web and API independently deployable and connect them with the public API URL.
 
-The repository includes a root `render.yaml` Blueprint so the API can be provisioned from GitHub without recreating Docker, health-check, port, or demo-mode settings by hand.
+The repository includes a root `render.yaml` Blueprint so the API can be provisioned from GitHub without recreating Docker, health-check, port, storage, or demo-mode settings by hand.
 
 The public demo runs in deterministic offline/heuristic mode so a visitor can complete the core product flow without requiring or exposing a model API key. Real-model evaluation is a separate, explicitly configured path.
 
@@ -24,13 +24,15 @@ Use the button above, or create a new Blueprint from this repository in the Rend
 The Blueprint creates one Docker Web Service with:
 
 - `docker/Dockerfile.api` and the repository root as Docker build context;
-- the Render-provided `PORT` value at runtime;
+- the Render-provided `PORT` value handled by the image entrypoint;
 - `/health` as the health-check path;
 - `DSA_LLM_MODE=heuristic` and heuristic fallback;
-- automatic deploys disabled so a public-demo instance is not rebuilt on every repository change;
-- `DSA_CORS_ORIGINS` requested during Blueprint creation rather than committed to the repository.
+- an ephemeral SQLite database at `/tmp/dsa.db` for the public preview;
+- automatic deploys disabled so a public-demo instance is not rebuilt on every repository change.
 
-For the initial deployment, set `DSA_CORS_ORIGINS` to the exact public Vercel frontend origin. Do not include a trailing path. If the frontend URL has not been created yet, you can temporarily use the intended Vercel origin and update the Render environment variable before the final smoke test.
+No model credential or CORS value is required to get the API itself healthy. First verify the public API and `/health`. After the final Vercel frontend URL exists, set `DSA_CORS_ORIGINS` manually on the Render Web Service to that exact origin. This ordering avoids relying on `sync: false` placeholders, which Render only prompts for during the initial Blueprint creation flow.
+
+If an existing Blueprint has a failed first deploy, keep the same Blueprint and use **Manual sync** after the repository fix is merged. Do not create a second Blueprint for the same service.
 
 Render's free Web Service is suitable for a public preview but has intentional limitations: it can spin down after inactivity and its local filesystem is ephemeral. Uploaded datasets and generated artifacts therefore must be treated as temporary demo data.
 
@@ -48,7 +50,7 @@ NEXT_PUBLIC_API_URL=https://your-api.onrender.com
 
 ### API
 
-Allow the public web origin:
+After the frontend deployment has a stable public origin, allow that origin on the Render service:
 
 ```bash
 DSA_CORS_ORIGINS=https://your-demo.vercel.app
