@@ -11,7 +11,7 @@
   "timeout_s": 600.0,
   "extra": {}
  },
- "wall_s": 5.8,
+ "wall_s": 13.6,
  "total_supported": 45,
  "by_status": {
   "COMPLETED": 45
@@ -33,7 +33,7 @@
    "evidence_per_task": {
     "median": 3.0
    },
-   "report_median_chars": 3646.5
+   "report_median_chars": 3647.0
   },
   "human_": {
    "n": 25,
@@ -56,7 +56,7 @@
   "evidence_total": 123,
   "tool_calls_total": 321,
   "median_tool_calls": 7.0,
-  "report_median_chars": 3554.0
+  "report_median_chars": 3555.0
  },
  "gt_lane": "PENDING \u2014 task success / CI / generalization gap not computed without GT (\u00a726)"
 }

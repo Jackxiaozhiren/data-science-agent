@@ -39,6 +39,7 @@ from dsa_evaluation.external_benchmark import (
     ExternalRun,
     ExternalTask,
     RunConfig,
+    TaskOutcome,
     assert_gold_isolation,
     classify_outcome,
 )
@@ -290,6 +291,7 @@ class DataSciBenchAdapter:
         # which _materialize_run_dir already created. We invoke the checkout's
         # experiments/evaluate.py and parse its stdout/stderr for a score.
         import subprocess
+        import sys
 
         upstream = self._upstream_root()
         eval_script = upstream / "experiments" / "evaluate.py"
@@ -312,21 +314,53 @@ class DataSciBenchAdapter:
                 details={**details, "error": f"evaluator not found: {eval_script}"},
             )
         try:
-            # Upstream evaluators are invoked as: python experiments/evaluate.py --data_dir data --output_dir evaluation_results
-            # We scope to this single task's run dir by passing the task/model selectors the evaluator understands.
-            # If the script's CLI is unknown, we still get an honest execution_error rather than a fabricated score.
+            # Upstream evaluators expect PYTHONPATH to include the checkout root (for `from src.utils import …`)
+            # and are scoped by --task_id / --model_id (see experiments/evaluate.py parse_arguments).
+            import os as _os
+
+            env = _os.environ.copy()
+            env["PYTHONPATH"] = str(upstream) + _os.pathsep + env.get("PYTHONPATH", "")
             proc = subprocess.run(
-                ["python", str(eval_script), "--task", run.task_id, "--model", f"dsa_{run.run_id or '0'}"],
+                [sys.executable, str(eval_script), "--task_id", run.task_id, "--model_id", f"dsa_{run.run_id or '0'}"],
                 cwd=str(upstream),
                 capture_output=True,
                 text=True,
                 timeout=120,
+                env=env,
             )
             details["returncode"] = proc.returncode
             details["stdout_tail"] = (proc.stdout or "")[-2000:]
             details["stderr_tail"] = (proc.stderr or "")[-2000:]
-            # Heuristic: upstream TFC scorer prints a JSON with "score" or prints Completion Rate
-            # We look for a float score in stdout; if found, map >=0.5 to PASSED.
+            # Upstream CREvaluator writes evaluation_results/{model}_results.csv (see experiments/evaluate.py get_result_output_dir)
+            # We parse result_cr for this task/model after the run.
+            model_name = f"dsa_{run.run_id or '0'}".split("/")[-1]
+            csv_path = upstream / "evaluation_results" / f"{model_name}_results.csv"
+            if csv_path.is_file():
+                try:
+                    import csv as _csv
+
+                    with csv_path.open(newline="", encoding="utf-8") as fh:
+                        reader = _csv.DictReader(fh)
+                        for row in reader:
+                            if row.get("task_name") == run.task_id and row.get("model_name") == model_name:
+                                try:
+                                    score = float(row.get("result_cr") or row.get("result_value") or 0)
+                                except Exception:
+                                    score = 0.0
+                                outcome = TaskOutcome.PASSED if score >= 0.5 else TaskOutcome.FAILED
+                                details["csv_score"] = score
+                                return ExternalEvaluation(
+                                    task_id=run.task_id,
+                                    benchmark_name=self.name,
+                                    outcome=outcome,
+                                    score=score,
+                                    evaluator=str(eval_script),
+                                    evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                                    details=details,
+                                )
+                except Exception as csv_exc:
+                    details["csv_error"] = f"{type(csv_exc).__name__}: {csv_exc}"
+            # Fallback: heuristic stdout score
             import re as _re
 
             m = _re.search(r'"score"\s*:\s*([0-9.]+)', proc.stdout)
@@ -345,6 +379,18 @@ class DataSciBenchAdapter:
                     details=details,
                 )
             # No score parsed but evaluator ran — treat non-zero as execution error, zero as failed honest
+            # Special case: missing workspace deps (e.g. metagpt) is an environment gap, not a DSA failure — keep honest failed
+            stderr = (proc.stderr or "")
+            if "ModuleNotFoundError" in stderr and "metagpt" in stderr:
+                details["evaluator_unavailable"] = "workspace missing `metagpt` (see .workspace/requirements.txt) — GT present but original evaluator not runnable"
+                return ExternalEvaluation(
+                    task_id=run.task_id,
+                    benchmark_name=self.name,
+                    outcome=TaskOutcome.FAILED,
+                    evaluator=str(eval_script),
+                    evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                    details=details,
+                )
             outcome = TaskOutcome.FAILED if proc.returncode == 0 else TaskOutcome.EXECUTION_ERROR
             return ExternalEvaluation(
                 task_id=run.task_id,
@@ -355,13 +401,14 @@ class DataSciBenchAdapter:
                 details=details,
             )
         except Exception as exc:
+            # GT lane wiring failure is environment, not DSA pipeline failure — honest failed
             return ExternalEvaluation(
                 task_id=run.task_id,
                 benchmark_name=self.name,
-                outcome=TaskOutcome.EXECUTION_ERROR,
+                outcome=TaskOutcome.FAILED,
                 evaluator=str(eval_script),
                 evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
-                details={**details, "error": f"{type(exc).__name__}: {exc}"},
+                details={**details, "error": f"{type(exc).__name__}: {exc}", "honest_lane": "GT present but evaluator wiring failed"},
             )
 
     def export_results(self) -> Path:
