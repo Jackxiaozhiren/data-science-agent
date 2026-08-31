@@ -179,7 +179,8 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
             pub_ok = pub_path.exists() and "id-token: write" in pub_path.read_text(encoding="utf-8")
             exp_sbom_ver = version.lstrip("v")
             sbom_ok = (
-                sbom_path.exists() and json.loads(sbom_path.read_text()).get("version") == exp_sbom_ver
+                sbom_path.exists()
+                and json.loads(sbom_path.read_text()).get("version") == exp_sbom_ver
             )
             verify_ok = verify_path.exists()
             sc_ok = pub_ok and sbom_ok and verify_ok
