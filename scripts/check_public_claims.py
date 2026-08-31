@@ -11,10 +11,10 @@ ROOT = Path(__file__).parents[1]
 
 # Expected current values (from pyproject/CITATION live)
 EXPECTED = {
-    "version": "4.3.0",
+    "version": "4.3.1",
     "prev_version": "4.1.1",
     "prev_versions": ["4.0.0", "3.0.0", "2.0.0"],
-    "pytest": "253",  # live at HEAD post-82bb1a3 trim (257 was at tag v4.3.0, pre-trim)
+    "pytest": "253",  # live at HEAD post-82bb1a3 trim (257 was at tag v4.3.1, pre-trim)
     "pytest_old": ["155", "86+", "86"],
     "mypy": "104",  # with src
     "mypy_alt": "102",  # without src (also valid)

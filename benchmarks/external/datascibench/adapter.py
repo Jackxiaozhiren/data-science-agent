@@ -320,8 +320,11 @@ class DataSciBenchAdapter:
 
             env = _os.environ.copy()
             env["PYTHONPATH"] = str(upstream) + _os.pathsep + env.get("PYTHONPATH", "")
+            # Prefer workspace venv python (has metagpt) when available, else fall back to DSA venv
+            ws_python = self.workspace / "venv" / "bin" / "python"
+            py = str(ws_python) if ws_python.is_file() else sys.executable
             proc = subprocess.run(
-                [sys.executable, str(eval_script), "--task_id", run.task_id, "--model_id", f"dsa_{run.run_id or '0'}"],
+                [py, str(eval_script), "--task_id", run.task_id, "--model_id", f"dsa_{run.run_id or '0'}"],
                 cwd=str(upstream),
                 capture_output=True,
                 text=True,

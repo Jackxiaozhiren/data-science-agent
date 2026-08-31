@@ -104,7 +104,11 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
                 man = json.loads(man_path.read_text(encoding="utf-8"))
                 raw = json.loads(raw_path.read_text(encoding="utf-8"))
                 # raw_runs is list or dict with runs
-                n_runs = len(raw) if isinstance(raw, list) else len(raw.get("runs", raw.get("results", [])))
+                n_runs = (
+                    len(raw)
+                    if isinstance(raw, list)
+                    else len(raw.get("runs", raw.get("results", [])))
+                )
                 if man.get("task_count") != 222 or n_runs < 45:
                     man_ok = False
                     detail = f"manifest task_count={man.get('task_count')} runs={n_runs}"
@@ -159,7 +163,11 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
                     "research/claim-evidence-matrix.md",
                 ]
             )
-            gate("publication artifacts (§93)", pub_ok, "" if pub_ok else "missing paper/portfolio/claim-evidence")
+            gate(
+                "publication artifacts (§93)",
+                pub_ok,
+                "" if pub_ok else "missing paper/portfolio/claim-evidence",
+            )
         except Exception as e:
             gate("publication artifacts (§93)", False, f"{type(e).__name__}: {e}")
 
@@ -169,7 +177,10 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
             sbom_path = ROOT / "release/sbom.json"
             verify_path = ROOT / "docs/security/VERIFY_RELEASE.md"
             pub_ok = pub_path.exists() and "id-token: write" in pub_path.read_text(encoding="utf-8")
-            sbom_ok = sbom_path.exists() and json.loads(sbom_path.read_text()).get("version") == "4.3.0"
+            exp_sbom_ver = version.lstrip("v")
+            sbom_ok = (
+                sbom_path.exists() and json.loads(sbom_path.read_text()).get("version") == exp_sbom_ver
+            )
             verify_ok = verify_path.exists()
             sc_ok = pub_ok and sbom_ok and verify_ok
             detail = ""
@@ -192,7 +203,11 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
             cit_ver = m.group(1) if m else ""
             exp_ver = version.lstrip("v")
             cit_ok = cit_ver == exp_ver
-            gate("citation metadata (§93)", cit_ok, "" if cit_ok else f"CITATION.cff {cit_ver} != {exp_ver}")
+            gate(
+                "citation metadata (§93)",
+                cit_ok,
+                "" if cit_ok else f"CITATION.cff {cit_ver} != {exp_ver}",
+            )
         except Exception as e:
             gate("citation metadata (§93)", False, f"{type(e).__name__}: {e}")
 

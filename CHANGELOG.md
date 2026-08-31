@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.3.1 — CI Hardening + GT Lane Robustness (V4.3 patch)
+
+### Fixed
+
+- **CI gate `ruff format --check`**: `verify_release.py` long lines reformatted (commit `b957177` had 1 file unformatted) — `ruff format` now `161 files already formatted`.
+- **DataSciBench GT lane subprocess**: `adapter.py` now prefers `workspace/venv/bin/python` (has `metagpt`) with `PYTHONPATH`, parses `evaluation_results/{model}_results.csv` `result_cr` for `passed/failed + score`; `TaskOutcome` import fixed, `sys.executable` fallback. GT present but evaluator missing `loguru` now returns `failed` honest with `evaluator_unavailable` detail, not `execution_error`.
+
+### Changed
+
+- Version `4.3.0 → 4.3.1` (patch, no API change; `SBOM 192 → 193`).
+
+### Verified
+
+- `pytest 276`, `mypy 105 clean`, `ruff OK`, `npm 13/13`, `docker valid`, `dsa verify-release v4.3.1 17/17 PASS`; `DataSciBench` `45/45 failed` honest (execution-only until workspace `venv` fully closed; `uv pip` now closes `metagpt`).
+
 ## 4.3.0 — External Scientific Validation + Publication Readiness + Supply-Chain Trust (V4.3 W1-W12, Phase A-L)
 
 ### Added

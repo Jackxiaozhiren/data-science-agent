@@ -4,8 +4,8 @@
  "input_raw": "/Users/jackson/Data agent/benchmarks/external/datascibench/results/raw_runs.json",
  "script": "research/v4_3/generate_phase_f_results.py",
  "git": {
-  "revparse": "efa3bca",
-  "describe": "v4.2.10-19-gefa3bca"
+  "revparse": "b957177",
+  "describe": "v4.3.1"
  },
  "generated_artifacts": {
   "processed": "processed/datascibench_summary.json",

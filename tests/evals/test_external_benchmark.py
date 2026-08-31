@@ -164,7 +164,7 @@ def test_manifest_covers_all_required_fields(tmp_path: Path) -> None:
         evaluator_version="1.0",
         environment={"python": "3.12"},
         dsa_commit="c8903d4",
-        dsa_version="4.3.0",
+        dsa_version="4.3.1",
         model="deterministic",
         prompt_versions={"system": "p1"},
         tool_versions={"polars": "1.0"},

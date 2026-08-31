@@ -5,7 +5,7 @@
   "metadata": {
     "component": {
       "name": "jack-data-science-agent",
-      "version": "4.3.0",
+      "version": "4.3.1",
       "type": "application"
     }
   },
@@ -542,6 +542,19 @@
     },
     {
       "name": "jack-data-science-agent",
+      "version": "4.3.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:local/jack-data-science-agent@4.3.1",
+      "source": "local:pyproject.toml"
+    },
+    {
+      "name": "jack-data-science-agent",
       "version": "4.3.0",
       "licenses": [
         {
@@ -550,8 +563,8 @@
           }
         }
       ],
-      "purl": "pkg:local/jack-data-science-agent@4.3.0",
-      "source": "local:pyproject.toml"
+      "purl": "pkg:pypi/jack-data-science-agent@4.3.0",
+      "source": "https://pypi.org/simple"
     },
     {
       "name": "jedi",
