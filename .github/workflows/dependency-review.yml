@@ -11,11 +11,13 @@ permissions:
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Dependency Review
-        uses: actions/dependency-review-action@v5
+        uses: actions/dependency-review-action@8912c3fa0fd11e3d8b37b7b6f0c9a5b6a7abb # v5.0.4
         with:
           fail-on-severity: high
           fail-on-scopes: runtime

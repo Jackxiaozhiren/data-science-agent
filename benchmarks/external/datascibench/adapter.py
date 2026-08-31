@@ -252,17 +252,117 @@ class DataSciBenchAdapter:
         return run
 
     def evaluate(self, run: ExternalRun) -> ExternalEvaluation:
-        """Outcome for one run; the original evaluator scores the materialized
-        ``logs.txt`` (subprocess wiring lands with the first real compute run,
-        raw output stored under ``results/`` per §48)."""
-        return ExternalEvaluation(
-            task_id=run.task_id,
-            benchmark_name=self.name,
-            outcome=classify_outcome(run),
-            evaluator="DataSciBench original (experiments/evaluate.py, CREvaluator)",
-            evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
-            details={"run_status": run.status, "conversion": "logs.txt plan markers"},
-        )
+        """Outcome for one run — execution lane vs GT lane (§89).
+
+        * **GT absent** (default, honest): ``classify_outcome`` only — no score,
+          outcome is ``failed`` honest (§26, §89).
+        * **GT present** (operator accepted ``zd21/DataSciBench`` and placed
+          ``workspace/gt/``): the materialized ``logs.txt`` is scored by the
+          upstream original evaluator (``experiments/evaluate.py`` or
+          ``evaluate_tmc.py``) in a subprocess — this harness never invents a
+          score (§16, §19). The subprocess is the §20 isolation seam.
+        Raw output would be stored under ``results/`` per §48 when GT is wired.
+        """
+        gt_present = (self.workspace / "GT_STATUS.txt").read_text(
+            encoding="utf-8"
+        ).startswith("ground_truth_present: true") if (self.workspace / "GT_STATUS.txt").exists() else False
+        # Also accept gt/ dir with any content as GT present (operator did direct download)
+        if not gt_present and (self.workspace / "gt").is_dir() and any((self.workspace / "gt").iterdir()):
+            gt_present = True
+
+        if not gt_present:
+            return ExternalEvaluation(
+                task_id=run.task_id,
+                benchmark_name=self.name,
+                outcome=classify_outcome(run),
+                evaluator="DataSciBench original (experiments/evaluate.py, CREvaluator) — GT absent",
+                evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                details={
+                    "run_status": run.status,
+                    "conversion": "logs.txt plan markers",
+                    "gt_present": False,
+                    "honest_lane": "execution-only (§89)",
+                },
+            )
+
+        # GT lane — run the upstream evaluator as a subprocess (§20 isolation)
+        # The evaluator expects data/{task_id}/{model}_{run_id}/logs.txt layout
+        # which _materialize_run_dir already created. We invoke the checkout's
+        # experiments/evaluate.py and parse its stdout/stderr for a score.
+        import subprocess
+
+        upstream = self._upstream_root()
+        eval_script = upstream / "experiments" / "evaluate.py"
+        # bcb* tasks use the TMC evaluator
+        if run.task_id.startswith("bcb"):
+            eval_script = upstream / "experiments" / "evaluate_tmc.py"
+        details: dict[str, object] = {
+            "run_status": run.status,
+            "conversion": "logs.txt plan markers",
+            "gt_present": True,
+            "evaluator_script": str(eval_script),
+        }
+        if not eval_script.is_file():
+            return ExternalEvaluation(
+                task_id=run.task_id,
+                benchmark_name=self.name,
+                outcome=TaskOutcome.EXECUTION_ERROR,
+                evaluator=str(eval_script),
+                evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                details={**details, "error": f"evaluator not found: {eval_script}"},
+            )
+        try:
+            # Upstream evaluators are invoked as: python experiments/evaluate.py --data_dir data --output_dir evaluation_results
+            # We scope to this single task's run dir by passing the task/model selectors the evaluator understands.
+            # If the script's CLI is unknown, we still get an honest execution_error rather than a fabricated score.
+            proc = subprocess.run(
+                ["python", str(eval_script), "--task", run.task_id, "--model", f"dsa_{run.run_id or '0'}"],
+                cwd=str(upstream),
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            details["returncode"] = proc.returncode
+            details["stdout_tail"] = (proc.stdout or "")[-2000:]
+            details["stderr_tail"] = (proc.stderr or "")[-2000:]
+            # Heuristic: upstream TFC scorer prints a JSON with "score" or prints Completion Rate
+            # We look for a float score in stdout; if found, map >=0.5 to PASSED.
+            import re as _re
+
+            m = _re.search(r'"score"\s*:\s*([0-9.]+)', proc.stdout)
+            if not m:
+                m = _re.search(r"Completion Rate[^0-9]*([0-9.]+)", proc.stdout)
+            if m and proc.returncode == 0:
+                score = float(m.group(1))
+                outcome = TaskOutcome.PASSED if score >= 0.5 else TaskOutcome.FAILED
+                return ExternalEvaluation(
+                    task_id=run.task_id,
+                    benchmark_name=self.name,
+                    outcome=outcome,
+                    score=score,
+                    evaluator=str(eval_script),
+                    evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                    details=details,
+                )
+            # No score parsed but evaluator ran — treat non-zero as execution error, zero as failed honest
+            outcome = TaskOutcome.FAILED if proc.returncode == 0 else TaskOutcome.EXECUTION_ERROR
+            return ExternalEvaluation(
+                task_id=run.task_id,
+                benchmark_name=self.name,
+                outcome=outcome,
+                evaluator=str(eval_script),
+                evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                details=details,
+            )
+        except Exception as exc:
+            return ExternalEvaluation(
+                task_id=run.task_id,
+                benchmark_name=self.name,
+                outcome=TaskOutcome.EXECUTION_ERROR,
+                evaluator=str(eval_script),
+                evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                details={**details, "error": f"{type(exc).__name__}: {exc}"},
+            )
 
     def export_results(self) -> Path:
         results_dir = Path(__file__).parent / "results"

@@ -22,15 +22,15 @@ jobs:
         language: ["python", "javascript"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@9492893284902ad3a77063a96fda98b703ac99df6 # v4.31.8
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@9492893284902ad3a77063a96fda98b703ac99df6 # v4.31.8
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@9492893284902ad3a77063a96fda98b703ac99df6 # v4.31.8
         with:
           category: "/language:${{matrix.language}}"
