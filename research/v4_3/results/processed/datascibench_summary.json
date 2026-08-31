@@ -1,0 +1,62 @@
+{
+ "benchmark": "DataSciBench",
+ "upstream_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+ "runner": "dsa AgentBackedRunner (deterministic local pipeline, no LLM key)",
+ "config": {
+  "model": "deterministic-local",
+  "provider": "",
+  "seed": 42,
+  "temperature": null,
+  "prompt_version": "adapter-1.0",
+  "timeout_s": 600.0,
+  "extra": {}
+ },
+ "wall_s": 5.8,
+ "total_supported": 45,
+ "by_status": {
+  "COMPLETED": 45
+ },
+ "by_outcome": {
+  "failed": 45
+ },
+ "category": {
+  "csv_excel_": {
+   "n": 20,
+   "status": {
+    "COMPLETED": 20
+   },
+   "outcome": {
+    "failed": 20
+   },
+   "evidence_total": 63,
+   "tool_calls_total": 139,
+   "evidence_per_task": {
+    "median": 3.0
+   },
+   "report_median_chars": 3646.5
+  },
+  "human_": {
+   "n": 25,
+   "status": {
+    "COMPLETED": 25
+   },
+   "outcome": {
+    "failed": 25
+   },
+   "evidence_total": 60,
+   "tool_calls_total": 182,
+   "evidence_per_task": {
+    "median": 3.0
+   },
+   "report_median_chars": 3365.0
+  }
+ },
+ "steps": {
+  "evidence_with": 33,
+  "evidence_total": 123,
+  "tool_calls_total": 321,
+  "median_tool_calls": 7.0,
+  "report_median_chars": 3554.0
+ },
+ "gt_lane": "PENDING \u2014 task success / CI / generalization gap not computed without GT (\u00a726)"
+}
