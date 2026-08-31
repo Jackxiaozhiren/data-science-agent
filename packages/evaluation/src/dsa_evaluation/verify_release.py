@@ -24,7 +24,12 @@ def _run(cmd: list[str], timeout: int = 300) -> tuple[bool, str]:
 
 
 def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
-    """Run §59–62 + §63 release gates (§58 v3.0.0). Each item PASS/FAIL/NOT VERIFIED."""
+    """Run §59–62 + §63 release gates (§58 v3.0.0). Each item PASS/FAIL/NOT VERIFIED.
+
+    For v4.3.0+ (Spec §93) extends with: external benchmark manifest,
+    case-study verification, publication artifacts, supply-chain provenance,
+    citation metadata.
+    """
     gates: dict[str, str] = {}
     details: dict[str, str] = {}
 
@@ -78,6 +83,118 @@ def verify_release(version: str = "v3.0.0") -> dict[str, Any]:
         timeout=30,
     )
     gate("documentation build (mkdocs)", ok2, out2[:800] if not ok2 else "")
+
+    # §93 v4.3.0 extended checks (honest: FAIL if missing, not silent)
+    is_v43 = False
+    try:
+        # Normalize "v4.3.0" or "4.3.0"
+        v = version.lstrip("v")
+        parts = [int(x) for x in v.split(".")]
+        is_v43 = parts >= [4, 3, 0]
+    except Exception:
+        is_v43 = version.strip() in ("v4.3.0", "4.3.0")
+    if is_v43:
+        # external benchmark manifest (§93: external benchmark manifest)
+        try:
+            man_path = ROOT / "benchmarks/external/datascibench/manifest.json"
+            raw_path = ROOT / "benchmarks/external/datascibench/results/raw_runs.json"
+            man_ok = man_path.exists() and raw_path.exists()
+            detail = ""
+            if man_ok:
+                man = json.loads(man_path.read_text(encoding="utf-8"))
+                raw = json.loads(raw_path.read_text(encoding="utf-8"))
+                # raw_runs is list or dict with runs
+                n_runs = len(raw) if isinstance(raw, list) else len(raw.get("runs", raw.get("results", [])))
+                if man.get("task_count") != 222 or n_runs < 45:
+                    man_ok = False
+                    detail = f"manifest task_count={man.get('task_count')} runs={n_runs}"
+            else:
+                detail = f"missing {man_path.name if not man_path.exists() else raw_path.name}"
+            gate("external benchmark manifest (§93)", man_ok, detail)
+        except Exception as e:
+            gate("external benchmark manifest (§93)", False, f"{type(e).__name__}: {e}")
+
+        # case-study verification (§93: 8/8 verified)
+        try:
+            cs_ok = True
+            cs_detail = ""
+            for idx in range(1, 9):
+                pat = ROOT / f"case-studies/{idx:02d}-*/outputs/summary.json"
+                matches = list(ROOT.glob(f"case-studies/{idx:02d}-*/outputs/summary.json"))
+                if not matches:
+                    # fallback glob
+                    matches = list((ROOT / "case-studies").glob(f"{idx:02d}*/outputs/summary.json"))
+                if not matches:
+                    # try any
+                    all_sum = list((ROOT / "case-studies").glob("*/outputs/summary.json"))
+                    # check count
+                    if len(all_sum) < 8:
+                        cs_ok = False
+                        cs_detail = f"found {len(all_sum)}/8 summary.json"
+                        break
+                    continue
+                s = json.loads(matches[0].read_text(encoding="utf-8"))
+                if s.get("status") != "COMPLETED":
+                    cs_ok = False
+                    cs_detail = f"{matches[0].parent.parent.name} status={s.get('status')}"
+                    break
+            # also check total 8
+            total = len(list((ROOT / "case-studies").glob("*/outputs/summary.json")))
+            if total != 8:
+                cs_ok = False
+                cs_detail = f"case-studies summaries {total}/8"
+            gate("case-study verification (§93)", cs_ok, cs_detail)
+        except Exception as e:
+            gate("case-study verification (§93)", False, f"{type(e).__name__}: {e}")
+
+        # publication artifacts (§93)
+        try:
+            pub_ok = all(
+                (ROOT / p).exists()
+                for p in [
+                    "research/paper/paper.md",
+                    "research/paper/references.bib",
+                    "docs/portfolio/PROJECT_SUMMARY.md",
+                    "docs/portfolio/ONE_MINUTE_PITCH.md",
+                    "research/claim-evidence-matrix.md",
+                ]
+            )
+            gate("publication artifacts (§93)", pub_ok, "" if pub_ok else "missing paper/portfolio/claim-evidence")
+        except Exception as e:
+            gate("publication artifacts (§93)", False, f"{type(e).__name__}: {e}")
+
+        # supply-chain provenance (§93 + W8)
+        try:
+            pub_path = ROOT / ".github/workflows/publish.yml"
+            sbom_path = ROOT / "release/sbom.json"
+            verify_path = ROOT / "docs/security/VERIFY_RELEASE.md"
+            pub_ok = pub_path.exists() and "id-token: write" in pub_path.read_text(encoding="utf-8")
+            sbom_ok = sbom_path.exists() and json.loads(sbom_path.read_text()).get("version") == "4.3.0"
+            verify_ok = verify_path.exists()
+            sc_ok = pub_ok and sbom_ok and verify_ok
+            detail = ""
+            if not pub_ok:
+                detail += "publish.yml missing id-token; "
+            if not sbom_ok:
+                detail += "sbom missing or version mismatch; "
+            if not verify_ok:
+                detail += "VERIFY_RELEASE.md missing; "
+            gate("supply-chain provenance (§93)", sc_ok, detail.strip())
+        except Exception as e:
+            gate("supply-chain provenance (§93)", False, f"{type(e).__name__}: {e}")
+
+        # citation metadata (§93)
+        try:
+            cit = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
+            import re
+
+            m = re.search(r"^version:\s*([0-9.]+)", cit, re.MULTILINE)
+            cit_ver = m.group(1) if m else ""
+            exp_ver = version.lstrip("v")
+            cit_ok = cit_ver == exp_ver
+            gate("citation metadata (§93)", cit_ok, "" if cit_ok else f"CITATION.cff {cit_ver} != {exp_ver}")
+        except Exception as e:
+            gate("citation metadata (§93)", False, f"{type(e).__name__}: {e}")
 
     # Compose §59 report
     report = {

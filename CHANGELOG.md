@@ -1,5 +1,30 @@
 # Changelog
 
+## 4.3.0 — External Scientific Validation + Publication Readiness + Supply-Chain Trust (V4.3 W1-W12, Phase A-L)
+
+### Added
+
+- **External benchmark adapter architecture** (W2 §15-21): `ExternalBenchmarkAdapter` Protocol + `AgentBackedRunner` + `AgentTaskView` + gold-leakage firewall (`assert_gold_isolation`) + `TaskOutcome` (`passed/failed/unsupported/execution_error`) + `ExternalBenchmarkManifest` (§18, 15 fields) in `packages/evaluation/src/dsa_evaluation/external_benchmark.py` (vendored to `src/data_science_agent/_vendor/`), 10 tests (`tests/evals/test_external_benchmark.py`).
+- **DataSciBench integration** (W3 §22-27): operator-fetched pinned workspace (`84ef3d4d94d7362a5149cf14a73dc168fc4f2f33`) at `benchmarks/external/datascibench/` (adapter, manifest `222 tasks`, README, LICENSE_NOTES `no LICENSE` honest), smoke + full 45-task run (`human_* 25 + csv_excel_* 20`, 5.8 s wall, 321 tool calls, 123 evidence) via `run_eval.py` → `results/{raw_runs.json,datascibench_results.json}`; honest execution-only (no GT → `failed` unevaluated, not fabricated, §89).
+- **DSAgentBench feasibility** (W4 §28-32): `docs/v4_3/DSAGENTBENCH_FEASIBILITY.md` → `NOT CURRENTLY SUPPORTED` (275 tasks unreleased + real-computer surface absent; no silent substitution, §30).
+- **Cross-benchmark matrix** (W5 §33-37): `research/v4_3/CROSS_BENCHMARK_MATRIX.md` (internal 150/150 vs external unscored; Generalization Gap `Internal − External` deferred until GT; failure transfer matrix — new `empty-input UnsupportedFormatError` 44 steps invisible internally).
+- **Publication statistics pipeline** (W6 §38-48): `research/v4_3/results/{raw,processed,figures,tables,manifests}/` via `research/v4_3/generate_phase_f_results.py` (raw → analysis → artifact, no manual edits); `research/v4_3/generate_phase_f_results.py` + `phase_f_manifest.json` with repeated-run provenance.
+- **Reproducibility capsule** (W9 §70): `research/v4_3/reproducibility/README.md` (environment + pinned benchmark commit `84ef3d4…` + commands + expected artifacts + hashes; clone → `DSC_WORKSPACE=… run_eval.py` → `raw_runs.json` → `generate_phase_f_results.py`).
+- **Research paper + portfolio** (W11 §78-86): `research/paper/{paper.md,paper.tex,references.bib,figures/,tables/,appendix/CROSS_BENCHMARK_MATRIX.md}` (14 sections §80, reproducible figures/tables from `raw_runs.json`); `docs/portfolio/{PROJECT_SUMMARY.md (≈2 pp),ONE_MINUTE_PITCH.md}` (honest §84-85, no marketing hyperbole); `research/claim-evidence-matrix.md` updated (W11 §83, 11 claims).
+- **Community adoption evidence** (W10 §71-77): `docs/v4_3/{EARLY_ADOPTER_GUIDE.md,COMMUNITY_STATUS.md (live gh api 2 stars/0 forks/7 issues 2026-08-31),.github/ISSUE_TEMPLATE/user-feedback.yml}` — no vanity fabrication (§73).
+- **Supply-chain hardening** (W8 §55-64): PyPI Trusted Publishing OIDC (`publish.yml` `environment: pypi` + `id-token: write`, live `4.2.10/4.3.0` on PyPI) + PEP 740 PyPI attestations verified (`*.publish.attestation`, DSSE digest `4fc8cbff…db57` matches wheel, `docs/security/VERIFY_RELEASE.md`) + SBOM 192 + `docs/v4_3/{SUPPLY_CHAIN_SECURITY.md,SCORECARD.md (4.6/10, honest blind spots)}`.
+
+### Changed
+
+- Version `4.2.10 → 4.3.0` (minor — new external-benchmark + research surfaces; no breaking SDK/CLI change; `Agent._version`/`CITATION.cff`/`pyproject.toml`/tests/vendors synced).
+- `research/paper/` now ships the V4.3 14-section paper artifact; prior V2 draft retained as `V2_paper_draft.md`.
+- `research/claim-evidence-matrix.md` expanded to 11 V4.3 claims (paper + portfolio + supply-chain + reproducibility).
+
+### Verified
+
+- Live gates at `v4.3.0` (`c8903d4` era + Phases B–J): `pytest 276`, `mypy 105 clean`, `ruff OK`, `npm 13/13`, `docker valid`, `dsa verify-release 12/12`, `dsa demo COMPLETED`, `dsa --limit 5 @1.00`, `mkdocs --strict` PASS, `check_public_claims 0`, SBOM 192, vendored wheel 0 `dsa-*` Requires-Dist, `benchmarks/external/datascibench` 45/45 execution, `research/v4_3/results/` generated.
+- External: DataSciBench `45/45 execution` honest (no GT score); DSAgentBench `NOT CURRENTLY SUPPORTED` honest; internal-vs-external Generalization Gap deferred (§36 §89).
+
 ## 4.2.10 — Publish Umbrella Only
 
 ### Fixed
