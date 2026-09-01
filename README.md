@@ -6,10 +6,10 @@
 
 Ask questions about CSV files and databases in natural language. DSA runs SQL, statistics, machine learning, and visualization, then returns **claim-level evidence, a reproducible report, and the artifacts needed to inspect how each conclusion was produced**.
 
-[**Try Product Tour**](https://jackxiaozhiren.github.io/data-science-agent/) ·
+[**Try Live Demo**](https://data-science-agent-web.vercel.app/datasets) ·
+[**Product Tour**](https://jackxiaozhiren.github.io/data-science-agent/) ·
 [**60-second quickstart**](#-60-second-quickstart) ·
 [**Install from PyPI**](https://pypi.org/project/jack-data-science-agent/) ·
-[**See it in action**](#-see-it-in-action) ·
 [**Case studies**](case-studies/) ·
 [**Evaluation**](docs/evaluation.md) ·
 [**Docs**](docs/getting-started.md) ·
@@ -26,7 +26,7 @@ Ask questions about CSV files and databases in natural language. DSA runs SQL, s
 
 **For analysts, researchers, and ML engineers who need answers they can inspect, audit, reproduce, and challenge.**
 
-Browser preview: [open the verified Product Tour](https://jackxiaozhiren.github.io/data-science-agent/) → then `pip install jack-data-science-agent` → `dsa demo` → inspect `report.md` and `evidence_graph.json`.
+Live browser demo: [upload a dataset and run DSA](https://data-science-agent-web.vercel.app/datasets) · Static artifact tour: [browse verified runs](https://jackxiaozhiren.github.io/data-science-agent/)
 
 </div>
 
@@ -98,6 +98,36 @@ analysis run
 | `analysis.ipynb` | Inspectable notebook representation |
 | `reproduce.sh` | Re-run the analysis |
 
+### Hosted browser demo
+
+The verified public demo is available at **[data-science-agent-web.vercel.app](https://data-science-agent-web.vercel.app/datasets)**. It runs the Next.js web interface on Vercel and the FastAPI analysis service on Render.
+
+The demo supports the core product flow:
+
+```text
+Upload CSV / Excel
+      ↓
+Inspect dataset
+      ↓
+Ask a natural-language question
+      ↓
+Planner selects analysis tools
+      ↓
+Statistics / ML / visualization execute
+      ↓
+Evidence is verified
+      ↓
+Validation + report
+```
+
+A useful smoke-test question is:
+
+> Explain which features are most important for revenue, test whether the main associations are statistically significant, assess the impact of campaign_group on the outcome, and clearly distinguish association from causation. Include a visualization.
+
+The hosted preview intentionally runs in deterministic heuristic/offline mode, so it does not require or expose a model API key. The public Render instance uses ephemeral local storage: **uploaded datasets and generated artifacts are temporary and may disappear after a restart or redeploy, so re-upload the dataset if it is no longer listed.** A free instance may also need a short cold-start period after inactivity.
+
+See [Hosted Demo Deployment](docs/hosted-demo.md) for the deployment topology, environment variables, and limitations.
+
 ### Where DSA fits
 
 | You are... | DSA helps you... |
@@ -110,9 +140,11 @@ analysis run
 
 ## See it in action
 
-**Fastest browser preview: [open the verified Product Tour →](https://jackxiaozhiren.github.io/data-science-agent/)**
+**Interactive path: [Try the live hosted demo →](https://data-science-agent-web.vercel.app/datasets)**
 
-The Product Tour is a static view of repository artifacts from verified DSA runs. It does not accept uploads or pretend to be a live hosted model/API service.
+**Artifact-only path: [Open the verified Product Tour →](https://jackxiaozhiren.github.io/data-science-agent/)**
+
+The Product Tour is a static view of repository artifacts from verified DSA runs. It does not accept uploads or pretend to be a live hosted model/API service. The live demo is separate and is explicitly labeled as a temporary public preview.
 
 <div align="center">
 
@@ -156,21 +188,25 @@ DSA records run metadata and reproduction artifacts instead of treating the fina
 
 ### 3. Evidence-aware critique
 
-A critic stage checks whether conclusions go beyond available evidence. For example, causal language can be rejected when the underlying analysis only supports correlation.
+A critic stage checks whether conclusions go beyond available evidence. Causal language can be rejected when the underlying analysis only supports association.
 
-### 4. Real data-science tools
+### 4. Statistical and modeling guardrails
+
+The current analysis path can select semantic outcome/treatment columns, run significance tests, encode categorical features for RandomForest importance, exclude exact target copies from feature importance, and preserve an explicit association-vs-causation boundary.
+
+### 5. Real data-science tools
 
 Core workflows can coordinate:
 
 - dataset profiling and exploratory analysis
 - SQL with DuckDB
-- statistical testing
+- correlation and hypothesis testing
 - regression and classification
 - forecasting and feature importance
 - visualization
 - report generation
 
-### 5. One runtime, multiple interfaces
+### 6. One runtime, multiple interfaces
 
 | Surface | Entry point |
 |---|---|
@@ -213,21 +249,11 @@ for evidence in result.evidence:
 
 ---
 
-## Case study gallery
-
-The repository includes verified end-to-end examples across business analytics, churn, forecasting, marketing, finance, public statistics, data quality, and classification.
-
-**[Browse the Case Study Gallery →](case-studies/)**
-
-A useful way to evaluate DSA is to start with the question you would ask about your own dataset, then inspect the generated report and evidence trail.
-
----
-
 ## Evaluation
 
 DSA is developed against versioned benchmark suites rather than relying only on hand-picked demos.
 
-The repository currently contains deterministic benchmark and evaluator-validation results, including frozen task suites and reproducibility checks. These results are useful for regression testing and validating the evaluation harness, but **they should not be interpreted as an independent comparison of real LLM model quality unless the run identifies a real model/provider and reproducible configuration**.
+The repository contains deterministic benchmark and evaluator-validation results, including frozen task suites and reproducibility checks. These results are useful for regression testing and validating the evaluation harness, but **they should not be interpreted as an independent comparison of real LLM model quality unless the run identifies a real model/provider and reproducible configuration**.
 
 The current public result registry includes a `stub/small` validation run. It is intentionally labeled as such so test-harness scores are not confused with real-model performance.
 
@@ -235,8 +261,6 @@ The current public result registry includes a `stub/small` validation run. It is
 - [Benchmark documentation](docs/benchmark.md)
 - [Reproducible result registry](benchmarks/leaderboard/)
 - [Research & limitations](docs/research.md)
-
-**Next evaluation gate:** run the merged credentialed four-way real-model smoke workflow, review all raw artifacts for reproducibility, and only then prepare any full-catalog comparative result for publication.
 
 ---
 
@@ -251,6 +275,17 @@ flowchart LR
     E --> F["Critic"]
     F --> G["Evidence-backed report"]
     G --> H["Reproduction artifacts"]
+```
+
+Hosted demo topology:
+
+```mermaid
+flowchart LR
+    U["Browser"] --> W["Next.js · Vercel"]
+    W --> A["FastAPI · Render"]
+    A --> D["Temporary dataset storage"]
+    A --> T["DSA tools"]
+    T --> R["Evidence + report"]
 ```
 
 The runtime uses a LangGraph-based orchestration layer over typed data-science tools, with local-first data operations built around Python, DuckDB, Polars, SciPy, scikit-learn, and Matplotlib.
@@ -272,9 +307,7 @@ The runtime uses a LangGraph-based orchestration layer over typed data-science t
 | MCP interface | Varies | Varies | ✓ |
 | Plugin runtime | Varies | Varies | ✓ |
 
-DSA is not intended to be only another natural-language interface to a dataframe.
-
-Its focus is **verifiable, reproducible AI data science**.
+DSA is not intended to be only another natural-language interface to a dataframe. Its focus is **verifiable, reproducible AI data science**.
 
 ---
 
@@ -282,8 +315,10 @@ Its focus is **verifiable, reproducible AI data science**.
 
 Start here:
 
+- [Live Demo](https://data-science-agent-web.vercel.app/datasets)
 - [Product Tour](https://jackxiaozhiren.github.io/data-science-agent/)
 - [Getting Started](docs/getting-started.md)
+- [Hosted Demo Deployment](docs/hosted-demo.md)
 - [SDK & API Reference](docs/api.md)
 - [Evaluation](docs/evaluation.md)
 - [Benchmarks](docs/benchmark.md)
@@ -344,6 +379,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [ROADMAP.md](ROADMAP.md), and [CODE_OF_C
 
 ### Ask. Analyze. Verify. Reproduce.
 
+[Live Demo](https://data-science-agent-web.vercel.app/datasets) ·
 [Product Tour](https://jackxiaozhiren.github.io/data-science-agent/) ·
 [Get Started](docs/getting-started.md) ·
 [Case Studies](case-studies/) ·
