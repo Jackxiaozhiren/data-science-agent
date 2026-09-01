@@ -1,19 +1,44 @@
 # Hosted Demo Deployment
 
-The repository contains a Next.js web app (`apps/web`) and FastAPI service (`apps/api`). The hosted demo should expose both through public HTTPS URLs.
+The repository contains a Next.js web app (`apps/web`) and FastAPI service (`apps/api`). The public demo exposes both through HTTPS URLs.
 
-## Current reference deployment
+## Current public deployment
 
-The recommended public-demo shape for this repository is:
+The verified deployment shape is:
 
-- **Web:** Vercel, built from `apps/web`.
-- **API:** Render Web Service, built from the repository's full Docker API image.
+- **Web:** Vercel — `https://data-science-agent-web.vercel.app`
+- **Try DSA:** `https://data-science-agent-web.vercel.app/datasets`
+- **API:** Render Web Service — `https://data-science-agent-api.onrender.com`
+- **API health:** `https://data-science-agent-api.onrender.com/health`
 
-The full DSA Python package is intentionally not treated as a lightweight serverless function: the scientific stack is substantially larger than typical function bundles. Keep the Web and API independently deployable and connect them with the public API URL.
+The full DSA Python package is intentionally not treated as a lightweight serverless function: the scientific stack is substantially larger than typical function bundles. The Web and API remain independently deployable and are connected with the public API URL.
 
-The repository includes a root `render.yaml` Blueprint so the API can be provisioned from GitHub without recreating Docker, health-check, port, storage, or demo-mode settings by hand.
+The repository includes a root `render.yaml` Blueprint so the API can be provisioned from GitHub without recreating Docker, health-check, port, or demo-mode settings by hand.
 
 The public demo runs in deterministic offline/heuristic mode so a visitor can complete the core product flow without requiring or exposing a model API key. Real-model evaluation is a separate, explicitly configured path.
+
+## Verified product flow
+
+The hosted deployment has been exercised through the complete browser path:
+
+```text
+Upload dataset
+  → profile dataset
+  → semantic planning
+  → correlation / significance testing
+  → feature importance
+  → causal guard
+  → visualization
+  → verified evidence
+  → validation
+  → COMPLETED report
+```
+
+A canonical acceptance question is:
+
+> Explain which features are most important for revenue, test whether the main associations are statistically significant, assess the impact of campaign_group on the outcome, and clearly distinguish association from causation. Include a visualization.
+
+A successful run should show completed tool calls, evidence marked `verified`, no tool errors, and a final `COMPLETED` report. A causal check may deliberately return `causal_bar=fail`; that is a guardrail indicating that an observational difference is not sufficient to establish causation.
 
 ## Deploy the API on Render
 
@@ -30,11 +55,40 @@ The Blueprint creates one Docker Web Service with:
 - an ephemeral SQLite database at `/tmp/dsa.db` for the public preview;
 - automatic deploys disabled so a public-demo instance is not rebuilt on every repository change.
 
-No model credential or CORS value is required to get the API itself healthy. First verify the public API and `/health`. After the final Vercel frontend URL exists, set `DSA_CORS_ORIGINS` manually on the Render Web Service to that exact origin. This ordering avoids relying on `sync: false` placeholders, which Render only prompts for during the initial Blueprint creation flow.
+No model credential or CORS value is required to get the API itself healthy. First verify the public API and `/health`. After the final Vercel frontend URL exists, set `DSA_CORS_ORIGINS` manually on the Render Web Service to that exact origin.
 
-If an existing Blueprint has a failed first deploy, keep the same Blueprint and use **Manual sync** after the repository fix is merged. Do not create a second Blueprint for the same service.
+For the current public deployment:
 
-Render's free Web Service is suitable for a public preview but has intentional limitations: it can spin down after inactivity and its local filesystem is ephemeral. Uploaded datasets and generated artifacts therefore must be treated as temporary demo data.
+```bash
+DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
+```
+
+If an existing Blueprint has a failed deploy, keep the same Blueprint and use **Manual sync** or **Manual Deploy** after the repository fix is merged. Do not create a second Blueprint for the same service.
+
+## Dataset storage behavior
+
+Runtime uploads are stored under the API dataset directory. The default resolves to:
+
+```text
+/app/data/datasets
+```
+
+You can override it with:
+
+```bash
+DSA_DATASET_DIR=/your/durable/path
+```
+
+On the current free Render preview, local storage is ephemeral. A restart or redeploy may remove uploaded files even if an old database record existed previously. The API therefore filters out dataset records whose backing file is missing, and analysis creation rejects a missing dataset before running tools.
+
+For the public demo, visitors should assume:
+
+- uploaded datasets are temporary;
+- generated chart/report files are temporary;
+- a restart or redeploy may require re-uploading the dataset;
+- the free instance may need a short cold start after inactivity.
+
+A production deployment should replace ephemeral local dataset/artifact storage with durable object storage, a persistent disk, or another explicitly managed persistence layer.
 
 ## Required configuration
 
@@ -43,28 +97,37 @@ Render's free Web Service is suitable for a public preview but has intentional l
 Set this **at web build time**:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://your-api.onrender.com
+NEXT_PUBLIC_API_URL=https://data-science-agent-api.onrender.com
 ```
 
 `NEXT_PUBLIC_API_URL` must be a URL the visitor's browser can reach. Do not use a Docker-only hostname such as `http://api:8000` for a public build.
 
 ### API
 
-After the frontend deployment has a stable public origin, allow that origin on the Render service:
+Allow the stable Vercel production origin:
 
 ```bash
-DSA_CORS_ORIGINS=https://your-demo.vercel.app
+DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
 ```
 
-Multiple origins may be comma-separated:
+Multiple origins may be comma-separated when preview deployments also need API access:
 
 ```bash
-DSA_CORS_ORIGINS=https://your-demo.vercel.app,https://your-preview.vercel.app
+DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app,https://your-preview.vercel.app
 ```
 
 Keep provider/API credentials in the hosting platform's secret store. Never expose them through `NEXT_PUBLIC_*` variables. The default hosted demo does not require a provider credential.
 
-For a public trial, prefer an isolated demo storage location and assume uploaded datasets are ephemeral unless the deployment explicitly provides durable storage. Do not promise persistence that the hosting configuration does not provide.
+## Troubleshooting the browser demo
+
+If the browser displays `TypeError: Failed to fetch`, check these in order:
+
+1. Open the Render `/health` URL directly and confirm the API is healthy.
+2. Confirm the browser is using the stable production Vercel origin allowed by `DSA_CORS_ORIGINS`.
+3. If upload succeeded before a restart/redeploy but analysis later says the file is unavailable, re-upload the dataset because local demo storage is ephemeral.
+4. Check Render logs for a restart, memory pressure, or process exit before changing frontend configuration.
+
+The frontend deliberately reports transport failures separately from normal API `4xx/5xx` responses so network/CORS failures are not confused with analysis errors.
 
 ## Local Docker check
 
@@ -93,16 +156,30 @@ Landing page
 
 ## Launch checklist
 
-- [ ] Render API build completes from `docker/Dockerfile.api`.
-- [ ] API is reachable over HTTPS.
-- [ ] `/health` returns successfully.
-- [ ] Web build uses the public Render API URL.
-- [ ] API CORS allows the public web origin only.
-- [ ] Uploading a small CSV succeeds.
-- [ ] A canonical analysis question completes successfully.
-- [ ] Analysis trace shows tool calls, evidence, validation, and artifacts.
-- [ ] Report download works.
-- [ ] File-size, request-rate, log-retention, and provider-spend limits are configured where applicable.
-- [ ] README gets a `Try Live Demo` link only after the public URL passes this checklist.
+Verified for the current public preview:
 
-The public demo should optimize for one reliable happy path rather than exposing every internal surface. A verified end-to-end demo is more valuable than a public URL that only renders the frontend.
+- [x] Render API builds and reaches `Live`.
+- [x] API is reachable over HTTPS.
+- [x] `/health` returns successfully.
+- [x] Vercel web build uses the public Render API URL.
+- [x] API CORS allows the stable public web origin.
+- [x] Uploading CSV succeeds.
+- [x] Uploading modern Excel (`.xlsx`) succeeds.
+- [x] A canonical multi-tool analysis completes successfully.
+- [x] Semantic planner selects the expected outcome/group analysis path.
+- [x] Correlation, Welch significance test, feature importance, causal guard, and visualization can complete in one run.
+- [x] Evidence reaches a terminal `verified` state.
+- [x] Validation can complete with no tool errors.
+- [x] Final report status reaches `COMPLETED`.
+- [x] README contains a public `Try Live Demo` link.
+
+Operational hardening still recommended before treating this as a durable production service:
+
+- [ ] Move datasets and generated artifacts to durable storage.
+- [ ] Move demo metadata from ephemeral SQLite to a managed/persistent database if retention is required.
+- [ ] Add production-grade request-rate and abuse limits.
+- [ ] Add explicit monitoring/alerting for API availability and resource pressure.
+- [ ] Decide whether preview Vercel origins should be admitted by CORS.
+- [ ] Configure a real-model provider only when credentials, cost controls, and evaluation policy are ready.
+
+The public demo should optimize for one reliable, transparent happy path rather than pretending the free preview infrastructure provides durable production guarantees.
