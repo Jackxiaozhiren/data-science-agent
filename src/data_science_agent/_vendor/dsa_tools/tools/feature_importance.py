@@ -52,6 +52,7 @@ class FeatureImportanceInput(BaseModel):
 class FeatureImportanceOutput(BaseModel):
     target: str
     importances: list[dict[str, Any]] = Field(default_factory=list)
+    excluded_features: list[str] = Field(default_factory=list)
     artifact_path: str | None = None
     base64_png: str | None = None
 
@@ -79,6 +80,18 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
         sub = df.select(feat_cols + [inp.target]).drop_nulls()
         if sub.height < 10:
             raise ToolExecutionError("Need >=10 rows")
+
+        excluded_features: list[str] = []
+        for col in list(feat_cols):
+            try:
+                if sub[col].equals(sub[inp.target]):
+                    excluded_features.append(col)
+            except Exception:
+                continue
+        feat_cols = [c for c in feat_cols if c not in excluded_features]
+        if not feat_cols:
+            raise ToolExecutionError("No usable feature columns after target-leakage checks")
+        sub = sub.select(feat_cols + [inp.target])
 
         numeric_cols = [c for c in feat_cols if _is_numeric(sub[c].dtype)]
         categorical_cols = [c for c in feat_cols if c not in numeric_cols]
@@ -154,5 +167,9 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
         dest.write_bytes(png)
 
         return FeatureImportanceOutput(
-            target=inp.target, importances=out, artifact_path=str(dest), base64_png=b64
+            target=inp.target,
+            importances=out,
+            excluded_features=excluded_features,
+            artifact_path=str(dest),
+            base64_png=b64,
         )
