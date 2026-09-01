@@ -90,6 +90,8 @@ For the public demo, visitors should assume:
 
 A production deployment should replace ephemeral local dataset/artifact storage with durable object storage, a persistent disk, or another explicitly managed persistence layer.
 
+For the recommended low-risk path from the current single-instance demo to durable storage, see [Production Persistence Hardening](production-hardening.md). The first stage deliberately keeps SQLite and local-file semantics, but moves them under one persistent `/var/data` mount before introducing Postgres or object storage.
+
 ## Required configuration
 
 ### Web
