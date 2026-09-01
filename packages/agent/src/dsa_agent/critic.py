@@ -51,7 +51,6 @@ def check_unsupported_claims(
 
 def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
     if not state.evidence:
-        # allow if only profiling steps so far
         if state.status.value in ("UNDERSTANDING", "PLANNING", "DATA_PROFILING"):
             return ValidationResult(
                 check="evidence_coverage", passed=True, message="Early stage, no evidence yet"
@@ -59,7 +58,6 @@ def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
         return ValidationResult(
             check="evidence_coverage", passed=False, message="No evidence collected", details={}
         )
-    # every insight should have at least one evidence
     for ins in state.insights:
         if not ins.evidence_ids:
             return ValidationResult(
@@ -71,12 +69,26 @@ def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
     return ValidationResult(check="evidence_coverage", passed=True, message="Evidence coverage ok")
 
 
+def _finalize_evidence_status(state: AnalysisState) -> None:
+    """Resolve evidence from pending to verified/failed based on its source tool call.
+
+    Evidence is created only from tool outputs, so the source tool-call status is
+    the concrete validation signal available at this stage. This keeps reports
+    from exposing a misleading permanent `pending` state after critic validation.
+    """
+
+    source_status = {tc.call_id: tc.status for tc in state.tool_calls}
+    for evidence in state.evidence:
+        evidence.validation_status = (
+            "verified" if source_status.get(evidence.source_id) == "ok" else "failed"
+        )
+
+
 def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     results: list[ValidationResult] = []
     results.append(check_evidence_coverage(state))
     results.append(check_unsupported_claims(state.insights, has_causal_evidence=False))
 
-    # statistical sanity: if any tool call errored, flag
     errors = [tc for tc in state.tool_calls if tc.status == "error"]
     if errors and state.status.value not in ("FAILED", "HUMAN_REVIEW"):
         results.append(
@@ -90,7 +102,6 @@ def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     else:
         results.append(ValidationResult(check="tool_errors", passed=True, message="No tool errors"))
 
-    # budget guard
     if state.tool_call_count > state.budget.max_tool_calls:
         results.append(
             ValidationResult(check="budget", passed=False, message="Tool call budget exceeded")
@@ -98,6 +109,7 @@ def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     else:
         results.append(ValidationResult(check="budget", passed=True, message="Budget ok"))
 
+    _finalize_evidence_status(state)
     return results
 
 
@@ -113,7 +125,6 @@ def should_retry(
 
 
 def detect_prompt_injection(dataset_text: str) -> ValidationResult:
-    # Dataset cells are UNTRUSTED DATA — flag injection-like payloads without blocking the run
     import dsa_execution.guardrails as _g
 
     if _g.contains_prompt_injection(dataset_text):
