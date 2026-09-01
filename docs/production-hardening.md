@@ -25,6 +25,20 @@ DSA_DATABASE_URL=sqlite+aiosqlite:////var/data/dsa.db
 
 The existing API can therefore preserve uploaded datasets and SQLite metadata across normal deploys/restarts as soon as `/var/data` is backed by a persistent disk.
 
+## Billing gate
+
+Do not change the active root `render.yaml` from `plan: free` until the repository owner explicitly chooses to incur paid Render compute and disk charges.
+
+The repository includes a non-active reference configuration at:
+
+```text
+deploy/render-persistent.example.yaml
+```
+
+It uses Render's smallest current paid Web Service compute plan (`0.5c-512mb`) and a 1 GB persistent disk mounted at `/var/data`. The file is an example only. Do **not** attach it as a second Blueprint to the existing service. When upgrading, copy the relevant `plan`, `disk`, and persistence environment settings into the existing Blueprint or make the equivalent changes in the Render Dashboard.
+
+This keeps the free public demo unchanged until the billing decision is intentional.
+
 ## Why not jump directly to Postgres + object storage?
 
 Postgres plus S3-compatible object storage is the better multi-instance architecture, but it adds several moving parts at once:
@@ -44,9 +58,10 @@ The current product is intentionally single-instance and already has a working l
 Upgrade the API Web Service from the free instance to a paid instance that supports persistent disks, then attach a disk:
 
 ```text
+Compute: 0.5c-512mb (smallest current paid Web Service plan)
 Disk name: dsa-data
 Mount path: /var/data
-Size: start with the smallest practical size
+Disk size: 1 GB to start
 ```
 
 Set these environment variables:
@@ -103,8 +118,12 @@ The current free hosted demo must still be treated as ephemeral until Stage 1 is
 
 Generated report/chart artifacts currently use local paths too. A persistent `/var/data` strategy should eventually move artifact output under the mounted directory as well. Dataset and database durability are the first gate because they directly affect whether a previously uploaded dataset can be analyzed after an instance lifecycle event.
 
+Render persistent disks are single-instance storage. Attaching one prevents multi-instance scaling for that service and introduces a brief deploy gap because the old instance must release the disk before the new instance mounts it. That tradeoff is acceptable for the current demo, but it is another reason to move to managed Postgres + object storage before horizontal scaling.
+
 ## Decision record
 
 **Chosen first step:** persistent disk + SQLite on the existing single Render API instance.
+
+**Billing policy:** keep the active service on Free until paid infrastructure is explicitly approved.
 
 **Deferred:** managed Postgres + object storage, until scale or retention requirements justify the added operational complexity.
