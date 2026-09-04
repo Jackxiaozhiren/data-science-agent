@@ -1,0 +1,32 @@
+{
+  "benchmark_name": "DataSciBench",
+  "benchmark_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+  "spec": "V4.3 W3 §31 external run manifest fields, §44 output manifest",
+  "dsa_version": "4.3.1",
+  "date": "2026-08-28",
+  "index_created": "2026-09-04",
+  "tasks_supported": 45,
+  "tasks_unsupported": 177,
+  "tasks_total": 222,
+  "outcome": {
+    "passed": 0,
+    "failed": 45,
+    "unsupported": 177,
+    "execution_error": 0,
+    "note": "failed = completed-but-unevaluated (GT absent); not a correctness verdict"
+  },
+  "wall_s": 5.8,
+  "tool_calls": 321,
+  "evidence_total": 123,
+  "token_usage": 0,
+  "model": "deterministic local pipeline (stub LLM, no key)",
+  "temperature": null,
+  "seed": null,
+  "prompt_version": "1.0-adapter",
+  "raw_runs": "benchmarks/external/datascibench/results/raw_runs.json",
+  "raw_runs_sha256": "a9b15af8ee5e03490c72a960acaaf9fe1d00348a344e4c15864337215a02efdd",
+  "report": "research/external/DATASCIBENCH_REPORT.md",
+  "evaluator": "original experiments/evaluate.py (not yet wired to subprocess; requires GT + HF_TOKEN)",
+  "gold_isolation": "assert_gold_isolation before every dispatch; 0 violations",
+  "environment": "Python 3.12, DSA 4.3.x, operator .workspace/ at pinned commit"
+}
