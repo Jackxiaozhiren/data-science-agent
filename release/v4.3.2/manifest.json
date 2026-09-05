@@ -1,7 +1,7 @@
 {
     "version": "4.3.2",
     "tag": "v4.3.2",
-    "commit": "PENDING-RELEASE-COMMIT",
+    "commit": "67a694b4f912ca9188572dc5d3569c5a22e7072d",
     "merge_commit": "1272fdb",
     "merged_lineages": [
         "origin/main @ 11dd214 (4.3.0 adoption, verifiable evaluation & reliability)",
