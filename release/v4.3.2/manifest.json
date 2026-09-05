@@ -1,0 +1,104 @@
+{
+    "version": "4.3.2",
+    "tag": "v4.3.2",
+    "commit": "PENDING-RELEASE-COMMIT",
+    "merge_commit": "1272fdb",
+    "merged_lineages": [
+        "origin/main @ 11dd214 (4.3.0 adoption, verifiable evaluation & reliability)",
+        "local main @ f0770e8 (4.3.1 external-benchmark evidence + prompt backfill)"
+    ],
+    "python": "Python 3.12.14",
+    "node": "v24.15.0",
+    "docker": "Docker version 29.7.2, build a7dcaa6",
+    "package": "jack-data-science-agent 4.3.2",
+    "benchmark_version": "0.3.0",
+    "dataset_version": "v2 0.3.0 (30 datasets)",
+    "evaluator_version": "evaluator_v2 (10 dims)",
+    "environment": {
+        "os": "macOS-26.6.2-arm64-arm-64bit",
+        "arch": "arm64",
+        "python": "Python 3.12.14",
+        "node": "v24.15.0",
+        "docker": "Docker version 29.7.2, build a7dcaa6"
+    },
+    "timestamp": "2026-09-05T02:27:42+00:00",
+    "gates": {
+        "pytest": "324 passed",
+        "mypy": "108 clean (packages apps/api src)",
+        "ruff": "All checks passed + 173 files formatted",
+        "npm": "web build PASS; vscode compile PASS; npm audit --audit-level=high 0",
+        "docker": "valid",
+        "mkdocs_strict": "PASS",
+        "verify_release": "17/17 PASS (dsa verify-release v4.3.2)",
+        "case_studies": "8/8 verified (real Agent, 18 tool failures preserved)",
+        "internal_benchmark": "50/50 @1.00 (v1) + 100/100 @1.00 (v2)",
+        "external_benchmark": "DataSciBench 45/45 execution (human_+csv_excel_); DSAgentBench NOT CURRENTLY SUPPORTED",
+        "check_public_claims": "0 issues (post-tag)",
+        "sync_vendor": "in sync (incl. ruff-fix resync)",
+        "uv_lock": "relocked (umbrella 4.3.2)"
+    },
+    "external_benchmark": {
+        "datascibench": {
+            "benchmark_name": "DataSciBench",
+            "benchmark_version": "1.0",
+            "benchmark_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+            "source": "https://github.com/THUDM/DataSciBench",
+            "license": "NONE STATED upstream (citation requested); GT gated zd21/DataSciBench",
+            "task_count": 222,
+            "supported": 45,
+            "unsupported": 177,
+            "results": "benchmarks/external/datascibench/results/raw_runs.json",
+            "manifest": "benchmarks/external/datascibench/manifest.json",
+            "evaluator_version": "original: experiments/evaluate.py + calculate_final_metric.py",
+            "wall_s": 5.8,
+            "tool_calls": 321,
+            "evidence": 123
+        },
+        "dsagentbench": {
+            "status": "NOT CURRENTLY SUPPORTED",
+            "reason": "artifacts unreleased + real-computer IDE/terminal/browser/DB surface absent",
+            "audit": "docs/v4_3/DSAGENTBENCH_FEASIBILITY.md"
+        }
+    },
+    "research": {
+        "paper": "research/paper/paper.md + paper.tex + references.bib + figures/ + tables/ + appendix/CROSS_BENCHMARK_MATRIX.md",
+        "cross_benchmark_matrix": "research/v4_3/CROSS_BENCHMARK_MATRIX.md",
+        "results": "research/v4_3/results/{raw,processed,figures,tables,manifests}/ (generate_phase_f_results.py)",
+        "reproducibility_capsule": "research/v4_3/reproducibility/README.md",
+        "claim_evidence_matrix": "research/claim-evidence-matrix.md"
+    },
+    "publication": {
+        "portfolio": "docs/portfolio/PROJECT_SUMMARY.md + ONE_MINUTE_PITCH.md",
+        "figures": "research/paper/figures/{category_evidence.png,latency_report.png} + research/v4_3/results/figures/"
+    },
+    "supply_chain": {
+        "trusted_publishing": "OIDC on version tags (publish.yml environment: pypi, id-token: write; tag/version match gate + ancestor check)",
+        "wheel": "0 dsa-* Requires-Dist; dsa console script included; self-contained _vendor/",
+        "sbom": "release/sbom.json (192 components, 4.3.2)",
+        "sbom_sha256": "53aeebb6d5d85a100a20cf095f4d4296966bc85c1354849518bd3096b8971d87",
+        "sbom_cyclonedx_sha256": "95193f0df3d3ff574447aaca2b43147e915384eab3d76000665e1f43d8ffc8f9",
+        "attestations": "PyPI PEP 740 path documented in docs/security/VERIFY_PYPI_RELEASE.md; 4.3.2 attestations pending publish",
+        "verify_release_doc": "docs/security/VERIFY_RELEASE.md + docs/security/VERIFY_PYPI_RELEASE.md",
+        "scorecard": "docs/v4_3/SCORECARD.md (Scorecard 5.5.0 -> 4.6/10, honest blind spots)",
+        "osps_baseline": "docs/security/OSPS_BASELINE.md (29 items)"
+    },
+    "artifacts": {
+        "wheel": "dist/jack_data_science_agent-4.3.2-py3-none-any.whl",
+        "sdist": "dist/jack_data_science_agent-4.3.2.tar.gz",
+        "sbom": "release/sbom.json",
+        "sbom_cyclonedx": "release/sbom.cyclonedx.json"
+    },
+    "release_workflow": ".github/workflows/publish.yml (OIDC, pinned actions, build only umbrella)",
+    "citation": "CITATION.cff 4.3.2 2026-09-05",
+    "merge_decisions": {
+        "verifier": "executing verifier kept (pkg+vendor in sync); tests/test_release_verifier_allowlist.py not taken; _is_release_candidate_ref ported to check_public_claims.py",
+        "changelog": "both 4.3.0 sections preserved with merge note",
+        "v430_manifest": "unchanged (matches tag v4.3.0 = 07e6302)"
+    },
+    "notes": [
+        "V4.3 PATCH release — lineage unification; no breaking public SDK/CLI change.",
+        "External scores honestly reported: DataSciBench execution lane COMPLETED=45 but task success NOT COMPUTED (GT gated); DSAgentBench NOT SUPPORTED.",
+        "Tags v4.2.0-v4.3.1 unchanged (release-truth rule).",
+        "commit field is filled by the follow-up manifest commit pinning the release commit (v4.3.0 pattern)."
+    ]
+}

@@ -266,7 +266,7 @@ class Agent:
         None on construction; methods take dataset + task.
 
     Return Value:
-        Constructed ``Agent`` with ``version == "4.3.1"``.
+        Constructed ``Agent`` with ``version == "4.3.2"``.
 
     Errors:
         Methods may raise ``FileNotFoundError`` (missing dataset),
@@ -283,7 +283,7 @@ class Agent:
     """
 
     def __init__(self) -> None:
-        self._version = "4.3.1"
+        self._version = "4.3.2"
 
     async def analyze(
         self,
@@ -431,7 +431,7 @@ class Agent:
         """SDK version (mirrors ``pyproject.toml``).
 
         Return Value:
-            ``"4.3.1"`` string.
+            ``"4.3.2"`` string.
 
         Version:
             4.0.0 Stable

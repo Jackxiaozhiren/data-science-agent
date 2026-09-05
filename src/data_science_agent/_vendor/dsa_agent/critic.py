@@ -70,6 +70,13 @@ def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
 
 
 def _finalize_evidence_status(state: AnalysisState) -> None:
+    """Resolve evidence from pending to verified/failed based on its source tool call.
+
+    Evidence is created only from tool outputs, so the source tool-call status is
+    the concrete validation signal available at this stage. This keeps reports
+    from exposing a misleading permanent `pending` state after critic validation.
+    """
+
     source_status = {tc.call_id: tc.status for tc in state.tool_calls}
     for evidence in state.evidence:
         evidence.validation_status = (

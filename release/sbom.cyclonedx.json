@@ -5,7 +5,7 @@
   "metadata": {
     "component": {
       "name": "jack-data-science-agent",
-      "version": "4.3.1",
+      "version": "4.3.2",
       "type": "application"
     }
   },
@@ -41,7 +41,13 @@
     {
       "name": "appnope",
       "version": "1.0.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD"
+          }
+        }
+      ],
       "purl": "pkg:pypi/appnope@1.0.0",
       "source": "https://pypi.org/simple"
     },
@@ -89,7 +95,13 @@
     {
       "name": "async-lru",
       "version": "2.3.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/async-lru@2.3.0",
       "source": "https://pypi.org/simple"
     },
@@ -123,14 +135,26 @@
     {
       "name": "beautifulsoup4",
       "version": "4.15.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/beautifulsoup4@4.15.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "bleach",
       "version": "6.4.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache Software License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/bleach@6.4.0",
       "source": "https://pypi.org/simple"
     },
@@ -187,7 +211,7 @@
       "licenses": [
         {
           "license": {
-            "id": "BSD 3-Clause License\n\nCopyright (c) 2022, Jupyter\nAll rights reserved.\n\nRedistri..."
+            "id": "BSD 3-Clause License\n        \n        Copyright (c) 2022, Jupyter\n        All ri..."
           }
         }
       ],
@@ -200,7 +224,7 @@
       "licenses": [
         {
           "license": {
-            "id": "BSD 3-Clause License\n\n Copyright (c) 2021-2025, ContourPy Developers.\n All right..."
+            "id": "BSD 3-Clause License\n        \n        Copyright (c) 2021-2024, ContourPy Develop..."
           }
         }
       ],
@@ -210,13 +234,7 @@
     {
       "name": "coverage",
       "version": "7.15.4",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/coverage@7.15.4",
       "source": "https://pypi.org/simple"
     },
@@ -226,7 +244,7 @@
       "licenses": [
         {
           "license": {
-            "id": "Copyright (c) 2015, matplotlib project\nAll rights reserved.\n\nRedistribution and ..."
+            "id": "Copyright (c) 2015, matplotlib project\n        All rights reserved.\n        \n   ..."
           }
         }
       ],
@@ -249,20 +267,20 @@
     {
       "name": "defusedxml",
       "version": "0.7.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "PSFL"
+          }
+        }
+      ],
       "purl": "pkg:pypi/defusedxml@0.7.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "distro",
       "version": "1.9.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache License, Version 2.0"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/distro@1.9.0",
       "source": "https://pypi.org/simple"
     },
@@ -414,7 +432,13 @@
     {
       "name": "fastjsonschema",
       "version": "2.22.2",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD"
+          }
+        }
+      ],
       "purl": "pkg:pypi/fastjsonschema@2.22.2",
       "source": "https://pypi.org/simple"
     },
@@ -434,27 +458,33 @@
     {
       "name": "fqdn",
       "version": "1.5.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL 2.0"
+          }
+        }
+      ],
       "purl": "pkg:pypi/fqdn@1.5.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "ghp-import",
       "version": "2.1.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache Software License"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/ghp-import@2.1.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "greenlet",
       "version": "3.5.5",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT AND Python-2.0"
+          }
+        }
+      ],
       "purl": "pkg:pypi/greenlet@3.5.5",
       "source": "https://pypi.org/simple"
     },
@@ -522,7 +552,13 @@
     {
       "name": "ipython",
       "version": "9.16.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
       "purl": "pkg:pypi/ipython@9.16.1",
       "source": "https://pypi.org/simple"
     },
@@ -536,13 +572,19 @@
     {
       "name": "isoduration",
       "version": "20.11.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "UNKNOWN"
+          }
+        }
+      ],
       "purl": "pkg:pypi/isoduration@20.11.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jack-data-science-agent",
-      "version": "4.3.1",
+      "version": "4.3.2",
       "licenses": [
         {
           "license": {
@@ -550,21 +592,8 @@
           }
         }
       ],
-      "purl": "pkg:local/jack-data-science-agent@4.3.1",
+      "purl": "pkg:local/jack-data-science-agent@4.3.2",
       "source": "local:pyproject.toml"
-    },
-    {
-      "name": "jack-data-science-agent",
-      "version": "4.3.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:pypi/jack-data-science-agent@4.3.0",
-      "source": "https://pypi.org/simple"
     },
     {
       "name": "jedi",
@@ -596,20 +625,20 @@
     {
       "name": "json5",
       "version": "0.15.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Files: Everything except for the benchmarks/*.json files.\n        \n        Apach..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/json5@0.15.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jsonpatch",
       "version": "1.33",
-      "licenses": [
-        {
-          "license": {
-            "id": "Modified BSD License"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/jsonpatch@1.33",
       "source": "https://pypi.org/simple"
     },
@@ -653,7 +682,7 @@
       "licenses": [
         {
           "license": {
-            "id": "BSD 3-Clause License\n\n- Copyright (c) 2001-2015, IPython Development Team\n- Copy..."
+            "id": "BSD 3-Clause License\n        \n        - Copyright (c) 2001-2015, IPython Develop..."
           }
         }
       ],
@@ -670,49 +699,91 @@
     {
       "name": "jupyter-events",
       "version": "0.12.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        Copyright (c) 2022-, Jupyter Development T..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyter-events@0.12.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jupyter-lsp",
       "version": "2.3.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyter-lsp@2.3.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jupyter-server",
       "version": "2.20.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        - Copyright (c) 2001-2015, IPython Develop..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyter-server@2.20.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jupyter-server-terminals",
       "version": "0.5.4",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        - Copyright (c) 2021-, Jupyter Development..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyter-server-terminals@0.5.4",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jupyterlab",
       "version": "4.6.3",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Copyright (c) 2015-2025 Project Jupyter Contributors\n        All rights reserved..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyterlab@4.6.3",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jupyterlab-pygments",
       "version": "0.3.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Copyright (c) 2015 Project Jupyter Contributors\n        All rights reserved.\n   ..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyterlab-pygments@0.3.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "jupyterlab-server",
       "version": "2.28.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Copyright (c) 2015-2017, Project Jupyter Contributors\n        All rights reserve..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/jupyterlab-server@2.28.0",
       "source": "https://pypi.org/simple"
     },
@@ -722,7 +793,7 @@
       "licenses": [
         {
           "license": {
-            "id": "=========================\n The Kiwi licensing terms\n=========================\nKi..."
+            "id": "=========================\n         The Kiwi licensing terms\n        ============..."
           }
         }
       ],
@@ -732,26 +803,14 @@
     {
       "name": "langchain-core",
       "version": "1.5.5",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/langchain-core@1.5.5",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "langchain-protocol",
       "version": "0.0.18",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/langchain-protocol@0.0.18",
       "source": "https://pypi.org/simple"
     },
@@ -786,6 +845,13 @@
     {
       "name": "langsmith",
       "version": "0.11.0",
+      "licenses": [],
+      "purl": "pkg:pypi/langsmith@0.11.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "lark",
+      "version": "1.3.1",
       "licenses": [
         {
           "license": {
@@ -793,13 +859,6 @@
           }
         }
       ],
-      "purl": "pkg:pypi/langsmith@0.11.0",
-      "source": "https://pypi.org/simple"
-    },
-    {
-      "name": "lark",
-      "version": "1.3.1",
-      "licenses": [],
       "purl": "pkg:pypi/lark@1.3.1",
       "source": "https://pypi.org/simple"
     },
@@ -830,7 +889,7 @@
       "licenses": [
         {
           "license": {
-            "id": "License agreement for matplotlib versions 1.3.0 and later\n =====================..."
+            "id": "License agreement for matplotlib versions 1.3.0 and later\n         =============..."
           }
         }
       ],
@@ -847,20 +906,20 @@
     {
       "name": "mergedeep",
       "version": "1.3.4",
-      "licenses": [
-        {
-          "license": {
-            "id": "UNKNOWN"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/mergedeep@1.3.4",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "mistune",
       "version": "3.3.4",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
       "purl": "pkg:pypi/mistune@3.3.4",
       "source": "https://pypi.org/simple"
     },
@@ -909,28 +968,52 @@
     {
       "name": "narwhals",
       "version": "2.24.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT License\n        \n        Copyright (c) 2024 to present, Marco Gorelli\n      ..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/narwhals@2.24.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "nbclient",
       "version": "0.11.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        Copyright (c) 2020-, Jupyter Development T..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/nbclient@0.11.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "nbconvert",
       "version": "7.17.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        - Copyright (c) 2001-2015, IPython Develop..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/nbconvert@7.17.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "nbformat",
       "version": "5.11.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        - Copyright (c) 2001-2015, IPython Develop..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/nbformat@5.11.1",
       "source": "https://pypi.org/simple"
     },
@@ -950,27 +1033,33 @@
     {
       "name": "nest-asyncio2",
       "version": "1.7.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/nest-asyncio2@1.7.2",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "notebook-shim",
       "version": "0.2.4",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n        \n        Copyright (c) 2022 Project Jupyter Contrib..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/notebook-shim@0.2.4",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "numpy",
       "version": "2.5.2",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Copyright (c) 2005-2023, NumPy Developers.\n        All rights reserved.\n        ..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/numpy@2.5.2",
       "source": "https://pypi.org/simple"
     },
@@ -1011,27 +1100,33 @@
     {
       "name": "paginate",
       "version": "0.5.7",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/paginate@0.5.7",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "pandas",
       "version": "3.0.5",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n         \n         Copyright (c) 2008-2011, AQR Capital Man..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/pandas@3.0.5",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "pandocfilters",
       "version": "1.5.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
       "purl": "pkg:pypi/pandocfilters@1.5.1",
       "source": "https://pypi.org/simple"
     },
@@ -1058,7 +1153,13 @@
     {
       "name": "patsy",
       "version": "1.0.2",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "2-clause BSD"
+          }
+        }
+      ],
       "purl": "pkg:pypi/patsy@1.0.2",
       "source": "https://pypi.org/simple"
     },
@@ -1105,26 +1206,14 @@
     {
       "name": "polars",
       "version": "1.43.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "Copyright (c) 2025 Ritchie Vink\nCopyright (c) 2024 (Some portions) NVIDIA CORPOR..."
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/polars@1.43.2",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "polars-runtime-32",
       "version": "1.43.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/polars-runtime-32@1.43.2",
       "source": "https://pypi.org/simple"
     },
@@ -1184,14 +1273,26 @@
     {
       "name": "pyarrow",
       "version": "25.0.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache Software License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/pyarrow@25.0.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "pycparser",
       "version": "3.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
       "purl": "pkg:pypi/pycparser@3.0",
       "source": "https://pypi.org/simple"
     },
@@ -1240,7 +1341,13 @@
     {
       "name": "pytest",
       "version": "9.1.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
       "purl": "pkg:pypi/pytest@9.1.1",
       "source": "https://pypi.org/simple"
     },
@@ -1274,20 +1381,20 @@
     {
       "name": "python-dotenv",
       "version": "1.2.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-3-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/python-dotenv@1.2.2",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "python-json-logger",
       "version": "4.2.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/python-json-logger@4.2.0",
       "source": "https://pypi.org/simple"
     },
@@ -1328,7 +1435,13 @@
     {
       "name": "pyzmq",
       "version": "27.2.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n         \n         Copyright (c) 2009-2012, Brian Granger, ..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/pyzmq@27.2.0",
       "source": "https://pypi.org/simple"
     },
@@ -1355,27 +1468,33 @@
     {
       "name": "requests-toolbelt",
       "version": "1.0.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache 2.0"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/requests-toolbelt@1.0.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "rfc3339-validator",
       "version": "0.1.4",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT license"
+          }
+        }
+      ],
       "purl": "pkg:pypi/rfc3339-validator@0.1.4",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "rfc3986-validator",
       "version": "0.1.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT license"
+          }
+        }
+      ],
       "purl": "pkg:pypi/rfc3986-validator@0.1.1",
       "source": "https://pypi.org/simple"
     },
@@ -1403,7 +1522,13 @@
     {
       "name": "scikit-learn",
       "version": "1.9.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 3-Clause License\n         \n         Copyright (c) 2007-2024 The scikit-learn..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/scikit-learn@1.9.0",
       "source": "https://pypi.org/simple"
     },
@@ -1413,7 +1538,7 @@
       "licenses": [
         {
           "license": {
-            "id": "Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.\n All rights rese..."
+            "id": "Copyright (c) 2001-2002 Enthought, Inc. 2003-2024, SciPy Developers.\n        All..."
           }
         }
       ],
@@ -1443,13 +1568,7 @@
     {
       "name": "sniffio",
       "version": "1.3.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT OR Apache-2.0"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/sniffio@1.3.1",
       "source": "https://pypi.org/simple"
     },
@@ -1496,27 +1615,33 @@
     {
       "name": "statsmodels",
       "version": "0.14.6",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/statsmodels@0.14.6",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "tenacity",
       "version": "9.1.4",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache 2.0"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/tenacity@9.1.4",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "terminado",
       "version": "0.18.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD 2-Clause License\n        \n        - Copyright (c) 2014-, Jupyter development..."
+          }
+        }
+      ],
       "purl": "pkg:pypi/terminado@0.18.1",
       "source": "https://pypi.org/simple"
     },
@@ -1559,7 +1684,7 @@
       "licenses": [
         {
           "license": {
-            "id": "BSD 3-Clause License\n\n- Copyright (c) 2001-, IPython Development Team\n\nAll right..."
+            "id": "BSD 3-Clause License\n        \n        - Copyright (c) 2001-, IPython Development..."
           }
         }
       ],
@@ -1583,21 +1708,39 @@
     {
       "name": "tzdata",
       "version": "2026.3",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
       "purl": "pkg:pypi/tzdata@2026.3",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "uri-template",
       "version": "1.3.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT License"
+          }
+        }
+      ],
       "purl": "pkg:pypi/uri-template@1.3.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "urllib3",
       "version": "2.7.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
       "purl": "pkg:pypi/urllib3@2.7.0",
       "source": "https://pypi.org/simple"
     },
@@ -1618,39 +1761,21 @@
     {
       "name": "uvloop",
       "version": "0.22.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT License"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/uvloop@0.22.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "watchdog",
       "version": "6.0.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/watchdog@6.0.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "watchfiles",
       "version": "1.2.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/watchfiles@1.2.0",
       "source": "https://pypi.org/simple"
     },
@@ -1664,21 +1789,39 @@
     {
       "name": "webcolors",
       "version": "25.10.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
       "purl": "pkg:pypi/webcolors@25.10.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "webencodings",
       "version": "0.6.1",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD"
+          }
+        }
+      ],
       "purl": "pkg:pypi/webencodings@0.6.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "websocket-client",
       "version": "1.9.0",
-      "licenses": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
       "purl": "pkg:pypi/websocket-client@1.9.0",
       "source": "https://pypi.org/simple"
     },
@@ -1698,13 +1841,7 @@
     {
       "name": "xxhash",
       "version": "4.0.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-2-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/xxhash@4.0.0",
       "source": "https://pypi.org/simple"
     },

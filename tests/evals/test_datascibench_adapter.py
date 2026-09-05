@@ -213,6 +213,7 @@ def test_no_benchmark_content_vendored_into_repo() -> None:
         "manifest.json",
         "README.md",
         "LICENSE_NOTES.md",
+        "UPSTREAM.md",  # §36 upstream-first record (our provenance doc, not benchmark content)
         "run_eval.py",  # §48 raw-run driver for the 45 supported tasks
         "results",
         "logs",

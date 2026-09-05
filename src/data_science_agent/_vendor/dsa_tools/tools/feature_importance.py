@@ -21,7 +21,6 @@ from dsa_datasets.validate import detect_format
 from dsa_tools.base import BaseTool
 from dsa_tools.errors import ToolExecutionError
 
-
 _NUMERIC_DTYPES = {
     pl.Float64,
     pl.Float32,
@@ -81,12 +80,14 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
         if sub.height < 10:
             raise ToolExecutionError("Need >=10 rows")
 
+        # Exact target copies are deterministic leakage, not explanatory features.
+        # Exclude them before model fitting and expose the exclusion in the output.
         excluded_features: list[str] = []
         for col in list(feat_cols):
             try:
                 if sub[col].equals(sub[inp.target]):
                     excluded_features.append(col)
-            except Exception:
+            except Exception:  # noqa: S112 - incomparable dtypes mean "not a copy"; keep column
                 continue
         feat_cols = [c for c in feat_cols if c not in excluded_features]
         if not feat_cols:
@@ -145,6 +146,8 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
         except Exception as e:
             raise ToolExecutionError(f"RandomForest fit failed: {e}") from e
 
+        # Aggregate one-hot encoded categories back to their original feature so
+        # the report remains interpretable at the source-column level.
         importance_by_feature = {c: 0.0 for c in feat_cols}
         for source, importance in zip(source_features, model.feature_importances_):
             importance_by_feature[source] += float(importance)

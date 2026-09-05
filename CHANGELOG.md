@@ -1,5 +1,45 @@
 # Changelog
 
+## 4.3.2 — Lineage Unification (merge origin/main 4.3.0 + local 4.3.1)
+
+Unifies the two 4.3.x lineages (published adoption line + spec external-benchmark
+line) into one tree. Ends the divergence noted in `docs/v4_3/SUPPLY_CHAIN_SECURITY.md` §0.
+Patch bump: no breaking public API change.
+
+### Merged
+
+- From `origin/main`: auditable real-model execution path, four controlled evaluation
+  variants, publication-integrity validator, hardened `publish.yml` (tag/version match
+  gate, ancestor check), real-model evaluation workflow, issue/discussion templates,
+  roadmap, leaderboard/contributor automation, adoption docs (both 4.3.0 CHANGELOG
+  sections preserved verbatim — see below).
+- From local: V4.3 external-benchmark evidence, prompt-completion backfill
+  (`UPSTREAM.md`, `research/v4_3/datascibench/`, `BENCHMARK_V3_PROPOSAL.md`,
+  `external-validation/` kit, `OSPS_BASELINE.md`, `VERIFY_PYPI_RELEASE.md`).
+
+### Merge decisions (Release Truth first)
+
+- `dsa verify-release` keeps the **executing** verifier (all published gates describe
+  it); the evidence-only design was not adopted (supports only the foreign manifest
+  schema). `tests/test_release_verifier_allowlist.py` not taken; its narrow
+  release-candidate ref exception (`_is_release_candidate_ref`) ported into
+  `scripts/check_public_claims.py`.
+- `release/v4.3.0/manifest.json` kept as tagged (`07e6302`).
+- `uv.lock` relocked, SBOM regenerated for 4.3.2.
+
+### Fixed
+
+- `ruff` I001/S112 in `feature_importance.py`, `ruff format` in `planner.py`
+  (both from merged tree — now clean).
+- Test allowlist now covers `UPSTREAM.md` (§36 record, not benchmark content).
+
+### Verified
+
+- `pytest 324 passed`, `mypy 108 clean`, `ruff check + format clean (173 files)`,
+  `mkdocs --strict PASS`, `docker valid`, web build PASS, vscode compile PASS,
+  `npm audit --audit-level=high` 0, `dsa verify-release v4.3.2 17/17 PASS`,
+  `check_public_claims` 0 issues (post-tag).
+
 ## 4.3.1 — CI Hardening + GT Lane Robustness (V4.3 patch)
 
 ### Fixed

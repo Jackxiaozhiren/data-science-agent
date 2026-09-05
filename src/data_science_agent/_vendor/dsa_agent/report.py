@@ -8,6 +8,10 @@ from dsa_agent.state import AnalysisState
 
 
 def _final_report_status(state: AnalysisState) -> str:
+    # Reports are generated during the REPORTING phase and the graph immediately
+    # transitions to COMPLETED afterwards unless it already returned on a hard
+    # failure. Render the terminal state in persisted/user-facing report artifacts
+    # so a successful run does not misleadingly appear stuck in REPORTING.
     return "COMPLETED" if state.status.value == "REPORTING" else state.status.value
 
 

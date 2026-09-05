@@ -342,11 +342,17 @@ def heuristics_plan(
 
     group_is_categorical = treatment_col in cols and treatment_col not in numeric_cols
     target_is_numeric = target_col in numeric_cols
-    if explicit_hypothesis or (wants_stats and wants_causal and group_is_categorical and target_is_numeric):
-        group_col = treatment_col if group_is_categorical else next(
-            (c for c in cols if c not in numeric_cols and c != target_col), treatment_col
+    if explicit_hypothesis or (
+        wants_stats and wants_causal and group_is_categorical and target_is_numeric
+    ):
+        group_col = (
+            treatment_col
+            if group_is_categorical
+            else next((c for c in cols if c not in numeric_cols and c != target_col), treatment_col)
         )
-        value_col = target_col if target_is_numeric else (numeric_cols[0] if numeric_cols else target_col)
+        value_col = (
+            target_col if target_is_numeric else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Group significance test",
             "Welch t-test for outcome differences between the primary groups",
@@ -397,7 +403,11 @@ def heuristics_plan(
         )
 
     if wants_causal and cols:
-        causal_outcome = target_col if target_col in numeric_cols else (numeric_cols[0] if numeric_cols else target_col)
+        causal_outcome = (
+            target_col
+            if target_col in numeric_cols
+            else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Causal check (stub)",
             "Association vs causation guard — requires design assumptions for causal claims",
@@ -422,7 +432,11 @@ def heuristics_plan(
         )
 
     if wants_viz or True:
-        hist_x = target_col if target_col in numeric_cols else (numeric_cols[0] if numeric_cols else target_col)
+        hist_x = (
+            target_col
+            if target_col in numeric_cols
+            else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Visualization",
             "Create evidence chart",
