@@ -1,0 +1,12 @@
+name: hello-metrics
+version: 0.1.0
+type: [metrics]
+dsa:
+  min_version: "4.0.0"
+  max_version: "5.0.0"
+license: MIT
+entrypoint: { python: hello_metrics.plugin:register }
+permissions: [dataset.read, process]
+dependencies: []
+capabilities: [metrics, evidence]
+description: "Deterministic hello-world metrics plugin with explicit evidence provenance"

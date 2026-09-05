@@ -7,7 +7,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from dsa_agent.critic import correction_message, critic_validate, should_retry
+from dsa_agent.critic import (
+    correction_message,
+    critic_validate,
+    evidence_critic_enabled,
+    should_retry,
+)
 from dsa_agent.planner import plan_analysis
 from dsa_agent.report import build_markdown_report, write_report_artifacts
 from dsa_agent.state import (
@@ -366,46 +371,56 @@ async def run_analysis(
             await _record(step2, inputs2, output2, ok2, err2, dur2)
 
     # VALIDATION (Critic)
-    state.status = AnalysisStatus.VALIDATION
-    vresults = critic_validate(state)
-    state.validation_results = vresults
-    # retry logic: if should_retry and we have failures, attempt one re-run of failed statistical steps (max 3)
-    if should_retry(vresults, state.retry_count, state.budget.max_retries):
-        # simple retry: re-run error tool calls once
-        state.retry_count += 1
+    if evidence_critic_enabled():
+        state.status = AnalysisStatus.VALIDATION
+        vresults = critic_validate(state)
+        state.validation_results = vresults
+        # retry logic: if should_retry and we have failures, attempt one re-run of failed statistical steps (max 3)
+        if should_retry(vresults, state.retry_count, state.budget.max_retries):
+            # simple retry: re-run error tool calls once
+            state.retry_count += 1
+            state.agent_messages.append(
+                AgentMessage(
+                    agent="critic",
+                    content=f"Validation failed, retry {state.retry_count}: {correction_message(vresults)}",
+                )
+            )
+            # retry failed tool calls
+            for rec in list(state.tool_calls):
+                if rec.status == "error" and state.tool_call_count < state.budget.max_tool_calls:
+                    # attempt retry with same inputs
+                    t0 = time.perf_counter()
+                    output, ok, err = await _run_tool(rec.tool, rec.input)
+                    dur = int((time.perf_counter() - t0) * 1000)
+                    new_id = f"TC-{uuid.uuid4().hex[:8]}"
+                    new_rec = ToolCallRecord(
+                        call_id=new_id,
+                        tool=rec.tool,
+                        input=rec.input,
+                        output=output.model_dump(mode="json")
+                        if hasattr(output, "model_dump")
+                        else None,
+                        status="ok" if ok else "error",
+                        error=err,
+                        duration_ms=dur,
+                    )
+                    state.tool_calls.append(new_rec)
+                    state.tool_call_count += 1
+                    if ok and output is not None:
+                        ev = _evidence_for_tool_call(rec.tool, new_id, output)
+                        if ev:
+                            state.evidence.append(ev)
+            # re-validate
+            state.validation_results = critic_validate(state)
+
+    else:
+        state.validation_results = []
         state.agent_messages.append(
             AgentMessage(
                 agent="critic",
-                content=f"Validation failed, retry {state.retry_count}: {correction_message(vresults)}",
+                content="Evidence critic disabled for evaluation ablation.",
             )
         )
-        # retry failed tool calls
-        for rec in list(state.tool_calls):
-            if rec.status == "error" and state.tool_call_count < state.budget.max_tool_calls:
-                # attempt retry with same inputs
-                t0 = time.perf_counter()
-                output, ok, err = await _run_tool(rec.tool, rec.input)
-                dur = int((time.perf_counter() - t0) * 1000)
-                new_id = f"TC-{uuid.uuid4().hex[:8]}"
-                new_rec = ToolCallRecord(
-                    call_id=new_id,
-                    tool=rec.tool,
-                    input=rec.input,
-                    output=output.model_dump(mode="json")
-                    if hasattr(output, "model_dump")
-                    else None,
-                    status="ok" if ok else "error",
-                    error=err,
-                    duration_ms=dur,
-                )
-                state.tool_calls.append(new_rec)
-                state.tool_call_count += 1
-                if ok and output is not None:
-                    ev = _evidence_for_tool_call(rec.tool, new_id, output)
-                    if ev:
-                        state.evidence.append(ev)
-        # re-validate
-        state.validation_results = critic_validate(state)
 
     # Check if still failing hard
     failed = [r for r in state.validation_results if not r.passed and r.check in ("budget",)]

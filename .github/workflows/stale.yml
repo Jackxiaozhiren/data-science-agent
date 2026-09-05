@@ -1,0 +1,48 @@
+name: Stale Issues and Pull Requests
+
+on:
+  schedule:
+    - cron: "37 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: stale-maintenance
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/stale@v11
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          days-before-issue-stale: 90
+          days-before-issue-close: 21
+          stale-issue-label: stale
+          stale-issue-message: >-
+            This issue has had no activity for 90 days and has been marked stale.
+            If it is still relevant, add a short update or reproduction note and the stale state will be removed.
+          close-issue-message: >-
+            Closing after an additional 21 days without activity. If the problem still reproduces on the latest release,
+            please open a fresh issue with current reproduction details and evidence artifacts.
+          exempt-issue-labels: "bug,good first issue,security"
+          exempt-all-issue-assignees: true
+
+          days-before-pr-stale: 45
+          days-before-pr-close: 14
+          stale-pr-label: stale
+          stale-pr-message: >-
+            This pull request has had no activity for 45 days. Add an update if the work is still active.
+          close-pr-message: >-
+            Closing after an additional 14 days without activity. Reopen or submit a fresh PR when the work is ready to continue.
+          exempt-all-pr-assignees: true
+
+          remove-stale-when-updated: true
+          operations-per-run: 100

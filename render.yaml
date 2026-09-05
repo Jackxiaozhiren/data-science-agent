@@ -1,0 +1,21 @@
+# Render Blueprint for the public demo API.
+services:
+  - type: web
+    name: data-science-agent-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: false
+    dockerfilePath: ./docker/Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DSA_LLM_MODE
+        value: heuristic
+      - key: DSA_LLM_FALLBACK
+        value: heuristic
+      - key: DSA_DATABASE_URL
+        value: sqlite+aiosqlite:////tmp/dsa.db
+      - key: PYTHONUNBUFFERED
+        value: "1"

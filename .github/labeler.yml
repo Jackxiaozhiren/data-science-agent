@@ -1,0 +1,26 @@
+# Pull-request labels based on changed paths.
+# Keep this list limited to labels that already exist in the repository.
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "case-studies/**"
+          - "**/*.md"
+
+javascript:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/web/**"
+          - "apps/vscode/**"
+          - "**/package.json"
+          - "**/package-lock.json"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "uv.lock"
+          - "pyproject.toml"
+          - "**/package.json"
+          - "**/package-lock.json"
+          - ".github/dependabot.yml"

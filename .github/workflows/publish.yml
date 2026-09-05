@@ -8,38 +8,172 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     environment: pypi
     permissions:
-      id-token: write   # Trusted Publishing (OIDC) — no long-lived token
-      contents: write   # attach artifacts to the GitHub release
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
-      - run: pip install uv
+      - name: Verify release ref and package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE_VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+          print(project["version"])
+          PY
+          )"
+          if [[ "${TAG_VERSION}" != "${PACKAGE_VERSION}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${PACKAGE_VERSION}."
+            exit 1
+          fi
+          git fetch origin main --prune
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "::error::Release tag ${GITHUB_REF_NAME} (${GITHUB_SHA}) is not reachable from origin/main."
+            exit 1
+          fi
+      - run: pip install "uv==0.12.7"
       - run: uv sync --dev
-      # Node deps: tests/vscode runs `npm run compile` (tsc) and needs node_modules.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
       - run: npm --prefix apps/web ci --legacy-peer-deps
-      # Verify the full gate on the exact tagged commit before publishing.
       - run: uv run mypy packages apps/api src --ignore-missing-imports
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run pytest -q --cov --cov-report=term-missing
-      # The umbrella is self-contained (dsa_* are vendored into the wheel), so
-      # build only jack-data-science-agent and publish it — no separate dsa-*
-      # distributions, and dist/ contains only the umbrella artifacts.
       - run: rm -rf dist && uv build
+      - name: Verify release distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          if (( ${#wheels[@]} != 1 || ${#sdists[@]} != 1 )); then
+            echo "::error::Expected exactly one wheel and one sdist; found ${#wheels[@]} wheel(s) and ${#sdists[@]} sdist(s)."
+            printf 'dist/%s\n' "${wheels[@]##*/}" "${sdists[@]##*/}"
+            exit 1
+          fi
+      - name: Fresh-wheel CLI and SDK smoke before publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/dsa-publish-smoke
+          /tmp/dsa-publish-smoke/bin/python -m pip install --upgrade pip
+          /tmp/dsa-publish-smoke/bin/python -m pip install dist/*.whl
+          (
+            cd /tmp
+            /tmp/dsa-publish-smoke/bin/dsa --help >/dev/null
+            /tmp/dsa-publish-smoke/bin/python -c 'import importlib.metadata; import data_science_agent; installed = importlib.metadata.version("jack-data-science-agent"); assert data_science_agent.__version__ == installed; assert data_science_agent.Agent().version == installed; print(f"publish wheel smoke: jack-data-science-agent {installed}")'
+          )
+      - name: Preserve built distributions as workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-dist-${{ github.ref_name }}
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 90
+      - name: Generate PEP 740 publish attestations
+        uses: astral-sh/attest-action@f589a42a7efb6fe400b4f400de60b4bc90390027 # v0.0.6
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@v1.14.2 # release tag — GHCR image is tagged by release, not commit SHA
-        with:
-          packages-dir: dist/
-      - name: Attach artifacts to GitHub Release
-        uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
-        with:
-          files: dist/*
+        run: uv publish
+      - name: Verify published version on PyPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          url = f"https://pypi.org/pypi/jack-data-science-agent/{version}/json"
+          last_error: Exception | None = None
+          for attempt in range(1, 13):
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as response:
+                      payload = json.load(response)
+                  published = payload.get("info", {}).get("version")
+                  if published != version:
+                      raise RuntimeError(f"PyPI returned version {published!r}, expected {version!r}")
+                  print(f"Verified jack-data-science-agent {version} on PyPI.")
+                  break
+              except (OSError, RuntimeError, urllib.error.URLError) as exc:
+                  last_error = exc
+                  if attempt == 12:
+                      raise SystemExit(f"PyPI verification failed after {attempt} attempts: {exc}")
+                  time.sleep(5)
+          else:
+              raise SystemExit(f"PyPI verification failed: {last_error}")
+          PY
+      - name: Attach distributions to GitHub Release safely
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          release_files=(dist/*.whl dist/*.tar.gz dist/*.publish.attestation)
+          if (( ${#release_files[@]} < 2 )); then
+            echo "::error::Expected release distributions after PyPI publish."
+            exit 1
+          fi
+
+          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" 2>/dev/null || true)"
+          if [[ -z "${release_json}" ]]; then
+            echo "No GitHub Release exists yet; creating a draft so assets are uploaded before immutable publication."
+            gh release create "${RELEASE_TAG}" "${release_files[@]}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --verify-tag \
+              --generate-notes \
+              --draft \
+              --title "${RELEASE_TAG}"
+            gh release edit "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft=false
+            exit 0
+          fi
+
+          immutable="$(jq -r '.immutable // false' <<<"${release_json}")"
+          draft="$(jq -r '.draft // false' <<<"${release_json}")"
+          if [[ "${immutable}" == "true" ]]; then
+            echo "::notice::GitHub Release ${RELEASE_TAG} is already immutable. PyPI publishing succeeded; release assets cannot be added after publication. The wheel and sdist remain in the release-dist workflow artifact."
+            exit 0
+          fi
+
+          gh release upload "${RELEASE_TAG}" "${release_files[@]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
+          if [[ "${draft}" == "true" ]]; then
+            gh release edit "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft=false
+          fi
+      - name: Generate release announcement
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python scripts/generate_release_announcement.py

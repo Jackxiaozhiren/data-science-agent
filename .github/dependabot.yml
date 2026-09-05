@@ -6,6 +6,20 @@ updates:
   - package-ecosystem: npm
     directory: "/apps/web"
     schedule: { interval: weekly }
+    groups:
+      next-security:
+        patterns:
+          - "next"
+        update-types:
+          - "minor"
+          - "patch"
+      react-runtime:
+        patterns:
+          - "react"
+          - "react-dom"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: docker
-    directory: "/"
+    directory: "/docker"
     schedule: { interval: weekly }

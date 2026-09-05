@@ -1,0 +1,36 @@
+title: "[Q&A] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask usage, architecture, evaluation, plugin, or reproducibility questions here. For reproducible bugs, please use the issue tracker instead.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to understand or accomplish?
+      placeholder: Describe the goal and where you are blocked.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Include commands, docs, or approaches you already checked.
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: DSA version
+      description: Optional; include `dsa --version` when the question is version-specific.
+      placeholder: e.g. 4.3.0
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Data safety
+      options:
+        - label: I have not included credentials, private datasets, or sensitive information.
+          required: true

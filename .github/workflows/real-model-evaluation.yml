@@ -1,0 +1,253 @@
+name: Real Model Evaluation Smoke
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: real-model-evaluation-smoke
+  cancel-in-progress: false
+
+env:
+  DSA_LLM_MODE: real
+  DSA_LLM_PROVIDER: openai
+  DSA_LLM_FALLBACK: error
+  DSA_OPENAI_MODEL: gpt-5.6-luna
+  DSA_INPUT_COST_PER_MILLION: "0.20"
+  DSA_OUTPUT_COST_PER_MILLION: "1.20"
+  DSA_GIT_COMMIT: ${{ github.sha }}
+  RUN_SCOPE: smoke-5
+  TASK_LIMIT: "5"
+  PRICING_REFERENCE_DATE: "2026-08-29"
+
+jobs:
+  benchmark:
+    name: four-way gpt-5.6-luna smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Build pinned evaluation image
+        run: docker build -f docker/Dockerfile.api -t dsa-eval:smoke .
+
+      - name: Prepare artifact directories
+        run: mkdir -p benchmark-artifacts/{dsa,dsa-no-critic,llm-tools,llm-only}
+
+      - name: Run DSA smoke
+        id: run_dsa
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DSA_EVALUATION_VARIANT: dsa
+          DSA_EVIDENCE_CRITIC: "on"
+        run: |
+          docker run --rm \
+            -e OPENAI_API_KEY \
+            -e DSA_LLM_MODE \
+            -e DSA_LLM_PROVIDER \
+            -e DSA_LLM_FALLBACK \
+            -e DSA_OPENAI_MODEL \
+            -e DSA_INPUT_COST_PER_MILLION \
+            -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_GIT_COMMIT \
+            -e DSA_EVALUATION_VARIANT \
+            -e DSA_EVIDENCE_CRITIC \
+            -v "${GITHUB_WORKSPACE}/benchmarks:/benchmarks:ro" \
+            -v "${GITHUB_WORKSPACE}/benchmark-artifacts/dsa:/artifacts" \
+            dsa-eval:smoke \
+            .venv/bin/dsa \
+            --limit 5 \
+            --catalog /benchmarks/ds-agent-benchmark/catalog.json \
+            --datasets /benchmarks/ds-agent-benchmark/datasets \
+            --out /artifacts
+
+      - name: Record DSA workflow manifest
+        if: ${{ always() }}
+        env:
+          OUT_DIR: benchmark-artifacts/dsa
+          VARIANT: dsa
+        run: python3 scripts/write_real_model_workflow_manifest.py
+
+      - name: Upload DSA artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-model-dsa-${{ github.run_id }}
+          path: benchmark-artifacts/dsa/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Run DSA no-critic smoke
+        id: run_dsa_no_critic
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DSA_EVALUATION_VARIANT: dsa-no-critic
+          DSA_EVIDENCE_CRITIC: "off"
+        run: |
+          docker run --rm \
+            -e OPENAI_API_KEY \
+            -e DSA_LLM_MODE \
+            -e DSA_LLM_PROVIDER \
+            -e DSA_LLM_FALLBACK \
+            -e DSA_OPENAI_MODEL \
+            -e DSA_INPUT_COST_PER_MILLION \
+            -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_GIT_COMMIT \
+            -e DSA_EVALUATION_VARIANT \
+            -e DSA_EVIDENCE_CRITIC \
+            -v "${GITHUB_WORKSPACE}/benchmarks:/benchmarks:ro" \
+            -v "${GITHUB_WORKSPACE}/benchmark-artifacts/dsa-no-critic:/artifacts" \
+            dsa-eval:smoke \
+            .venv/bin/dsa \
+            --limit 5 \
+            --catalog /benchmarks/ds-agent-benchmark/catalog.json \
+            --datasets /benchmarks/ds-agent-benchmark/datasets \
+            --out /artifacts
+
+      - name: Record DSA no-critic workflow manifest
+        if: ${{ always() }}
+        env:
+          OUT_DIR: benchmark-artifacts/dsa-no-critic
+          VARIANT: dsa-no-critic
+        run: python3 scripts/write_real_model_workflow_manifest.py
+
+      - name: Upload DSA no-critic artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-model-dsa-no-critic-${{ github.run_id }}
+          path: benchmark-artifacts/dsa-no-critic/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Run LLM plus tools smoke
+        id: run_llm_tools
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DSA_EVALUATION_VARIANT: llm-tools
+          DSA_EVIDENCE_CRITIC: "on"
+        run: |
+          docker run --rm \
+            -e OPENAI_API_KEY \
+            -e DSA_LLM_MODE \
+            -e DSA_LLM_PROVIDER \
+            -e DSA_LLM_FALLBACK \
+            -e DSA_OPENAI_MODEL \
+            -e DSA_INPUT_COST_PER_MILLION \
+            -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_GIT_COMMIT \
+            -e DSA_EVALUATION_VARIANT \
+            -e DSA_EVIDENCE_CRITIC \
+            -v "${GITHUB_WORKSPACE}/benchmarks:/benchmarks:ro" \
+            -v "${GITHUB_WORKSPACE}/benchmark-artifacts/llm-tools:/artifacts" \
+            dsa-eval:smoke \
+            .venv/bin/dsa \
+            --limit 5 \
+            --catalog /benchmarks/ds-agent-benchmark/catalog.json \
+            --datasets /benchmarks/ds-agent-benchmark/datasets \
+            --out /artifacts
+
+      - name: Record LLM plus tools workflow manifest
+        if: ${{ always() }}
+        env:
+          OUT_DIR: benchmark-artifacts/llm-tools
+          VARIANT: llm-tools
+        run: python3 scripts/write_real_model_workflow_manifest.py
+
+      - name: Upload LLM plus tools artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-model-llm-tools-${{ github.run_id }}
+          path: benchmark-artifacts/llm-tools/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Run LLM-only smoke
+        id: run_llm_only
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DSA_EVALUATION_VARIANT: llm-only
+          DSA_EVIDENCE_CRITIC: "on"
+        run: |
+          docker run --rm \
+            -e OPENAI_API_KEY \
+            -e DSA_LLM_MODE \
+            -e DSA_LLM_PROVIDER \
+            -e DSA_LLM_FALLBACK \
+            -e DSA_OPENAI_MODEL \
+            -e DSA_INPUT_COST_PER_MILLION \
+            -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_GIT_COMMIT \
+            -e DSA_EVALUATION_VARIANT \
+            -e DSA_EVIDENCE_CRITIC \
+            -v "${GITHUB_WORKSPACE}/benchmarks:/benchmarks:ro" \
+            -v "${GITHUB_WORKSPACE}/benchmark-artifacts/llm-only:/artifacts" \
+            dsa-eval:smoke \
+            .venv/bin/dsa \
+            --limit 5 \
+            --catalog /benchmarks/ds-agent-benchmark/catalog.json \
+            --datasets /benchmarks/ds-agent-benchmark/datasets \
+            --out /artifacts
+
+      - name: Record LLM-only workflow manifest
+        if: ${{ always() }}
+        env:
+          OUT_DIR: benchmark-artifacts/llm-only
+          VARIANT: llm-only
+        run: python3 scripts/write_real_model_workflow_manifest.py
+
+      - name: Upload LLM-only artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-model-llm-only-${{ github.run_id }}
+          path: benchmark-artifacts/llm-only/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Validate four-way matrix integrity
+        id: validate_matrix
+        if: ${{ always() }}
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/benchmark-artifacts:/artifacts" \
+            dsa-eval:smoke \
+            .venv/bin/python \
+            -m dsa_evaluation.publication \
+            /artifacts \
+            --json \
+            --output /artifacts/matrix_validation.json
+
+      - name: Upload matrix validation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-model-matrix-validation-${{ github.run_id }}
+          path: benchmark-artifacts/matrix_validation.json
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+
+      - name: Fail when any comparison row or matrix validation failed
+        if: ${{ always() && (steps.run_dsa.outcome != 'success' || steps.run_dsa_no_critic.outcome != 'success' || steps.run_llm_tools.outcome != 'success' || steps.run_llm_only.outcome != 'success' || steps.validate_matrix.outcome != 'success') }}
+        run: |
+          echo "::error::At least one real-model row or the matrix validator failed. Review artifacts and logs."
+          exit 1

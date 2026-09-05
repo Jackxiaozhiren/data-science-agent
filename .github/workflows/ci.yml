@@ -1,32 +1,98 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Lint GitHub Actions workflows
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="/tmp/actionlint_${ACTIONLINT_VERSION}.tar.gz"
+          curl -fsSL -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "$archive" -C /tmp actionlint
+          /tmp/actionlint -color
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with: { python-version: "3.12" }
-      - run: pip install uv
+      - run: pip install "uv==0.12.7"
       - run: uv sync --dev
       - run: uv lock --check  # §46 dependency pinning
       - run: uv run python scripts/sync_vendor.py --check  # vendored dsa_* must match source
+      - run: uv run python scripts/check_npm_workspace_lock.py  # root npm lock must match workspace manifests
       # Node deps: tests/vscode runs `npm run compile` (tsc) and the web build
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
       - run: npm --prefix apps/web ci --legacy-peer-deps
+      # `npm ci` reports vulnerabilities but exits successfully. Enforce the Web
+      # runtime policy explicitly so High/Critical advisories cannot hide in logs.
+      - run: npm --prefix apps/web audit --audit-level=high
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run ruff format --check packages apps/api tests src apps/jupyter
       - run: uv run mypy packages apps/api src --ignore-missing-imports
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM
       - run: uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
+      - name: Build wheel and sdist
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          uv build --wheel --sdist
+          test "$(find dist -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -type f -name '*.tar.gz' | wc -l)" -eq 1
+      - name: Smoke-test clean wheel install
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_dir="$(mktemp -d "${RUNNER_TEMP:?}/dsa-wheel-smoke.XXXXXX")"
+          python -m venv "${smoke_dir}"
+          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          test -n "${wheel}"
+          "${smoke_dir}/bin/python" -m pip install --disable-pip-version-check "${wheel}"
+          "${smoke_dir}/bin/python" - <<'PY'
+          import importlib.metadata
+          import data_science_agent
+          from data_science_agent import Agent, Dataset
+
+          installed = importlib.metadata.version("jack-data-science-agent")
+          assert data_science_agent.__version__ == installed
+          assert Agent is not None
+          assert Dataset is not None
+          print(f"clean wheel import ok: {installed}")
+          PY
+          "${smoke_dir}/bin/dsa" --help >/dev/null
       - run: docker build -f docker/Dockerfile.api -t dsa-api:ci .
+      - run: docker run --rm dsa-api:ci .venv/bin/dsa --help >/dev/null
       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
       - run: npm --prefix apps/web run build 2>&1 | tail -n 20
       - run: docker compose config 2>&1 | head -n 40
       - run: uv run python -m mkdocs build --strict 2>&1 | tail -n 50
+      - name: Verify v4.3.0 release candidate
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 47 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          .venv/bin/dsa verify-release v4.3.0 --json

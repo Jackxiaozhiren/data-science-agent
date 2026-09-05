@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from dsa_api.core.config import settings
 from dsa_api.routers.analysis import router as analysis_router
 from dsa_api.routers.datasets import router as datasets_router
 from dsa_api.routers.experiments import router as experiments_router
@@ -15,7 +17,15 @@ try:
 except Exception:  # pragma: no cover
     mcp_app_v4 = None  # type: ignore[assignment]
 
-app = FastAPI(title="Data Science Agent API", version="0.1.0")
+app = FastAPI(title=settings.app_name, version=settings.version)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 app.include_router(health_router)
 app.include_router(datasets_router)
@@ -29,4 +39,4 @@ if mcp_app_v4 is not None:
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"name": "Data Science Agent API", "version": "0.1.0"}
+    return {"name": settings.app_name, "version": settings.version}

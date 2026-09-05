@@ -1,0 +1,42 @@
+title: "[Show & Tell] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share projects, plugins, case studies, research experiments, or integrations built with Data Science Agent.
+  - type: input
+    id: project
+    attributes:
+      label: Project
+      description: What did you build or analyze?
+      placeholder: Project, plugin, case study, paper, notebook, or integration name
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: How DSA is used
+      description: Describe the workflow and which DSA surfaces or capabilities are involved.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results / lessons
+      description: What worked, what failed, and what did you learn?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction details
+      description: Optional commands, repository links, dataset/license information, or run artifacts others can use to reproduce the work.
+    validations:
+      required: false
+  - type: checkboxes
+    id: sharing
+    attributes:
+      label: Sharing check
+      options:
+        - label: I have permission to share the linked code/data/artifacts and have not included secrets or private data.
+          required: true

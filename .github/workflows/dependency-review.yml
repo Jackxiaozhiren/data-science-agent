@@ -6,13 +6,18 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
+
+concurrency:
+  group: dependency-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -22,4 +27,8 @@ jobs:
           fail-on-severity: high
           fail-on-scopes: runtime
           comment-summary-in-pr: always
-          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, PSF, Python-2.0
+          # Sharp 0.35.x ships platform-specific libvips shared binaries under
+          # LGPL-3.0-or-later. Next 16's Browserslist data also includes
+          # caniuse-lite under CC-BY-4.0. Keep license enforcement enabled while
+          # explicitly documenting these required upstream runtime/data licenses.
+          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0-or-later, CC-BY-4.0

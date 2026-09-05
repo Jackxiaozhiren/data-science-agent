@@ -2,167 +2,391 @@
 
 # Data Science Agent
 
-**From natural language to reproducible data science.**
+### The AI data scientist that shows its work.
 
-Turns a question about your data into a completed analysis — with every claim traced
-back to an executable tool call, the underlying computation, and the dataset it was run on.
+Ask questions about CSV files and databases in natural language. DSA runs SQL, statistics, machine learning, and visualization, then returns **claim-level evidence, a reproducible report, and the artifacts needed to inspect how each conclusion was produced**.
 
-[Documentation](docs/getting-started.md) ·
-[SDK reference](docs/api.md) ·
-[CLI](docs/benchmark.md) ·
-[Changelog](CHANGELOG.md) ·
-[Citation](CITATION.cff)
+[**Try Live Demo**](https://data-science-agent-web.vercel.app/datasets) ·
+[**Product Tour**](https://jackxiaozhiren.github.io/data-science-agent/) ·
+[**60-second quickstart**](#-60-second-quickstart) ·
+[**Install from PyPI**](https://pypi.org/project/jack-data-science-agent/) ·
+[**Case studies**](case-studies/) ·
+[**Evaluation**](docs/evaluation.md) ·
+[**Docs**](docs/getting-started.md) ·
+[**v4.3.0**](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.3.0)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Jackxiaozhiren/data-science-agent/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/Jackxiaozhiren/data-science-agent/actions)
-[![PyPI version](https://img.shields.io/pypi/v/jack-data-science-agent)](https://pypi.org/project/jack-data-science-agent/)
-[![Python ≥ 3.12](https://img.shields.io/pypi/pyversions/jack-data-science-agent)](https://pypi.org/project/jack-data-science-agent/)
-[![License: MIT](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/jack-data-science-agent?logo=pypi&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
+[![Latest release](https://img.shields.io/github/v/release/Jackxiaozhiren/data-science-agent?logo=github&label=release)](https://github.com/Jackxiaozhiren/data-science-agent/releases/latest)
+[![Python](https://img.shields.io/pypi/pyversions/jack-data-science-agent?logo=python&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
+[![License](https://img.shields.io/github/license/Jackxiaozhiren/data-science-agent)](LICENSE)
+
+<br />
+
+<img src="docs/assets/hero.svg" alt="Data Science Agent — Ask your data. Verify the answer." width="100%" />
+
+**For analysts, researchers, and ML engineers who need answers they can inspect, audit, reproduce, and challenge.**
+
+Live browser demo: [upload a dataset and run DSA](https://data-science-agent-web.vercel.app/datasets) · Static artifact tour: [browse verified runs](https://jackxiaozhiren.github.io/data-science-agent/)
 
 </div>
 
-## What is it?
+---
 
-**Data Science Agent is an evidence-grounded autonomous data science platform.** You ask
-a question in natural language — *"Does price predict revenue?"* — and it profiles your
-data, runs the analysis (SQL, statistics, forecasting, ML, visualization), and produces a
-report in which **every claim is linked to an evidence record**: a specific tool call, its
-result, and the `sha256` hash of the dataset it ran on. No anonymous numbers, no fabricated
-results.
+## Why DSA?
 
-```python
-import asyncio
-from data_science_agent import Agent
+Most AI data-analysis tools stop at the answer.
 
-result = asyncio.run(Agent().analyze(
-    "sales.csv",
-    "Does price predict revenue, and is the effect statistically significant?",
-))
-print(result.report_markdown)   # prose + charts, every claim evidence-cited
-print(result.evidence)          # Insight → Evidence → ToolCall → Dataset (hash)
+**Data Science Agent is built to preserve the path from a claim back to the computation and dataset that produced it.**
+
+```text
+Question
+   ↓
+Executed analysis
+   ↓
+Evidence
+   ↓
+Claim
+   ↓
+Reproducible report
 ```
 
-## The key features are
+That means an analysis can be **inspected, audited, reproduced, and challenged** instead of accepted on confidence alone.
 
-- **Evidence-grounded output** — each insight traces the chain
-  `Insight → Evidence → ToolCall → Dataset(sha256)`, so results can be audited, not trusted on faith.
-- **Reproducible by default** — every run writes a bundle: `report.md`, `experiment.json`, `reproduce.sh`, `analysis.ipynb`, `evidence_graph.json`. Re-run it, get the same result.
-- **Local-first, no cloud required** — runs fully on your machine (DuckDB, Polars, Python). A stub LLM means even heavy features degrade gracefully offline.
-- **Benchmark-driven** — evaluated on two frozen internal benchmarks plus 8 real-world-style case studies, with results and limitations published.
-- **One SDK, many surfaces** — `dsa` CLI, Python SDK, FastAPI server with an **MCP** endpoint, Jupyter magic, VS Code extension, and a plugin runtime for custom tools.
+> **If an AI makes a data-science claim, you should be able to inspect how it got there.**
 
-## Quickstart
+---
+
+## ⚡ 60-second quickstart
+
+Install:
 
 ```bash
-# Install (Python ≥ 3.12)
-uv sync --dev            # or: pip install jack-data-science-agent
-
-# One-command smoke run: demo dataset → analysis → evidence → report
-uv run dsa demo
-
-# Your data, your question
-uv run dsa analyze sales.csv --task "Does price predict revenue?"
+pip install jack-data-science-agent
 ```
 
-`uv run dsa --help` exposes `profile`, `benchmark`, `init`, `reproduce`, `plugin`, and `mcp`.
-Prefer the SDK? `from data_science_agent import Agent` works in any script or notebook.
+Run the built-in demo:
 
-## Using the SDK
-
-### Create it
-```python
-import asyncio
-from data_science_agent import Agent
-
-result = asyncio.run(Agent().analyze(
-    "sales.csv",
-    "Which region drives the most revenue, and is the trend significant?",
-))
-```
-
-### Run it
 ```bash
-uv run dsa analyze benchmarks/v2/datasets/sales.csv \
-  --task "Which region drives the most revenue?"
+dsa demo
 ```
 
-### Check it
-```python
-print(result.status)               # "COMPLETED" | "FAILED"
-print(len(result.evidence))        # each evidence is traceable
-for e in result.evidence:
-    print(e.claim, "->", e.source_id, "->", e.result)
+Analyze your own data:
+
+```bash
+dsa analyze sales.csv \
+  --task "Which factors explain revenue, and are the effects statistically significant?"
 ```
 
-## How it works
+Python **3.12+** is required.
 
+A successful run produces more than chat output:
+
+```text
+analysis run
+├── report.md
+├── experiment.json
+├── evidence_graph.json
+├── analysis.ipynb
+└── reproduce.sh
 ```
-your question ──▶ LangGraph agent ──▶ planner ──▶ data scientist ──▶ critic ──▶ reporter
-                        │                 ◀──────── tools (18) ────────
-                        ▼
-              DuckDB · Polars · SQL/Stats · ML · Visualization · Evidence
-                        │
-                        ▼
-      report.md + evidence graph + reproduce.sh + analysis.ipynb
+
+| Artifact | Purpose |
+|---|---|
+| `report.md` | Human-readable findings |
+| `experiment.json` | Structured run metadata |
+| `evidence_graph.json` | Claim → evidence → computation lineage |
+| `analysis.ipynb` | Inspectable notebook representation |
+| `reproduce.sh` | Re-run the analysis |
+
+### Hosted browser demo
+
+The verified public demo is available at **[data-science-agent-web.vercel.app](https://data-science-agent-web.vercel.app/datasets)**. It runs the Next.js web interface on Vercel and the FastAPI analysis service on Render.
+
+The demo supports the core product flow:
+
+```text
+Upload CSV / Excel
+      ↓
+Inspect dataset
+      ↓
+Ask a natural-language question
+      ↓
+Planner selects analysis tools
+      ↓
+Statistics / ML / visualization execute
+      ↓
+Evidence is verified
+      ↓
+Validation + report
 ```
 
-The runtime is a **LangGraph** orchestrator running over a typed tool layer: dataset
-profiling, read-only SQL on DuckDB, Python, statistical tests, forecasting, regression and
-classification, feature importance, and visualization. Every tool call may emit an
-`Evidence` record bound to the dataset hash, and a **critic** step rejects claims that
-outrun their evidence (e.g. causal language without a causal check). The API layer
-(see `apps/api`) wraps the same graph behind REST + **SSE streaming** + an MCP endpoint.
+A useful smoke-test question is:
 
-## Integrations
+> Explain which features are most important for revenue, test whether the main associations are statistically significant, assess the impact of campaign_group on the outcome, and clearly distinguish association from causation. Include a visualization.
+
+The hosted preview intentionally runs in deterministic heuristic/offline mode, so it does not require or expose a model API key. The public Render instance uses ephemeral local storage: **uploaded datasets and generated artifacts are temporary and may disappear after a restart or redeploy, so re-upload the dataset if it is no longer listed.** A free instance may also need a short cold-start period after inactivity.
+
+See [Hosted Demo Deployment](docs/hosted-demo.md) for the deployment topology, environment variables, and limitations.
+
+### Where DSA fits
+
+| You are... | DSA helps you... |
+|---|---|
+| **Analyst** | move from a natural-language question to SQL, statistics, plots, and an auditable report |
+| **Researcher** | preserve dataset hashes, evidence lineage, and reproduction artifacts alongside conclusions |
+| **ML engineer / data scientist** | run regression, classification, forecasting, and evaluation inside one inspectable workflow |
+
+---
+
+## See it in action
+
+**Interactive path: [Try the live hosted demo →](https://data-science-agent-web.vercel.app/datasets)**
+
+**Artifact-only path: [Open the verified Product Tour →](https://jackxiaozhiren.github.io/data-science-agent/)**
+
+The Product Tour is a static view of repository artifacts from verified DSA runs. It does not accept uploads or pretend to be a live hosted model/API service. The live demo is separate and is explicitly labeled as a temporary public preview.
+
+<div align="center">
+
+<img src="docs/assets/demo.svg" alt="Data Science Agent terminal demo: profile, plan, execute, build evidence, check claims, and generate a reproducible report" width="92%" />
+
+<sub>Question → profile → plan → tools → evidence → critic → reproducible report.</sub>
+
+</div>
+
+### Start with 3 flagship workflows
+
+| Workflow | Ask DSA | What it demonstrates |
+|---|---|---|
+| **[Sales analytics](case-studies/01-sales/)** | What drives revenue across regions and categories? | SQL + statistics → evidence → reproducible report |
+| **[Time-series forecasting](case-studies/03-time-series/)** | What are the next 30 values, and how well does the baseline forecast perform? | Forecasting, holdout evaluation, reproducibility, and visible failure recovery |
+| **[ML classification](case-studies/08-classification/)** | Can DSA train, evaluate, and explain an imbalanced classifier? | Model evaluation + feature importance inside the same provenance trail |
+
+**[Browse all 8 verified case studies →](case-studies/)**
+
+These are verified repository workflows intended to show product behavior and evidence artifacts. They are **not** presented as independent real-LLM leaderboard results.
+
+---
+
+## What makes DSA different?
+
+### 1. Claim-level evidence
+
+Supported findings can be connected to the analysis that produced them:
+
+```text
+Claim
+└── statistical result
+    └── executed tool
+        └── parameters
+            └── dataset SHA-256
+```
+
+### 2. Reproducibility by default
+
+DSA records run metadata and reproduction artifacts instead of treating the final prose answer as the only output.
+
+### 3. Evidence-aware critique
+
+A critic stage checks whether conclusions go beyond available evidence. Causal language can be rejected when the underlying analysis only supports association.
+
+### 4. Statistical and modeling guardrails
+
+The current analysis path can select semantic outcome/treatment columns, run significance tests, encode categorical features for RandomForest importance, exclude exact target copies from feature importance, and preserve an explicit association-vs-causation boundary.
+
+### 5. Real data-science tools
+
+Core workflows can coordinate:
+
+- dataset profiling and exploratory analysis
+- SQL with DuckDB
+- correlation and hypothesis testing
+- regression and classification
+- forecasting and feature importance
+- visualization
+- report generation
+
+### 6. One runtime, multiple interfaces
 
 | Surface | Entry point |
 |---|---|
-| CLI | `uv run dsa <command>` — analyze, benchmark, reproduce, plugin, mcp |
+| CLI | `dsa <command>` |
 | Python SDK | `from data_science_agent import Agent` |
-| REST API | `apps/api` — FastAPI + Pydantic v2 + SQLAlchemy/SQLite, `/api/v1/analysis/...` |
-| MCP | stateless MCP server mounted at `/mcp` over the same tool layer |
-| Jupyter | `%load_ext dsa_jupyter` magic (see `apps/jupyter`) |
-| VS Code | extension w/ dataset explorer + analysis replay (see `apps/vscode`) |
-| Plugins | `dsa plugin install` — custom tool packages validated via `PluginManifest` |
+| REST API | FastAPI |
+| Streaming | Server-Sent Events |
+| MCP | MCP server |
+| Jupyter | `%load_ext dsa_jupyter` |
+| VS Code | Dataset explorer + analysis replay |
+| Plugins | Custom data-science tools |
+
+---
+
+## Python SDK
+
+```python
+import asyncio
+from data_science_agent import Agent
+
+async def main():
+    result = await Agent().analyze(
+        "sales.csv",
+        "Which region drives the most revenue, and is the trend statistically significant?",
+    )
+
+    print(result.report_markdown)
+
+asyncio.run(main())
+```
+
+Inspect evidence programmatically:
+
+```python
+for evidence in result.evidence:
+    print(evidence.claim)
+    print(evidence.source_id)
+    print(evidence.result)
+```
+
+---
 
 ## Evaluation
 
-Numbers are what we measured on frozen benchmarks, with the version and commit recorded.
+DSA is developed against versioned benchmark suites rather than relying only on hand-picked demos.
 
-- **Benchmark v1** (`benchmarks/ds-agent-benchmark`, frozen): **50 / 50 tasks** at
-  `task_success_rate = 1.0`, `1.0` statistical & SQL accuracy, `0.06` unsupported-claim rate.
-- **Benchmark v2** (`benchmarks/v2`, catalog `0.3.0`, seed 42): **100 tasks · 30 datasets · 11 categories**.
-- **8 case studies** (`case-studies/`) executed end-to-end; real tool failures are *kept* and
-  documented as limitations rather than hidden.
-- **Reproduction** harness: 6-dim `ReproductionScore` across execution / numerical / statistical
-  / evidence / semantic dimensions.
+The repository contains deterministic benchmark and evaluator-validation results, including frozen task suites and reproducibility checks. These results are useful for regression testing and validating the evaluation harness, but **they should not be interpreted as an independent comparison of real LLM model quality unless the run identifies a real model/provider and reproducible configuration**.
 
-A full, honest gap analysis (which failure modes the benchmarks *don't* cover) lives in
-[`docs/research.md`](docs/research.md) — see also [`docs/benchmark.md`](docs/benchmark.md)
-and [`docs/evaluation.md`](docs/evaluation.md).
+The current public result registry includes a `stub/small` validation run. It is intentionally labeled as such so test-harness scores are not confused with real-model performance.
 
-## Why evidence-grounded?
+- [Evaluation methodology](docs/evaluation.md)
+- [Benchmark documentation](docs/benchmark.md)
+- [Reproducible result registry](benchmarks/leaderboard/)
+- [Research & limitations](docs/research.md)
 
-Data-science outputs are only as trustworthy as the path from question to number. This
-project treats that path as a first-class artifact:
+---
 
-- claims cite the exact computation and dataset (hash), not vibes;
-- every run is reproducible from a bundle, so "works on my machine" becomes verifiable;
-- the critic and evidence gates make the agent refuse claims it cannot back.
+## Architecture
 
-## Resources
+```mermaid
+flowchart LR
+    A["Natural-language question"] --> B["Planner"]
+    B --> C["Data-science tools"]
+    C --> D["SQL / Statistics / ML / Visualization"]
+    D --> E["Evidence graph"]
+    E --> F["Critic"]
+    F --> G["Evidence-backed report"]
+    G --> H["Reproduction artifacts"]
+```
 
-- [Documentation](docs/getting-started.md) — get started, architecture, tools, statistics, security
-- [SDK & API reference](docs/api.md)
-- [MCP design](docs/mcp.md)
-- [Contributing guide](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
-- [Cite this project](CITATION.cff)
+Hosted demo topology:
+
+```mermaid
+flowchart LR
+    U["Browser"] --> W["Next.js · Vercel"]
+    W --> A["FastAPI · Render"]
+    A --> D["Temporary dataset storage"]
+    A --> T["DSA tools"]
+    T --> R["Evidence + report"]
+```
+
+The runtime uses a LangGraph-based orchestration layer over typed data-science tools, with local-first data operations built around Python, DuckDB, Polars, SciPy, scikit-learn, and Matplotlib.
+
+---
+
+## DSA vs. typical AI data analysis
+
+| Capability | Chat-with-data tools | Generic coding agents | Data Science Agent |
+|---|:---:|:---:|:---:|
+| Natural-language analysis | ✓ | ✓ | ✓ |
+| SQL / statistics / ML | ✓ | ✓ | ✓ |
+| Autonomous workflow | Limited | ✓ | ✓ |
+| Dataset hashing | — | — | ✓ |
+| Claim-level evidence | — | — | ✓ |
+| Evidence graph | — | — | ✓ |
+| Reproduction bundle | Limited | Limited | ✓ |
+| Evidence-aware critic | — | — | ✓ |
+| MCP interface | Varies | Varies | ✓ |
+| Plugin runtime | Varies | Varies | ✓ |
+
+DSA is not intended to be only another natural-language interface to a dataframe. Its focus is **verifiable, reproducible AI data science**.
+
+---
+
+## Documentation
+
+Start here:
+
+- [Live Demo](https://data-science-agent-web.vercel.app/datasets)
+- [Product Tour](https://jackxiaozhiren.github.io/data-science-agent/)
+- [Getting Started](docs/getting-started.md)
+- [Hosted Demo Deployment](docs/hosted-demo.md)
+- [SDK & API Reference](docs/api.md)
+- [Evaluation](docs/evaluation.md)
+- [Benchmarks](docs/benchmark.md)
+- [MCP](docs/mcp.md)
+- [Research & Limitations](docs/research.md)
+- [Case Studies](case-studies/)
+- [Roadmap](ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+- [Releases](https://github.com/Jackxiaozhiren/data-science-agent/releases)
+
+---
+
+## Development
+
+```bash
+git clone https://github.com/Jackxiaozhiren/data-science-agent.git
+cd data-science-agent
+uv sync --dev
+uv run dsa demo
+uv run pytest
+```
+
+Static checks:
+
+```bash
+uv run ruff check .
+uv run mypy .
+```
+
+---
 
 ## Contributing
 
-Contributions are welcome — bug reports, docs, plugins, and benchmark tasks alike. Open an
-issue or PR; CI gates on tests, mypy, ruff, the docs build, and `dsa verify-release`. See
-[CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome, especially:
 
-## License
+- real-model benchmark baselines
+- reproducibility failures
+- new datasets and benchmark tasks
+- statistical validation improvements
+- data-science tools and plugins
+- case studies and documentation
 
-[MIT](LICENSE)
+**New contributor?** Start with the [`good first issue`](https://github.com/Jackxiaozhiren/data-science-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) queue.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [ROADMAP.md](ROADMAP.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+---
+
+## Citation, security, and license
+
+- Academic use: [CITATION.cff](CITATION.cff)
+- Security reports: [SECURITY.md](SECURITY.md)
+- License: [MIT](LICENSE)
+
+---
+
+<div align="center">
+
+### Ask. Analyze. Verify. Reproduce.
+
+[Live Demo](https://data-science-agent-web.vercel.app/datasets) ·
+[Product Tour](https://jackxiaozhiren.github.io/data-science-agent/) ·
+[Get Started](docs/getting-started.md) ·
+[Case Studies](case-studies/) ·
+[Evaluation](docs/evaluation.md) ·
+[Roadmap](ROADMAP.md) ·
+[Contribute](CONTRIBUTING.md)
+
+⭐ If reproducible AI data analysis is useful to you, consider starring the project.
+
+</div>

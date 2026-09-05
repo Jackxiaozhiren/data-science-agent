@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import uuid
 from pathlib import Path
@@ -11,15 +12,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dsa_api.models.dataset import DatasetORM
 from dsa_datasets.hash_utils import sha256_file
-from dsa_datasets.loader import load_dataframe
 from dsa_datasets.models import DatasetFormat
-from dsa_datasets.profiler import build_profile
 from dsa_datasets.validate import validate_file
 
 
 def _storage_dir() -> Path:
-    # relative to project root (Data agent)
-    return Path(__file__).resolve().parents[4] / "data" / "datasets"
+    configured = os.getenv("DSA_DATASET_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    # Project-root data directory. In the Render image this resolves to
+    # /app/data/datasets, matching docker/Dockerfile.api.
+    return Path(__file__).resolve().parents[5] / "data" / "datasets"
+
+
+def _dataset_available(row: DatasetORM) -> bool:
+    try:
+        return Path(row.path).is_file()
+    except (OSError, TypeError, ValueError):
+        return False
 
 
 async def ensure_tables(session: AsyncSession) -> None:
@@ -38,17 +48,19 @@ async def save_dataset(
     head: bytes | None = None,
 ) -> dict[str, Any]:
     fmt = validate_file(filename, size_bytes, content_type=content_type, head=head)
-    # hash from temp file
     sha = sha256_file(tmp_path)
     dataset_id = str(uuid.uuid4())
     storage = _storage_dir()
     storage.mkdir(parents=True, exist_ok=True)
-    # persist file as {id}_{safe_filename}
     safe_name = f"{dataset_id}_{filename}"
     dest = storage / safe_name
     shutil.copyfile(tmp_path, dest)
 
-    # load + profile (raises DatasetError -> caller maps to 400)
+    # Keep the scientific dataframe stack off the API import path so lightweight
+    # health checks can start reliably on memory-constrained demo instances.
+    from dsa_datasets.loader import load_dataframe
+    from dsa_datasets.profiler import build_profile
+
     df = load_dataframe(dest, fmt)
     profile = build_profile(
         df, dataset_id, filename, fmt if isinstance(fmt, DatasetFormat) else DatasetFormat(fmt)
@@ -69,20 +81,23 @@ async def save_dataset(
     session.add(orm)
     await session.commit()
     await session.refresh(orm)
-    d = orm.to_dict()
-    # ensure profile is dict (already)
-    return d
+    return orm.to_dict()
 
 
 async def list_datasets(session: AsyncSession) -> list[dict[str, Any]]:
     await ensure_tables(session)
     result = await session.execute(select(DatasetORM).order_by(DatasetORM.created_at.desc()))
     rows = result.scalars().all()
-    return [r.to_dict() for r in rows]
+    # Runtime uploads live on ephemeral storage on the free hosted demo. If an
+    # instance restart removes a file, do not keep offering its stale DB record
+    # to the analysis UI.
+    return [r.to_dict() for r in rows if _dataset_available(r)]
 
 
 async def get_dataset(session: AsyncSession, dataset_id: str) -> dict[str, Any] | None:
     await ensure_tables(session)
     result = await session.execute(select(DatasetORM).where(DatasetORM.id == dataset_id))
     row = result.scalars().first()
-    return row.to_dict() if row else None
+    if row is None or not _dataset_available(row):
+        return None
+    return row.to_dict()

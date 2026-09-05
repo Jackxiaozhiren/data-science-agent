@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Sequence
 
@@ -9,6 +10,17 @@ _CAUSAL_WORDS = re.compile(
     r"\b(cause[sd]?|caused by|impact(?:s|ed)?|effect(?: of)?|leads to|results in|due to|drives|driven by)\b",
     re.IGNORECASE,
 )
+_FALSE_ENV_VALUES = {"0", "false", "off", "no"}
+
+
+def evidence_critic_enabled() -> bool:
+    """Return whether the evidence critic stage should run.
+
+    The critic stays enabled by default. Disabling it is an explicit evaluation
+    ablation and should not change normal product or regression behavior.
+    """
+
+    return os.getenv("DSA_EVIDENCE_CRITIC", "on").strip().lower() not in _FALSE_ENV_VALUES
 
 
 def rewrite_unsupported_claim(text: str, has_causal_evidence: bool = False) -> str:
@@ -39,7 +51,6 @@ def check_unsupported_claims(
 
 def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
     if not state.evidence:
-        # allow if only profiling steps so far
         if state.status.value in ("UNDERSTANDING", "PLANNING", "DATA_PROFILING"):
             return ValidationResult(
                 check="evidence_coverage", passed=True, message="Early stage, no evidence yet"
@@ -47,7 +58,6 @@ def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
         return ValidationResult(
             check="evidence_coverage", passed=False, message="No evidence collected", details={}
         )
-    # every insight should have at least one evidence
     for ins in state.insights:
         if not ins.evidence_ids:
             return ValidationResult(
@@ -59,12 +69,19 @@ def check_evidence_coverage(state: AnalysisState) -> ValidationResult:
     return ValidationResult(check="evidence_coverage", passed=True, message="Evidence coverage ok")
 
 
+def _finalize_evidence_status(state: AnalysisState) -> None:
+    source_status = {tc.call_id: tc.status for tc in state.tool_calls}
+    for evidence in state.evidence:
+        evidence.validation_status = (
+            "verified" if source_status.get(evidence.source_id) == "ok" else "failed"
+        )
+
+
 def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     results: list[ValidationResult] = []
     results.append(check_evidence_coverage(state))
     results.append(check_unsupported_claims(state.insights, has_causal_evidence=False))
 
-    # statistical sanity: if any tool call errored, flag
     errors = [tc for tc in state.tool_calls if tc.status == "error"]
     if errors and state.status.value not in ("FAILED", "HUMAN_REVIEW"):
         results.append(
@@ -78,7 +95,6 @@ def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     else:
         results.append(ValidationResult(check="tool_errors", passed=True, message="No tool errors"))
 
-    # budget guard
     if state.tool_call_count > state.budget.max_tool_calls:
         results.append(
             ValidationResult(check="budget", passed=False, message="Tool call budget exceeded")
@@ -86,6 +102,7 @@ def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     else:
         results.append(ValidationResult(check="budget", passed=True, message="Budget ok"))
 
+    _finalize_evidence_status(state)
     return results
 
 
@@ -101,7 +118,6 @@ def should_retry(
 
 
 def detect_prompt_injection(dataset_text: str) -> ValidationResult:
-    # Dataset cells are UNTRUSTED DATA — flag injection-like payloads without blocking the run
     import dsa_execution.guardrails as _g
 
     if _g.contains_prompt_injection(dataset_text):

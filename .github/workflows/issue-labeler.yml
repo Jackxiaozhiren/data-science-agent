@@ -1,0 +1,44 @@
+name: Issue Labeler
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: issue-labeler-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const text = `${issue.title}\n${issue.body || ''}`.toLowerCase();
+            const labels = new Set();
+
+            if (/\b(docs?|documentation|readme|mkdocs|tutorial|quickstart)\b/i.test(text)) {
+              labels.add('documentation');
+            }
+            if (/\b(error|exception|traceback|crash|broken|regression|fails?|failure)\b/i.test(text)) {
+              labels.add('bug');
+            }
+            if (/\b(feature|enhancement|proposal|plugin|benchmark|support|request|integration)\b/i.test(text)) {
+              labels.add('enhancement');
+            }
+
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [...labels],
+              });
+            }
