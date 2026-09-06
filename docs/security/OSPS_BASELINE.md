@@ -30,8 +30,8 @@
 | BR-2 | Reproducible builds / pinned dependencies | **PASS** | `uv.lock` committed + CI `uv lock --check`; npm lockfile committed; `scripts/sync_vendor.py --check` guards vendoring drift. |
 | BR-3 | Releases produced by a dedicated workflow | **PASS** | `publish.yml` (PyPI Trusted Publishing, OIDC, no long-lived token — `grep PYPI_API_TOKEN .github/ → 0`). |
 | BR-4 | Release provenance / attestations | **PARTIAL** | PEP 740 PyPI publish attestations **empirically digest-verified** for 4.2.10 (`docs/security/VERIFY_RELEASE.md`; DSSE subject digest == wheel). GitHub **build** provenance (`attest-build-provenance`) NOT IMPLEMENTED — `docs/v4_3/SUPPLY_CHAIN_SECURITY.md` item 4. |
-| BR-5 | SBOM shipped with releases | **PASS** | `release/sbom.json` (CycloneDX, 193 components at 4.3.1), CI enforces currency via `--check`. |
-| BR-6 | Signed release artifacts (Sigstore/GH build attestation) | **FAIL (open item)** | Only the PyPI publish-attestation path exists; GitHub-issued build provenance absent (see BR-4). |
+| BR-5 | SBOM shipped with releases | **PASS** | `release/sbom.json` (CycloneDX, 192 components at 4.3.2), CI enforces currency via `--check`. |
+| BR-6 | Signed release artifacts (Sigstore/GH build attestation) | **PARTIAL** | `attest-build-provenance@v2` (SHA-pinned) wired into `publish.yml` 2026-09-05 with `attestations: write`; live `gh attestation verify` pending the next tag push. |
 
 ## 3. Documentation
 
@@ -42,8 +42,8 @@
 | DOC-3 | Contribution guide | **PASS** | `CONTRIBUTING.md` (+ `docs/contributing.md`). |
 | DOC-4 | Code of Conduct | **PASS** | `CODE_OF_CONDUCT.md`. |
 | DOC-5 | Security policy | **PASS** | `SECURITY.md` — private reporting via GitHub Security Advisories, 3-business-day response expectation. |
-| DOC-6 | Governance / maintainer model | **FAIL (open item)** | No `GOVERNANCE.md` / `MAINTAINERS.md`; single-maintainer project. Recommendation: add a minimal governance statement. |
-| DOC-7 | Citation metadata | **PASS** | `CITATION.cff` (version 4.3.1 lineage; audited in Phase I, commit `40d6e71`). |
+| DOC-6 | Governance / maintainer model | **PASS** | `GOVERNANCE.md` added 2026-09-05 (roles, release authority, ADR rule, triage SLA). |
+| DOC-7 | Citation metadata | **PASS** | `CITATION.cff` (version 4.3.2 lineage; audited in Phase I, commit `40d6e71`). |
 
 ## 4. Bug Reporting
 
@@ -51,13 +51,13 @@
 |---|------|:------:|---|
 | BUG-1 | Public issue tracker open to users | **PASS** | Issues enabled; `docs/v4_3/COMMUNITY_STATUS.md` (2026-08-31: 7 open issues via live `gh api`). |
 | BUG-2 | Issue templates | **PASS** | `.github/ISSUE_TEMPLATE/` incl. `user-feedback.yml` (Phase J). |
-| BUG-3 | Documented response process for non-security issues | **PARTIAL** | Security SLA documented (3 business days); general-issue triage SLA not yet written down. |
+| BUG-3 | Documented response process for non-security issues | **PASS** | Triage SLA documented in `GOVERNANCE.md` (labeled within 7 days; no fix-commitment promised). |
 
 ## 5. Maintenance
 
 | # | Item | Status | Evidence |
 |---|------|:------:|---|
-| M-1 | Active maintenance / release cadence | **PASS** | `v4.2.0` (2026-08-22) → `v4.2.1` → … → `v4.3.0` (2026-08-30) → `v4.3.1` (2026-08-31), all with GitHub Releases + CHANGELOG entries. |
+| M-1 | Active maintenance / release cadence | **PASS** | `v4.2.0` (2026-08-22) → `v4.2.1` → … → `v4.3.0` (2026-08-30) → `v4.3.1` (2026-08-31) → `v4.3.2` (2026-09-05), all with GitHub Releases + CHANGELOG entries. |
 | M-2 | Dependency update strategy | **PASS** | `.github/dependabot.yml` (npm/pip/docker); `uv lock --check` in CI. |
 | M-3 | Archived/status banner | **PASS** (active) | No archival banner; actively released. |
 
@@ -78,21 +78,20 @@
 
 | Status | Count | Items |
 |---|---:|---|
-| PASS | 21 | AC-1, AC-2, BR-1, BR-2, BR-3, BR-5, DOC-1..5, DOC-7, BUG-1, BUG-2, M-1..3, VM-1..4 |
-| PARTIAL | 3 | BR-4 (PyPI attestations verified; GH build provenance absent), BUG-3, VM-6 |
-| FAIL | 2 | BR-6 (GitHub build attestation absent), DOC-6 (no governance doc) |
+| PASS | 23 | AC-1, AC-2, BR-1, BR-2, BR-3, BR-5, DOC-1..7, BUG-1..3, M-1..3, VM-1..4 |
+| PARTIAL | 3 | BR-4 (PyPI attestations verified; GH build provenance wired, live check pending), BR-6 (same), VM-6 |
+| FAIL | 0 | — |
 | NOT VERIFIED | 3 | AC-3 (2FA), AC-4 (env approval), VM-5 (native push protection) |
 | NOT APPLICABLE | 0 | — |
 
-*29 items assessed; counts match the per-section rows above.*
+*29 items assessed; counts match the per-section rows above (updated 2026-09-05:
+DOC-6 + BUG-3 closed, BR-6 wired).*
 
 **Open items, in priority order (substantive fixes first, per §91/§92 — never badge-chasing):**
 
-1. **BR-6:** add `actions/attest-build-provenance` to the release workflow so
-   `gh attestation verify` works for repo-built artifacts (the PyPI path already works).
-2. **DOC-6:** add `GOVERNANCE.md` (roles, release authority, security-response owner).
-3. **BUG-3:** document a general issue-triage SLA in `CONTRIBUTING.md`.
-4. **NOT VERIFIED trio (owner action, §128):** confirm 2FA, `pypi` environment
+1. **BR-4/BR-6 live check:** run `gh attestation verify` against the next tag's
+   artifacts; flip both to PASS with the command output.
+2. **NOT VERIFIED trio (owner action, §128):** confirm 2FA, `pypi` environment
    approval rules, and GitHub push protection in the repository settings console;
    update this file with the confirmation date.
 
