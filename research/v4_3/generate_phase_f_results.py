@@ -59,15 +59,19 @@ def _git_head() -> dict[str, str]:
         return out.stdout.strip()
 
     try:
-        return {"revparse": run(["rev-parse", "--short", "HEAD"]),
-                "describe": run(["describe", "--tags", "--always"])}
+        return {
+            "revparse": run(["rev-parse", "--short", "HEAD"]),
+            "describe": run(["describe", "--tags", "--always"]),
+        }
     except Exception as exc:  # pragma: no cover — non-git checkout
         return {"error": str(exc)}
 
 
 def _category(task_id: str) -> str:
-    return "human_" if task_id.startswith("human_") else (
-        "csv_excel_" if task_id.startswith("csv_excel_") else task_id.split("_")[0]
+    return (
+        "human_"
+        if task_id.startswith("human_")
+        else ("csv_excel_" if task_id.startswith("csv_excel_") else task_id.split("_")[0])
     )
 
 
@@ -187,9 +191,12 @@ def gt_lane_stats(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def write_task_table(raw: dict[str, Any]) -> Path:
-    lines = ["# DataSciBench — per-task table (Phase F, GT lane since 2026-09-05)\n",
-             "\n", "| task_id | dataset | status | outcome | score_CR | evidence | tool_calls | report_chars |\n",
-             "|---|---|---|---|---|---|---|---|\n"]
+    lines = [
+        "# DataSciBench — per-task table (Phase F, GT lane since 2026-09-05)\n",
+        "\n",
+        "| task_id | dataset | status | outcome | score_CR | evidence | tool_calls | report_chars |\n",
+        "|---|---|---|---|---|---|---|---|\n",
+    ]
     for r in sorted(raw["runs"], key=lambda x: x["task_id"]):
         ds = Path(r["dataset_path"]).name
         sc = r.get("score")
@@ -205,12 +212,14 @@ def write_task_table(raw: dict[str, Any]) -> Path:
 
 def write_gt_table(raw: dict[str, Any]) -> Path:
     stats = gt_lane_stats(raw)
-    lines = ["# DataSciBench — GT-lane scores (Phase F §43, original evaluator)\n\n",
-             f"> {stats['n_scored']}/45 tasks scored; pass = CR >= 0.5; "
-             f"pass rate {stats['n_passed']}/{stats['n_scored']} "
-             f"(Wilson 95% {stats['pass_rate_wilson95']}); mean CR {stats['mean_cr']}.\n\n",
-             "| category | scored | passed | pass rate | Wilson 95% | mean CR | max CR |\n",
-             "|---|---:|---:|---:|---|---:|---:|\n"]
+    lines = [
+        "# DataSciBench — GT-lane scores (Phase F §43, original evaluator)\n\n",
+        f"> {stats['n_scored']}/45 tasks scored; pass = CR >= 0.5; "
+        f"pass rate {stats['n_passed']}/{stats['n_scored']} "
+        f"(Wilson 95% {stats['pass_rate_wilson95']}); mean CR {stats['mean_cr']}.\n\n",
+        "| category | scored | passed | pass rate | Wilson 95% | mean CR | max CR |\n",
+        "|---|---:|---:|---:|---|---:|---:|\n",
+    ]
     for c, b in sorted(stats["by_category"].items()):
         lines.append(
             f"| {c} | {b['n_scored']} | {b['n_passed']} | {b['pass_rate']} "
@@ -251,9 +260,12 @@ def write_failure_table() -> Path:
 def write_figures(raw: dict[str, Any]) -> list[Path]:
     runs = raw["runs"]
     cats = sorted({_category(r["task_id"]) for r in runs})
-    ev = [sum(1 for r in runs if _category(r["task_id"]) == c and r["n_evidence"] > 0) for c in cats]
+    ev = [
+        sum(1 for r in runs if _category(r["task_id"]) == c and r["n_evidence"] > 0) for c in cats
+    ]
     tc = [
-        sum(r["n_tool_calls"] for r in runs if _category(r["task_id"]) == c) / max(1, sum(1 for r in runs if _category(r["task_id"]) == c))
+        sum(r["n_tool_calls"] for r in runs if _category(r["task_id"]) == c)
+        / max(1, sum(1 for r in runs if _category(r["task_id"]) == c))
         for c in cats
     ]
 

@@ -55,6 +55,11 @@ UPSTREAM_URL = "https://github.com/THUDM/DataSciBench"
 UPSTREAM_COMMIT = "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33"  # 2026-01-21, audited 2026-08-28
 HF_GT_DATASET = "zd21/DataSciBench"
 
+#: Adapter conversion-layer version. v1 materialized trajectory → logs.txt
+#: only; v2 additionally maps genuine agent artifacts onto the exact output
+#: filenames the metric functions read (see _materialize_expected_files).
+ADAPTER_VERSION = "2.0"
+
 #: Categories this adapter version drives through ``experiments/evaluate.py``.
 #: ``bcb_*`` tasks score through the separate ``evaluate_tmc.py`` path, which is
 #: planned but not implemented in adapter v1 — recorded as unsupported with a
@@ -264,11 +269,19 @@ class DataSciBenchAdapter:
           score (§16, §19). The subprocess is the §20 isolation seam.
         Raw output would be stored under ``results/`` per §48 when GT is wired.
         """
-        gt_present = (self.workspace / "GT_STATUS.txt").read_text(
-            encoding="utf-8"
-        ).startswith("ground_truth_present: true") if (self.workspace / "GT_STATUS.txt").exists() else False
+        gt_present = (
+            (self.workspace / "GT_STATUS.txt")
+            .read_text(encoding="utf-8")
+            .startswith("ground_truth_present: true")
+            if (self.workspace / "GT_STATUS.txt").exists()
+            else False
+        )
         # Also accept gt/ dir with any content as GT present (operator did direct download)
-        if not gt_present and (self.workspace / "gt").is_dir() and any((self.workspace / "gt").iterdir()):
+        if (
+            not gt_present
+            and (self.workspace / "gt").is_dir()
+            and any((self.workspace / "gt").iterdir())
+        ):
             gt_present = True
 
         if not gt_present:
@@ -323,8 +336,15 @@ class DataSciBenchAdapter:
             # Prefer workspace venv python (has metagpt) when available, else fall back to DSA venv
             ws_python = self.workspace / "venv" / "bin" / "python"
             py = str(ws_python) if ws_python.is_file() else sys.executable
-            proc = subprocess.run(
-                [py, str(eval_script), "--task_id", run.task_id, "--model_id", f"dsa_{run.run_id or '0'}"],
+            proc = subprocess.run(  # noqa: S603 - fixed argv (python + pinned script + task/model ids); task_id comes from the pinned benchmark catalog, never raw user input
+                [
+                    py,
+                    str(eval_script),
+                    "--task_id",
+                    run.task_id,
+                    "--model_id",
+                    f"dsa_{run.run_id or '0'}",
+                ],
                 cwd=str(upstream),
                 capture_output=True,
                 text=True,
@@ -361,34 +381,29 @@ class DataSciBenchAdapter:
                         cr_rows = [
                             row
                             for row in rows
-                            if (row.get("result_type") or "").strip()
-                            == "Completion Rate"
+                            if (row.get("result_type") or "").strip() == "Completion Rate"
                         ]
                         picked = (cr_rows or rows or [None])[0]
                         if picked is not None:
                             try:
                                 score = float(
-                                    picked.get("result_cr")
-                                    or picked.get("result_value")
-                                    or 0
+                                    picked.get("result_cr") or picked.get("result_value") or 0
                                 )
                             except Exception:
                                 score = 0.0
-                            outcome = (
-                                TaskOutcome.PASSED if score >= 0.5 else TaskOutcome.FAILED
-                            )
+                            outcome = TaskOutcome.PASSED if score >= 0.5 else TaskOutcome.FAILED
                             details["csv_score"] = score
                             details["csv_metric"] = picked.get("metric_name")
                             details["csv_result_type"] = picked.get("result_type")
                             return ExternalEvaluation(
-                                    task_id=run.task_id,
-                                    benchmark_name=self.name,
-                                    outcome=outcome,
-                                    score=score,
-                                    evaluator=str(eval_script),
-                                    evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
-                                    details=details,
-                                )
+                                task_id=run.task_id,
+                                benchmark_name=self.name,
+                                outcome=outcome,
+                                score=score,
+                                evaluator=str(eval_script),
+                                evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
+                                details=details,
+                            )
                 except Exception as csv_exc:
                     details["csv_error"] = f"{type(csv_exc).__name__}: {csv_exc}"
             # Fallback: heuristic stdout score
@@ -411,9 +426,11 @@ class DataSciBenchAdapter:
                 )
             # No score parsed but evaluator ran — treat non-zero as execution error, zero as failed honest
             # Special case: missing workspace deps (e.g. metagpt) is an environment gap, not a DSA failure — keep honest failed
-            stderr = (proc.stderr or "")
+            stderr = proc.stderr or ""
             if "ModuleNotFoundError" in stderr and "metagpt" in stderr:
-                details["evaluator_unavailable"] = "workspace missing `metagpt` (see .workspace/requirements.txt) — GT present but original evaluator not runnable"
+                details["evaluator_unavailable"] = (
+                    "workspace missing `metagpt` (see .workspace/requirements.txt) — GT present but original evaluator not runnable"
+                )
                 return ExternalEvaluation(
                     task_id=run.task_id,
                     benchmark_name=self.name,
@@ -439,7 +456,11 @@ class DataSciBenchAdapter:
                 outcome=TaskOutcome.FAILED,
                 evaluator=str(eval_script),
                 evaluator_version=f"upstream@{UPSTREAM_COMMIT[:8]}",
-                details={**details, "error": f"{type(exc).__name__}: {exc}", "honest_lane": "GT present but evaluator wiring failed"},
+                details={
+                    **details,
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "honest_lane": "GT present but evaluator wiring failed",
+                },
             )
 
     def export_results(self) -> Path:
@@ -489,7 +510,148 @@ class DataSciBenchAdapter:
                 json.dumps(run.evidence, ensure_ascii=False, indent=1, default=_json_default),
                 encoding="utf-8",
             )
+        file_map = self._materialize_expected_files(run, run_dir)
+        if file_map:
+            (run_dir / "dsa_file_map.json").write_text(
+                json.dumps(file_map, ensure_ascii=False, indent=1), encoding="utf-8"
+            )
         return run_dir
+
+    # ------------------------------------------------- adapter v2: file mapping
+    def _expected_output_files(self, task_id: str) -> list[str]:
+        """Filenames the metric functions read, parsed from metric YAML.
+
+        Gold-isolation boundary (§19, §29): only string literals inside file
+        I/O calls (read_csv/read_excel/to_csv/imread/open/savefig …) are
+        extracted — i.e. the task's *I/O contract*. GT values, metric logic,
+        and thresholds are never read here and never reach the agent (this
+        runs on the evaluation side, after the agent run finished).
+        """
+        import re as _re
+
+        metric = self._upstream_root() / "metric" / task_id / "metric.yaml"
+        if not metric.is_file():
+            return []
+        try:
+            text = metric.read_text(encoding="utf-8")
+        except OSError:
+            return []
+        # Strip full-line comments: example snippets in metric YAML are often
+        # commented out (e.g. a sample model_accuracy reading predictions.csv);
+        # only live code defines the I/O contract.
+        text = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
+        # Any quoted filename literal with a data/image extension: metric code
+        # passes output names positionally too (e.g. vlm_vis_quality(gt,
+        # "roc_curve.png")), so I/O-call scoping would miss them. Ground-truth
+        # *values* are never read here — only filename strings, resolved
+        # against the run dir (GT itself lives under data/{task}/gt/).
+        pat = _re.compile(r"['\"]([^\"'(){}:\s]+?\.(?:csv|xlsx|xls|png|jpg|jpeg|parquet))['\"]")
+        return sorted(set(pat.findall(text)))
+
+    @staticmethod
+    def _collect_genuine_artifacts(run: ExternalRun) -> tuple[list, list]:
+        """Genuine agent outputs eligible for file mapping.
+
+        Returns (tabular, images) where tabular entries are
+        (n_rows, columns, rows, call_id) from tool outputs carrying
+        columns+rows, and images are (n_bytes, png_bytes, call_id) from
+        successful chart outputs. Nothing is synthesized: byte-identical
+        agent content is only relocated under evaluator-expected names.
+        """
+        import base64 as _b64
+
+        tabular: list = []
+        images: list = []
+        for tc in run.tool_calls or []:
+            if not isinstance(tc, dict) or tc.get("status") != "ok":
+                continue
+            out = tc.get("output")
+            if not isinstance(out, dict):
+                continue
+            cols, rows = out.get("columns"), out.get("rows")
+            if (
+                isinstance(cols, list)
+                and cols
+                and isinstance(rows, list)
+                and all(isinstance(c, str) for c in cols)
+            ):
+                tabular.append((len(rows), cols, rows, tc.get("call_id")))
+            b64 = out.get("base64_png")
+            if isinstance(b64, str) and b64:
+                try:
+                    raw = _b64.b64decode(b64)
+                except Exception:  # noqa: S112 - undecodable chart payload means "no image"; recorded by absence
+                    continue
+                if raw[:8] == b"\x89PNG\r\n\x1a\n":
+                    images.append((len(raw), raw, tc.get("call_id")))
+        tabular.sort(key=lambda t: t[0], reverse=True)
+        images.sort(key=lambda t: t[0], reverse=True)
+        return tabular, images
+
+    def _materialize_expected_files(self, run: ExternalRun, run_dir: Path) -> dict[str, object]:
+        """Map genuine agent artifacts onto evaluator-expected filenames.
+
+        For every expected relative path: ``.csv`` ← largest tabular tool
+        output; ``.xlsx``/``.xls`` ← same via openpyxl (skipped honestly when
+        unavailable); ``.png``/``.jpg`` ← largest chart PNG bytes. Paths are
+        confined to the run dir (absolute or ``..`` targets refused and
+        recorded). Unmatched names stay absent (honest Error, not invented
+        content). Returns the audit map written as ``dsa_file_map.json``.
+        """
+        import csv as _csv
+
+        mapping: dict[str, object] = {
+            "adapter_version": ADAPTER_VERSION,
+            "task_id": run.task_id,
+            "mapped": {},
+            "skipped": {},
+        }
+        tabular, images = self._collect_genuine_artifacts(run)
+        if not tabular and not images:
+            mapping["skipped"]["_all"] = "no genuine tabular/chart artifacts in run"
+            return mapping
+        for rel in self._expected_output_files(run.task_id):
+            if rel.startswith(("/", "\\")) or ".." in Path(rel).parts:
+                mapping["skipped"][rel] = "unsafe path refused"
+                continue
+            dest = run_dir / rel
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                mapping["skipped"][rel] = f"mkdir failed: {exc}"
+                continue
+            suf = dest.suffix.lower()
+            try:
+                if suf == ".csv" and tabular:
+                    _, cols, rows, cid = tabular[0]
+                    with dest.open("w", newline="", encoding="utf-8") as fh:
+                        w = _csv.writer(fh)
+                        w.writerow(cols)
+                        w.writerows(rows)
+                    mapping["mapped"][rel] = f"tabular from {cid} ({len(rows)} rows)"
+                elif suf in (".xlsx", ".xls") and tabular:
+                    try:
+                        import openpyxl as _oxl
+                    except ImportError:
+                        mapping["skipped"][rel] = "openpyxl unavailable"
+                        continue
+                    _, cols, rows, cid = tabular[0]
+                    wb = _oxl.Workbook()
+                    ws = wb.active
+                    ws.append(list(cols))
+                    for r in rows:
+                        ws.append(list(r))
+                    wb.save(dest)
+                    mapping["mapped"][rel] = f"tabular-xlsx from {cid} ({len(rows)} rows)"
+                elif suf in (".png", ".jpg", ".jpeg") and images:
+                    _, raw, cid = images[0]
+                    dest.write_bytes(raw)
+                    mapping["mapped"][rel] = f"chart bytes from {cid} ({len(raw)} B)"
+                else:
+                    mapping["skipped"][rel] = "no matching genuine artifact"
+            except Exception as exc:
+                mapping["skipped"][rel] = f"{type(exc).__name__}: {exc}"
+        return mapping
 
 
 #: Preferred input-file extensions for the §25 task mapping (order matters).

@@ -12,11 +12,11 @@
 
 ## 1. Task Success
 
-> **Superseded 2026-09-05 by GT-lane scores** (kept for audit trail; was honest
-> when GT was absent). Real scores: **44 scored, 0 passed (CR ≥ 0.5), mean CR
-> 0.026** — human_ mean 0.048/max 0.300; csv_excel_ all 0.000
-> (output-layout mismatch + VLM-judge credential gap); human_7
-> `execution_error` (OOM). Details: canonical report §9 + `tables/datascibench_gt_scores.md`.
+> **Updated 2026-09-05 by adapter v2 re-run** (v1 GT numbers kept in git history).
+> Real scores: **44 scored, 5 passed (CR ≥ 0.5, Wilson 95% [0.050, 0.240]), mean
+> CR 0.088** — human_ 4/24 (mean 0.141/max 0.600); csv_excel_ 1/20
+> (`csv_excel_39`, mean 0.025); human_7 `execution_error` (OOM). Details:
+> canonical report §9 + §9.5 and `tables/datascibench_gt_scores.md`.
 
 | Metric | Value | Note |
 |--------|-------|------|

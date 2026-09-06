@@ -4,13 +4,13 @@
 > parse (materialized `logs.txt` plan markers). Describes **tool behavior**, not
 > benchmark correctness (GT absent — nothing scored).
 
-## GT-lane update (2026-09-05 — scored, supersedes the execution-only taxonomy below for task outcomes)
+## GT-lane update (2026-09-05 — scored; v2 re-run same day)
 
-- **44 scored, 0 passed, mean CR 0.026.** Dominant cause: **output-layout
-  mismatch** (adapter v1 converts trajectory → `logs.txt` but not agent
-  artifacts → expected filenames like `output.csv`/`predictions.csv`; metric
-  functions `Error` on missing files — e.g. csv_excel_0). Queued as adapter v2
-  scope (legitimate output conversion, §30-allowed), not a benchmark edit.
+- **v1: 44 scored, 0 passed, mean CR 0.026. v2 (file mapping): 44 scored,
+  5 passed (`csv_excel_39`, `human_17/20/22/3`), mean CR 0.088.**
+  The v1→v2 delta (+5, +0.062) isolates the output-layout share: dominant
+  cause confirmed as adapter-side filename mapping, with content still
+  failing on 39/44.
 - **VLM-judge handicap:** 3 VLM-only tasks (`human_131/141/19`, structural 0
   without OpenAI key) + 9 mixed.
 - **human_7 `execution_error`:** OOM on 79 MB xlsx (16 GB box, exit 137 ×3).

@@ -35,8 +35,8 @@ research/v4_3/datascibench/
 
 ## Verdict (one line, honest)
 
-**GT lane 2026-09-05: 44/45 scored, 0 passed (CR ≥ 0.5), mean CR 0.026**
-(human_ mean 0.048/max 0.300; csv_excel_ all 0.000 — output-layout mismatch +
-VLM-judge credential gap, §9 of the canonical report); **human_7
-`execution_error` (OOM on 79 MB xlsx, 16 GB box).**
-Canonical narrative: `research/external/DATASCIBENCH_REPORT.md` §9.
+**GT lane v2 2026-09-05: 44/45 scored, 5 passed (CR ≥ 0.5, Wilson 95%
+[0.050, 0.240]), mean CR 0.088** (v1: 0 passed, mean 0.026; delta from
+output-layout mapping of genuine artifacts); **human_7 `execution_error`
+(OOM on 79 MB xlsx, 16 GB box).**
+Canonical narrative: `research/external/DATASCIBENCH_REPORT.md` §9 (+§9.5).

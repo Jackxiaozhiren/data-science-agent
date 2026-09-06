@@ -136,3 +136,8 @@ Workspace-only changes (git-ignored `.workspace/` + `~/.metagpt/config2.yaml`);
    (= task_id; `task_name` is the metric group — prior runs parsed no score);
    `run_eval.py` checkpoints per task + records `score` (two SIGKILLs at 42/45
    lost results before); per-task figure/GC cleanup.
+6. **Adapter v2 (2026-09-05, `ADAPTER_VERSION = "2.0"`):** maps genuine agent
+   artifacts onto evaluator-expected filenames (tabular → `.csv`/`.xlsx`,
+   chart bytes → images, `dsa_file_map.json` audit; filenames-only parsed
+   from metric YAML). Same agent/seed/evaluator: 0/44 → **5/44 passed**, mean
+   CR 0.026 → **0.088** (canonical report §9.5).

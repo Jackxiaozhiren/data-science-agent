@@ -31,7 +31,7 @@ tasks = adapter.list_tasks()
 supported = [t for t in tasks if t.supported]
 print(f"tasks: {len(tasks)} | supported: {len(supported)}", flush=True)
 
-config = RunConfig(model="deterministic-local", prompt_version="adapter-1.0", seed=42)
+config = RunConfig(model="deterministic-local", prompt_version="adapter-2.0", seed=42)
 out = REPO / "benchmarks" / "external" / "datascibench" / "results" / "raw_runs.json"
 out.parent.mkdir(parents=True, exist_ok=True)
 # Checkpointing: each completed record is appended to raw_runs.partial.jsonl
@@ -88,11 +88,12 @@ with partial.open("a", encoding="utf-8") as ckpt:
         ckpt.flush()
         try:  # release per-task figure/memory state; OOM killed a 42/45 run before
             import gc as _gc
+
             import matplotlib.pyplot as _plt
 
             _plt.close("all")
             _gc.collect()
-        except Exception:
+        except Exception:  # noqa: S110 - best-effort memory hygiene; failure is non-fatal
             pass
         print(
             f"[{i:02d}/{len(supported)}] {task.task_id}: {run.status} -> {ev.outcome.value} score={ev.score} ({time.time() - ts:.1f}s)",
@@ -115,6 +116,11 @@ for r in records:
     summary["by_outcome"][r["outcome"]] = summary["by_outcome"].get(r["outcome"], 0) + 1
 
 out = REPO / "benchmarks" / "external" / "datascibench" / "results" / "raw_runs.json"
-out.write_text(json.dumps(summary, ensure_ascii=False, indent=1, default=_json_default), encoding="utf-8")
+out.write_text(
+    json.dumps(summary, ensure_ascii=False, indent=1, default=_json_default), encoding="utf-8"
+)
 print("WALL", round(time.time() - t0, 1), "s ->", out, flush=True)
-print(json.dumps({k: v for k, v in summary.items() if k != "runs"}, indent=1, default=_json_default), flush=True)
+print(
+    json.dumps({k: v for k, v in summary.items() if k != "runs"}, indent=1, default=_json_default),
+    flush=True,
+)

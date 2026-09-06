@@ -4,8 +4,9 @@
 > **Spec:** W5 §33-37 · §34 cross-benchmark questions · §35 matrix · §36 Generalization Gap · §37 failure transfer
 > **Date:** 2026-08-28
 > **Sources:** internal benchmark summaries (`benchmarks/baseline/summary.json`, `benchmarks/v2/catalog.json`, `benchmarks/leaderboard/README.md`), DataSciBench full run (`research/external/datascibench_results.json`, `research/external/DATASCIBENCH_REPORT.md`), 8 case studies (`case-studies/*/outputs/summary.json`), Phase D feasibility audit (`docs/v4_3/DSAGENTBENCH_FEASIBILITY.md`).
-> **Status (updated 2026-09-05):** DataSciBench column = **GT SCORED** — 44/45 scored,
-> 0 passed (CR ≥ 0.5), mean CR 0.026 (see §3; canonical: `research/external/DATASCIBENCH_REPORT.md` §9).
+> **Status (updated 2026-09-05):** DataSciBench column = **GT SCORED, v2 re-run** —
+> 44/45 scored, **5 passed (CR ≥ 0.5, Wilson 95% [0.050, 0.240]), mean CR 0.088**
+> (v1: 0 passed, mean 0.026; delta from output-layout mapping, §9.5 of canonical report).
 > DSAgentBench = **NOT CURRENTLY SUPPORTED** (§29). Internal/real-world = V4.2 verified baselines.
 
 ---
@@ -17,8 +18,8 @@
 | **Benchmark** | `ds-agent-benchmark` | `benchmarks/v2` | THUDM/DataSciBench | vis-nlp/DSAgentBench | 8 case studies |
 | **Tasks** | 50 | 100 | **45 supported / 222 total** | 275 (unreleased) | 8 open-ended |
 | **Environment** | synthetic CSVs, closed SQL/stats | synthetic CSVs, 11 cats | file-based, original evaluator layout | notebooks/IDEs/terminals/OS (real computer) | open questions, real pipeline |
-| **Task success** | 1.00 (50/50) | 1.00 (100/100) | **0.000 (0/44, Wilson 95% [0.000, 0.080])** — GT lane 2026-09-05 | n/a — not run | 1.00 (8/8 `COMPLETED`) |
-| **Statistical accuracy** | 1.00 | 1.00 (S01–S10) | mean CR 0.026 (human_ 0.048/max 0.300; csv_excel_ 0.000) | n/a | not scored (open) |
+| **Task success** | 1.00 (50/50) | 1.00 (100/100) | **0.114 (5/44, Wilson 95% [0.050, 0.240])** — GT lane v2 2026-09-05 | n/a — not run | 1.00 (8/8 `COMPLETED`) |
+| **Statistical accuracy** | 1.00 | 1.00 (S01–S10) | mean CR 0.088 (human_ 0.141/max 0.600; csv_excel_ 0.025/max 0.500) | n/a | not scored (open) |
 | **Evidence coverage** | 1.00 | 1.00 | 33/45 tasks with 2–5 evidence (123 total) | n/a | 8/8 evidence-grounded |
 | **Unsupported claim rate** | 0.06 | n/a | n/a (unevaluated) | n/a | soft failures recorded honestly |
 | **Tool efficiency** | — | — | 321 calls / 45 tasks (median 7) | n/a | 5–9 calls / case |
@@ -30,8 +31,8 @@
 
 | Question | Answer |
 |----------|--------|
-| Does 100/100 internal performance transfer externally? | **No — measured 2026-09-05.** Internal 1.00 (150/150) vs DataSciBench **0.000 (0/44, Wilson 95% [0.000, 0.080])**: gap = 1.000, descriptive (§3). Dominant causes: output-layout mismatch (adapter v1), VLM-judge credential gap, stub pipeline (§37). |
-| Which task categories generalize? | **`human_*` partially (mean CR 0.048, max 0.300); `csv_excel_*` not at all (all 0.000).** Internally all 11 categories hit 1.00. |
+| Does 100/100 internal performance transfer externally? | **Partially — measured 2026-09-05 (v2).** Internal 1.00 (150/150) vs DataSciBench **0.114 (5/44, Wilson 95% [0.050, 0.240])**: gap = 0.886, descriptive (§3). File mapping recovered +5 passes; remaining failures are content-level (see §37). |
+| Which task categories generalize? | **`human_*` partially (4/24, mean CR 0.141, max 0.600); `csv_excel_*` minimally (1/20, `csv_excel_39`, mean 0.025).** Internally all 11 categories hit 1.00. |
 | Which do not? | **`dl_*` and `bcb*` are UNSUPPORTED** by adapter v1 (no GPU surface / TMC path pending) — reported with reasons, not silently filtered (§26). |
 | Which failures are invisible internally? | **The 44 `UnsupportedFormatError` steps** (empty-input `human_*` tasks) — internal benchmarks always ship a data file, so the "no data file" failure class never occurs internally. This is a **new external failure** (§37). |
 | Does Evidence Grounding help externally? | **Not measured.** 33/45 tasks produced evidence; no GT to validate whether it reduced unsupported claims. |
@@ -44,18 +45,19 @@
 Generalization Gap = Internal Benchmark Score − External Benchmark Score
 ```
 
-**Computed 2026-09-05** — external score now defined (GT lane). Per §36 the gap
+**Computed 2026-09-05, revised same day by adapter v2 re-run** — external score now defined (GT lane). Per §36 the gap
 is **not alone statistically meaningful**; accompanied by:
 
-- **Confidence interval:** internal 150/150 Wilson 95% [0.975, 1.000]; external 0/44 Wilson 95% [0.000, 0.080] (Phase F §43, Wilson z=1.96)
-- **Category breakdown:** human_ 0/24 (mean CR 0.048) vs csv_excel_ 0/20 (mean CR 0.000) — see §2
-- **Failure analysis:** output-layout mismatch (dominant) + VLM-judge credential gap + stub pipeline (§37 below)
+- **Confidence interval:** internal 150/150 Wilson 95% [0.975, 1.000]; external 5/44 Wilson 95% [0.050, 0.240] (Phase F §43, Wilson z=1.96)
+- **Category breakdown:** human_ 4/24, mean CR 0.141 (Wilson [0.067, 0.359]) vs csv_excel_ 1/20, mean CR 0.025 (Wilson [0.009, 0.236]) — see §2
+- **Failure analysis:** wrong-content measured 0s (dominant post-v2) + VLM-judge credential gap + stub pipeline (§37 below)
 
-> **"DSA achieves 1.00 internally (150/150 v1+v2). Externally (DataSciBench GT lane,
-> 44 scored): pass rate 0.000, mean CR 0.026 — gap = 1.000 (descriptive, §53 caveat:
+> **"DSA achieves 1.00 internally (150/150 v1+v2). Externally (DataSciBench GT lane v2,
+> 44 scored): pass rate 0.114, mean CR 0.088 — gap = 0.886 (descriptive, §53 caveat:
 > closed exact-match vs open GT-scored measure different constructs)."**
 
-This replaces the pre-GT §110 posture above (kept in git history) — no fabricated transfer claim in either direction.
+v1 GT history (0/44, mean 0.026, gap 1.000) kept in git — the v1→v2 delta (+5 passes,
++0.062 mean CR) isolates the output-layout share honestly.
 
 ## 4. Failure transfer matrix (§37)
 

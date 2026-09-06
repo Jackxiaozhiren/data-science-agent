@@ -189,3 +189,29 @@ task (§51). Feeds Benchmark V3 proposal C4 (large-table handling).
 Internal 150/150 (Wilson 95% [0.975, 1.000]) vs external 0/44 (Wilson 95%
 [0.000, 0.080]): **gap = 1.000, descriptive** (§53 caveat: closed exact-match
 vs open GT-scored measure different constructs; see `CROSS_BENCHMARK_MATRIX.md`).
+
+### 9.5 Adapter v2 re-run (2026-09-05, same day — output-layout mapping)
+
+Adapter v2 (`ADAPTER_VERSION = "2.0"`) maps genuine agent artifacts onto
+evaluator-expected filenames (largest tabular output → expected `.csv`,
+chart PNG bytes → expected images, audit in `dsa_file_map.json`; filenames
+only parsed from metric YAML, never GT values — boundary in adapter docstring).
+Same agent, same seed, same evaluator, no tuning:
+
+| Lane | Scored | Passed (CR ≥ 0.5) | Pass rate (Wilson 95%) | Mean CR |
+|---|---:|---:|---|---:|
+| v1 (logs.txt only) | 44 | 0 | 0.000 [0.000, 0.080] | 0.026 |
+| **v2 (+ file mapping)** | **44** | **5** | **0.114 [0.050, 0.240]** | **0.088** |
+
+Passed: `csv_excel_39` (0.5), `human_17` (0.5), `human_20` (0.6), `human_22`
+(0.5), `human_3` (0.5). Spot-checked `human_20`: 3/5 boolean structural checks
+(`True` on outlier-removal %, date format, one-hot completeness) against files
+materialized byte-identically from agent outputs — genuine measured passes,
+narrow in scope, reported as such.
+
+**Decomposition honest reading:** of the v1→v2 delta (+5 passes, +0.062 mean
+CR), the file-mapping share is *necessary but not sufficient* — content still
+has to satisfy the checks, and 39/44 remain failed on content. Remaining
+failures: wrong-content measured 0s (dominant), VLM-judge credential gap
+(3 VLM-only + 9 mixed), stub pipeline, human_7 OOM. Generalization gap after
+v2: 1.000 − 0.114 = **0.886** (descriptive, same §53 caveat).

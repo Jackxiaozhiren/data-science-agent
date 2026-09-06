@@ -4,14 +4,22 @@
  "runner": "dsa AgentBackedRunner (deterministic local pipeline, no LLM key)",
  "config": {
   "model": "deterministic-local",
-  "prompt_version": "adapter-1.0",
-  "seed": 42
+  "provider": "",
+  "seed": 42,
+  "temperature": null,
+  "prompt_version": "adapter-2.0",
+  "timeout_s": 600.0,
+  "extra": {}
  },
- "wall_s": null,
+ "wall_s": 128.0,
  "total_supported": 45,
- "by_status": null,
+ "by_status": {
+  "COMPLETED": 44,
+  "EXECUTION_ERROR": 1
+ },
  "by_outcome": {
-  "failed": 44,
+  "failed": 39,
+  "passed": 5,
   "execution_error": 1
  },
  "category": {
@@ -21,14 +29,15 @@
     "COMPLETED": 20
    },
    "outcome": {
-    "failed": 20
+    "failed": 19,
+    "passed": 1
    },
    "evidence_total": 86,
    "tool_calls_total": 126,
    "evidence_per_task": {
     "median": 5.0
    },
-   "report_median_chars": 3896.0
+   "report_median_chars": 3895.5
   },
   "human_": {
    "n": 25,
@@ -37,7 +46,8 @@
     "EXECUTION_ERROR": 1
    },
    "outcome": {
-    "failed": 24,
+    "failed": 20,
+    "passed": 4,
     "execution_error": 1
    },
    "evidence_total": 76,
@@ -53,7 +63,7 @@
   "evidence_total": 162,
   "tool_calls_total": 284,
   "median_tool_calls": 7.0,
-  "report_median_chars": 3633.0
+  "report_median_chars": 3632.0
  },
  "gt_lane": {
   "n_scored": 44,
@@ -61,35 +71,35 @@
   "unscored_tasks": [
    "human_7"
   ],
-  "n_passed": 0,
-  "pass_rate": 0.0,
+  "n_passed": 5,
+  "pass_rate": 0.1136,
   "pass_rate_wilson95": [
-   0.0,
-   0.0803
+   0.0495,
+   0.2398
   ],
-  "mean_cr": 0.0261,
+  "mean_cr": 0.0881,
   "by_category": {
    "csv_excel_": {
     "n_scored": 20,
-    "n_passed": 0,
-    "pass_rate": 0.0,
+    "n_passed": 1,
+    "pass_rate": 0.05,
     "pass_rate_wilson95": [
-     0.0,
-     0.1611
+     0.0089,
+     0.2361
     ],
-    "mean_cr": 0.0,
-    "max_cr": 0
+    "mean_cr": 0.025,
+    "max_cr": 0.5
    },
    "human_": {
     "n_scored": 24,
-    "n_passed": 0,
-    "pass_rate": 0.0,
+    "n_passed": 4,
+    "pass_rate": 0.1667,
     "pass_rate_wilson95": [
-     0.0,
-     0.138
+     0.0668,
+     0.3585
     ],
-    "mean_cr": 0.0479,
-    "max_cr": 0.3
+    "mean_cr": 0.1406,
+    "max_cr": 0.6
    }
   },
   "generalization_gap": {
@@ -99,9 +109,9 @@
     0.975,
     1.0
    ],
-   "external_pass_rate": 0.0,
+   "external_pass_rate": 0.1136,
    "external_n": 44,
-   "gap_internal_minus_external": 1.0,
+   "gap_internal_minus_external": 0.8864,
    "caveat": "different constructs (closed exact-match vs open GT-scored); gap is descriptive (\u00a753)"
   },
   "method": "Wilson 95% CI (z=1.96); pass threshold score>=0.5"
