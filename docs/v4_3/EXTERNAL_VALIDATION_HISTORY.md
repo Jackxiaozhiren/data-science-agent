@@ -99,3 +99,10 @@ git ls-tree bf8d176 reproduction/external/
   bf8d176 -- reproduction/external/` and either `git add -f` (overriding
   `.gitignore`) or narrow the `.gitignore` rule to `reproduction/*` with an
   exception for `reproduction/external/`.
+
+## 7. 2026-09-05 — Call for independent reviewers posted (status: PENDING)
+
+- **Channel:** GitHub Discussion #69 (Q&A) — "Call for independent reviewers".
+- **Kit referenced:** `external-validation/` (README/INSTALL/TASKS/RUBRIC/FEEDBACK_TEMPLATE/RESULTS_SCHEMA.json).
+- **Status:** invitation live, **0 responses so far → human study remains NOT CONDUCTED** (§80).
+- When a genuine review arrives: archive verbatim under this file's lineage + update paper §12 (Human Evaluation) and portfolio; never fabricate.
