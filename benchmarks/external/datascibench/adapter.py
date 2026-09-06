@@ -344,15 +344,43 @@ class DataSciBenchAdapter:
 
                     with csv_path.open(newline="", encoding="utf-8") as fh:
                         reader = _csv.DictReader(fh)
-                        for row in reader:
-                            if row.get("task_name") == run.task_id and row.get("model_name") == model_name:
-                                try:
-                                    score = float(row.get("result_cr") or row.get("result_value") or 0)
-                                except Exception:
-                                    score = 0.0
-                                outcome = TaskOutcome.PASSED if score >= 0.5 else TaskOutcome.FAILED
-                                details["csv_score"] = score
-                                return ExternalEvaluation(
+                        # NOTE (2026-09-05 GT-lane fix): upstream CSV columns are
+                        # model_name, run_id, data_name, task_name, ... where
+                        # data_name carries the task_id (e.g. human_5) and
+                        # task_name carries the human-readable metric group
+                        # (e.g. "Predictive modeling"). Matching on task_name
+                        # never hit, so every GT run scored None. Match on
+                        # data_name + model_name; the task-level score is the
+                        # "Completion Rate" row's result_cr.
+                        rows = [
+                            row
+                            for row in reader
+                            if row.get("data_name") == run.task_id
+                            and row.get("model_name") == model_name
+                        ]
+                        cr_rows = [
+                            row
+                            for row in rows
+                            if (row.get("result_type") or "").strip()
+                            == "Completion Rate"
+                        ]
+                        picked = (cr_rows or rows or [None])[0]
+                        if picked is not None:
+                            try:
+                                score = float(
+                                    picked.get("result_cr")
+                                    or picked.get("result_value")
+                                    or 0
+                                )
+                            except Exception:
+                                score = 0.0
+                            outcome = (
+                                TaskOutcome.PASSED if score >= 0.5 else TaskOutcome.FAILED
+                            )
+                            details["csv_score"] = score
+                            details["csv_metric"] = picked.get("metric_name")
+                            details["csv_result_type"] = picked.get("result_type")
+                            return ExternalEvaluation(
                                     task_id=run.task_id,
                                     benchmark_name=self.name,
                                     outcome=outcome,

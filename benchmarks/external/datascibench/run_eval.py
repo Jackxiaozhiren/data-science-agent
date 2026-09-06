@@ -32,18 +32,50 @@ supported = [t for t in tasks if t.supported]
 print(f"tasks: {len(tasks)} | supported: {len(supported)}", flush=True)
 
 config = RunConfig(model="deterministic-local", prompt_version="adapter-1.0", seed=42)
+out = REPO / "benchmarks" / "external" / "datascibench" / "results" / "raw_runs.json"
+out.parent.mkdir(parents=True, exist_ok=True)
+# Checkpointing: each completed record is appended to raw_runs.partial.jsonl
+# immediately, so an OOM-killed / interrupted run loses nothing. A restart
+# resumes by skipping task_ids already checkpointed (§48 raw-output rule:
+# the final raw_runs.json is still assembled from per-task records only).
+partial = out.parent / "raw_runs.partial.jsonl"
+done: dict[str, dict] = {}
+if partial.is_file():
+    for line in partial.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(rec, dict) and rec.get("task_id"):
+            done[rec["task_id"]] = rec
+    print(f"resuming: {len(done)} task(s) already checkpointed", flush=True)
 records = []
 t0 = time.time()
-for i, task in enumerate(supported, 1):
-    ts = time.time()
-    run = adapter.run_task(task, config)
-    ev = adapter.evaluate(run)
-    records.append(
-        {
+with partial.open("a", encoding="utf-8") as ckpt:
+    for i, task in enumerate(supported, 1):
+        if task.task_id in done:
+            records.append(done[task.task_id])
+            print(
+                f"[{i:02d}/{len(supported)}] {task.task_id}: resumed "
+                f"({done[task.task_id].get('outcome')})",
+                flush=True,
+            )
+            continue
+        ts = time.time()
+        run = adapter.run_task(task, config)
+        ev = adapter.evaluate(run)
+        rec = {
             "task_id": task.task_id,
             "dataset_path": run.agent_view.dataset_path,
             "status": run.status,
             "outcome": ev.outcome.value,
+            "score": ev.score,
+            "evaluator": ev.evaluator,
+            "evaluator_returncode": ev.details.get("returncode"),
+            "evaluator_csv_score": ev.details.get("csv_score"),
             "run_id": run.run_id,
             "latency_s": run.latency_s,
             "n_evidence": len(run.evidence),
@@ -51,11 +83,21 @@ for i, task in enumerate(supported, 1):
             "report_chars": len(run.report or ""),
             "error": (run.error or "")[:300] or None,
         }
-    )
-    print(
-        f"[{i:02d}/{len(supported)}] {task.task_id}: {run.status} -> {ev.outcome.value} ({time.time() - ts:.1f}s)",
-        flush=True,
-    )
+        records.append(rec)
+        ckpt.write(json.dumps(rec, ensure_ascii=False, default=_json_default) + "\n")
+        ckpt.flush()
+        try:  # release per-task figure/memory state; OOM killed a 42/45 run before
+            import gc as _gc
+            import matplotlib.pyplot as _plt
+
+            _plt.close("all")
+            _gc.collect()
+        except Exception:
+            pass
+        print(
+            f"[{i:02d}/{len(supported)}] {task.task_id}: {run.status} -> {ev.outcome.value} score={ev.score} ({time.time() - ts:.1f}s)",
+            flush=True,
+        )
 
 summary = {
     "benchmark": "DataSciBench",
@@ -73,7 +115,6 @@ for r in records:
     summary["by_outcome"][r["outcome"]] = summary["by_outcome"].get(r["outcome"], 0) + 1
 
 out = REPO / "benchmarks" / "external" / "datascibench" / "results" / "raw_runs.json"
-out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps(summary, ensure_ascii=False, indent=1, default=_json_default), encoding="utf-8")
 print("WALL", round(time.time() - t0, 1), "s ->", out, flush=True)
 print(json.dumps({k: v for k, v in summary.items() if k != "runs"}, indent=1, default=_json_default), flush=True)

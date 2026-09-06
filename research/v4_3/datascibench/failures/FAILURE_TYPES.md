@@ -4,7 +4,20 @@
 > parse (materialized `logs.txt` plan markers). Describes **tool behavior**, not
 > benchmark correctness (GT absent — nothing scored).
 
-## Step-level failures
+## GT-lane update (2026-09-05 — scored, supersedes the execution-only taxonomy below for task outcomes)
+
+- **44 scored, 0 passed, mean CR 0.026.** Dominant cause: **output-layout
+  mismatch** (adapter v1 converts trajectory → `logs.txt` but not agent
+  artifacts → expected filenames like `output.csv`/`predictions.csv`; metric
+  functions `Error` on missing files — e.g. csv_excel_0). Queued as adapter v2
+  scope (legitimate output conversion, §30-allowed), not a benchmark edit.
+- **VLM-judge handicap:** 3 VLM-only tasks (`human_131/141/19`, structural 0
+  without OpenAI key) + 9 mixed.
+- **human_7 `execution_error`:** OOM on 79 MB xlsx (16 GB box, exit 137 ×3).
+- Step-level classes below remain valid pipeline-honesty evidence for the
+  execution lane.
+
+## Step-level failures (execution lane, 2026-08-28)
 
 | Failure | Steps | Trigger | Agent decision | Observed | Benchmark coverage |
 |---------|------:|---------|----------------|----------|--------------------|

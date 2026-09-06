@@ -4,16 +4,17 @@
   "spec": "V4.3 W3 §31 external run manifest fields, §44 output manifest",
   "dsa_version": "4.3.1",
   "date": "2026-08-28",
+  "gt_lane_date": "2026-09-05",
   "index_created": "2026-09-04",
   "tasks_supported": 45,
   "tasks_unsupported": 177,
   "tasks_total": 222,
   "outcome": {
     "passed": 0,
-    "failed": 45,
+    "failed": 44,
     "unsupported": 177,
-    "execution_error": 0,
-    "note": "failed = completed-but-unevaluated (GT absent); not a correctness verdict"
+    "execution_error": 1,
+    "note": "GT lane 2026-09-05: failed = scored below CR 0.5 (mean CR 0.026); human_7 execution_error (OOM)"
   },
   "wall_s": 5.8,
   "tool_calls": 321,

@@ -110,3 +110,29 @@ within the same pin (§31 manifest).
 - License: `benchmarks/external/datascibench/LICENSE_NOTES.md`
 - Results: `research/external/DATASCIBENCH_REPORT.md` +
   `benchmarks/external/datascibench/results/`
+
+## 10. Operator environment remediation log (2026-09-05, GT lane)
+
+Workspace-only changes (git-ignored `.workspace/` + `~/.metagpt/config2.yaml`);
+**upstream checkout, adapter scoring logic, and evaluator unmodified** (§16):
+
+1. **GT + input placement:** `gt/gt_data/{task}/gt/` → `data/{task}/gt/`;
+   `hf_dataset/DataSciBench-data/{task}/` input files → `data/{task}/`
+   (prompt.json already present; 55 tasks have GT, supported 45 scored).
+2. **Workspace venv completed** (py3.9, metagpt 0.8.2): pandas, matplotlib,
+   seaborn, sklearn, imbalanced-learn, nltk, Pillow, scikit-image, gymnasium,
+   playwright, gitignore_parser, tree_sitter(+python), provider SDKs
+   (anthropic, google-generativeai, ollama, qianfan, dashscope==1.14.1,
+   boto3, spark-ai-python, imap_tools, rank_bm25, selenium, connexion, …).
+   `lancedb==0.4.0` uninstallable on py3.9 (only ≥0.14 on PyPI) — not needed
+   for the evaluator import chain; recorded, not worked around.
+3. **Venv-only `sitecustomize.py` shim** for empty `volcenginesdkarkruntime
+   0.0.1`: fabricates missing names as fail-loud placeholders (Ark provider
+   never used by the evaluator). Documented in the file itself.
+4. **`~/.metagpt/config2.yaml`**: minimal `llm:` block (defaults + dummy key)
+   to satisfy metagpt import-time `Config.default()`; no LLM is called by the
+   programmatic metrics. VLM-judge metrics fail honestly without real creds.
+5. **Adapter fixes (repo code, tested):** CSV matcher now keys on `data_name`
+   (= task_id; `task_name` is the metric group — prior runs parsed no score);
+   `run_eval.py` checkpoints per task + records `score` (two SIGKILLs at 42/45
+   lost results before); per-task figure/GC cleanup.

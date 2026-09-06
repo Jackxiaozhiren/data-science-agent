@@ -1,22 +1,24 @@
 {
  "phase": "F",
- "lane": "execution (no-GT)",
+ "lane": "GT lane (original evaluator, scored 2026-09-05)",
  "input_raw": "/Users/jackson/Data agent/benchmarks/external/datascibench/results/raw_runs.json",
  "script": "research/v4_3/generate_phase_f_results.py",
  "git": {
-  "revparse": "b957177",
-  "describe": "v4.3.1"
+  "revparse": "648fd45",
+  "describe": "v4.3.2"
  },
  "generated_artifacts": {
   "processed": "processed/datascibench_summary.json",
   "tables": [
    "tables/datascibench_task_outcomes.md",
-   "tables/datascibench_failure_types.md"
+   "tables/datascibench_failure_types.md",
+   "tables/datascibench_gt_scores.md"
   ],
   "figures": [
    "figures/category_evidence.png",
-   "figures/latency_report.png"
+   "figures/latency_report.png",
+   "figures/cr_distribution.png"
   ]
  },
- "note": "GT-lane statistics (task_success, CI, generalization gap) deferred to GT availability"
+ "note": "GT-lane statistics computed from original-evaluator CR scores; pass threshold 0.5; Wilson 95% CIs"
 }

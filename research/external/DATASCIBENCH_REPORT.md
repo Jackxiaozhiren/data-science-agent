@@ -2,7 +2,8 @@
 
 > **Phase:** C — DataSciBench Integration (DATA_SCIENCE_AGENT_V4_3.md §22-27)
 > **Spec:** W3 §22-27, §26 outcome taxonomy, §27 result report, §48 raw→analysis→artifact
-> **Date:** 2026-08-28 · **Upstream pinned commit:** `84ef3d4d94d7362a5149cf14a73dc168fc4f2f33`
+> **Date:** 2026-08-28 (execution lane) · **GT-lane addendum:** 2026-09-05 (§9 below — first scored run)
+> **Upstream pinned commit:** `84ef3d4d94d7362a5149cf14a73dc168fc4f2f33`
 > **Runner:** DSA `AgentBackedRunner` (deterministic local pipeline, **no LLM key** — same surface as the V4.2 case studies)
 > **Raw data:** `benchmarks/external/datascibench/results/raw_runs.json` (= `research/external/datascibench_results.json`)
 > **Adapter:** `benchmarks/external/datascibench/adapter.py` · **Manifest:** `benchmarks/external/datascibench/manifest.json`
@@ -121,10 +122,70 @@ Total 177 unsupported, 45 supported, 222 benchmark tasks. The `bcb*` TMC evaluat
 
 ## 8. Next steps (Phase C completion → Phase E/F)
 
-- [ ] Operator: accept HF gate for `zd21/DataSciBench`, place GT + input datasets into
-      `.workspace/` (per `README.md`).
-- [ ] Wire the original evaluator subprocess (`experiments/evaluate.py`) behind
-      `adapter.evaluate()` (recorded in manifest as pending).
-- [ ] Re-run with GT + evaluator → real scores, then re-populate this report's §1-2 with
-      passed/failed counts and the §27-required table.
+- [x] Operator: accept HF gate for `zd21/DataSciBench`, place GT + input datasets into
+      `.workspace/` (per `README.md`). **Done 2026-09-05** (gt/gt_data + hf_dataset present).
+- [x] Wire the original evaluator subprocess (`experiments/evaluate.py`) behind
+      `adapter.evaluate()` (recorded in manifest as pending). **Done 2026-09-05**
+      (GT lane verified end-to-end; see §9).
+- [x] Re-run with GT + evaluator → real scores, then re-populate this report's §1-2 with
+      passed/failed counts and the §27-required table. **Done 2026-09-05** (§9).
 - [ ] Feed raw runs into Phase E `CROSS_BENCHMARK_MATRIX.md` (§33-37).
+
+---
+
+## 9. GT-lane addendum — first scored run (2026-09-05, §129 honest low-score report)
+
+> **What changed:** GT + input datasets placed in `.workspace/`; workspace venv
+> completed for the original evaluator (pandas/matplotlib/sklearn/playwright/
+> provider deps per metagpt 0.8.2 pins + a venv-only `sitecustomize` shim for the
+> empty `volcenginesdkarkruntime 0.0.1` on py3.9 — benchmark untouched, §16);
+> adapter CSV matcher fixed (`data_name` carries task_id, `task_name` is the
+> metric group — prior runs parsed no score); driver checkpoints per task
+> (`raw_runs.partial.jsonl`) after two SIGKILLs at 42/45.
+> **Raw:** `benchmarks/external/datascibench/results/raw_runs.json` (45 records,
+> per-run `score` = task Completion Rate). Analysis: `research/v4_3/generate_phase_f_results.py`
+> (GT pass) → `research/v4_3/results/{processed,tables/​datascibench_gt_scores.md,figures/cr_distribution.png}`.
+
+### 9.1 Scores (original evaluator, no tuning, no filtering)
+
+| Lane | Scored | Passed (CR ≥ 0.5) | Pass rate (Wilson 95%) | Mean CR |
+|---|---:|---:|---|---:|
+| `human_*` | 24/25 | 0 | 0.000 [0.000, 0.138] | 0.048 (max 0.300, human_142) |
+| `csv_excel_*` | 20/20 | 0 | 0.000 [0.000, 0.161] | 0.000 |
+| **Total** | **44/45** | **0** | **0.000 [0.000, 0.080]** | **0.026** |
+| human_7 | — | — | `execution_error` (OOM, see §9.3) | n/a |
+
+Per §129 this low score is reported as-is: no test-set tuning, no hidden
+failures, no evaluator modification, no skipped hard tasks.
+
+### 9.2 Why so low — failure-cause taxonomy (from evaluator output, not speculation)
+
+1. **Output-layout mismatch (dominant, adapter-side):** metric functions read
+   exact filenames (`pd.read_csv("output.csv")`, `predictions.csv`, named PNGs)
+   from the run dir; adapter v1 materializes trajectory → `logs.txt` + report
+   but does not map agent artifacts onto those names. Example: csv_excel_0 —
+   Data Completeness / Visualization / Report Completeness all `Error` on
+   missing files. Fixing this is legitimate *output conversion* (§30-allowed)
+   and is queued as adapter v2 scope — deliberately NOT done in this pass, so
+   this baseline stays an honest pre-fix measurement.
+2. **VLM-judge handicap (credential gap, not capability proof):** 3 tasks are
+   VLM-only (`human_131/141/19` → structural 0 without an OpenAI key) and 9 are
+   mixed (one VLM function each). Their 0s measure missing credentials.
+3. **Stub pipeline:** deterministic local pipeline (no LLM) on a benchmark built
+   for LLM agents; open-ended analysis vs exact-output scoring.
+4. **New external class confirmed:** 44 empty-input `UnsupportedFormatError`
+   steps from the execution lane are gone (inputs now placed), replaced by
+   scored outcomes — the pipeline-honesty signal served its purpose.
+
+### 9.3 human_7 — `execution_error` (environment, OOM)
+
+79 MB `online_retail_II.xlsx` SIGKills the agent process on this 16 GB box
+(exit 137; twice at 42/45 in full runs + once isolated; empty log, no run dir).
+Recorded as `execution_error`, not a correctness verdict. No core hack for one
+task (§51). Feeds Benchmark V3 proposal C4 (large-table handling).
+
+### 9.4 Generalization gap (§56, now computable)
+
+Internal 150/150 (Wilson 95% [0.975, 1.000]) vs external 0/44 (Wilson 95%
+[0.000, 0.080]): **gap = 1.000, descriptive** (§53 caveat: closed exact-match
+vs open GT-scored measure different constructs; see `CROSS_BENCHMARK_MATRIX.md`).

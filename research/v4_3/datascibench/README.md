@@ -1,7 +1,7 @@
 # DataSciBench Research Output — V4.3 W3 §44
 
 > **Spec:** V4.3 §44 DATASCIBENCH OUTPUT.
-> **Date:** 2026-09-04 (prompt-completion index; measurements from 2026-08-28 full run).
+> **Date:** 2026-08-28 (execution lane) · **GT lane scored:** 2026-09-05.
 > **Honesty note:** this directory is an **index**, not a fork. Canonical raw data
 > lives at `benchmarks/external/datascibench/results/raw_runs.json` (sha256
 > `a9b15af8…efdd`, 45 runs). Nothing here duplicates GT or upstream content
@@ -35,6 +35,8 @@ research/v4_3/datascibench/
 
 ## Verdict (one line, honest)
 
-**45/45 supported tasks executed end-to-end (5.8 s); 0 scored — GT absent,
-all 45 `failed` (completed-but-unevaluated); 177 unsupported with reasons.
-No score is claimed (§42 pilot-success definition).**
+**GT lane 2026-09-05: 44/45 scored, 0 passed (CR ≥ 0.5), mean CR 0.026**
+(human_ mean 0.048/max 0.300; csv_excel_ all 0.000 — output-layout mismatch +
+VLM-judge credential gap, §9 of the canonical report); **human_7
+`execution_error` (OOM on 79 MB xlsx, 16 GB box).**
+Canonical narrative: `research/external/DATASCIBENCH_REPORT.md` §9.

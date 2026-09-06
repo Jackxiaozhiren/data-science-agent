@@ -4,13 +4,19 @@
 > Latency, Token Usage, Evidence Coverage, Unsupported Tasks).
 > **Source:** generated from `benchmarks/external/datascibench/results/raw_runs.json`
 > only (raw → analysis → artifact, §73). Index copy — canonical narrative:
-> `research/external/DATASCIBENCH_REPORT.md`.
-> **Date:** 2026-08-28 run · 2026-09-04 index.
+> `research/external/DATASCIBENCH_REPORT.md` (GT-lane addendum §9, 2026-09-05).
+> **Date:** 2026-08-28 run · 2026-09-04 index · **GT scored 2026-09-05**.
 > **Upstream pin:** `84ef3d4d94d7362a5149cf14a73dc168fc4f2f33` (see `UPSTREAM.md`).
 
 ---
 
 ## 1. Task Success
+
+> **Superseded 2026-09-05 by GT-lane scores** (kept for audit trail; was honest
+> when GT was absent). Real scores: **44 scored, 0 passed (CR ≥ 0.5), mean CR
+> 0.026** — human_ mean 0.048/max 0.300; csv_excel_ all 0.000
+> (output-layout mismatch + VLM-judge credential gap); human_7
+> `execution_error` (OOM). Details: canonical report §9 + `tables/datascibench_gt_scores.md`.
 
 | Metric | Value | Note |
 |--------|-------|------|
