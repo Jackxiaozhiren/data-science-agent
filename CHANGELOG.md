@@ -1,5 +1,44 @@
 # Changelog
 
+## 4.3.3 — GT-Lane Scores + Adapter v2 (first measured external results)
+
+Patch release, no breaking public API change. First release whose external
+numbers are **measured GT scores** rather than execution-only honesty markers.
+
+### Measured (original upstream evaluator, pinned commit 84ef3d4d, no tuning)
+
+- **DataSciBench GT lane: 44/45 scored, 5 passed (CR ≥ 0.5, Wilson 95%
+  [0.050, 0.240]), mean CR 0.088** — human_ 4/24 (mean 0.141, max 0.600);
+  csv_excel_ 1/20 (mean 0.025); human_7 `execution_error` (OOM on 79 MB xlsx).
+- **Adapter v2** (`ADAPTER_VERSION = "2.0"`): maps genuine agent artifacts onto
+  evaluator-expected filenames (filenames-only from metric YAML, never GT
+  values; `dsa_file_map.json` audit). v1→v2 delta (+5 passes, +0.062 mean CR)
+  isolates the output-layout share; remaining failures are wrong-content 0s +
+  VLM-judge credential gap + stub surface.
+- **Generalization gap: 0.886, descriptive** (internal 150/150 vs external 5/44,
+  Wilson CIs both ends; §53 construct caveat in `CROSS_BENCHMARK_MATRIX.md`).
+
+### Added
+
+- `external-validation/` reviewer kit + live invitation (Discussion #69; study
+  still NOT CONDUCTED until a genuine response arrives).
+- `GOVERNANCE.md`; `attest-build-provenance@v2` wired in `publish.yml`
+  (live `gh attestation verify` pending this tag's artifacts).
+- Phase F GT pass: Wilson CIs, `tables/datascibench_gt_scores.md`,
+  `figures/cr_distribution.png`.
+
+### Fixed
+
+- Adapter CSV matcher keyed on `data_name` (= task_id; prior runs parsed no score).
+- `run_eval.py` per-task checkpointing (two SIGKILLs at 42/45 previously lost all).
+- SECURITY.md stale OIDC status; ruff clean (173+3 files).
+
+### Verified
+
+- `pytest 324 passed`, `mypy 108 clean`, `ruff clean`, `mkdocs --strict PASS`,
+  `docker valid`, web build + vscode compile PASS, `dsa verify-release v4.3.3
+  17/17 PASS`, `check_public_claims` 0 issues (post-tag).
+
 ## 4.3.2 — Lineage Unification (merge origin/main 4.3.0 + local 4.3.1)
 
 Unifies the two 4.3.x lineages (published adoption line + spec external-benchmark

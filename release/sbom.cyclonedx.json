@@ -5,7 +5,7 @@
   "metadata": {
     "component": {
       "name": "jack-data-science-agent",
-      "version": "4.3.2",
+      "version": "4.3.3",
       "type": "application"
     }
   },
@@ -584,7 +584,7 @@
     },
     {
       "name": "jack-data-science-agent",
-      "version": "4.3.2",
+      "version": "4.3.3",
       "licenses": [
         {
           "license": {
@@ -592,7 +592,7 @@
           }
         }
       ],
-      "purl": "pkg:local/jack-data-science-agent@4.3.2",
+      "purl": "pkg:local/jack-data-science-agent@4.3.3",
       "source": "local:pyproject.toml"
     },
     {
