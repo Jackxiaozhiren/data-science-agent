@@ -82,16 +82,22 @@ stay in memory; only charts persist as files today.
   so rollback restores v2 behavior exactly. If GT scores regress vs the v2
   baseline (5/44, mean 0.088), the PR does not merge.
 
-## Appendix (2026-09-08): internal v2 regression discovered, NOT caused by this track
+## Appendix (2026-09-08): internal v2 scare — root-caused to a CLI default bug, FIXED
 
-- `dsa --catalog benchmarks/v2/catalog.json --limit 100` on the merged tree:
-  **0.57** (all categories ~0.6–0.7, Data Profiling 0.0, Clustering 0.14).
-- A/B attribution: identical 0.57 with this track's changes stashed → **pre-existing
-  (merge-lineage) regression**, not export-track fallout. v1 holds 50/50 on the
-  same tree.
-- Release-truth consequence: 4.3.x manifests/CHANGELOG cite "100/100 (v2)" from
-  pre-merge measurements. Those historical entries are preserved, but no NEW
-  claim may cite 150/150 until the v2 regression is root-caused and fixed.
-  The GT generalization-gap math in `CROSS_BENCHMARK_MATRIX.md` must be
-  re-anchored or caveated accordingly (tracked as follow-up P0, separate from
-  this ADR).
+- `dsa --catalog benchmarks/v2/catalog.json --limit 100` (no `--datasets`)
+  measured **0.57**. A/B attribution via stash: identical 0.57 with this
+  track's changes stashed → not export-track fallout.
+- Root cause (deeper, same day): the `--datasets` default stayed at the v1
+  dir even when `--catalog` pointed at v2 (present since 2026-08-17), so all
+  v2-only datasets failed with "Dataset not found". With explicit
+  `--datasets benchmarks/v2/datasets`: **100/100 @1.00** on the merged tree
+  (all 11 categories green), export track active.
+- Fix (this track, general not benchmark-specific): `_resolve_datasets_dir`
+  derives the sibling `datasets/` dir when the catalog is overridden
+  (`packages/evaluation/src/dsa_evaluation/cli.py` + regression test in
+  `tests/unit/test_benchmark.py`). Verified: catalog-only v2 invocation now
+  measures **100/100**. Lesson recorded: the `dsa` console resolves
+  `dsa_evaluation` to the **vendored** copy — source edits take effect only
+  after `sync_vendor.py` (this trap cost one full 100-task run).
+- Release-truth consequence: no stale-claim issue — manifests' "100/100 (v2)"
+  re-verified live on the merged tree. The GT generalization-gap math stands.
