@@ -101,3 +101,123 @@ async def test_spend_cap_refuses_before_any_http(monkeypatch: pytest.MonkeyPatch
     provider = OpenAIResponsesProvider(api_key="test-key", model="test-model")
     with pytest.raises(RuntimeError, match="cap reached"):
         await provider.generate("hello")
+
+
+class _FakeChatResponse:
+    status_code = 200
+    text = "{}"
+
+    def __init__(self, payload: dict) -> None:
+        self._payload = payload
+
+    def json(self) -> dict:
+        return self._payload
+
+
+class _FakeChatClient:
+    def __init__(self, payload: dict, seen: list) -> None:
+        self._payload = payload
+        self._seen = seen
+
+    async def __aenter__(self) -> _FakeChatClient:
+        return self
+
+    async def __aexit__(self, *args: object) -> bool:
+        return False
+
+    async def post(
+        self, url: str, headers: dict | None = None, json: dict | None = None
+    ) -> _FakeChatResponse:
+        self._seen.append({"url": url, "headers": headers, "json": json})
+        return _FakeChatResponse(self._payload)
+
+
+def _chat_payload(text: str = '{"answer": "yes"}', **usage: int) -> dict:
+    return {
+        "id": "chatcmpl-test123",
+        "choices": [{"message": {"role": "assistant", "content": text}}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50, **usage},
+    }
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_generate_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    seen: list = []
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: _FakeChatClient(_chat_payload("hello"), seen)
+    )
+    p = OpenAIChatProvider(model="test-model", base_url="http://localhost:11434/v1", local=True)
+    assert await p.generate("hi") == "hello"
+    assert seen[0]["url"] == "http://localhost:11434/v1/chat/completions"
+    assert "Authorization" not in seen[0]["headers"]  # localhost: no key sent
+    assert p.last_usage == {"input_tokens": 100, "output_tokens": 50}
+    assert p.last_response_id == "chatcmpl-test123"
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_ollama_eval_counts_and_structured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    payload = {
+        "choices": [{"message": {"role": "assistant", "content": '{"answer": "ok"}'}}],
+        "usage": {"prompt_eval_count": 200, "eval_count": 30},
+    }
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: _FakeChatClient(payload, []))
+    p = OpenAIChatProvider(model="qwen3:8b", base_url="http://localhost:11434/v1", local=True)
+    out = await p.structured_output("q?", _StructuredAnswer)
+    assert out.answer == "ok"
+    assert p.last_usage == {"input_tokens": 200, "output_tokens": 30}
+    assert (p.last_response_id or "").startswith("local-")  # honestly labeled, no fake id
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_http_error_is_loud(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    class _Bad:
+        status_code = 401
+        text = "invalid key"
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **k):
+            return self
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: _Bad())
+    p = OpenAIChatProvider(api_key="k", model="m", base_url="https://example.com/v1")
+    with pytest.raises(RuntimeError, match="HTTP 401"):
+        await p.generate("hi")
+
+
+def test_env_selects_ollama_and_compat(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dsa_llm.providers import EnvLLMProvider
+
+    monkeypatch.setenv("DSA_LLM_MODE", "real")
+    monkeypatch.setenv("DSA_LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("DSA_OLLAMA_MODEL", "llama3.1:8b")
+    p = EnvLLMProvider()
+    assert p.active_provider == "ollama"
+
+    monkeypatch.setenv("DSA_LLM_PROVIDER", "openai-compat")
+    monkeypatch.delenv("DSA_OPENAI_COMPAT_BASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match="DSA_OPENAI_COMPAT_BASE_URL"):
+        EnvLLMProvider()
+
+    monkeypatch.setenv("DSA_OPENAI_COMPAT_BASE_URL", "https://example.com/v1")
+    monkeypatch.delenv("DSA_OPENAI_COMPAT_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="DSA_OPENAI_COMPAT_API_KEY"):
+        EnvLLMProvider()

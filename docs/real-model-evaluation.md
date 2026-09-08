@@ -159,6 +159,43 @@ Measured call profile per task: DSA variants = 1 planner call (structured, max
 Estimates only — verify against the first smoke's recorded `cost_usd` before
 scaling. Never run `scope=full` without a prior green smoke on the same commit.
 
+## Free lanes ($0, no paid key)
+
+Two providers, one class (`OpenAIChatProvider`, chat/completions +
+`json_object` structured output, usage mapped incl. Ollama eval counts):
+
+**A. Ollama, local (truly free, private, no signup).** Operator-side:
+`ollama serve` + `ollama pull qwen3:8b` (≈5 GB). Then:
+
+```bash
+export DSA_LLM_MODE=real DSA_LLM_PROVIDER=ollama DSA_OLLAMA_MODEL=qwen3:8b
+export DSA_LLM_FALLBACK=error DSA_MAX_COST_USD=0
+export DSA_EVALUATION_VARIANT=dsa DSA_GIT_COMMIT="$(git rev-parse HEAD)"
+dsa --limit 5 --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets
+```
+
+16 GB machines run 8B Q4 models comfortably; expect slower and weaker plans
+than frontier APIs. Without the daemon/model, calls fail loudly with
+connection errors — never silently stubbed.
+
+**B. Hosted free tiers** (e.g. Gemini/Groq OpenAI-compatible endpoints; free
+key from the vendor, own rate limits apply):
+
+```bash
+export DSA_LLM_MODE=real DSA_LLM_PROVIDER=openai-compat
+export DSA_OPENAI_COMPAT_BASE_URL="https://<vendor>/v1"  # vendor's OpenAI-compat URL
+export DSA_OPENAI_COMPAT_API_KEY="<free key>"
+export DSA_OPENAI_COMPAT_MODEL="<exact model id>"
+```
+
+**Labeling rule (non-negotiable):** free rows are valid for *within-model*
+comparisons (dsa vs dsa-no-critic vs llm-tools vs llm-only on the SAME
+provider+model — RQ2–RQ4 ablations) but must never merge with, or compare
+against, paid-lane rows. The publication validator still requires the paid
+`openai` lane, so free matrices cannot promote to leaderboard claims — by
+design, not oversight. Every artifact records its real provider+model.
+
 ## Dry-run verification (2026-09-05, $0 spent)
 
 All four variants executed locally with the stub provider (2 tasks each):
