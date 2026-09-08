@@ -103,6 +103,8 @@ with partial.open("a", encoding="utf-8") as ckpt:
 summary = {
     "benchmark": "DataSciBench",
     "upstream_commit": dsc.UPSTREAM_COMMIT,
+    "adapter_version": getattr(dsc, "ADAPTER_VERSION", "1.0"),
+    "agent_track": "export_artifact terminal export (ADR-002, planner conventional filenames)",
     "runner": "dsa AgentBackedRunner (deterministic local pipeline, no LLM key)",
     "config": config.model_dump(),
     "wall_s": round(time.time() - t0, 1),

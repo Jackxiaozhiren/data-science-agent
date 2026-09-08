@@ -215,3 +215,19 @@ has to satisfy the checks, and 39/44 remain failed on content. Remaining
 failures: wrong-content measured 0s (dominant), VLM-judge credential gap
 (3 VLM-only + 9 mixed), stub pipeline, human_7 OOM. Generalization gap after
 v2: 1.000 − 0.114 = **0.886** (descriptive, same §53 caveat).
+
+### 9.6 B-track: planner-directed export (ADR-002) — mechanism works, GT delta 0
+
+`export_artifact` tool + executor `$from_step`/`$from_tool` resolution +
+planner terminal export steps (filenames from generic query-intent conventions,
+never benchmark definitions) + adapter exact-name preference. Verified live:
+exports materialize (`artifacts/<run>/exports/`, byte-identical, hashed),
+`dsa_file_map.json` records provenance, full suite green, internal v1 still
+50/50. GT re-run (same seed/evaluator): **identical scores (mean 0.0881, same 5
+passed, zero per-task deltas)** — planner-conventional names (e.g.
+`result_table.csv`, `cleaned_data.csv`) rarely equal benchmark-expected names
+(e.g. `all_stocks_by_industry_count.csv`), so the largest-tabular fallback
+already covered those bytes. Conclusion: file *presence* is solved; the
+remaining gap is *content correctness* (right numbers, right schemas), which
+needs better analysis, not more plumbing. No further adapter/file work is
+planned on this evidence.

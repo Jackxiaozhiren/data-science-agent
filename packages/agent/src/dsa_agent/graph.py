@@ -45,6 +45,43 @@ def _get_columns(dataset_path: str | None) -> list[str]:
 _TOOL_CACHE: dict[tuple[str, str], tuple[Any, bool, str | None]] = {}
 
 
+def _resolve_refs(inputs: dict[str, Any], prior_calls: list[dict[str, Any]]) -> dict[str, Any]:
+    """Resolve cross-step references against already-recorded tool calls.
+
+    Generic executor mechanism (ADR-002): a step input of
+    ``{"$from_step": i}`` is replaced with the recorded output of the i-th
+    prior call (0-based among *executed* calls); ``{"$from_tool": name}``
+    takes the latest successful call of that tool. Anything else passes
+    through untouched; unresolvable references are left in place so the
+    tool fails honestly instead of inventing content.
+    """
+    ok_calls = [c for c in prior_calls if isinstance(c, dict) and c.get("status") == "ok"]
+
+    def _resolve(value: Any) -> Any:
+        if isinstance(value, dict):
+            if set(value.keys()) == {"$from_step"} and isinstance(value["$from_step"], int):
+                i = value["$from_step"]
+                if 0 <= i < len(ok_calls):
+                    return ok_calls[i].get("output") or {}
+                return value
+            if set(value.keys()) == {"$from_tool"} and isinstance(value["$from_tool"], str):
+                for c in reversed(ok_calls):
+                    if c.get("tool") == value["$from_tool"]:
+                        return c.get("output") or {}
+                return value
+            return {k: _resolve(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [_resolve(v) for v in value]
+        return value
+
+    return {k: _resolve(v) for k, v in inputs.items()}
+
+
+def _export_workspace(run_id: str | None) -> str:
+    root = Path(__file__).resolve().parents[4] / "artifacts" / (run_id or "run-local")
+    return str(root / "exports")
+
+
 def _tool_cache_key(tool_name: str, inputs: dict[str, Any]) -> tuple[str, str]:
     try:
         raw = _json.dumps(inputs, sort_keys=True, default=str)
@@ -274,6 +311,15 @@ async def run_analysis(
 
     async def _exec_one(step: Any) -> tuple[Any, Any, Any, Any, Any, float]:
         inputs = _tool_inputs_for_step(step.tool, step.inputs, dataset_path)
+        prior = []
+        for c in state.tool_calls:
+            try:
+                prior.append(c.model_dump(mode="json") if hasattr(c, "model_dump") else dict(c))
+            except Exception:  # noqa: S112 - unserializable prior call skipped from ref scope
+                continue
+        inputs = _resolve_refs(inputs, prior)
+        if step.tool == "export_artifact" and "workspace" not in inputs:
+            inputs["workspace"] = _export_workspace(rid)
         t0 = time.perf_counter()
         output, ok, err = await _run_tool(step.tool, inputs)
         dur = int((time.perf_counter() - t0) * 1000)

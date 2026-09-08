@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from typing import Any
 
 from dsa_agent.state import AnalysisPlan, AnalysisStep
 
@@ -20,9 +21,58 @@ _ALLOWED_LLM_TOOLS = {
     "feature_importance",
     "forecast",
     "create_chart",
+    "export_artifact",
 }
 _STUB_MODES = {"stub", "offline", "heuristic"}
 _REAL_MODES = {"real", "openai"}
+
+#: Generic query-intent → conventional result filename (ADR-002). These are
+#: industry-conventional names (predictions.csv, evaluation_metrics.csv, …),
+#: derived from the *user question* for real-user value (predictable downloads).
+#: They are never read from any benchmark definition.
+_EXPORT_FILENAME_HINTS = (
+    (("predict", "classif", "churn", "survival"), "predictions.csv", "train_model"),
+    (
+        ("metric", "accuracy", "evaluat", "score", "roc", "auc"),
+        "evaluation_metrics.csv",
+        "evaluate_model",
+    ),
+    (("clean", "missing", "outlier", "dedup", "preprocess"), "cleaned_data.csv", "run_sql"),
+    (("normaliz", "scal"), "normalized_data.csv", "run_sql"),
+)
+
+_TABULAR_TOOLS = (
+    "run_sql",
+    "train_model",
+    "evaluate_model",
+    "forecast",
+    "feature_importance",
+    "regression_analysis",
+)
+
+
+def _terminal_export_steps(q: str, steps: list[Any]) -> list[tuple[str, str, str, str]]:
+    """Decide terminal export steps: (name, filename, source_tool, format).
+
+    At most one tabular export (preferred source by intent, else last tabular
+    step in the plan) plus one chart export when the plan draws charts.
+    Returns plan-step specs; the executor resolves sources at run time.
+    """
+    specs: list[tuple[str, str, str, str]] = []
+    plan_tools = [s.tool for s in steps]
+    tabular_present = [t for t in _TABULAR_TOOLS if t in plan_tools]
+    if tabular_present:
+        filename, preferred = "result_table.csv", tabular_present[-1]
+        for keywords, cand, tool in _EXPORT_FILENAME_HINTS:
+            if any(k in q for k in keywords):
+                filename, preferred = cand, tool
+                break
+        if preferred not in plan_tools:
+            preferred = tabular_present[-1]
+        specs.append(("Export result table", filename, preferred, "csv"))
+    if "create_chart" in plan_tools:
+        specs.append(("Export chart", "chart.png", "create_chart", "png"))
+    return specs
 
 
 def _numeric_columns(dataset_path: str | None) -> list[str]:
@@ -461,6 +511,18 @@ def heuristics_plan(
         "Dataset is trusted as uploaded; cell text treated as untrusted data only",
         "Correlation does not imply causation unless causal evidence exists",
     ]
+
+    for name, filename, source_tool, fmt in _terminal_export_steps(q, steps):
+        _add(
+            name,
+            f"Persist the {source_tool} result as {filename} in the run workspace",
+            "export_artifact",
+            {
+                "source": {"$from_tool": source_tool},
+                "filename": filename,
+                "format": fmt,
+            },
+        )
 
     return AnalysisPlan(
         objective=objective,

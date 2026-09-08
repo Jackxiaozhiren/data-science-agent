@@ -9,7 +9,13 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
-from dsa_agent.graph import _evidence_for_tool_call, _run_tool, _tool_inputs_for_step
+from dsa_agent.graph import (
+    _evidence_for_tool_call,
+    _export_workspace,
+    _resolve_refs,
+    _run_tool,
+    _tool_inputs_for_step,
+)
 from dsa_agent.state import AnalysisState, AnalysisStatus, Insight
 
 
@@ -77,6 +83,10 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
     ds_path = state.get("dataset_path")
     tool = step.get("tool", "")
     inputs = _tool_inputs_for_step(tool, dict(step.get("inputs") or {}), ds_path)
+    analysis_pre = state.get("analysis_state") or {}
+    inputs = _resolve_refs(inputs, list(analysis_pre.get("tool_calls") or []))
+    if tool == "export_artifact" and "workspace" not in inputs:
+        inputs["workspace"] = _export_workspace(state.get("run_id"))
     t0 = time.perf_counter()
     output, ok, err = await _run_tool(tool, inputs)
     dur = int((time.perf_counter() - t0) * 1000)
