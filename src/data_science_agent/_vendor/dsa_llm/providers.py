@@ -37,6 +37,39 @@ def _strip_json_fence(text: str) -> str:
     return "\n".join(lines).strip()
 
 
+def _usd_for_usage(usage: dict[str, Any]) -> float | None:
+    """Estimated USD for one Responses API usage dict using env pricing.
+
+    Returns None when rates are not configured (then no cap can apply).
+    """
+    try:
+        in_rate = float(os.environ["DSA_INPUT_COST_PER_MILLION"])
+        out_rate = float(os.environ["DSA_OUTPUT_COST_PER_MILLION"])
+    except (KeyError, ValueError):
+        return None
+
+    def _n(*keys: str) -> int:
+        for k in keys:
+            v = usage.get(k)
+            if isinstance(v, bool):
+                continue
+            if isinstance(v, (int, float)):
+                return int(v)
+        return 0
+
+    total_in = _n("input_tokens") + _n("input_tokens_details")
+    total_out = _n("output_tokens") + _n("output_tokens_details")
+    return total_in / 1_000_000 * in_rate + total_out / 1_000_000 * out_rate
+
+
+def _spend_cap_usd() -> float | None:
+    try:
+        cap = float(os.environ.get("DSA_MAX_COST_USD", ""))
+    except ValueError:
+        return None
+    return cap if cap >= 0 else None
+
+
 def _extract_output_text(payload: dict[str, Any]) -> str:
     """Extract text from a raw Responses API payload without relying on SDK helpers."""
 
@@ -112,12 +145,20 @@ class OpenAIResponsesProvider(LLMProvider):
         self.last_usage: dict[str, Any] = {}
         self.last_response_id: str | None = None
         self.last_latency_ms: int | None = None
+        self.spent_usd: float = 0.0
 
     async def _request(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         request: dict[str, Any] = {"model": self.model, "input": prompt}
         max_output_tokens = kwargs.get("max_output_tokens")
         if max_output_tokens is not None:
             request["max_output_tokens"] = int(max_output_tokens)
+
+        cap = _spend_cap_usd()
+        if cap is not None and self.spent_usd >= cap:
+            raise RuntimeError(
+                f"DSA_MAX_COST_USD cap reached (${self.spent_usd:.4f} >= ${cap:.4f}); "
+                "refusing further real-model calls."
+            )
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -141,6 +182,9 @@ class OpenAIResponsesProvider(LLMProvider):
         self.last_response_id = response_id if isinstance(response_id, str) else None
         usage = payload.get("usage")
         self.last_usage = usage if isinstance(usage, dict) else {}
+        cost = _usd_for_usage(self.last_usage)
+        if cost is not None:
+            self.spent_usd += cost
         _CALL_LOG.append(
             {
                 "provider": self.provider_name,
@@ -148,6 +192,8 @@ class OpenAIResponsesProvider(LLMProvider):
                 "response_id": self.last_response_id,
                 "latency_ms": self.last_latency_ms,
                 "usage": dict(self.last_usage),
+                "est_cost_usd": cost,
+                "cumulative_spent_usd": round(self.spent_usd, 6),
             }
         )
         return payload
@@ -192,6 +238,7 @@ class OpenAIResponsesProvider(LLMProvider):
             "response_id": self.last_response_id,
             "latency_ms": self.last_latency_ms,
             "usage": self.last_usage,
+            "spent_usd": round(self.spent_usd, 6),
         }
 
 

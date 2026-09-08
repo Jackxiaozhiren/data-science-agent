@@ -134,6 +134,40 @@ The following environment variables are recorded in `run_manifest.json` through 
 
 For a fair comparison, hold these values fixed across repeated runs and publish them with the artifacts.
 
+## Spend cap (in-code guard)
+
+`DSA_MAX_COST_USD` sets a hard per-process ceiling on real-model spend. The
+provider prices each call from actual API `usage` × the explicit
+`DSA_INPUT/OUTPUT_COST_PER_MILLION` rates, accumulates `spent_usd`, and
+**refuses further calls** once the cap is reached (loud error, no silent stop).
+Per-call `est_cost_usd` and cumulative spend land in the call log and provider
+metadata, so every artifact is auditable. Without the env var, no cap applies —
+always set it for credentialed runs, *in addition to* an OpenAI project-level
+spend limit (defense in depth; the project limit is the binding one).
+
+## Cost estimate (gpt-5.6-luna @ $0.20/$1.20 per M, 2026-08-29 pricing)
+
+Measured call profile per task: DSA variants = 1 planner call (structured, max
+3000 out); llm-tools = plan + answer; llm-only = 1 answer call. Typical usage
+≈ 4k input + 1.5k output tokens/task (≈ $0.0026).
+
+| Scope | Tasks | Expected | Upper bound (max tokens) | Suggested cap |
+|---|---:|---:|---:|---:|
+| 4-variant smoke (CI pinned) | 20 | ≈ $0.05 | ≈ $0.10 | `DSA_MAX_COST_USD=2` |
+| Full internal (4 × 150) | 600 | ≈ $1.60 | ≈ $2.50 | `DSA_MAX_COST_USD=5` |
+
+Estimates only — verify against the first smoke's recorded `cost_usd` before
+scaling. Never run `scope=full` without a prior green smoke on the same commit.
+
+## Dry-run verification (2026-09-05, $0 spent)
+
+All four variants executed locally with the stub provider (2 tasks each):
+`dsa` 1.0, `dsa-no-critic` 1.0, `llm-tools` 0.0, `llm-only` 0.0 (stub baselines
+correctly score 0 — stub echoes, executes nothing). Workflow manifests written
+per variant; the matrix validator **correctly rejected** the stub matrix
+(`matrix_valid=false`: not real-model mode, zero token usage, pricing
+mismatch). The machinery cannot be gamed with stub runs — verified, not assumed.
+
 ## Pricing assumptions
 
 Model pricing changes over time. The benchmark code therefore does not embed a permanent provider price table.
