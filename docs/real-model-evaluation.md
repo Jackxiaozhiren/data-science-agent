@@ -168,6 +168,18 @@ per variant; the matrix validator **correctly rejected** the stub matrix
 (`matrix_valid=false`: not real-model mode, zero token usage, pricing
 mismatch). The machinery cannot be gamed with stub runs — verified, not assumed.
 
+## Attempt log (honest, no spend without credits)
+
+- **2026-09-08, CI run 34190135991** (triggered manually, pinned workflow):
+  all four rows executed, **0.0 success everywhere** — OpenAI API returned
+  HTTP 429 `credit_balance_exhausted` ("You have no credits remaining").
+  **$0 spent.** Machinery validated end-to-end (key wiring, real-mode error
+  propagation without stub fallback, per-row artifacts, matrix validator
+  correctly reporting `matrix_valid=false`). Next attempt requires funded
+  credits on the OpenAI org; re-dispatch the same pinned workflow unchanged.
+- Prior attempts 2026-08-30 (runs 33291103265, 33297462359): `startup_failure`
+  before any row executed (workflow-level, no model calls, $0 spent).
+
 ## Pricing assumptions
 
 Model pricing changes over time. The benchmark code therefore does not embed a permanent provider price table.
