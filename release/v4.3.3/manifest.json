@@ -1,7 +1,7 @@
 {
     "version": "4.3.3",
     "tag": "v4.3.3",
-    "commit": "PENDING-RELEASE-COMMIT",
+    "commit": "722f7e98921d48da1b0fbc18951cb46481ebb625",
     "python": "Python 3.12.14",
     "node": "v24.15.0",
     "docker": "Docker version 29.7.2, build a7dcaa6",
