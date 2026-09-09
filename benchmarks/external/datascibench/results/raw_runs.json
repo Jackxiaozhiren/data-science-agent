@@ -1,6 +1,8 @@
 {
  "benchmark": "DataSciBench",
  "upstream_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+ "adapter_version": "2.0",
+ "agent_track": "export_artifact terminal export (ADR-002, planner conventional filenames)",
  "runner": "dsa AgentBackedRunner (deterministic local pipeline, no LLM key)",
  "config": {
   "model": "deterministic-local",
@@ -11,7 +13,7 @@
   "timeout_s": 600.0,
   "extra": {}
  },
- "wall_s": 128.0,
+ "wall_s": 144.2,
  "total_supported": 45,
  "by_status": {
   "COMPLETED": 44,
@@ -32,11 +34,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-0309a5e6d5",
+   "run_id": "run-cd84b8e540",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2006,
+   "n_tool_calls": 6,
+   "report_chars": 2338,
    "error": null
   },
   {
@@ -48,11 +50,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-9007f04d30",
+   "run_id": "run-62659a5594",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 5,
-   "report_chars": 3632,
+   "n_tool_calls": 7,
+   "report_chars": 3942,
    "error": null
   },
   {
@@ -64,11 +66,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-c5826a70ae",
+   "run_id": "run-eabd222b3b",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 6,
-   "report_chars": 3559,
+   "n_tool_calls": 9,
+   "report_chars": 4031,
    "error": null
   },
   {
@@ -80,11 +82,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-34a8eb5108",
+   "run_id": "run-ffddd78f2f",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 5,
-   "report_chars": 3243,
+   "n_tool_calls": 8,
+   "report_chars": 3708,
    "error": null
   },
   {
@@ -96,11 +98,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-02859bc76e",
+   "run_id": "run-3ebe7af6be",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 6,
-   "report_chars": 4147,
+   "n_tool_calls": 9,
+   "report_chars": 4620,
    "error": null
   },
   {
@@ -112,11 +114,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-c21954020f",
+   "run_id": "run-38aa379e59",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 8,
-   "report_chars": 4370,
+   "n_tool_calls": 11,
+   "report_chars": 4842,
    "error": null
   },
   {
@@ -128,11 +130,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-b16103e2fd",
+   "run_id": "run-8da0e17057",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2006,
+   "n_tool_calls": 6,
+   "report_chars": 2338,
    "error": null
   },
   {
@@ -144,11 +146,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-3ac404ba09",
+   "run_id": "run-b9cdb292c3",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2007,
+   "n_tool_calls": 6,
+   "report_chars": 2339,
    "error": null
   },
   {
@@ -160,11 +162,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-2986028629",
+   "run_id": "run-43b454985b",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 8,
-   "report_chars": 5179,
+   "n_tool_calls": 11,
+   "report_chars": 5651,
    "error": null
   },
   {
@@ -176,11 +178,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-d959664b1a",
+   "run_id": "run-7c76a70799",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 8,
-   "report_chars": 5162,
+   "n_tool_calls": 11,
+   "report_chars": 5634,
    "error": null
   },
   {
@@ -192,11 +194,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-db9acb2ac6",
+   "run_id": "run-f86e22034c",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 4,
-   "report_chars": 3274,
+   "n_tool_calls": 5,
+   "report_chars": 3424,
    "error": null
   },
   {
@@ -208,11 +210,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-86d5e0dc68",
+   "run_id": "run-75ee3cbfd7",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 5,
-   "report_chars": 3573,
+   "n_tool_calls": 8,
+   "report_chars": 4046,
    "error": null
   },
   {
@@ -224,11 +226,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.5,
-   "run_id": "run-f9f42420cb",
+   "run_id": "run-5f5b4a7da4",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 9,
-   "report_chars": 4252,
+   "n_tool_calls": 11,
+   "report_chars": 4568,
    "error": null
   },
   {
@@ -240,11 +242,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-835db5e19d",
+   "run_id": "run-44a1c368e1",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 9,
-   "report_chars": 4697,
+   "n_tool_calls": 12,
+   "report_chars": 5188,
    "error": null
   },
   {
@@ -256,11 +258,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-137c97d036",
+   "run_id": "run-b3f260cfbf",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 4,
-   "report_chars": 3251,
+   "n_tool_calls": 5,
+   "report_chars": 3404,
    "error": null
   },
   {
@@ -272,11 +274,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-d1e4ee6b4e",
+   "run_id": "run-beef9810de",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 7,
-   "report_chars": 4475,
+   "n_tool_calls": 10,
+   "report_chars": 4954,
    "error": null
   },
   {
@@ -288,11 +290,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-561bbb2c76",
+   "run_id": "run-8fbd633f44",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 8,
-   "report_chars": 4549,
+   "n_tool_calls": 11,
+   "report_chars": 5043,
    "error": null
   },
   {
@@ -304,11 +306,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-debe06986f",
+   "run_id": "run-e6b70ea9bc",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 7,
-   "report_chars": 4081,
+   "n_tool_calls": 10,
+   "report_chars": 4583,
    "error": null
   },
   {
@@ -320,11 +322,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-1d6d368b7c",
+   "run_id": "run-c542cd46a5",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 7,
-   "report_chars": 3961,
+   "n_tool_calls": 10,
+   "report_chars": 4433,
    "error": null
   },
   {
@@ -336,11 +338,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-f6029db812",
+   "run_id": "run-af0c4b534b",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 8,
-   "report_chars": 3830,
+   "n_tool_calls": 11,
+   "report_chars": 4326,
    "error": null
   },
   {
@@ -352,11 +354,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-ccf09a97b5",
+   "run_id": "run-a1b8cebea7",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 4,
-   "report_chars": 3274,
+   "n_tool_calls": 5,
+   "report_chars": 3424,
    "error": null
   },
   {
@@ -368,11 +370,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-acdd086022",
+   "run_id": "run-0e83702081",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 6,
-   "report_chars": 2409,
+   "n_tool_calls": 10,
+   "report_chars": 3086,
    "error": null
   },
   {
@@ -384,11 +386,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.25,
-   "run_id": "run-626459fd47",
+   "run_id": "run-79548ffa0d",
    "latency_s": null,
    "n_evidence": 3,
-   "n_tool_calls": 5,
-   "report_chars": 2626,
+   "n_tool_calls": 8,
+   "report_chars": 3122,
    "error": null
   },
   {
@@ -400,11 +402,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.125,
-   "run_id": "run-1b0a60c383",
+   "run_id": "run-1b0d930627",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 11,
-   "report_chars": 5156,
+   "n_tool_calls": 14,
+   "report_chars": 5644,
    "error": null
   },
   {
@@ -416,11 +418,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.125,
-   "run_id": "run-afb0f6bf10",
+   "run_id": "run-720f5436e6",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 8,
-   "report_chars": 2896,
+   "n_tool_calls": 12,
+   "report_chars": 3573,
    "error": null
   },
   {
@@ -432,11 +434,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-acb510a3d4",
+   "run_id": "run-5fc8283148",
    "latency_s": null,
    "n_evidence": 7,
-   "n_tool_calls": 7,
-   "report_chars": 4873,
+   "n_tool_calls": 10,
+   "report_chars": 5360,
    "error": null
   },
   {
@@ -448,11 +450,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.16666666666666666,
-   "run_id": "run-c240d05b0e",
+   "run_id": "run-d5973486e2",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 7,
-   "report_chars": 3899,
+   "n_tool_calls": 10,
+   "report_chars": 4393,
    "error": null
   },
   {
@@ -464,11 +466,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-48010bf5ad",
+   "run_id": "run-5b6094fa4f",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2217,
+   "n_tool_calls": 6,
+   "report_chars": 2549,
    "error": null
   },
   {
@@ -480,11 +482,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.3,
-   "run_id": "run-fd722a26dd",
+   "run_id": "run-4b74ba4a24",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2217,
+   "n_tool_calls": 6,
+   "report_chars": 2549,
    "error": null
   },
   {
@@ -496,11 +498,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-6e03a59653",
+   "run_id": "run-d0b899cd12",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2003,
+   "n_tool_calls": 6,
+   "report_chars": 2335,
    "error": null
   },
   {
@@ -512,11 +514,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-6f3915c3d0",
+   "run_id": "run-e6a16ceb84",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 6,
-   "report_chars": 3207,
+   "n_tool_calls": 9,
+   "report_chars": 3687,
    "error": null
   },
   {
@@ -528,11 +530,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.5,
-   "run_id": "run-0abdc48cfc",
+   "run_id": "run-f0afb7671a",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 7,
-   "report_chars": 4023,
+   "n_tool_calls": 9,
+   "report_chars": 4333,
    "error": null
   },
   {
@@ -544,11 +546,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-b8d156e71b",
+   "run_id": "run-ef972293a9",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 10,
-   "report_chars": 5492,
+   "n_tool_calls": 13,
+   "report_chars": 5987,
    "error": null
   },
   {
@@ -560,11 +562,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-16b795e26d",
+   "run_id": "run-e39e588b94",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2003,
+   "n_tool_calls": 6,
+   "report_chars": 2335,
    "error": null
   },
   {
@@ -576,11 +578,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-94c11a9481",
+   "run_id": "run-2eb5accc31",
    "latency_s": null,
    "n_evidence": 3,
-   "n_tool_calls": 13,
-   "report_chars": 4054,
+   "n_tool_calls": 16,
+   "report_chars": 4545,
    "error": null
   },
   {
@@ -592,11 +594,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.6,
-   "run_id": "run-e587bdf74f",
+   "run_id": "run-7b071da90f",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 7,
-   "report_chars": 4053,
+   "n_tool_calls": 9,
+   "report_chars": 4368,
    "error": null
   },
   {
@@ -608,11 +610,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-4c3ba15265",
+   "run_id": "run-0fa001b655",
    "latency_s": null,
    "n_evidence": 3,
-   "n_tool_calls": 3,
-   "report_chars": 2346,
+   "n_tool_calls": 4,
+   "report_chars": 2496,
    "error": null
   },
   {
@@ -624,11 +626,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.5,
-   "run_id": "run-8684aaed28",
+   "run_id": "run-ba45240e9c",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 8,
-   "report_chars": 3268,
+   "n_tool_calls": 10,
+   "report_chars": 3583,
    "error": null
   },
   {
@@ -640,11 +642,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-d63dba984d",
+   "run_id": "run-48505ee62b",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 8,
-   "report_chars": 4434,
+   "n_tool_calls": 11,
+   "report_chars": 4919,
    "error": null
   },
   {
@@ -656,11 +658,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.0,
-   "run_id": "run-9750594cb6",
+   "run_id": "run-510c3697f8",
    "latency_s": null,
    "n_evidence": 4,
-   "n_tool_calls": 8,
-   "report_chars": 4492,
+   "n_tool_calls": 11,
+   "report_chars": 4989,
    "error": null
   },
   {
@@ -672,11 +674,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.5,
-   "run_id": "run-f807b09715",
+   "run_id": "run-4df43b8a5e",
    "latency_s": null,
    "n_evidence": 3,
-   "n_tool_calls": 3,
-   "report_chars": 2378,
+   "n_tool_calls": 5,
+   "report_chars": 2687,
    "error": null
   },
   {
@@ -688,11 +690,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.125,
-   "run_id": "run-f955ad6d57",
+   "run_id": "run-9f0cf1983b",
    "latency_s": null,
    "n_evidence": 6,
-   "n_tool_calls": 8,
-   "report_chars": 4826,
+   "n_tool_calls": 11,
+   "report_chars": 5319,
    "error": null
   },
   {
@@ -709,7 +711,7 @@
    "n_evidence": 0,
    "n_tool_calls": 0,
    "report_chars": 0,
-   "error": "OOM-killed on 16GB box (v1 lane observed 2026-09-05 x3; v2 retries identical agent path so carried over with note — mapping stage unreachable without a completed run). Environment limitation, not a correctness verdict."
+   "error": "OOM-killed on 16GB box (v1/v2 lanes observed; export track retries identical agent path so carried over — mapping stage unreachable without a completed run). Environment limitation, not a correctness verdict."
   },
   {
    "task_id": "human_8",
@@ -720,11 +722,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.1,
-   "run_id": "run-dfa77dc52a",
+   "run_id": "run-efa598469e",
    "latency_s": null,
    "n_evidence": 5,
-   "n_tool_calls": 9,
-   "report_chars": 5024,
+   "n_tool_calls": 12,
+   "report_chars": 5510,
    "error": null
   },
   {
@@ -736,11 +738,11 @@
    "evaluator": "/Users/jackson/Data agent/benchmarks/external/datascibench/.workspace/experiments/evaluate.py",
    "evaluator_returncode": 0,
    "evaluator_csv_score": 0.08333333333333333,
-   "run_id": "run-d0bd5bdf43",
+   "run_id": "run-26b8a1408b",
    "latency_s": null,
    "n_evidence": 0,
-   "n_tool_calls": 4,
-   "report_chars": 2002,
+   "n_tool_calls": 6,
+   "report_chars": 2334,
    "error": null
   }
  ]
