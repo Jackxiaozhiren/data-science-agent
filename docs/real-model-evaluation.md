@@ -231,16 +231,21 @@ defaults for the ollama lane with tests.
 
 | Variant | Pass | Wilson 95% | Repeats |
 |---|---:|---|---|
-| dsa | 3/5 (0.60) | [0.23, 0.88] | ×3, all 0.60 |
-| dsa-no-critic | 1/5 (0.20) | [0.04, 0.62] | ×1 |
-| llm-tools | 1/5 (0.20) | [0.04, 0.62] | ×1 |
-| llm-only | 0/5 (0.00) | [0.00, 0.43] | ×1 |
+| dsa | 0.60, 0.60, 0.60, **1.00** | pooled 12/20 [0.39, 0.81] | ×4 |
+| dsa-no-critic | 1.00 ×3 | pooled 15/15 [0.80, 1.00] | ×3 |
+| llm-tools | 0.20 | [0.04, 0.62] | ×1 |
+| llm-only | 0.00 | [0.00, 0.43] | ×1 |
 
-Reading (honest, n=5 each): ordering matches the predicted hierarchy
-(dsa > no-critic ≈ llm-tools > llm-only), but CIs overlap heavily — only the
-dsa row has repeats. Treat as a **smoke shape, not an ablation conclusion**;
-RQ2–RQ4 need full-catalog repeats per W7 §67. Rows labeled
-provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
+**Correction appended same day — do NOT read a critic effect into the table.**
+All dsa-variant failures were plan-validation flakes; no-critic had zero in 15
+runs (naively p≈0.0005). A follow-up dsa repeat run *after* the no-critic block
+scored **1.0**, implicating environmental drift over time (server warmup), not
+the critic flag — which touches nothing in the plan path (verified by code
+inspection: planner/provider read no critic setting). The dsa-vs-no-critic gap
+is therefore **time-confounded, inconclusive**. Lesson recorded: variant
+comparisons on stochastic local models require **interleaved ABAB order**,
+never all-of-A-then-all-of-B. RQ3 stays open pending an interleaved design.
+Rows labeled provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
 
 ## Pricing assumptions
 
