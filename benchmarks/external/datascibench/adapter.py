@@ -549,19 +549,23 @@ class DataSciBenchAdapter:
         return sorted(set(pat.findall(text)))
 
     @staticmethod
-    def _collect_genuine_artifacts(run: ExternalRun) -> tuple[list, list]:
+    def _collect_genuine_artifacts(run: ExternalRun) -> tuple[list, list, dict]:
         """Genuine agent outputs eligible for file mapping.
 
-        Returns (tabular, images) where tabular entries are
+        Returns (tabular, images, exports) where tabular entries are
         (n_rows, columns, rows, call_id) from tool outputs carrying
-        columns+rows, and images are (n_bytes, png_bytes, call_id) from
-        successful chart outputs. Nothing is synthesized: byte-identical
+        columns+rows, images are (n_bytes, png_bytes, call_id) from
+        successful chart outputs, and exports maps exported filenames to
+        ``(path, call_id)`` for `export_artifact` results (ADR-002: the
+        planner names these from the user question, so an exact-name match
+        carries semantic intent). Nothing is synthesized: byte-identical
         agent content is only relocated under evaluator-expected names.
         """
         import base64 as _b64
 
         tabular: list = []
         images: list = []
+        exports: dict[str, tuple[str, str | None]] = {}
         for tc in run.tool_calls or []:
             if not isinstance(tc, dict) or tc.get("status") != "ok":
                 continue
@@ -584,9 +588,11 @@ class DataSciBenchAdapter:
                     continue
                 if raw[:8] == b"\x89PNG\r\n\x1a\n":
                     images.append((len(raw), raw, tc.get("call_id")))
+            if tc.get("tool") == "export_artifact" and out.get("filename") and out.get("path"):
+                exports[str(out["filename"])] = (str(out["path"]), tc.get("call_id"))
         tabular.sort(key=lambda t: t[0], reverse=True)
         images.sort(key=lambda t: t[0], reverse=True)
-        return tabular, images
+        return tabular, images, exports
 
     def _materialize_expected_files(self, run: ExternalRun, run_dir: Path) -> dict[str, object]:
         """Map genuine agent artifacts onto evaluator-expected filenames.
@@ -606,10 +612,12 @@ class DataSciBenchAdapter:
             "mapped": {},
             "skipped": {},
         }
-        tabular, images = self._collect_genuine_artifacts(run)
-        if not tabular and not images:
-            mapping["skipped"]["_all"] = "no genuine tabular/chart artifacts in run"
+        tabular, images, exports = self._collect_genuine_artifacts(run)
+        if not tabular and not images and not exports:
+            mapping["skipped"]["_all"] = "no genuine tabular/chart/export artifacts in run"
             return mapping
+        import shutil as _shutil
+
         for rel in self._expected_output_files(run.task_id):
             if rel.startswith(("/", "\\")) or ".." in Path(rel).parts:
                 mapping["skipped"][rel] = "unsafe path refused"
@@ -620,6 +628,18 @@ class DataSciBenchAdapter:
             except OSError as exc:
                 mapping["skipped"][rel] = f"mkdir failed: {exc}"
                 continue
+            # Exact-name workspace export first (semantic intent: the planner
+            # named this file for its purpose); generic largest-artifact
+            # fallback second. Either way bytes are agent-computed.
+            exp = exports.get(Path(rel).name)
+            if exp is not None and Path(exp[0]).is_file():
+                try:
+                    _shutil.copyfile(exp[0], dest)
+                    mapping["mapped"][rel] = f"workspace export from {exp[1]}"
+                    continue
+                except OSError as exc:
+                    mapping["skipped"][rel] = f"export copy failed: {exc}"
+                    continue
             suf = dest.suffix.lower()
             try:
                 if suf == ".csv" and tabular:
