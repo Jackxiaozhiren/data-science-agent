@@ -221,6 +221,27 @@ mismatch). The machinery cannot be gamed with stub runs — verified, not assume
 - Prior attempts 2026-08-30 (runs 33291103265, 33297462359): `startup_failure`
   before any row executed (workflow-level, no model calls, $0 spent).
 
+## Free-lane smoke results (2026-09-09, ollama qwen3:8b, $0)
+
+First within-model 4-way comparison, internal v1 5-task smoke
+(`--limit 5`, think on, temperature 0.1, `DSA_MAX_COST_USD` unset — local
+inference is unmetered). Planner needed `think` (without it qwen3:8b echoes
+the schema), one validation retry, and a 600 s timeout; all three are now
+defaults for the ollama lane with tests.
+
+| Variant | Pass | Wilson 95% | Repeats |
+|---|---:|---|---|
+| dsa | 3/5 (0.60) | [0.23, 0.88] | ×3, all 0.60 |
+| dsa-no-critic | 1/5 (0.20) | [0.04, 0.62] | ×1 |
+| llm-tools | 1/5 (0.20) | [0.04, 0.62] | ×1 |
+| llm-only | 0/5 (0.00) | [0.00, 0.43] | ×1 |
+
+Reading (honest, n=5 each): ordering matches the predicted hierarchy
+(dsa > no-critic ≈ llm-tools > llm-only), but CIs overlap heavily — only the
+dsa row has repeats. Treat as a **smoke shape, not an ablation conclusion**;
+RQ2–RQ4 need full-catalog repeats per W7 §67. Rows labeled
+provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
+
 ## Pricing assumptions
 
 Model pricing changes over time. The benchmark code therefore does not embed a permanent provider price table.

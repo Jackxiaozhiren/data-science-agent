@@ -556,12 +556,13 @@ async def _real_llm_plan(
         "- Do not put conclusions, p-values, model scores, or fabricated observations in the plan."
     )
     provider = auto_provider()
-    raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
     try:
+        raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
         return _validate_real_plan(raw_plan, user_query, dataset_path)
-    except RuntimeError as first_err:
+    except Exception as first_err:  # noqa: BLE001 — provider raises RuntimeError on schema mismatch, model_validate raises ValidationError, checks raise RuntimeError; any triggers the single retry
         # One retry with the validation error fed back (2026-09-09: small
-        # local models often fix step ids/deps on the second attempt).
+        # local models often echo the schema on the first attempt, e.g.
+        # qwen3:8b missing `steps`, then fix it on the second attempt).
         # Bounded to a single retry; still raises loudly if invalid twice.
         retry_prompt = (
             prompt + f"\n\nYour previous plan was rejected: {first_err} "
