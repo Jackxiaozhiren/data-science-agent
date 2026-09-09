@@ -270,12 +270,15 @@ class OpenAIChatProvider(LLMProvider):
         base_url: str | None = None,
         timeout_s: float = 120.0,
         local: bool = False,
+        think: bool | None = None,
     ) -> None:
         self.api_key = api_key
         self.model = model or "qwen3:8b"
         self.base_url = (base_url or "http://localhost:11434/v1").rstrip("/")
         self.timeout_s = timeout_s
         self.local = local
+        self.think = think
+        self.temperature: float | None = None
         self.last_usage: dict[str, Any] = {}
         self.last_response_id: str | None = None
         self.last_latency_ms: int | None = None
@@ -292,11 +295,19 @@ class OpenAIChatProvider(LLMProvider):
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
         }
+        if self.think is not None:
+            # Ollama reasoning models (qwen3 etc.): hidden thinking pass before
+            # the answer. Proven necessary for valid structured plans (probe
+            # 2026-09-09: think=False regurgitates the schema, think=True plans).
+            body["think"] = self.think
         if structured:
             body["response_format"] = {"type": "json_object"}
         max_output_tokens = kwargs.get("max_output_tokens")
         if max_output_tokens is not None:
             body["max_tokens"] = int(max_output_tokens)
+        temperature = kwargs.get("temperature", self.temperature)
+        if temperature is not None:
+            body["temperature"] = float(temperature)
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -415,7 +426,11 @@ class EnvLLMProvider(LLMProvider):
                 model=os.getenv("DSA_OLLAMA_MODEL") or "qwen3:8b",
                 base_url=os.getenv("DSA_OLLAMA_BASE_URL") or "http://localhost:11434/v1",
                 local=True,
+                think=os.getenv("DSA_OLLAMA_THINK", "1").strip().lower()
+                not in {"0", "false", "no", "off"},
+                timeout_s=float(os.getenv("DSA_OLLAMA_TIMEOUT_S", "600")),
             )
+            real_provider.temperature = float(os.getenv("DSA_OLLAMA_TEMPERATURE", "0.1"))
             real_provider.provider_name = "ollama"
         elif provider_name == "openai-compat":
             # Free-tier hosted lane (e.g. Gemini/Groq OpenAI-compatible endpoints).

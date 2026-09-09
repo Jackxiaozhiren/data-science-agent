@@ -557,6 +557,25 @@ async def _real_llm_plan(
     )
     provider = auto_provider()
     raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
+    try:
+        return _validate_real_plan(raw_plan, user_query, dataset_path)
+    except RuntimeError as first_err:
+        # One retry with the validation error fed back (2026-09-09: small
+        # local models often fix step ids/deps on the second attempt).
+        # Bounded to a single retry; still raises loudly if invalid twice.
+        retry_prompt = (
+            prompt + f"\n\nYour previous plan was rejected: {first_err} "
+            "Fix exactly that and return only the corrected JSON object."
+        )
+        raw_retry = await provider.structured_output(
+            retry_prompt, AnalysisPlan, max_output_tokens=3000
+        )
+        return _validate_real_plan(raw_retry, user_query, dataset_path)
+
+
+def _validate_real_plan(
+    raw_plan: object, user_query: str, dataset_path: str | None
+) -> AnalysisPlan:
     plan = raw_plan if isinstance(raw_plan, AnalysisPlan) else AnalysisPlan.model_validate(raw_plan)
 
     if not plan.steps:

@@ -221,3 +221,59 @@ def test_env_selects_ollama_and_compat(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DSA_OPENAI_COMPAT_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="DSA_OPENAI_COMPAT_API_KEY"):
         EnvLLMProvider()
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_think_flag_forwarded(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    seen: list = []
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: _FakeChatClient(_chat_payload("ok"), seen)
+    )
+    p = OpenAIChatProvider(model="qwen3:8b", base_url="http://x/v1", local=True, think=True)
+    assert await p.generate("hi") == "ok"
+    assert seen[0]["json"]["think"] is True
+
+    p2 = OpenAIChatProvider(model="m", base_url="https://example.com/v1", api_key="k")
+    await p2.generate("hi")
+    assert "think" not in seen[1]["json"]
+
+
+def test_env_ollama_think_default_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dsa_llm.providers import EnvLLMProvider
+
+    monkeypatch.setenv("DSA_LLM_MODE", "real")
+    monkeypatch.setenv("DSA_LLM_PROVIDER", "ollama")
+    monkeypatch.delenv("DSA_OLLAMA_THINK", raising=False)
+    assert EnvLLMProvider().inner.think is True
+    monkeypatch.setenv("DSA_OLLAMA_THINK", "0")
+    assert EnvLLMProvider().inner.think is False
+
+
+def test_chat_provider_temperature_forwarded(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    seen: list = []
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: _FakeChatClient(_chat_payload("ok"), seen)
+    )
+    p = OpenAIChatProvider(model="m", base_url="http://x/v1", local=True)
+    p.temperature = 0.1
+    import asyncio
+
+    asyncio.run(p.generate("hi"))
+    assert seen[0]["json"]["temperature"] == pytest.approx(0.1)
+
+
+def test_env_ollama_temperature_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dsa_llm.providers import EnvLLMProvider
+
+    monkeypatch.setenv("DSA_LLM_MODE", "real")
+    monkeypatch.setenv("DSA_LLM_PROVIDER", "ollama")
+    monkeypatch.delenv("DSA_OLLAMA_TEMPERATURE", raising=False)
+    assert EnvLLMProvider().inner.temperature == pytest.approx(0.1)
