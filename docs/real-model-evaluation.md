@@ -169,11 +169,15 @@ Two providers, one class (`OpenAIChatProvider`, chat/completions +
 
 ```bash
 export DSA_LLM_MODE=real DSA_LLM_PROVIDER=ollama DSA_OLLAMA_MODEL=qwen3:8b
-export DSA_LLM_FALLBACK=error DSA_MAX_COST_USD=0
+export DSA_LLM_FALLBACK=error
 export DSA_EVALUATION_VARIANT=dsa DSA_GIT_COMMIT="$(git rev-parse HEAD)"
 dsa --limit 5 --catalog benchmarks/ds-agent-benchmark/catalog.json \
   --datasets benchmarks/ds-agent-benchmark/datasets
 ```
+
+Do NOT set `DSA_MAX_COST_USD=0` here: with a zero cap the provider refuses
+before the first call (0 >= 0). Local inference has no metered cost; leave
+the cap unset (or set a positive value — untracked $0 spend never reaches it).
 
 16 GB machines run 8B Q4 models comfortably; expect slower and weaker plans
 than frontier APIs. Without the daemon/model, calls fail loudly with
