@@ -1,0 +1,101 @@
+name: User feedback
+description: Share how you used Data Science Agent — what worked, what didn't, and what feature you need next. (V4.3 W10 §75)
+title: "Feedback: <short summary>"
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using Data Science Agent! This template collects honest, useful signal for
+        the project. **Do not paste sensitive datasets or credentials** — describe them instead
+        (§75: "Do NOT collect sensitive datasets").
+
+  - type: input
+    id: use-case
+    attributes:
+      label: Use case
+      description: What were you trying to accomplish?
+      placeholder: e.g. "Clean a messy CSV and run a quick regression"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dataset-type
+    attributes:
+      label: Dataset type
+      description: What kind of data did you work with?
+      multiple: true
+      options:
+        - CSV / Excel / tabular
+        - Time series
+        - Text / NLP
+        - Image
+        - Public dataset / API
+        - Synthetic / demo
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation experience
+      description: How did installing go?
+      options:
+        - Smooth — just worked
+        - Minor hiccup, resolved
+        - Blocked / couldn't install
+    validations:
+      required: true
+
+  - type: textarea
+    id: task
+    attributes:
+      label: Task attempted
+      description: What task/question did you give the agent?
+      placeholder: e.g. "Analyze revenue by region and forecast next 30 days"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Did it work?
+      options:
+        - Completed and useful
+        - Completed but output needed correction
+        - Failed / error
+        - Partially worked
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence usefulness
+      description: Did the evidence/statistical grounding help you trust the result? Why / why not?
+    validations:
+      required: false
+
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations observed
+      description: What held you back? (slow, wrong stat, missing tool, docs unclear, LLM behaved badly, …)
+    validations:
+      required: false
+
+  - type: textarea
+    id: feature-request
+    attributes:
+      label: Feature request
+      description: What would have made this a win for you?
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy:** describe your dataset; never attach it. By submitting you agree this may
+        be used to improve the project. No fabricated metrics are collected from this form.

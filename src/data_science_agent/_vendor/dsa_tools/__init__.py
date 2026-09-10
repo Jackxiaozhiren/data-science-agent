@@ -6,6 +6,7 @@ from dsa_tools.tools.correlation import CorrelationTool
 from dsa_tools.tools.create_chart import CreateChartTool
 from dsa_tools.tools.create_evidence import CreateEvidenceTool
 from dsa_tools.tools.evaluate_model import EvaluateModelTool
+from dsa_tools.tools.export_artifact import ExportArtifactTool
 from dsa_tools.tools.feature_importance import FeatureImportanceTool
 from dsa_tools.tools.forecast import ForecastTool
 from dsa_tools.tools.generate_report import GenerateReportTool
@@ -31,6 +32,7 @@ def bootstrap() -> None:
         RegressionTool(),
         TrainModelTool(),
         EvaluateModelTool(),
+        ExportArtifactTool(),
         FeatureImportanceTool(),
         ForecastTool(),
         CreateChartTool(),

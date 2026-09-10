@@ -134,6 +134,148 @@ The following environment variables are recorded in `run_manifest.json` through 
 
 For a fair comparison, hold these values fixed across repeated runs and publish them with the artifacts.
 
+## Spend cap (in-code guard)
+
+`DSA_MAX_COST_USD` sets a hard per-process ceiling on real-model spend. The
+provider prices each call from actual API `usage` × the explicit
+`DSA_INPUT/OUTPUT_COST_PER_MILLION` rates, accumulates `spent_usd`, and
+**refuses further calls** once the cap is reached (loud error, no silent stop).
+Per-call `est_cost_usd` and cumulative spend land in the call log and provider
+metadata, so every artifact is auditable. Without the env var, no cap applies —
+always set it for credentialed runs, *in addition to* an OpenAI project-level
+spend limit (defense in depth; the project limit is the binding one).
+
+## Cost estimate (gpt-5.6-luna @ $0.20/$1.20 per M, 2026-08-29 pricing)
+
+Measured call profile per task: DSA variants = 1 planner call (structured, max
+3000 out); llm-tools = plan + answer; llm-only = 1 answer call. Typical usage
+≈ 4k input + 1.5k output tokens/task (≈ $0.0026).
+
+| Scope | Tasks | Expected | Upper bound (max tokens) | Suggested cap |
+|---|---:|---:|---:|---:|
+| 4-variant smoke (CI pinned) | 20 | ≈ $0.05 | ≈ $0.10 | `DSA_MAX_COST_USD=2` |
+| Full internal (4 × 150) | 600 | ≈ $1.60 | ≈ $2.50 | `DSA_MAX_COST_USD=5` |
+
+Estimates only — verify against the first smoke's recorded `cost_usd` before
+scaling. Never run `scope=full` without a prior green smoke on the same commit.
+
+## Free lanes ($0, no paid key)
+
+Two providers, one class (`OpenAIChatProvider`, chat/completions +
+`json_object` structured output, usage mapped incl. Ollama eval counts):
+
+**A. Ollama, local (truly free, private, no signup).** Operator-side:
+`ollama serve` + `ollama pull qwen3:8b` (≈5 GB). Then:
+
+```bash
+export DSA_LLM_MODE=real DSA_LLM_PROVIDER=ollama DSA_OLLAMA_MODEL=qwen3:8b
+export DSA_LLM_FALLBACK=error
+export DSA_EVALUATION_VARIANT=dsa DSA_GIT_COMMIT="$(git rev-parse HEAD)"
+dsa --limit 5 --catalog benchmarks/ds-agent-benchmark/catalog.json \
+  --datasets benchmarks/ds-agent-benchmark/datasets
+```
+
+Do NOT set `DSA_MAX_COST_USD=0` here: with a zero cap the provider refuses
+before the first call (0 >= 0). Local inference has no metered cost; leave
+the cap unset (or set a positive value — untracked $0 spend never reaches it).
+
+16 GB machines run 8B Q4 models comfortably; expect slower and weaker plans
+than frontier APIs. Without the daemon/model, calls fail loudly with
+connection errors — never silently stubbed.
+
+**B. Hosted free tiers** (e.g. Gemini/Groq OpenAI-compatible endpoints; free
+key from the vendor, own rate limits apply):
+
+```bash
+export DSA_LLM_MODE=real DSA_LLM_PROVIDER=openai-compat
+export DSA_OPENAI_COMPAT_BASE_URL="https://<vendor>/v1"  # vendor's OpenAI-compat URL
+export DSA_OPENAI_COMPAT_API_KEY="<free key>"
+export DSA_OPENAI_COMPAT_MODEL="<exact model id>"
+```
+
+**Labeling rule (non-negotiable):** free rows are valid for *within-model*
+comparisons (dsa vs dsa-no-critic vs llm-tools vs llm-only on the SAME
+provider+model — RQ2–RQ4 ablations) but must never merge with, or compare
+against, paid-lane rows. The publication validator still requires the paid
+`openai` lane, so free matrices cannot promote to leaderboard claims — by
+design, not oversight. Every artifact records its real provider+model.
+
+## Dry-run verification (2026-09-05, $0 spent)
+
+All four variants executed locally with the stub provider (2 tasks each):
+`dsa` 1.0, `dsa-no-critic` 1.0, `llm-tools` 0.0, `llm-only` 0.0 (stub baselines
+correctly score 0 — stub echoes, executes nothing). Workflow manifests written
+per variant; the matrix validator **correctly rejected** the stub matrix
+(`matrix_valid=false`: not real-model mode, zero token usage, pricing
+mismatch). The machinery cannot be gamed with stub runs — verified, not assumed.
+
+## Attempt log (honest, no spend without credits)
+
+- **2026-09-08, CI run 34190135991** (triggered manually, pinned workflow):
+  all four rows executed, **0.0 success everywhere** — OpenAI API returned
+  HTTP 429 `credit_balance_exhausted` ("You have no credits remaining").
+  **$0 spent.** Machinery validated end-to-end (key wiring, real-mode error
+  propagation without stub fallback, per-row artifacts, matrix validator
+  correctly reporting `matrix_valid=false`). Next attempt requires funded
+  credits on the OpenAI org; re-dispatch the same pinned workflow unchanged.
+- Prior attempts 2026-08-30 (runs 33291103265, 33297462359): `startup_failure`
+  before any row executed (workflow-level, no model calls, $0 spent).
+
+## Free-lane smoke results (2026-09-09, ollama qwen3:8b, $0)
+
+First within-model 4-way comparison, internal v1 5-task smoke
+(`--limit 5`, think on, temperature 0.1, `DSA_MAX_COST_USD` unset — local
+inference is unmetered). Planner needed `think` (without it qwen3:8b echoes
+the schema), one validation retry, and a 600 s timeout; all three are now
+defaults for the ollama lane with tests.
+
+| Variant | Pass | Wilson 95% | Repeats |
+|---|---:|---|---|
+| dsa | 0.60, 0.60, 0.60, **1.00** | pooled 12/20 [0.39, 0.81] | ×4 |
+| dsa-no-critic | 1.00 ×3 | pooled 15/15 [0.80, 1.00] | ×3 |
+| llm-tools | 0.20 | [0.04, 0.62] | ×1 |
+| llm-only | 0.00 | [0.00, 0.43] | ×1 |
+
+**Correction appended same day — do NOT read a critic effect into the table.**
+All dsa-variant failures were plan-validation flakes; no-critic had zero in 15
+runs (naively p≈0.0005). A follow-up dsa repeat run *after* the no-critic block
+scored **1.0**, implicating environmental drift over time (server warmup), not
+the critic flag — which touches nothing in the plan path (verified by code
+inspection: planner/provider read no critic setting). The dsa-vs-no-critic gap
+is therefore **time-confounded, inconclusive**. Lesson recorded: variant
+comparisons on stochastic local models require **interleaved ABAB order**,
+never all-of-A-then-all-of-B. RQ3 stays open pending an interleaved design.
+Rows labeled provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
+
+## Free-lane smoke results (2026-09-10, Groq `openai/gpt-oss-120b`, $0)
+
+Second within-model 4-way comparison, internal v1 5-task smoke
+(`--limit 5`, `DSA_LLM_PROVIDER=openai-compat`,
+`DSA_OPENAI_COMPAT_BASE_URL=https://api.groq.com/openai/v1`,
+`DSA_LLM_FALLBACK=error`, `DSA_MAX_COST_USD=2`, commit `712e9201`).
+All four rows share the task sequence `eda-01..eda-05`, real mode, and zero
+non-rate-limit errors; every call carries a Groq `chatcmpl-*` response ID.
+Spend $0 (free tier, `cost_usd` unpriced by design).
+
+| Variant | Pass | Clean (excl. 429s) |
+|---|---:|---|
+| dsa | 5/5 (1.00) | 5/5, zero errors |
+| dsa-no-critic | 5/5 (1.00) | 5/5, zero errors (after one cooldown re-run; first attempt had 1× TPM 429) |
+| llm-tools | 1/5 (0.20) | 1/1 clean success; 4× HTTP 429 TPM-429 (free-tier 8000 tokens/min ceiling) |
+| llm-only | 0/5 (0.00) | 5/5 clean, honest control zero |
+
+Reading (honest, n=5 each): the DSA pipeline rows are clean 5/5 while both
+vanilla baselines score ~0 — but **no ablation claim is supported**.
+dsa and dsa-no-critic tie at ceiling (no critic signal at n=5 EDA), and the
+llm-tools row is **incomplete by infrastructure, not capability**: its fast
+plan+answer bursts exceed Groq's 8000 TPM free limit, while the slower DSA
+rows spread the same token budget over minutes and stay under it. A paced
+runner (honor `retry-after`) would be needed for a fair llm-tools row; that
+is a product change, out of scope for this smoke. Rows labeled provider
+`openai-compat`, model `openai/gpt-oss-120b`; never merged with paid-lane
+rows. Local rows carry no `workflow_manifest.json`, so the publication
+validator reports `matrix_valid=false` for them by design.
+
 ## Pricing assumptions
 
 Model pricing changes over time. The benchmark code therefore does not embed a permanent provider price table.

@@ -1,0 +1,35 @@
+# Example only — DO NOT attach this as a second Blueprint to the existing service.
+# When you decide to enable paid persistent storage, copy the relevant `plan`,
+# `disk`, and persistence env vars into the existing root render.yaml (or make
+# the equivalent changes in the Render Dashboard), then sync/deploy once.
+#
+# This example intentionally uses Render's smallest current paid Web Service
+# compute plan and a 1 GB persistent disk for the single-instance demo.
+services:
+  - type: web
+    name: data-science-agent-api
+    runtime: docker
+    plan: 0.5c-512mb
+    region: singapore
+    branch: main
+    autoDeploy: false
+    dockerfilePath: ./docker/Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /health
+    disk:
+      name: dsa-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DSA_LLM_MODE
+        value: heuristic
+      - key: DSA_LLM_FALLBACK
+        value: heuristic
+      - key: DSA_DATABASE_URL
+        value: sqlite+aiosqlite:////var/data/dsa.db
+      - key: DSA_DATASET_DIR
+        value: /var/data/datasets
+      - key: DSA_CORS_ORIGINS
+        value: https://data-science-agent-web.vercel.app
+      - key: PYTHONUNBUFFERED
+        value: "1"

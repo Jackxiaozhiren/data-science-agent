@@ -40,6 +40,13 @@ def load_dataframe(path: Path, fmt: DatasetFormat) -> pl.DataFrame:
             raise DatasetError(f"Failed to parse JSON {path.name}: {e}") from e
     if fmt == DatasetFormat.excel:
         try:
+            # Polars defaults to the calamine/fastexcel engine for modern Excel
+            # files. The project already ships openpyxl, so use it explicitly for
+            # .xlsx to keep the hosted API image lean and avoid an undeclared
+            # fastexcel runtime dependency. Legacy .xls retains Polars' default
+            # engine behavior.
+            if path.suffix.lower() == ".xlsx":
+                return pl.read_excel(str(path), engine="openpyxl")
             return pl.read_excel(str(path))
         except Exception as e:
             raise DatasetError(f"Failed to parse Excel {path.name}: {e}") from e

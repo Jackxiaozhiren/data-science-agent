@@ -39,6 +39,7 @@ MCP_TOOL_MAP: dict[str, str] = {
     "get_evidence": "create_evidence",
     "generate_report": "generate_report",
     "save_artifact": "save_artifact",
+    "export_artifact": "export_artifact",
     "analyze": "analyze",  # §36 full loop Dataset→Question→Analysis→Evidence→Viz→Report
 }
 
@@ -60,6 +61,7 @@ MCP_TOOL_CLASS: dict[str, ToolClass] = {
     "get_evidence": "SAFE_READ",
     "generate_report": "WRITE_ARTIFACT",
     "save_artifact": "WRITE_ARTIFACT",
+    "export_artifact": "WRITE_ARTIFACT",
     "analyze": "COMPUTE",
 }
 
@@ -72,7 +74,7 @@ MCP_IDEMPOTENT = {
     "assumption_check",
     "forecast",
 }
-MCP_WRITE = {"generate_report", "save_artifact", "create_visualization"}
+MCP_WRITE = {"generate_report", "save_artifact", "export_artifact", "create_visualization"}
 
 MCP_DESCRIPTIONS: dict[str, str] = {
     "profile_dataset": "Profile a dataset file (schema, missing, duplicates, cardinality).",
@@ -92,6 +94,7 @@ MCP_DESCRIPTIONS: dict[str, str] = {
     "get_evidence": "Create or validate an evidence record for a claim.",
     "generate_report": "Generate report.md + experiment.json + reproduce.sh + notebook.",
     "save_artifact": "Save an artifact under artifacts/<run_id>/",
+    "export_artifact": "Persist a prior tool result to a file in the run workspace (csv/xlsx/png, byte-identical).",
     "analyze": "Run full analysis (§36 Dataset→Question→Analysis→Evidence→Viz→Report) — stateless with explicit run_id handle.",
 }
 

@@ -6,7 +6,7 @@ COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY packages ./packages
 COPY apps ./apps
 COPY src ./src
-RUN uv sync --no-dev --locked
+RUN uv sync --no-dev --locked --all-packages
 RUN mkdir -p /app/data/datasets
 EXPOSE 8000
 CMD ["/bin/sh", "-c", "exec .venv/bin/uvicorn dsa_api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

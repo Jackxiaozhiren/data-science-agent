@@ -3,11 +3,41 @@ from __future__ import annotations
 from pathlib import Path
 
 from dsa_evaluation.catalog import Catalog
+from dsa_evaluation.cli import _resolve_datasets_dir
 from dsa_evaluation.metrics import evaluate_task
 from dsa_evaluation.runner import run_benchmark
 
 CATALOG = Path("benchmarks/ds-agent-benchmark/catalog.json")
 DATASETS = Path("benchmarks/ds-agent-benchmark/datasets")
+
+
+def test_resolve_datasets_dir_prefers_catalog_sibling(tmp_path: Path) -> None:
+    """Catalog-only invocation must not silently use the v1 datasets dir.
+
+    Regression test for the 2026-09-08 finding: `dsa --catalog <v2>` without
+    `--datasets` scored v2 at 0.57 ('Dataset not found' on v2-only files)
+    instead of 1.00.
+    """
+    custom = tmp_path / "custom"
+    (custom / "datasets").mkdir(parents=True)
+    cat = custom / "catalog.json"
+    cat.write_text("{}", encoding="utf-8")
+    # default catalog -> v1 default (unchanged behavior)
+    assert _resolve_datasets_dir(Path("benchmarks/ds-agent-benchmark/catalog.json"), None) == Path(
+        "benchmarks/ds-agent-benchmark/datasets"
+    )
+    # NOTE: argparse pre-fills --datasets with the v1 default, so an explicitly
+    # passed v1 path is indistinguishable from omission; sibling-wins is the
+    # documented behavior in that case (matches the catalog-only v2 invocation).
+    assert _resolve_datasets_dir(cat, Path("benchmarks/ds-agent-benchmark/datasets")) == (
+        custom / "datasets"
+    )
+    # overridden catalog + sibling datasets dir -> sibling
+    assert _resolve_datasets_dir(cat, None) == custom / "datasets"
+    # overridden catalog without sibling -> v1 default (legacy fallback)
+    lonely = tmp_path / "lonely" / "catalog.json"
+    lonely.parent.mkdir(parents=True)
+    assert _resolve_datasets_dir(lonely, None) == Path("benchmarks/ds-agent-benchmark/datasets")
 
 
 def test_catalog_has_50_tasks_and_categories() -> None:

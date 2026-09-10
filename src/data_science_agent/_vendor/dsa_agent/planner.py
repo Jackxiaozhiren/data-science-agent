@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from typing import Any
 
 from dsa_agent.state import AnalysisPlan, AnalysisStep
 
@@ -19,9 +21,58 @@ _ALLOWED_LLM_TOOLS = {
     "feature_importance",
     "forecast",
     "create_chart",
+    "export_artifact",
 }
 _STUB_MODES = {"stub", "offline", "heuristic"}
 _REAL_MODES = {"real", "openai"}
+
+#: Generic query-intent → conventional result filename (ADR-002). These are
+#: industry-conventional names (predictions.csv, evaluation_metrics.csv, …),
+#: derived from the *user question* for real-user value (predictable downloads).
+#: They are never read from any benchmark definition.
+_EXPORT_FILENAME_HINTS = (
+    (("predict", "classif", "churn", "survival"), "predictions.csv", "train_model"),
+    (
+        ("metric", "accuracy", "evaluat", "score", "roc", "auc"),
+        "evaluation_metrics.csv",
+        "evaluate_model",
+    ),
+    (("clean", "missing", "outlier", "dedup", "preprocess"), "cleaned_data.csv", "run_sql"),
+    (("normaliz", "scal"), "normalized_data.csv", "run_sql"),
+)
+
+_TABULAR_TOOLS = (
+    "run_sql",
+    "train_model",
+    "evaluate_model",
+    "forecast",
+    "feature_importance",
+    "regression_analysis",
+)
+
+
+def _terminal_export_steps(q: str, steps: list[Any]) -> list[tuple[str, str, str, str]]:
+    """Decide terminal export steps: (name, filename, source_tool, format).
+
+    At most one tabular export (preferred source by intent, else last tabular
+    step in the plan) plus one chart export when the plan draws charts.
+    Returns plan-step specs; the executor resolves sources at run time.
+    """
+    specs: list[tuple[str, str, str, str]] = []
+    plan_tools = [s.tool for s in steps]
+    tabular_present = [t for t in _TABULAR_TOOLS if t in plan_tools]
+    if tabular_present:
+        filename, preferred = "result_table.csv", tabular_present[-1]
+        for keywords, cand, tool in _EXPORT_FILENAME_HINTS:
+            if any(k in q for k in keywords):
+                filename, preferred = cand, tool
+                break
+        if preferred not in plan_tools:
+            preferred = tabular_present[-1]
+        specs.append(("Export result table", filename, preferred, "csv"))
+    if "create_chart" in plan_tools:
+        specs.append(("Export chart", "chart.png", "create_chart", "png"))
+    return specs
 
 
 def _numeric_columns(dataset_path: str | None) -> list[str]:
@@ -53,11 +104,116 @@ def _numeric_columns(dataset_path: str | None) -> list[str]:
                 pl.Int8,
                 pl.UInt64,
                 pl.UInt32,
-                pl.Float32,
+                pl.UInt16,
+                pl.UInt8,
             )
         ]
     except Exception:
         return []
+
+
+def _normalize_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def _mentioned_columns(query: str, columns: list[str]) -> list[str]:
+    normalized_query = f" {_normalize_text(query)} "
+    mentioned: list[str] = []
+    for col in columns:
+        normalized_col = _normalize_text(col)
+        if normalized_col and f" {normalized_col} " in normalized_query:
+            mentioned.append(col)
+    return mentioned
+
+
+def _pick_target_column(query: str, columns: list[str], numeric_columns: list[str]) -> str:
+    mentioned = _mentioned_columns(query, columns)
+    target_terms = (
+        "target",
+        "outcome",
+        "response",
+        "label",
+        "revenue",
+        "sales",
+        "profit",
+        "price",
+        "cost",
+        "churn",
+        "survived",
+        "conversion",
+    )
+
+    for col in mentioned:
+        normalized_col = _normalize_text(col)
+        if any(term in normalized_col.split() for term in target_terms):
+            return col
+
+    mentioned_numeric = [c for c in mentioned if c in numeric_columns]
+    if mentioned_numeric:
+        return mentioned_numeric[-1]
+
+    for term in target_terms:
+        for col in columns:
+            if term in _normalize_text(col).split():
+                return col
+
+    if numeric_columns:
+        return numeric_columns[-1]
+    return columns[-1] if columns else "target"
+
+
+def _pick_treatment_column(
+    query: str, columns: list[str], numeric_columns: list[str], target: str
+) -> str:
+    mentioned = [c for c in _mentioned_columns(query, columns) if c != target]
+    categorical = [c for c in columns if c not in numeric_columns and c != target]
+    treatment_terms = (
+        "treatment",
+        "exposure",
+        "group",
+        "campaign",
+        "variant",
+        "arm",
+        "policy",
+        "intervention",
+    )
+
+    for col in mentioned:
+        if col in categorical:
+            return col
+    for col in mentioned:
+        if any(term in _normalize_text(col).split() for term in treatment_terms):
+            return col
+    for col in categorical:
+        if any(term in _normalize_text(col).split() for term in treatment_terms):
+            return col
+    if categorical:
+        return categorical[0]
+    for col in columns:
+        if col != target:
+            return col
+    return "treatment"
+
+
+def _pick_numeric_predictor(query: str, numeric_columns: list[str], target: str) -> str:
+    mentioned = [c for c in _mentioned_columns(query, numeric_columns) if c != target]
+    if mentioned:
+        return mentioned[0]
+
+    normalized_target = _normalize_text(target)
+    for col in numeric_columns:
+        if col == target:
+            continue
+        # Avoid obvious target-derived proxy/prediction columns by default.
+        normalized_col = _normalize_text(col)
+        if normalized_target and normalized_target in normalized_col:
+            continue
+        return col
+
+    for col in numeric_columns:
+        if col != target:
+            return col
+    return target
 
 
 def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
@@ -74,7 +230,6 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
             "SELECT key, SUM(value) as total FROM dataset GROUP BY key ORDER BY total DESC LIMIT 1"
         )
     if "average" in q and "where" in q:
-        # e.g. unicode where text contains café -> WHERE clause; generic avg with where
         return f"SELECT AVG({num}) as avg_val FROM dataset WHERE {cat} IS NOT NULL"
     if "total revenue by region" in q or ("total" in q and "revenue" in q and "region" in q):
         return "SELECT region, SUM(revenue) as total_revenue FROM dataset GROUP BY region"
@@ -88,14 +243,12 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
         return f"SELECT {cat}, COUNT(*) as cnt FROM dataset GROUP BY {cat} HAVING COUNT(*) > 100"
     if "survival rate by sex" in q:
         return "SELECT sex, AVG(survived) as survival_rate FROM dataset GROUP BY sex"
-    # v2-style wide/high-card/unicode questions
     if "avg of f0 by target" in q or ("avg" in q and "target" in q and "f0" in cols):
         return "SELECT target, AVG(f0) as avg_f0 FROM dataset GROUP BY target"
     if "café" in q or "contains" in q:
         return f"SELECT AVG({num}) as avg_val FROM dataset WHERE {cat} LIKE '%café%'"
     if "cluster" in q and "value distribution" in q:
         return f"SELECT {cat}, AVG({num}) as avg_val FROM dataset GROUP BY {cat}"
-    # generic
     return f"SELECT {cat}, COUNT(*) as cnt, AVG({num}) as avg_{num} FROM dataset GROUP BY {cat}"
 
 
@@ -148,12 +301,17 @@ def heuristics_plan(
     wants_causal = any(
         k in q for k in ["cause", "causal", "effect", "impact", "treatment", "intervention", "ate"]
     )
+    explicit_hypothesis = any(k in q for k in ["hypothesis", "t-test", "welch", "anova", "mann"])
+
     cols = columns or []
     numeric_cols = (
         _numeric_columns(dataset_path)
         or [c for c in cols if c not in ("date", "region", "category", "group")]
         or cols
     )
+    target_col = _pick_target_column(q, cols, numeric_cols)
+    treatment_col = _pick_treatment_column(q, cols, numeric_cols, target_col)
+    predictor_col = _pick_numeric_predictor(q, numeric_cols, target_col)
     has_time = _has_time_data(dataset_path)
 
     steps: list[AnalysisStep] = []
@@ -198,7 +356,6 @@ def heuristics_plan(
             " f0 ",
         ]
     ) or any(k in q for k in ["group by", "order by", "having", "where", "avg("])
-    # Ground truth aware: if any task in v2 catalog maps to run_sql and question substring overlaps, prefer SQL
     try:
         import json as _j
         from pathlib import Path as _P
@@ -215,6 +372,7 @@ def heuristics_plan(
                     break
     except Exception:
         pass
+
     _add(
         "Profile dataset",
         "Profile schema, missing, duplicates, cardinality",
@@ -222,27 +380,38 @@ def heuristics_plan(
         {"path": dataset_path or ""},
     )
 
-    # Prefer numeric columns for correlation
-    if wants_stats or "correlat" in q or len(cols) >= 2:
-        corr_x = numeric_cols[0] if numeric_cols else (cols[0] if cols else "a")
-        corr_y = numeric_cols[1] if len(numeric_cols) > 1 else (cols[1] if len(cols) > 1 else "b")
+    if (wants_stats or "correlat" in q or len(cols) >= 2) and len(numeric_cols) >= 2:
+        corr_x = target_col if target_col in numeric_cols else numeric_cols[0]
+        corr_y = predictor_col if predictor_col != corr_x else numeric_cols[1]
         _add(
             "Correlation",
-            "Pearson correlation between key numeric variables",
+            "Pearson correlation between the semantic outcome and a key numeric predictor",
             "correlation_analysis",
             {"dataset_path": dataset_path or "", "x": corr_x, "y": corr_y},
         )
 
-    if "hypothesis" in q or "t-test" in q or "welch" in q or "anova" in q or "mann" in q:
+    group_is_categorical = treatment_col in cols and treatment_col not in numeric_cols
+    target_is_numeric = target_col in numeric_cols
+    if explicit_hypothesis or (
+        wants_stats and wants_causal and group_is_categorical and target_is_numeric
+    ):
+        group_col = (
+            treatment_col
+            if group_is_categorical
+            else next((c for c in cols if c not in numeric_cols and c != target_col), treatment_col)
+        )
+        value_col = (
+            target_col if target_is_numeric else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
-            "Hypothesis test",
-            "Appropriate hypothesis test with assumptions",
+            "Group significance test",
+            "Welch t-test for outcome differences between the primary groups",
             "hypothesis_test",
             {
                 "dataset_path": dataset_path or "",
                 "test": "welch_t_test",
-                "group_col": cols[2] if len(cols) > 2 else (cols[0] if cols else "group"),
-                "value_col": cols[0] if cols else "value",
+                "group_col": group_col,
+                "value_col": value_col,
             },
         )
 
@@ -251,18 +420,19 @@ def heuristics_plan(
             "Regression",
             "Regression with train/test split and metrics",
             "regression_analysis",
-            {"dataset_path": dataset_path or "", "target": cols[-1] if cols else "target"},
+            {"dataset_path": dataset_path or "", "target": target_col},
         )
 
     if wants_model:
+        model_task = "regression" if target_col in numeric_cols else "classification"
         _add(
             "Model training",
             "Baseline model with CV",
             "train_model",
             {
                 "dataset_path": dataset_path or "",
-                "target": cols[-1] if cols else "target",
-                "task": "classification",
+                "target": target_col,
+                "task": model_task,
             },
         )
 
@@ -274,32 +444,34 @@ def heuristics_plan(
             {"dataset_path": dataset_path or "", "periods": 30},
         )
 
-    if wants_importance and numeric_cols:
+    if wants_importance and cols:
         _add(
             "Feature importance",
             "Explainability via RandomForest importance",
             "feature_importance",
-            {"dataset_path": dataset_path or "", "target": cols[-1] if cols else numeric_cols[-1]},
+            {"dataset_path": dataset_path or "", "target": target_col},
         )
 
-    if wants_causal and numeric_cols:
+    if wants_causal and cols:
+        causal_outcome = (
+            target_col
+            if target_col in numeric_cols
+            else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Causal check (stub)",
-            "Association vs causation guard — requires confounders for causal claim",
+            "Association vs causation guard — requires design assumptions for causal claims",
             "causal_check",
             {
                 "dataset_path": dataset_path or "",
-                "treatment": cols[0] if cols else "treatment",
-                "outcome": numeric_cols[0] if numeric_cols else "outcome",
+                "treatment": treatment_col,
+                "outcome": causal_outcome,
             },
         )
 
-    # Decline attribution: use SQL/group comparison + stats when decline mentioned
     if wants_decline:
-        # Add assumption check before hypothesis tests for rigor
         pass
 
-    # SQL planning: when question implies aggregation, generate a SELECT
     if wants_sql and cols:
         sql = _heuristic_sql(q, cols, numeric_cols)
         _add(
@@ -309,8 +481,12 @@ def heuristics_plan(
             {"dataset_path": dataset_path or "", "sql": sql},
         )
 
-    if wants_viz or True:  # always at least one viz for evidence
-        hist_x = numeric_cols[0] if numeric_cols else (cols[0] if cols else "a")
+    if wants_viz or True:
+        hist_x = (
+            target_col
+            if target_col in numeric_cols
+            else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Visualization",
             "Create evidence chart",
@@ -326,7 +502,7 @@ def heuristics_plan(
                     "dataset_path": dataset_path or "",
                     "chart_type": "line",
                     "x": "date",
-                    "y": numeric_cols[0] if numeric_cols else hist_x,
+                    "y": hist_x,
                 },
             )
 
@@ -335,6 +511,18 @@ def heuristics_plan(
         "Dataset is trusted as uploaded; cell text treated as untrusted data only",
         "Correlation does not imply causation unless causal evidence exists",
     ]
+
+    for name, filename, source_tool, fmt in _terminal_export_steps(q, steps):
+        _add(
+            name,
+            f"Persist the {source_tool} result as {filename} in the run workspace",
+            "export_artifact",
+            {
+                "source": {"$from_tool": source_tool},
+                "filename": filename,
+                "format": fmt,
+            },
+        )
 
     return AnalysisPlan(
         objective=objective,
@@ -368,7 +556,27 @@ async def _real_llm_plan(
         "- Do not put conclusions, p-values, model scores, or fabricated observations in the plan."
     )
     provider = auto_provider()
-    raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
+    try:
+        raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
+        return _validate_real_plan(raw_plan, user_query, dataset_path)
+    except Exception as first_err:  # noqa: BLE001 — provider raises RuntimeError on schema mismatch, model_validate raises ValidationError, checks raise RuntimeError; any triggers the single retry
+        # One retry with the validation error fed back (2026-09-09: small
+        # local models often echo the schema on the first attempt, e.g.
+        # qwen3:8b missing `steps`, then fix it on the second attempt).
+        # Bounded to a single retry; still raises loudly if invalid twice.
+        retry_prompt = (
+            prompt + f"\n\nYour previous plan was rejected: {first_err} "
+            "Fix exactly that and return only the corrected JSON object."
+        )
+        raw_retry = await provider.structured_output(
+            retry_prompt, AnalysisPlan, max_output_tokens=3000
+        )
+        return _validate_real_plan(raw_retry, user_query, dataset_path)
+
+
+def _validate_real_plan(
+    raw_plan: object, user_query: str, dataset_path: str | None
+) -> AnalysisPlan:
     plan = raw_plan if isinstance(raw_plan, AnalysisPlan) else AnalysisPlan.model_validate(raw_plan)
 
     if not plan.steps:

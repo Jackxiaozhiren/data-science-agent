@@ -10,6 +10,29 @@ from typing import Any
 
 from dsa_evaluation.runner import run_benchmark
 
+_DEFAULT_CATALOG = Path("benchmarks/ds-agent-benchmark/catalog.json")
+_DEFAULT_DATASETS = Path("benchmarks/ds-agent-benchmark/datasets")
+
+
+def _resolve_datasets_dir(catalog: Path | None, datasets: Path | None) -> Path:
+    """Pick the datasets dir for a benchmark run (2026-09-08 fix).
+
+    Historical trap: `--catalog <v2 catalog>` without `--datasets` silently
+    used the v1 datasets dir, so every v2-only dataset failed with
+    "Dataset not found" (v2 measured 0.57 instead of 1.00). When the catalog
+    differs from the default and a sibling `datasets/` dir exists next to it,
+    use the sibling; an explicitly passed non-default datasets dir always
+    wins. (Note: argparse pre-fills the v1 default, so that exact path is
+    treated as omitted — documented, covered by test.)
+    """
+    cat = catalog or _DEFAULT_CATALOG
+    if datasets is not None and str(datasets) != str(_DEFAULT_DATASETS):
+        return datasets
+    sibling = Path(cat).parent / "datasets"
+    if Path(cat) != _DEFAULT_CATALOG and sibling.is_dir():
+        return sibling
+    return _DEFAULT_DATASETS
+
 
 def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
     from dsa_evidence.reproducibility import compare_runs
@@ -391,7 +414,7 @@ def main() -> None:
         return
     if args.cmd == "benchmark":
         cat = args.catalog or Path("benchmarks/ds-agent-benchmark/catalog.json")
-        ds = args.datasets or Path("benchmarks/ds-agent-benchmark/datasets")
+        ds = _resolve_datasets_dir(args.catalog, args.datasets)
         payload = run_benchmark(
             cat, ds, Path("benchmarks/ds-agent-benchmark/results"), limit=args.limit
         )
@@ -624,7 +647,11 @@ def main() -> None:
         return
 
     payload = run_benchmark(
-        args.catalog, args.datasets, args.out, limit=args.limit, task_ids=args.tasks
+        args.catalog,
+        _resolve_datasets_dir(args.catalog, args.datasets),
+        args.out,
+        limit=args.limit,
+        task_ids=args.tasks,
     )
     agg = payload.get("aggregate", {})
     print("=== DS-Agent-Benchmark ===")

@@ -7,13 +7,21 @@ from pathlib import Path
 from dsa_agent.state import AnalysisState
 
 
+def _final_report_status(state: AnalysisState) -> str:
+    # Reports are generated during the REPORTING phase and the graph immediately
+    # transitions to COMPLETED afterwards unless it already returned on a hard
+    # failure. Render the terminal state in persisted/user-facing report artifacts
+    # so a successful run does not misleadingly appear stuck in REPORTING.
+    return "COMPLETED" if state.status.value == "REPORTING" else state.status.value
+
+
 def build_markdown_report(state: AnalysisState) -> str:
     lines: list[str] = []
     lines.append(f"# Analysis Report — {state.run_id}")
     lines.append("")
     lines.append(f"**Objective:** {state.objective or state.user_query}")
     lines.append(
-        f"**Dataset:** `{state.dataset_id}`  |  **Status:** {state.status.value}  |  **Generated:** {datetime.now(UTC).isoformat()}"
+        f"**Dataset:** `{state.dataset_id}`  |  **Status:** {_final_report_status(state)}  |  **Generated:** {datetime.now(UTC).isoformat()}"
     )
     lines.append("")
     lines.append("## Plan")
@@ -34,7 +42,6 @@ def build_markdown_report(state: AnalysisState) -> str:
             )
             if ap:
                 rel = Path(str(ap)).name
-                # artifact lives under artifacts/reports/<run_id>/ — link relative for markdown readers
                 lines.append(f"  - ![chart]({rel})")
                 lines.append(f"  - artifact: `{ap}`")
     lines.append("")
@@ -85,7 +92,7 @@ def write_report_artifacts(state: AnalysisState, out_dir: Path | None = None) ->
         "run_id": state.run_id,
         "dataset_id": state.dataset_id,
         "user_query": state.user_query,
-        "status": state.status.value,
+        "status": _final_report_status(state),
         "created_at": state.created_at.isoformat(),
         "tool_calls": len(state.tool_calls),
         "evidence": len(state.evidence),

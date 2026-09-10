@@ -6,8 +6,8 @@ authors:
   - family-names: "Data Science Agent Contributors"
     given-names: ""
     orcid: ""
-version: 4.3.0
-date-released: 2026-08-30
+version: 4.3.3
+date-released: 2026-09-05
 license: MIT
 repository-code: "https://github.com/Jackxiaozhiren/data-science-agent"
 url: "https://github.com/Jackxiaozhiren/data-science-agent"
@@ -23,6 +23,12 @@ keywords:
   - duckdb
 references:
   - type: software
-    title: "Data Science Agent V4.1 — Open-Source Ecosystem, Developer Platform & Productization — Benchmark v2 (30 datasets / 100 tasks)"
+    title: "Data Science Agent — Evidence-Grounded Autonomous Data Science Platform / Benchmark v2 (30 datasets / 100 tasks)"
     version: 4.2.0
     year: 2026
+    url: "https://github.com/Jackxiaozhiren/data-science-agent"
+  - type: software
+    title: "Data Science Agent — current release used in this work"
+    version: 4.3.3
+    year: 2026
+    url: "https://github.com/Jackxiaozhiren/data-science-agent"

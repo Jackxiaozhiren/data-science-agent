@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "external-validation/RESULTS_SCHEMA.json",
+  "title": "Data Science Agent — External Human Review Results",
+  "description": "V4.3 W8 §76. One JSON document per reviewer submission. No field is pre-filled by the project; every value comes from a real reviewer. Not conducted yet (PENDING EXTERNAL ACTOR, §75).",
+  "type": "object",
+  "required": ["reviewer", "review_date", "install", "task_results"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "reviewer": {
+      "type": "object",
+      "required": ["id_or_pseudonym", "background"],
+      "additionalProperties": false,
+      "properties": {
+        "id_or_pseudonym": { "type": "string", "minLength": 1 },
+        "background": { "type": "string", "minLength": 1 },
+        "is_project_author": {
+          "type": "boolean",
+          "description": "Must be false for a submission to count as independent (V4.3 §75)."
+        }
+      }
+    },
+    "review_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "install": {
+      "type": "object",
+      "required": ["path", "package_version", "os", "python_version"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "enum": ["pypi", "source"] },
+        "package_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "os": { "type": "string" },
+        "python_version": { "type": "string" }
+      }
+    },
+    "task_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["task_id", "scores"],
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "enum": ["T1_doctor_smoke", "T2_demo", "T3_own_dataset", "T4_evidence_trace", "T5_reproduction", "T6_provenance"]
+          },
+          "status": {
+            "enum": ["completed", "partially_completed", "environment_failure"],
+            "description": "environment_failure is a result, not an omission (§32 spirit)."
+          },
+          "own_dataset_description": {
+            "type": "string",
+            "description": "T3 only: description of the reviewer's data and question. Never attach the data itself."
+          },
+          "scores": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Dimensions per V4.3 §78; integer 1-5 or omitted if genuinely not applicable (never imputed, §79).",
+            "properties": {
+              "correctness": { "$ref": "#/$defs/score" },
+              "statistical_validity": { "$ref": "#/$defs/score" },
+              "evidence_quality": { "$ref": "#/$defs/score" },
+              "clarity": { "$ref": "#/$defs/score" },
+              "uncertainty": { "$ref": "#/$defs/score" },
+              "usefulness": { "$ref": "#/$defs/score" },
+              "trust": { "$ref": "#/$defs/score" }
+            }
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "reproduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "matched": { "type": "boolean" },
+        "divergence_notes": { "type": "string" }
+      }
+    },
+    "provenance_verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "attempted": { "type": "boolean" },
+        "digest_match": { "type": "boolean" },
+        "commands_and_outputs": { "type": "string" }
+      }
+    },
+    "narrative_feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "got_right": { "type": "string" },
+        "got_wrong": { "type": "string" },
+        "evidence_trace_example": { "type": "string" },
+        "uncertainty_honesty": { "type": "string" },
+        "most_valuable": { "type": "string" },
+        "biggest_weakness": { "type": "string" },
+        "trust_increasing_change": { "type": "string" },
+        "would_use_or_recommend": { "type": "string" }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "required": ["may_publish_anonymized"],
+      "additionalProperties": false,
+      "properties": {
+        "may_publish_anonymized": { "type": "boolean" },
+        "attribution_preference": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    }
+  }
+}
