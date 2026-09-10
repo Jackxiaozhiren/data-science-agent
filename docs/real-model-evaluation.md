@@ -221,13 +221,28 @@ mismatch). The machinery cannot be gamed with stub runs — verified, not assume
 - Prior attempts 2026-08-30 (runs 33291103265, 33297462359): `startup_failure`
   before any row executed (workflow-level, no model calls, $0 spent).
 
-## Free-lane smoke results (2026-09-09, ollama qwen3:8b, $0)
+## Free-lane smoke results (2026-09-09/10, ollama qwen3:8b, $0)
 
-First within-model 4-way comparison, internal v1 5-task smoke
-(`--limit 5`, think on, temperature 0.1, `DSA_MAX_COST_USD` unset — local
-inference is unmetered). Planner needed `think` (without it qwen3:8b echoes
-the schema), one validation retry, and a 600 s timeout; all three are now
-defaults for the ollama lane with tests.
+Full 4-way ABAB completed 2026-09-10: each variant ×4 rounds alternating
+(dsa/no-critic block, then llm-tools/llm-only block), same 5 tasks
+(eda-01..05), think on, temp 0.1, python-tree guard per step (one aborted
+batch re-run after a concurrent branch checkout; invalid runs discarded with
+cause, never silently kept).
+
+| Variant | Rounds | Pooled | Wilson 95% |
+|---|---:|---:|---|
+| dsa | 0.8, 1.0, 1.0, 0.8 | **18/20 (0.90)** | [0.70, 0.97] |
+| dsa-no-critic | 0.6, 0.8, 0.6, 0.8 | **14/20 (0.70)** | [0.48, 0.85] |
+| llm-tools | 0.2, 0.4, 0.2, 0.2 | **6/20 (0.30)** | [0.15, 0.52] |
+| llm-only | 0.0 ×4 | **0/20 (0.00)** | [0.00, 0.16] |
+
+Reading: clean monotone hierarchy dsa > no-critic > llm-tools > llm-only —
+the first real RQ4 (orchestration value) evidence: full pipeline roughly
+triples vanilla tool use (0.90 vs 0.30), tools triple the no-tool control
+(0.30 vs 0.00). RQ2/RQ3 (evidence/critic, dsa vs no-critic +0.20, paired
+McNemar 6:2, p≈0.29): suggestive, not significant. All n=5 tasks — smoke
+shape, not ablation conclusions; full-catalog repeats per W7 §67 still owed.
+Rows labeled provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
 
 | Variant | Pass | Wilson 95% | Repeats |
 |---|---:|---|---|
