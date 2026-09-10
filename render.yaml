@@ -19,3 +19,11 @@ services:
         value: sqlite+aiosqlite:////tmp/dsa.db
       - key: PYTHONUNBUFFERED
         value: "1"
+      # Browser origins allowed to call the API. Explicit production origin
+      # plus a regex covering Vercel preview deployments (hostnames churn
+      # per build, so they cannot be enumerated). Demo API carries no
+      # credentials; CORS here is browser UX, not access control.
+      - key: DSA_CORS_ORIGINS
+        value: https://data-science-agent-web-rr93.vercel.app
+      - key: DSA_CORS_ORIGIN_REGEX
+        value: https://.*\.vercel\.app

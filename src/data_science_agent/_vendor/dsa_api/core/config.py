@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     debug: bool = False
     database_url: str = "sqlite+aiosqlite:///./data/dsa.db"
     cors_origins: str = "http://localhost:3000"
+    # Optional regex for dynamic browser origins (e.g. Vercel preview
+    # deployments, whose hostnames change per build). Empty = disabled.
+    # Safe for the public demo: the API carries no credentials
+    # (allow_credentials=False) and every endpoint is reachable by curl
+    # regardless, so CORS only governs browser UX, not access control.
+    cors_origin_regex: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
