@@ -86,6 +86,45 @@ jobs:
           "${smoke_dir}/bin/dsa" --help >/dev/null
       - run: docker build -f docker/Dockerfile.api -t dsa-api:ci .
       - run: docker run --rm dsa-api:ci .venv/bin/dsa --help >/dev/null
+      - name: Smoke-test Render free-tier API startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          cid="$(docker run -d \
+            --memory=512m \
+            -e PORT=10000 \
+            -e DSA_LLM_MODE=heuristic \
+            -e DSA_LLM_FALLBACK=heuristic \
+            -e DSA_DATABASE_URL=sqlite+aiosqlite:////tmp/dsa.db \
+            -p 127.0.0.1:18000:10000 \
+            dsa-api:ci)"
+          cleanup() {
+            docker logs "${cid}" || true
+            docker rm -f "${cid}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for _ in $(seq 1 45); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18000/health > /tmp/render-health.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "${ready}" -eq 1
+          test "$(docker inspect "${cid}" --format '{{.State.OOMKilled}}')" = "false"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          body = json.loads(Path("/tmp/render-health.json").read_text(encoding="utf-8"))
+          assert body["status"] == "ok"
+          assert set(body["details"]) == {"process"}
+          assert "db" not in body["details"]
+          assert "duckdb" not in body["details"]
+          assert "polars" not in body["details"]
+          PY
       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
       - run: npm --prefix apps/web run build 2>&1 | tail -n 20
       - run: docker compose config 2>&1 | head -n 40
