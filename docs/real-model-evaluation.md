@@ -236,15 +236,28 @@ defaults for the ollama lane with tests.
 | llm-tools | 0.20 | [0.04, 0.62] | ×1 |
 | llm-only | 0.00 | [0.00, 0.43] | ×1 |
 
-**Correction appended same day — do NOT read a critic effect into the table.**
-All dsa-variant failures were plan-validation flakes; no-critic had zero in 15
-runs (naively p≈0.0005). A follow-up dsa repeat run *after* the no-critic block
-scored **1.0**, implicating environmental drift over time (server warmup), not
-the critic flag — which touches nothing in the plan path (verified by code
-inspection: planner/provider read no critic setting). The dsa-vs-no-critic gap
-is therefore **time-confounded, inconclusive**. Lesson recorded: variant
-comparisons on stochastic local models require **interleaved ABAB order**,
-never all-of-A-then-all-of-B. RQ3 stays open pending an interleaved design.
+**Update 2026-09-10 — interleaved ABAB completed (the design this note demanded).**
+Alternating dsa / dsa-no-critic ×4 rounds (8 runs, same 5 tasks, ollama
+qwen3:8b, think on, temp 0.1; two invalid runs discarded with cause: one batch
+ran during a concurrent branch checkout — old code, all-0.0 — and was re-run
+under a python-tree guard; see progress log conventions in `~/ollama-runs`
+(retained off-repo)):
+
+| Task | dsa r1–r4 | nc r1–r4 |
+|---|---|---|
+| eda-01 | 0 1 1 1 | 1 1 1 1 |
+| eda-02 | 1 1 1 1 | 1 1 1 1 |
+| eda-03 | 1 1 1 1 | 1 1 0 1 |
+| eda-04 | 1 1 1 0 | 0 1 0 1 |
+| eda-05 | 1 1 1 1 | 0 0 1 0 |
+
+Pooled: **dsa 18/20 (0.90, Wilson [0.70, 0.97]) vs no-critic 14/20 (0.70,
+Wilson [0.48, 0.85])**. Paired McNemar on 20 task-rounds: 6 discordant for
+dsa, 2 for no-critic (exact p ≈ 0.29). Reading: **directionally favors the
+critic (+0.20, eda-05 drives it: 4/4 vs 1/4) but NOT significant** — RQ3
+upgraded from "inconclusive" to "**suggestive, awaiting full-catalog
+repeats**". No critic-harm signal anywhere (the earlier 0.6-vs-1.0 scare was
+drift, confirmed dead: with interleaving, dsa ≥ nc in 3/4 rounds, tied 1).
 Rows labeled provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
 
 ## Free-lane smoke results (2026-09-10, Groq `openai/gpt-oss-120b`, $0)
