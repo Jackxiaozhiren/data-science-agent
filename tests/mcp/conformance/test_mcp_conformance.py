@@ -10,8 +10,9 @@ from dsa_mcp.server import app
 
 def test_tool_discovery_and_metadata() -> None:
     tools = list_mcp_tools()
-    assert len(tools) == 18  # 17 + analyze (§36)
+    assert len(tools) == 19  # 17 + analyze (§36) + export_artifact (ADR-002)
     assert any(t.name == "analyze" for t in tools)
+    assert any(t.name == "export_artifact" for t in tools)
     for t in tools:
         assert t.name
         assert t.description
@@ -38,7 +39,7 @@ def test_tools_list_endpoint() -> None:
     c = TestClient(app)
     r = c.get("/mcp/tools")
     assert r.status_code == 200
-    assert r.json()["count"] == 18
+    assert r.json()["count"] == 19
     r2 = c.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
     assert r2.status_code == 200
     assert "tools" in r2.json()["result"]

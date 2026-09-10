@@ -21,7 +21,6 @@ from dsa_datasets.validate import detect_format
 from dsa_tools.base import BaseTool
 from dsa_tools.errors import ToolExecutionError
 
-
 _NUMERIC_DTYPES = {
     pl.Float64,
     pl.Float32,
@@ -88,7 +87,7 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
             try:
                 if sub[col].equals(sub[inp.target]):
                     excluded_features.append(col)
-            except Exception:
+            except Exception:  # noqa: S112 - incomparable dtypes mean "not a copy"; keep column
                 continue
         feat_cols = [c for c in feat_cols if c not in excluded_features]
         if not feat_cols:

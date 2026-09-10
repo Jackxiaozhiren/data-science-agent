@@ -40,3 +40,9 @@ dist/
 site/
 apps/vscode/out/
 apps/vscode/node_modules/
+.mimosa/
+
+# DataSciBench adapter: upstream clone + gated GT never committed (§23)
+benchmarks/external/datascibench/.workspace/
+# GT-run checkpoint (resume state; canonical artifact is results/raw_runs.json)
+benchmarks/external/datascibench/results/raw_runs.partial.jsonl

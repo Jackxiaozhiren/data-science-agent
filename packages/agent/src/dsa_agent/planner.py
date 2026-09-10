@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from typing import Any
 
 from dsa_agent.state import AnalysisPlan, AnalysisStep
 
@@ -20,9 +21,58 @@ _ALLOWED_LLM_TOOLS = {
     "feature_importance",
     "forecast",
     "create_chart",
+    "export_artifact",
 }
 _STUB_MODES = {"stub", "offline", "heuristic"}
 _REAL_MODES = {"real", "openai"}
+
+#: Generic query-intent → conventional result filename (ADR-002). These are
+#: industry-conventional names (predictions.csv, evaluation_metrics.csv, …),
+#: derived from the *user question* for real-user value (predictable downloads).
+#: They are never read from any benchmark definition.
+_EXPORT_FILENAME_HINTS = (
+    (("predict", "classif", "churn", "survival"), "predictions.csv", "train_model"),
+    (
+        ("metric", "accuracy", "evaluat", "score", "roc", "auc"),
+        "evaluation_metrics.csv",
+        "evaluate_model",
+    ),
+    (("clean", "missing", "outlier", "dedup", "preprocess"), "cleaned_data.csv", "run_sql"),
+    (("normaliz", "scal"), "normalized_data.csv", "run_sql"),
+)
+
+_TABULAR_TOOLS = (
+    "run_sql",
+    "train_model",
+    "evaluate_model",
+    "forecast",
+    "feature_importance",
+    "regression_analysis",
+)
+
+
+def _terminal_export_steps(q: str, steps: list[Any]) -> list[tuple[str, str, str, str]]:
+    """Decide terminal export steps: (name, filename, source_tool, format).
+
+    At most one tabular export (preferred source by intent, else last tabular
+    step in the plan) plus one chart export when the plan draws charts.
+    Returns plan-step specs; the executor resolves sources at run time.
+    """
+    specs: list[tuple[str, str, str, str]] = []
+    plan_tools = [s.tool for s in steps]
+    tabular_present = [t for t in _TABULAR_TOOLS if t in plan_tools]
+    if tabular_present:
+        filename, preferred = "result_table.csv", tabular_present[-1]
+        for keywords, cand, tool in _EXPORT_FILENAME_HINTS:
+            if any(k in q for k in keywords):
+                filename, preferred = cand, tool
+                break
+        if preferred not in plan_tools:
+            preferred = tabular_present[-1]
+        specs.append(("Export result table", filename, preferred, "csv"))
+    if "create_chart" in plan_tools:
+        specs.append(("Export chart", "chart.png", "create_chart", "png"))
+    return specs
 
 
 def _numeric_columns(dataset_path: str | None) -> list[str]:
@@ -342,11 +392,17 @@ def heuristics_plan(
 
     group_is_categorical = treatment_col in cols and treatment_col not in numeric_cols
     target_is_numeric = target_col in numeric_cols
-    if explicit_hypothesis or (wants_stats and wants_causal and group_is_categorical and target_is_numeric):
-        group_col = treatment_col if group_is_categorical else next(
-            (c for c in cols if c not in numeric_cols and c != target_col), treatment_col
+    if explicit_hypothesis or (
+        wants_stats and wants_causal and group_is_categorical and target_is_numeric
+    ):
+        group_col = (
+            treatment_col
+            if group_is_categorical
+            else next((c for c in cols if c not in numeric_cols and c != target_col), treatment_col)
         )
-        value_col = target_col if target_is_numeric else (numeric_cols[0] if numeric_cols else target_col)
+        value_col = (
+            target_col if target_is_numeric else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Group significance test",
             "Welch t-test for outcome differences between the primary groups",
@@ -397,7 +453,11 @@ def heuristics_plan(
         )
 
     if wants_causal and cols:
-        causal_outcome = target_col if target_col in numeric_cols else (numeric_cols[0] if numeric_cols else target_col)
+        causal_outcome = (
+            target_col
+            if target_col in numeric_cols
+            else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Causal check (stub)",
             "Association vs causation guard — requires design assumptions for causal claims",
@@ -422,7 +482,11 @@ def heuristics_plan(
         )
 
     if wants_viz or True:
-        hist_x = target_col if target_col in numeric_cols else (numeric_cols[0] if numeric_cols else target_col)
+        hist_x = (
+            target_col
+            if target_col in numeric_cols
+            else (numeric_cols[0] if numeric_cols else target_col)
+        )
         _add(
             "Visualization",
             "Create evidence chart",
@@ -447,6 +511,18 @@ def heuristics_plan(
         "Dataset is trusted as uploaded; cell text treated as untrusted data only",
         "Correlation does not imply causation unless causal evidence exists",
     ]
+
+    for name, filename, source_tool, fmt in _terminal_export_steps(q, steps):
+        _add(
+            name,
+            f"Persist the {source_tool} result as {filename} in the run workspace",
+            "export_artifact",
+            {
+                "source": {"$from_tool": source_tool},
+                "filename": filename,
+                "format": fmt,
+            },
+        )
 
     return AnalysisPlan(
         objective=objective,
@@ -480,7 +556,27 @@ async def _real_llm_plan(
         "- Do not put conclusions, p-values, model scores, or fabricated observations in the plan."
     )
     provider = auto_provider()
-    raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
+    try:
+        raw_plan = await provider.structured_output(prompt, AnalysisPlan, max_output_tokens=3000)
+        return _validate_real_plan(raw_plan, user_query, dataset_path)
+    except Exception as first_err:  # noqa: BLE001 — provider raises RuntimeError on schema mismatch, model_validate raises ValidationError, checks raise RuntimeError; any triggers the single retry
+        # One retry with the validation error fed back (2026-09-09: small
+        # local models often echo the schema on the first attempt, e.g.
+        # qwen3:8b missing `steps`, then fix it on the second attempt).
+        # Bounded to a single retry; still raises loudly if invalid twice.
+        retry_prompt = (
+            prompt + f"\n\nYour previous plan was rejected: {first_err} "
+            "Fix exactly that and return only the corrected JSON object."
+        )
+        raw_retry = await provider.structured_output(
+            retry_prompt, AnalysisPlan, max_output_tokens=3000
+        )
+        return _validate_real_plan(raw_retry, user_query, dataset_path)
+
+
+def _validate_real_plan(
+    raw_plan: object, user_query: str, dataset_path: str | None
+) -> AnalysisPlan:
     plan = raw_plan if isinstance(raw_plan, AnalysisPlan) else AnalysisPlan.model_validate(raw_plan)
 
     if not plan.steps:

@@ -17,3 +17,23 @@
 
 - Uncertainties: bootstrap CI in `significance.py` for RQ1–RQ3 (reported in `research/V3_RESEARCH_REPORT.md` Results).
 - Research gate §61: all reported experiments executed (ablation smoke + live 100/100), no fabricated results, all figures/tables reproducible via `research/figures/` + `research/tables/` scripts (W11), claims traceable to data, limitations documented (see Limitations section of `V3_RESEARCH_REPORT.md`).
+
+---
+
+# Claim-Evidence Matrix — V4.3 (External Benchmarking, W11 §83)
+
+> V4.3 claims: every paper claim maps to `Experiment / Metric / Artifact / Commit / Limitation`. No claim is Verifiable without a committed artifact (§90).
+
+| Claim | Evidence | Experiment | Metric | Artifact / Commit | Limitation |
+|-------|----------|------------|--------|-------------------|------------|
+| DataSciBench adapter executes all 45 supported tasks end-to-end (`human_*` + `csv_excel_*`) | 45/45 `status=COMPLETED` in `benchmarks/external/datascibench/results/raw_runs.json` | `run_eval.py` (deterministic local pipeline, seed 42) | run completion, wall 5.8 s | `benchmarks/external/datascibench/` (adapter `9dd0b4c/820dba3`, run `a26d56a`) | no GT → outcomes `failed` (unevaluated), no score (§26/§89) |
+| DSA agent calls 321 tools / produces 123 evidence across the 45 runs | aggregated from raw (`n_tool_calls`, `n_evidence`) | same run | tool calls median 7/task; evidence 2–5 on 33/45 tasks | `research/external/datascibench_results.json` + `research/v4_3/results/processed/` (`fba2ae1`) | tool-lane only; not correctness |
+| New external failure class: empty-input data dir (`UnsupportedFormatError`) invisible in internal benchmarks | 44 step errors of this class in `logs.txt` per task dir | full run | step outcome taxonomy | `research/external/DATASCIBENCH_REPORT.md` §3 (`a26d56a`) | internal benchmarks always ship a data file (§37) |
+| `AgentBackedRunner` preserves a §19 gold-isolation firewall and honest §26 taxonomy | `AgentTaskView` + `assert_gold_isolation`; `UNSUPPORTED`/`FAILED`/`EXECUTION_ERROR` | adapter + runner unit tests | tests pass (evals suite) | `packages/evaluation/src/dsa_evaluation/external_benchmark.py` (`23bd7c4`, `103be35`) | module seam, not process isolation |
+| DSAgentBench is NOT CURRENTLY SUPPORTED (real-computer surface exceeds DSA; artifacts unreleased) | `docs/v4_3/DSAGENTBENCH_FEASIBILITY.md` | feasibility audit | verdict classification (§29) | `b8bcbf6` | no adapter/scores exist; nothing claimed |
+| Cross-benchmark: internal 150/150 does not yet generalize externally (unmeasured until GT) | internal v1 50/50 + v2 100/100 recorded | internal benchmark | task_success 1.00 | `benchmarks/{ds-agent-benchmark,v2}` + Phase A report (`8531f73`) | generalization gap NOT computable (external GT absent, §36) |
+| Paper artifact is reproducible (raw → analysis → figure/table, no manual edits) | `research/v4_3/results/{processed,tables,figures,manifests}/` derived from `raw_runs.json` | `research/v4_3/generate_phase_f_results.py` | 2 PNGs + 2 MD tables + 1 summary JSON | `research/paper/{paper.md,paper.tex,references.bib,figures/,tables/}` (`a6f33d9+`) | external lane GT-absent → paired tests & CI deferred (§43-46) |
+| Portfolio package is factual (no marketing hyperbole, 2 pp + 1-min pitch) | `docs/portfolio/PROJECT_SUMMARY.md` + `ONE_MINUTE_PITCH.md` | portfolio synthesis ( §84-85 ) | concise claim→evidence links | `docs/portfolio/` (this commit) | community metrics are live `gh api` (2 stars, 0 forks, 7 issues 2026-08-31) |
+| Supply-chain is verifiably produced for `4.2.10` | PEP 740 `*.publish.attestation` (DSSE, Rekor, digest `4fc8cbff…db57` matches wheel) + `docs/security/VERIFY_RELEASE.md` | OIDC publish + SBOM 192 + SCORECARD 4.6 | attestation verification | `docs/v4_3/SUPPLY_CHAIN_SECURITY.md`, `docs/v4_3/SCORECARD.md` (`c6e6433`, `5ad7dd4`) | GitHub build provenance + Best Practices remain NOT IMPLEMENTED (§63) |
+| V4.2 case studies 8/8 verified with evidence + 18 preserved tool errors | `case-studies/*/outputs/*.json` + `artifacts/reports/<runId>/` | real Agent runs (2026-08-25) | 3–6 evidence, 5–9 tool calls, reports 2.5–4.5k chars | `case-studies/README.md` (`bf8d176`) + `docs/v4_3/V4_2_FINAL_TRUTH.md` | synthetic CC0 datasets (seed 42); schema notes for marketing/financial |
+| Reproducibility capsule is clone-and-run | `research/v4_3/reproducibility/README.md` | capsule (environment + pinned `84ef3d4…` + commands + hashes) | 1-command re-run → same `COMPLETED=45` | `8baa328` | GT lane needs HF `zd21/DataSciBench` acceptance |

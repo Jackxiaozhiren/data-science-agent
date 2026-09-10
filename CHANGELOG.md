@@ -1,6 +1,102 @@
 # Changelog
 
+## 4.3.3 — GT-Lane Scores + Adapter v2 (first measured external results)
+
+Patch release, no breaking public API change. First release whose external
+numbers are **measured GT scores** rather than execution-only honesty markers.
+
+### Measured (original upstream evaluator, pinned commit 84ef3d4d, no tuning)
+
+- **DataSciBench GT lane: 44/45 scored, 5 passed (CR ≥ 0.5, Wilson 95%
+  [0.050, 0.240]), mean CR 0.088** — human_ 4/24 (mean 0.141, max 0.600);
+  csv_excel_ 1/20 (mean 0.025); human_7 `execution_error` (OOM on 79 MB xlsx).
+- **Adapter v2** (`ADAPTER_VERSION = "2.0"`): maps genuine agent artifacts onto
+  evaluator-expected filenames (filenames-only from metric YAML, never GT
+  values; `dsa_file_map.json` audit). v1→v2 delta (+5 passes, +0.062 mean CR)
+  isolates the output-layout share; remaining failures are wrong-content 0s +
+  VLM-judge credential gap + stub surface.
+- **Generalization gap: 0.886, descriptive** (internal 150/150 vs external 5/44,
+  Wilson CIs both ends; §53 construct caveat in `CROSS_BENCHMARK_MATRIX.md`).
+
+### Added
+
+- `external-validation/` reviewer kit + live invitation (Discussion #69; study
+  still NOT CONDUCTED until a genuine response arrives).
+- `GOVERNANCE.md`; `attest-build-provenance@v2` wired in `publish.yml`
+  (live `gh attestation verify` pending this tag's artifacts).
+- Phase F GT pass: Wilson CIs, `tables/datascibench_gt_scores.md`,
+  `figures/cr_distribution.png`.
+
+### Fixed
+
+- Adapter CSV matcher keyed on `data_name` (= task_id; prior runs parsed no score).
+- `run_eval.py` per-task checkpointing (two SIGKILLs at 42/45 previously lost all).
+- SECURITY.md stale OIDC status; ruff clean (173+3 files).
+
+### Verified
+
+- `pytest 324 passed`, `mypy 108 clean`, `ruff clean`, `mkdocs --strict PASS`,
+  `docker valid`, web build + vscode compile PASS, `dsa verify-release v4.3.3
+  17/17 PASS`, `check_public_claims` 0 issues (post-tag).
+
+## 4.3.2 — Lineage Unification (merge origin/main 4.3.0 + local 4.3.1)
+
+Unifies the two 4.3.x lineages (published adoption line + spec external-benchmark
+line) into one tree. Ends the divergence noted in `docs/v4_3/SUPPLY_CHAIN_SECURITY.md` §0.
+Patch bump: no breaking public API change.
+
+### Merged
+
+- From `origin/main`: auditable real-model execution path, four controlled evaluation
+  variants, publication-integrity validator, hardened `publish.yml` (tag/version match
+  gate, ancestor check), real-model evaluation workflow, issue/discussion templates,
+  roadmap, leaderboard/contributor automation, adoption docs (both 4.3.0 CHANGELOG
+  sections preserved verbatim — see below).
+- From local: V4.3 external-benchmark evidence, prompt-completion backfill
+  (`UPSTREAM.md`, `research/v4_3/datascibench/`, `BENCHMARK_V3_PROPOSAL.md`,
+  `external-validation/` kit, `OSPS_BASELINE.md`, `VERIFY_PYPI_RELEASE.md`).
+
+### Merge decisions (Release Truth first)
+
+- `dsa verify-release` keeps the **executing** verifier (all published gates describe
+  it); the evidence-only design was not adopted (supports only the foreign manifest
+  schema). `tests/test_release_verifier_allowlist.py` not taken; its narrow
+  release-candidate ref exception (`_is_release_candidate_ref`) ported into
+  `scripts/check_public_claims.py`.
+- `release/v4.3.0/manifest.json` kept as tagged (`07e6302`).
+- `uv.lock` relocked, SBOM regenerated for 4.3.2.
+
+### Fixed
+
+- `ruff` I001/S112 in `feature_importance.py`, `ruff format` in `planner.py`
+  (both from merged tree — now clean).
+- Test allowlist now covers `UPSTREAM.md` (§36 record, not benchmark content).
+
+### Verified
+
+- `pytest 324 passed`, `mypy 108 clean`, `ruff check + format clean (173 files)`,
+  `mkdocs --strict PASS`, `docker valid`, web build PASS, vscode compile PASS,
+  `npm audit --audit-level=high` 0, `dsa verify-release v4.3.2 17/17 PASS`,
+  `check_public_claims` 0 issues (post-tag).
+
+## 4.3.1 — CI Hardening + GT Lane Robustness (V4.3 patch)
+
+### Fixed
+
+- **CI gate `ruff format --check`**: `verify_release.py` long lines reformatted (commit `b957177` had 1 file unformatted) — `ruff format` now `161 files already formatted`.
+- **DataSciBench GT lane subprocess**: `adapter.py` now prefers `workspace/venv/bin/python` (has `metagpt`) with `PYTHONPATH`, parses `evaluation_results/{model}_results.csv` `result_cr` for `passed/failed + score`; `TaskOutcome` import fixed, `sys.executable` fallback. GT present but evaluator missing `loguru` now returns `failed` honest with `evaluator_unavailable` detail, not `execution_error`.
+
+### Changed
+
+- Version `4.3.0 → 4.3.1` (patch, no API change; `SBOM 192 → 193`).
+
+### Verified
+
+- `pytest 276`, `mypy 105 clean`, `ruff OK`, `npm 13/13`, `docker valid`, `dsa verify-release v4.3.1 17/17 PASS`; `DataSciBench` `45/45 failed` honest (execution-only until workspace `venv` fully closed; `uv pip` now closes `metagpt`).
+
 ## 4.3.0 — Adoption, Verifiable Evaluation & Project Reliability
+
+> Merged from `origin/main` (published lineage): this 4.3.0 section and the one below it describe the same version number from two lineages merged for 4.3.2. Both are preserved; neither rewritten.
 
 ### Added
 
@@ -38,6 +134,31 @@
 
 - No intentional breaking change to the Stable public SDK surface.
 - Python **3.12+** remains the supported baseline for this release; the separate Python 3.14 and Node 26 base-image Dependabot proposals are intentionally excluded from this candidate and require independent review.
+
+## 4.3.0 — External Scientific Validation + Publication Readiness + Supply-Chain Trust (V4.3 W1-W12, Phase A-L)
+
+### Added
+
+- **External benchmark adapter architecture** (W2 §15-21): `ExternalBenchmarkAdapter` Protocol + `AgentBackedRunner` + `AgentTaskView` + gold-leakage firewall (`assert_gold_isolation`) + `TaskOutcome` (`passed/failed/unsupported/execution_error`) + `ExternalBenchmarkManifest` (§18, 15 fields) in `packages/evaluation/src/dsa_evaluation/external_benchmark.py` (vendored to `src/data_science_agent/_vendor/`), 10 tests (`tests/evals/test_external_benchmark.py`).
+- **DataSciBench integration** (W3 §22-27): operator-fetched pinned workspace (`84ef3d4d94d7362a5149cf14a73dc168fc4f2f33`) at `benchmarks/external/datascibench/` (adapter, manifest `222 tasks`, README, LICENSE_NOTES `no LICENSE` honest), smoke + full 45-task run (`human_* 25 + csv_excel_* 20`, 5.8 s wall, 321 tool calls, 123 evidence) via `run_eval.py` → `results/{raw_runs.json,datascibench_results.json}`; honest execution-only (no GT → `failed` unevaluated, not fabricated, §89).
+- **DSAgentBench feasibility** (W4 §28-32): `docs/v4_3/DSAGENTBENCH_FEASIBILITY.md` → `NOT CURRENTLY SUPPORTED` (275 tasks unreleased + real-computer surface absent; no silent substitution, §30).
+- **Cross-benchmark matrix** (W5 §33-37): `research/v4_3/CROSS_BENCHMARK_MATRIX.md` (internal 150/150 vs external unscored; Generalization Gap `Internal − External` deferred until GT; failure transfer matrix — new `empty-input UnsupportedFormatError` 44 steps invisible internally).
+- **Publication statistics pipeline** (W6 §38-48): `research/v4_3/results/{raw,processed,figures,tables,manifests}/` via `research/v4_3/generate_phase_f_results.py` (raw → analysis → artifact, no manual edits); `research/v4_3/generate_phase_f_results.py` + `phase_f_manifest.json` with repeated-run provenance.
+- **Reproducibility capsule** (W9 §70): `research/v4_3/reproducibility/README.md` (environment + pinned benchmark commit `84ef3d4…` + commands + expected artifacts + hashes; clone → `DSC_WORKSPACE=… run_eval.py` → `raw_runs.json` → `generate_phase_f_results.py`).
+- **Research paper + portfolio** (W11 §78-86): `research/paper/{paper.md,paper.tex,references.bib,figures/,tables/,appendix/CROSS_BENCHMARK_MATRIX.md}` (14 sections §80, reproducible figures/tables from `raw_runs.json`); `docs/portfolio/{PROJECT_SUMMARY.md (≈2 pp),ONE_MINUTE_PITCH.md}` (honest §84-85, no marketing hyperbole); `research/claim-evidence-matrix.md` updated (W11 §83, 11 claims).
+- **Community adoption evidence** (W10 §71-77): `docs/v4_3/{EARLY_ADOPTER_GUIDE.md,COMMUNITY_STATUS.md (live gh api 2 stars/0 forks/7 issues 2026-08-31),.github/ISSUE_TEMPLATE/user-feedback.yml}` — no vanity fabrication (§73).
+- **Supply-chain hardening** (W8 §55-64): PyPI Trusted Publishing OIDC (`publish.yml` `environment: pypi` + `id-token: write`, live `4.2.10/4.3.0` on PyPI) + PEP 740 PyPI attestations verified (`*.publish.attestation`, DSSE digest `4fc8cbff…db57` matches wheel, `docs/security/VERIFY_RELEASE.md`) + SBOM 192 + `docs/v4_3/{SUPPLY_CHAIN_SECURITY.md,SCORECARD.md (4.6/10, honest blind spots)}`.
+
+### Changed
+
+- Version `4.2.10 → 4.3.0` (minor — new external-benchmark + research surfaces; no breaking SDK/CLI change; `Agent._version`/`CITATION.cff`/`pyproject.toml`/tests/vendors synced).
+- `research/paper/` now ships the V4.3 14-section paper artifact; prior V2 draft retained as `V2_paper_draft.md`.
+- `research/claim-evidence-matrix.md` expanded to 11 V4.3 claims (paper + portfolio + supply-chain + reproducibility).
+
+### Verified
+
+- Live gates at `v4.3.0` (`c8903d4` era + Phases B–J): `pytest 276`, `mypy 105 clean`, `ruff OK`, `npm 13/13`, `docker valid`, `dsa verify-release 12/12`, `dsa demo COMPLETED`, `dsa --limit 5 @1.00`, `mkdocs --strict` PASS, `check_public_claims 0`, SBOM 192, vendored wheel 0 `dsa-*` Requires-Dist, `benchmarks/external/datascibench` 45/45 execution, `research/v4_3/results/` generated.
+- External: DataSciBench `45/45 execution` honest (no GT score); DSAgentBench `NOT CURRENTLY SUPPORTED` honest; internal-vs-external Generalization Gap deferred (§36 §89).
 
 ## 4.2.10 — Publish Umbrella Only
 

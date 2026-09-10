@@ -1,6 +1,4 @@
 name: CI
-# Actions permissions recovery verification trigger.
-
 on:
   push:
     branches: [main]
@@ -17,6 +15,8 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
