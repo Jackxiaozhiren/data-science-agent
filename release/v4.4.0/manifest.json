@@ -1,0 +1,106 @@
+{
+    "version": "4.4.0",
+    "tag": "v4.4.0",
+    "commit": "PENDING-RELEASE-COMMIT",
+    "python": "Python 3.12.14",
+    "node": "v24.15.0",
+    "docker": "Docker version 29.7.2, build a7dcaa6",
+    "package": "jack-data-science-agent 4.4.0",
+    "benchmark_version": "0.3.0",
+    "dataset_version": "v2 0.3.0 (30 datasets)",
+    "evaluator_version": "evaluator_v2 (10 dims)",
+    "environment": {
+        "os": "macOS-26.6.2-arm64-arm-64bit",
+        "arch": "arm64",
+        "python": "Python 3.12.14",
+        "node": "v24.15.0",
+        "docker": "Docker version 29.7.2, build a7dcaa6"
+    },
+    "timestamp": "2026-09-10T07:33:39+00:00",
+    "gates": {
+        "pytest": "345 passed",
+        "mypy": "109 clean (packages apps/api src)",
+        "ruff": "All checks passed + 175 files formatted",
+        "npm": "web build PASS; vscode compile PASS; npm audit --audit-level=high 0",
+        "docker": "valid",
+        "mkdocs_strict": "PASS",
+        "verify_release": "17/17 PASS (dsa verify-release v4.4.0)",
+        "case_studies": "8/8 verified (real Agent, 18 tool failures preserved)",
+        "internal_benchmark": "50/50 @1.00 (v1) + 100/100 @1.00 (v2, post CLI-fix re-verified)",
+        "external_benchmark": "DataSciBench GT lane v2: 44/45 scored, 5 passed, mean CR 0.088; human_7 execution_error (OOM); DSAgentBench NOT CURRENTLY SUPPORTED",
+        "free_lane_smoke": "ollama qwen3:8b $0: dsa 0.60x3+1.0, ABAB dsa 18/20 vs no-critic 14/20 (p~0.29, suggestive)",
+        "check_public_claims": "0 issues (post-tag)",
+        "sync_vendor": "in sync",
+        "uv_lock": "relocked (umbrella 4.4.0)"
+    },
+    "external_benchmark": {
+        "datascibench": {
+            "benchmark_name": "DataSciBench",
+            "benchmark_version": "1.0",
+            "benchmark_commit": "84ef3d4d94d7362a5149cf14a73dc168fc4f2f33",
+            "adapter_version": "2.0",
+            "source": "https://github.com/THUDM/DataSciBench",
+            "license": "NONE STATED upstream (citation requested); GT gated zd21/DataSciBench",
+            "task_count": 222,
+            "supported": 45,
+            "unsupported": 177,
+            "scored": 44,
+            "passed": 5,
+            "pass_rate_wilson95": [0.0495, 0.2398],
+            "mean_cr": 0.0881,
+            "results": "benchmarks/external/datascibench/results/raw_runs.json",
+            "manifest": "benchmarks/external/datascibench/manifest.json",
+            "evaluator_version": "original: experiments/evaluate.py + calculate_final_metric.py",
+            "generalization_gap": 0.8864
+        },
+        "dsagentbench": {
+            "status": "NOT CURRENTLY SUPPORTED",
+            "reason": "artifacts unreleased + real-computer IDE/terminal/browser/DB surface absent",
+            "audit": "docs/v4_3/DSAGENTBENCH_FEASIBILITY.md"
+        }
+    },
+    "research": {
+        "paper": "research/paper/paper.md + paper.tex + references.bib + figures/ + tables/ + appendix/CROSS_BENCHMARK_MATRIX.md",
+        "cross_benchmark_matrix": "research/v4_3/CROSS_BENCHMARK_MATRIX.md",
+        "results": "research/v4_3/results/{raw,processed,figures,tables,manifests}/ (generate_phase_f_results.py GT pass)",
+        "reproducibility_capsule": "research/v4_3/reproducibility/README.md",
+        "claim_evidence_matrix": "research/claim-evidence-matrix.md"
+    },
+    "publication": {
+        "portfolio": "docs/portfolio/PROJECT_SUMMARY.md + ONE_MINUTE_PITCH.md",
+        "figures": "research/paper/figures/{category_evidence.png,latency_report.png} + research/v4_3/results/figures/cr_distribution.png"
+    },
+    "supply_chain": {
+        "trusted_publishing": "OIDC on version tags (publish.yml environment: pypi, id-token: write; tag/version match gate + ancestor check)",
+        "wheel": "0 dsa-* Requires-Dist; dsa console script included; self-contained _vendor/",
+        "sbom": "release/sbom.json (192 components, 4.4.0)",
+        "sbom_sha256": "05fee5a7747fa9ef06366286e884585b051e6725faf9220cebe90994b4bbe96e",
+        "sbom_cyclonedx_sha256": "bb43cd074359483245403ed5c4bf5c1b8589910510ff0761c59e635975b7af59",
+        "attestations": "PyPI PEP 740 path documented in docs/security/VERIFY_PYPI_RELEASE.md; GitHub build provenance wired (attest-build-provenance@v2), live check on tag artifacts",
+        "verify_release_doc": "docs/security/VERIFY_RELEASE.md + docs/security/VERIFY_PYPI_RELEASE.md",
+        "scorecard": "docs/v4_3/SCORECARD.md (Scorecard 5.5.0 -> 4.6/10, honest blind spots)",
+        "osps_baseline": "docs/security/OSPS_BASELINE.md (29 items: 23 PASS / 3 PARTIAL / 0 FAIL / 3 NOT VERIFIED)"
+    },
+    "artifacts": {
+        "wheel": "dist/jack_data_science_agent-4.4.0-py3-none-any.whl",
+        "sdist": "dist/jack_data_science_agent-4.4.0.tar.gz",
+        "sbom": "release/sbom.json",
+        "sbom_cyclonedx": "release/sbom.cyclonedx.json"
+    },
+    "release_workflow": ".github/workflows/publish.yml (OIDC, pinned actions, build only umbrella)",
+    "citation": "CITATION.cff 4.4.0 2026-09-10",
+    "since_4_3_3": [
+        "export_artifact tool + executor $from_step/$from_tool refs + planner terminal export (ADR-002)",
+        "ollama + openai-compat free providers, DSA_MAX_COST_USD cap, think/temperature/timeout, planner single retry",
+        "benchmark --datasets sibling derivation (v2 CLI fix) + regression test",
+        "GOVERNANCE.md, SECURITY OIDC-live correction, OSPS 23/3/0",
+        "attest-build-provenance@v2 wired in publish.yml",
+        "DataSciBench GT lane v1+v2 scores, Phase F GT pass, ABAB RQ3 (18/20 vs 14/20)"
+    ],
+    "notes": [
+        "V4.4 MINOR release — new surfaces (export tool, free providers, cap); no breaking public SDK/CLI change.",
+        "External scores honestly reported; RQ3 suggestive-not-significant; VLM-judge credential gap disclosed.",
+        "Tags v4.2.0-v4.3.3 unchanged (release-truth rule).",
+        "commit field is filled by the follow-up manifest commit pinning the release commit (v4.3.x pattern)."
+    ]
+}

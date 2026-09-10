@@ -1,5 +1,40 @@
 # Changelog
 
+## 4.4.0 — Free-Model Lane + Export Track + CLI Fix (minor, no breaking change)
+
+New surfaces since 4.3.3: `export_artifact` tool, `ollama` / `openai-compat`
+providers, `DSA_MAX_COST_USD` cap; fixes: benchmark `--datasets` default,
+planner single-retry, ollama think/temperature/timeout.
+
+### Measured
+
+- **DataSciBench GT lane v2: 44/45 scored, 5 passed (CR ≥ 0.5), mean CR 0.088**
+  (v1 was 0/44, 0.026); gap 0.886 descriptive; human_7 OOM recorded.
+- **Free-lane 4-way smoke** (ollama qwen3:8b, $0): dsa 0.60×3 (+1.0 rep4);
+  ABAB dsa/no-critic **18/20 vs 14/20** (McNemar p≈0.29 — suggestive, not
+  significant; RQ3 open). Groq gpt-oss-120b lane: dsa/no-critic 5/5.
+- **Internal: v1 50/50, v2 100/100** (v2 scare root-caused to CLI default bug,
+  fixed + regression-tested; manifests' claims re-verified live).
+
+### Added
+
+- `export_artifact` tool + executor `$from_step`/`$from_tool` refs + planner
+  terminal export (ADR-002); MCP 19 tools; adapter exact-name preference.
+- Free providers with honest labeling; publication validator unchanged
+  (paid-lane-only leaderboard).
+- `GOVERNANCE.md`; `attest-build-provenance@v2` wired (live check on tag artifacts).
+
+### Fixed
+
+- Benchmark `--datasets` sibling derivation (v2 catalog-only was 0.57).
+- SECURITY.md stale OIDC status; OSPS 23/3/0 (+3 NOT VERIFIED owner items).
+
+### Verified
+
+- `pytest 345 passed`, `mypy 109 clean`, `ruff clean`, `mkdocs --strict PASS`,
+  `docker valid`, web/vscode build PASS, `dsa verify-release v4.4.0 17/17 PASS`,
+  `check_public_claims` 0 issues (post-tag).
+
 ## 4.3.3 — GT-Lane Scores + Adapter v2 (first measured external results)
 
 Patch release, no breaking public API change. First release whose external
