@@ -247,6 +247,35 @@ comparisons on stochastic local models require **interleaved ABAB order**,
 never all-of-A-then-all-of-B. RQ3 stays open pending an interleaved design.
 Rows labeled provider `ollama`, model `qwen3:8b`; never merged with paid-lane rows.
 
+## Free-lane smoke results (2026-09-10, Groq `openai/gpt-oss-120b`, $0)
+
+Second within-model 4-way comparison, internal v1 5-task smoke
+(`--limit 5`, `DSA_LLM_PROVIDER=openai-compat`,
+`DSA_OPENAI_COMPAT_BASE_URL=https://api.groq.com/openai/v1`,
+`DSA_LLM_FALLBACK=error`, `DSA_MAX_COST_USD=2`, commit `712e9201`).
+All four rows share the task sequence `eda-01..eda-05`, real mode, and zero
+non-rate-limit errors; every call carries a Groq `chatcmpl-*` response ID.
+Spend $0 (free tier, `cost_usd` unpriced by design).
+
+| Variant | Pass | Clean (excl. 429s) |
+|---|---:|---|
+| dsa | 5/5 (1.00) | 5/5, zero errors |
+| dsa-no-critic | 5/5 (1.00) | 5/5, zero errors (after one cooldown re-run; first attempt had 1× TPM 429) |
+| llm-tools | 1/5 (0.20) | 1/1 clean success; 4× HTTP 429 TPM-429 (free-tier 8000 tokens/min ceiling) |
+| llm-only | 0/5 (0.00) | 5/5 clean, honest control zero |
+
+Reading (honest, n=5 each): the DSA pipeline rows are clean 5/5 while both
+vanilla baselines score ~0 — but **no ablation claim is supported**.
+dsa and dsa-no-critic tie at ceiling (no critic signal at n=5 EDA), and the
+llm-tools row is **incomplete by infrastructure, not capability**: its fast
+plan+answer bursts exceed Groq's 8000 TPM free limit, while the slower DSA
+rows spread the same token budget over minutes and stay under it. A paced
+runner (honor `retry-after`) would be needed for a fair llm-tools row; that
+is a product change, out of scope for this smoke. Rows labeled provider
+`openai-compat`, model `openai/gpt-oss-120b`; never merged with paid-lane
+rows. Local rows carry no `workflow_manifest.json`, so the publication
+validator reports `matrix_valid=false` for them by design.
+
 ## Pricing assumptions
 
 Model pricing changes over time. The benchmark code therefore does not embed a permanent provider price table.
