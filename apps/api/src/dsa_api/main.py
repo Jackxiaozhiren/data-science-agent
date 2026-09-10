@@ -1,7 +1,16 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from dsa_api.core.config import settings
+from dsa_api.core.database import Base, engine
+
+# Import ORM models so their tables register on Base.metadata before create_all.
+from dsa_api.models import analysis as _analysis_models  # noqa: F401
+from dsa_api.models import dataset as _dataset_models  # noqa: F401
+from dsa_api.models import experiment as _experiment_models  # noqa: F401
 from dsa_api.routers.analysis import router as analysis_router
 from dsa_api.routers.datasets import router as datasets_router
 from dsa_api.routers.experiments import router as experiments_router
@@ -17,7 +26,17 @@ try:
 except Exception:  # pragma: no cover
     mcp_app_v4 = None  # type: ignore[assignment]
 
-app = FastAPI(title=settings.app_name, version=settings.version)
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    """Create ORM tables on startup so fresh databases (e.g. Render sqlite)
+    accept writes immediately. Safe on existing databases (checkfirst)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(title=settings.app_name, version=settings.version, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
