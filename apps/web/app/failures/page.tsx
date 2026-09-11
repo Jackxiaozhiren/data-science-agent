@@ -94,7 +94,7 @@ export default async function FailuresPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm"><TriangleAlert className="size-4 text-amber-600" aria-hidden /> Failure log — top tools by error count</CardTitle>
-          <CardDescription className="text-xs">Taxonomy source: packages/evidence/src/dsa_evidence/failure_taxonomy.py</CardDescription>
+          <CardDescription className="text-xs">Taxonomy source: <code className="break-all font-mono">packages/evidence/src/dsa_evidence/failure_taxonomy.py</code></CardDescription>
         </CardHeader>
         <CardContent>
           {stats.byTool.length === 0 ? (

@@ -13,6 +13,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  web-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm --prefix apps/web ci --legacy-peer-deps
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - run: npm --prefix apps/web run build 2>&1 | tail -n 10
+      - run: node apps/web/scripts/regression.mjs
+      - name: Upload regression screenshots
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-regression-screenshots
+          path: output/playwright/regression/
+          retention-days: 7
   ci:
     runs-on: ubuntu-latest
     permissions:

@@ -59,7 +59,7 @@ export default function ResearchPage() {
       </Card>
       <Card>
         <CardContent className="p-4 pt-4 text-xs leading-5 text-zinc-500">
-          Runner provenance: ablation configs at <code className="font-mono">research/experiments/ablation_matrix.py</code> (A LLM-only → F Full). Significance: <code className="font-mono">packages/evaluation/src/dsa_evaluation/significance.py</code>.
+          Runner provenance: ablation configs at <code className="break-all font-mono">research/experiments/ablation_matrix.py</code> (A LLM-only → F Full). Significance: <code className="break-all font-mono">packages/evaluation/src/dsa_evaluation/significance.py</code>.
         </CardContent>
       </Card>
     </div>
