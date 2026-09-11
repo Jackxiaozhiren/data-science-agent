@@ -3,7 +3,6 @@ import { Database, Hash, Table2, FileDigit, ArrowRight, Fingerprint } from "luci
 import { apiUrl } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/app/components/ui/tabs";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatCard } from "@/app/components/data/StatCard";
@@ -126,19 +125,33 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
                   <div className="flex justify-between"><span className="text-zinc-500">Shape</span><span className="font-medium tabular-nums">{prof.rows} × {prof.columns}</span></div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader>
-                  <CardTitle className="text-sm">First columns</CardTitle>
-                  <CardDescription className="text-xs">Showing up to 8 of {prof.column_profiles.length} columns — full list under Schema.</CardDescription>
+                  <CardTitle className="text-sm">Column health</CardTitle>
+                  <CardDescription className="text-xs">Null share per column — over 20% gets flagged. Showing up to 8 of {prof.column_profiles.length}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-1.5 text-sm">
-                    {prof.column_profiles.slice(0, 8).map((c) => (
-                      <li key={c.name} className="flex items-center justify-between gap-2">
-                        <code className="truncate font-mono text-xs" title={c.name}>{c.name}</code>
-                        <Badge variant="secondary">{c.dtype}</Badge>
-                      </li>
-                    ))}
+                  <ul className="space-y-2.5 text-sm">
+                    {prof.column_profiles.slice(0, 8).map((c) => {
+                      const nullPct = prof.rows > 0 ? (c.null_count / prof.rows) * 100 : 0;
+                      const flagged = nullPct > 20;
+                      return (
+                        <li key={c.name}>
+                          <div className="flex items-center justify-between gap-2">
+                            <code className="min-w-0 flex-1 truncate font-mono text-xs" title={c.name}>{c.name}</code>
+                            <span className={`shrink-0 text-xs tabular-nums ${flagged ? "font-semibold text-amber-700" : "text-zinc-500"}`}>
+                              {flagged ? `⚠ ${nullPct.toFixed(1)}% null` : `${nullPct.toFixed(1)}% null`} · {c.unique_count ?? "—"} uniq
+                            </span>
+                          </div>
+                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={`${c.name}: ${nullPct.toFixed(1)}% null values`}>
+                            <div
+                              className={`h-full rounded-full ${flagged ? "bg-amber-400" : "bg-emerald-500"}`}
+                              style={{ width: `${Math.max(2, Math.min(100, nullPct))}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </CardContent>
               </Card>
