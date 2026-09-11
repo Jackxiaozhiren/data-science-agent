@@ -68,7 +68,19 @@ function waitForServer(url, timeoutMs = 90000) {
 const server = spawn("npx", ["next", "start", "--port", PORT], {
   cwd: webDir,
   stdio: ["ignore", "pipe", "pipe"],
+  // Own process group so cleanup can SIGKILL the whole tree (npx wrapper
+  // alone may leave next-server orphaned, hanging CI until timeout).
+  detached: process.platform !== "win32",
 });
+server.unref();
+function killServer() {
+  try {
+    if (server.pid && process.platform !== "win32") process.kill(-server.pid, "SIGKILL");
+    else server.kill("SIGKILL");
+  } catch {
+    try { server.kill("SIGKILL"); } catch { /* already gone */ }
+  }
+}
 let serverLog = "";
 server.stdout?.on("data", (d) => { serverLog += d.toString().slice(-2000); });
 server.stderr?.on("data", (d) => { serverLog += d.toString().slice(-2000); });
@@ -124,12 +136,12 @@ try {
   failures.push(`harness: ${e instanceof Error ? e.message : String(e)}\n${serverLog.slice(-1500)}`);
 } finally {
   await browser?.close();
-  server.kill("SIGTERM");
+  killServer();
 }
 
 console.log(`\nregression: ${ROUTES.length * VIEWPORTS.length - failures.length}/${ROUTES.length * VIEWPORTS.length} checks passed, screenshots in ${OUT}`);
 if (failures.length > 0) {
   console.error("FAILURES:\n- " + failures.join("\n- "));
-  process.exit(1);
 }
-console.log("all green");
+// Force-exit: lingering child handles must never hang CI.
+process.exit(failures.length > 0 ? 1 : 0);
