@@ -168,16 +168,22 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
                   action={<Link href={`/analysis?dataset=${ds.id}`}><Button size="sm">Ask a question →</Button></Link>}
                 />
               ) : (
-                <ul className="divide-y divide-zinc-100">
-                  {analyses.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-3 py-2.5">
-                      <Link href={`/analysis/${a.id}`} className="min-w-0 flex-1 truncate text-sm hover:underline">
-                        {a.user_query || a.id}
-                      </Link>
-                      <StatusBadge status={a.status} />
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <p className="mb-2 text-xs text-zinc-500">Session chain, newest first — open any run to ask a follow-up from its trace page.</p>
+                  <ul className="divide-y divide-zinc-100">
+                    {analyses.map((a, i) => (
+                      <li key={a.id} className="flex items-center gap-3 py-2.5">
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 font-mono text-[11px] text-zinc-500" title={`Session #${analyses.length - i}`}>
+                          {analyses.length - i}
+                        </span>
+                        <Link href={`/analysis/${a.id}`} className="min-w-0 flex-1 truncate text-sm hover:underline">
+                          {a.user_query || a.id}
+                        </Link>
+                        <StatusBadge status={a.status} />
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </CardContent>
           </Card>

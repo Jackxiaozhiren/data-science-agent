@@ -13,7 +13,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
   if (n === "FAILED" || n === "FAIL" || n === "ERROR") {
     return <Badge variant="destructive" className={className}>{status}</Badge>;
   }
-  if (n === "RUNNING" || n === "PENDING" || n === "QUEUED" || n === "STARTED") {
+  if (n === "RUNNING" || n === "PENDING" || n === "QUEUED" || n === "STARTED" || n === "HUMAN_REVIEW") {
     return (
       <Badge variant="warning" className={className}>
         <span className="size-1.5 animate-pulse rounded-full bg-amber-500" aria-hidden />

@@ -15,8 +15,9 @@ async function fetchRun(id: string): Promise<RunDetail | null> {
   }
 }
 
-export default async function TracePage({ params }: { params: Promise<{ runId: string }> }) {
+export default async function TracePage({ params, searchParams }: { params: Promise<{ runId: string }>; searchParams: Promise<{ from?: string }> }) {
   const { runId } = await params;
+  const { from } = await searchParams;
   const run = await fetchRun(runId);
   if (!run) {
     return (
@@ -33,5 +34,5 @@ export default async function TracePage({ params }: { params: Promise<{ runId: s
   }
 
   const reportUrl = apiUrl(`/api/v1/analysis/${runId}/report?format=markdown`);
-  return <RunInspector run={run} reportUrl={reportUrl} />;
+  return <RunInspector run={run} reportUrl={reportUrl} fromRunId={from} />;
 }

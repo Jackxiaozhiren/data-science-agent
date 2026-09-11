@@ -26,7 +26,7 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <Card className={cn(className)}>
+    <Card className={cn("min-w-0", className)}>
       <CardContent className="p-4 pt-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
