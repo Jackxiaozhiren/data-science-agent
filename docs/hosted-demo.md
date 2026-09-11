@@ -6,10 +6,10 @@ The repository contains a Next.js web app (`apps/web`) and FastAPI service (`app
 
 The verified deployment shape is:
 
-- **Web:** Vercel — `https://data-science-agent-web.vercel.app`
-- **Try DSA:** `https://data-science-agent-web.vercel.app/datasets`
-- **API:** Render Web Service — `https://data-science-agent-api.onrender.com`
-- **API health:** `https://data-science-agent-api.onrender.com/health`
+- **Web:** Vercel — `https://data-science-agent-web-rr93.vercel.app`
+- **Try DSA:** `https://data-science-agent-web-rr93.vercel.app/datasets`
+- **API:** Render Web Service — `https://data-science-agent-api-h43i.onrender.com`
+- **API health:** `https://data-science-agent-api-h43i.onrender.com/health`
 
 The full DSA Python package is intentionally not treated as a lightweight serverless function: the scientific stack is substantially larger than typical function bundles. The Web and API remain independently deployable and are connected with the public API URL.
 
@@ -39,6 +39,14 @@ A canonical acceptance question is:
 > Explain which features are most important for revenue, test whether the main associations are statistically significant, assess the impact of campaign_group on the outcome, and clearly distinguish association from causation. Include a visualization.
 
 A successful run should show completed tool calls, evidence marked `verified`, no tool errors, and a final `COMPLETED` report. A causal check may deliberately return `causal_bar=fail`; that is a guardrail indicating that an observational difference is not sufficient to establish causation.
+
+## Product capture (30 s, recorded 2026-09-11 against the live deployment)
+
+<video src="assets/demo/dsa-demo-30s.webm" controls preload="metadata" width="100%"></video>
+
+Flow: upload `ads.csv` → ask “Does spend predict conversions?” → run → COMPLETED evidence report. Waiting time edited out; no step staged or simulated.
+
+Still frames: [upload](assets/demo/01-upload.png), [question](assets/demo/02-question.png), [report](assets/demo/03-report.png).
 
 ## Deploy the API on Render
 
