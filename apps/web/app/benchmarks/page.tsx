@@ -19,7 +19,7 @@ function firstExisting(...segments: string[]): string | null {
   return null;
 }
 
-function benchStats(): { n: number; task_success_rate: unknown; evidence_coverage: unknown; sql_accuracy: unknown; unsupported_claim_rate: unknown; mean_latency_ms: unknown } | null {
+function benchStats(): { n: number; task_success_rate: unknown; evidence_coverage: unknown; sql_accuracy: unknown; unsupported_claim_rate: unknown; mean_latency_ms: unknown; by_category?: Record<string, { n: number; task_success: unknown }> } | null {
   try {
     const p = firstExisting("benchmarks", "baseline", "summary.json");
     if (!p) return null;
@@ -65,6 +65,11 @@ export default function BenchmarksPage() {
   const sqlAcc = base ? toPct(base.sql_accuracy) : null;
   const hasBars = taskSuccess != null || evidence != null || sqlAcc != null;
   const donut = v2 ? Object.entries(v2.byCat).map(([name, value]) => ({ name, value })) : [];
+  const byCatBars = base?.by_category
+    ? Object.entries(base.by_category)
+        .map(([name, c]) => ({ name, success: toPct(c.task_success) ?? 0, n: c.n }))
+        .filter((d) => d.n > 0)
+    : [];
 
   return (
     <div className="space-y-4">
@@ -139,6 +144,15 @@ export default function BenchmarksPage() {
 
       {donut.length > 0 && (
         <DonutChart title="V2 category distribution" description={`${v2?.tasks} tasks across ${donut.length} categories`} data={donut} />
+      )}
+
+      {byCatBars.length > 0 && (
+        <CompareBarChart
+          title="v1 success by category"
+          description={`${byCatBars.length} categories · task success rate (frozen baseline)`}
+          data={byCatBars.map((d) => ({ name: d.name, success: Math.round(d.success * 10) / 10 }))}
+          bars={[{ key: "success", label: "Task success (%)", color: "#3f3f46" }]}
+        />
       )}
 
       <Card>
