@@ -20,8 +20,26 @@ async function fetchRuns(): Promise<{ runs: RunItem[]; unreachable: boolean }> {
   }
 }
 
+async function fetchDatasetNames(): Promise<Map<string, string>> {
+  try {
+    const res = await fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" });
+    if (!res.ok) return new Map();
+    const d = (await res.json()) as { datasets: { id: string; filename: string }[] };
+    return new Map(d.datasets.map((x) => [x.id, x.filename]));
+  } catch {
+    return new Map();
+  }
+}
+
 export default async function ReportsPage() {
-  const { runs, unreachable } = await fetchRuns();
+  const [{ runs, unreachable }, names] = await Promise.all([fetchRuns(), fetchDatasetNames()]);
+  const groups = new Map<string, RunItem[]>();
+  for (const r of runs) {
+    const key = r.dataset_id || "unknown";
+    const arr = groups.get(key) ?? [];
+    arr.push(r);
+    groups.set(key, arr);
+  }
   return (
     <div className="space-y-4">
       <PageHeader
@@ -45,7 +63,19 @@ export default async function ReportsPage() {
               action={<Link href="/analysis"><Button size="sm">Start your first analysis →</Button></Link>}
             />
           ) : (
-            <ReportsTable runs={runs} />
+            <div className="space-y-2">
+              {[...groups.entries()].map(([dsId, items], gi) => (
+                <details key={dsId} open={gi === 0} className="rounded-xl border border-zinc-100">
+                  <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium hover:bg-zinc-50">
+                    {names.get(dsId) ?? (dsId === "unknown" ? "Unknown dataset" : `Dataset ${dsId.slice(0, 8)}`)}
+                    <span className="ml-2 font-mono text-xs font-normal text-zinc-400">{items.length} report{items.length === 1 ? "" : "s"}</span>
+                  </summary>
+                  <div className="border-t border-zinc-100 p-3 sm:p-4">
+                    <ReportsTable runs={items} />
+                  </div>
+                </details>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
