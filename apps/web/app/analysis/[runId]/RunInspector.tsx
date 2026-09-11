@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
@@ -17,6 +17,7 @@ import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { EmptyState } from "@/app/components/data/States";
 import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
+import { Markdown } from "@/app/components/data/Markdown";
 
 export type RunDetail = {
   id: string;
@@ -49,6 +50,13 @@ const DEFAULT_TITLE = "Data Science Agent — Verifiable AI Data Science";
 
 function stripHtml(raw: string): string {
   return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+const SEVERE_LIMITATIONS = ["bias", "leakage", "leak", "overfit", "causal", "causation", "confound", "spurious"];
+
+function limitationSeverity(text: string): "error" | "warning" {
+  const lower = text.toLowerCase();
+  return SEVERE_LIMITATIONS.some((k) => lower.includes(k)) ? "error" : "warning";
 }
 
 // Live progress: polls the lightweight /progress endpoint every 3s while the
@@ -320,8 +328,13 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
   const [copied, setCopied] = React.useState(false);
   const [traceFilter, setTraceFilter] = React.useState<"all" | "ok" | "error">("all");
   const [traceQuery, setTraceQuery] = React.useState("");
+  const [tab, setTab] = React.useState("overview");
+  const [highlightCall, setHighlightCall] = React.useState<string | null>(null);
+  const [highlightEvidence, setHighlightEvidence] = React.useState<string | null>(null);
   const validations = st?.validation_results ?? [];
   const passed = validations.filter((v) => v.passed).length;
+  const limitations = (st?.insights ?? []).filter((i) => i.limitation);
+  const severeCount = limitations.filter((i) => limitationSeverity(i.limitation ?? "") === "error").length;
   const { prog, live, notify, toggleNotify } = useLiveProgress(run.id, run.status);
   const statusNow = prog?.status ?? run.status;
   const stepsDone = prog?.steps_done ?? st?.tool_calls.length ?? 0;
@@ -338,6 +351,39 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
     });
   }, [st?.tool_calls, traceFilter, traceQuery]);
   const maxDuration = Math.max(1, ...(st?.tool_calls ?? []).map((tc) => tc.duration_ms));
+  // Reverse index: tool call_id -> evidence ids citing it (for trace→evidence links).
+  const callToEvidence = React.useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const ev of st?.evidence ?? []) {
+      const arr = m.get(ev.source_id) ?? [];
+      arr.push(ev.id);
+      m.set(ev.source_id, arr);
+    }
+    return m;
+  }, [st?.evidence]);
+
+  // Cross-tab jump with 2s highlight + scroll into view.
+  function jumpToCall(callId: string) {
+    setTab("trace");
+    setTraceFilter("all");
+    setTraceQuery("");
+    setHighlightCall(callId);
+    setTimeout(() => setHighlightCall((cur) => (cur === callId ? null : cur)), 2000);
+  }
+  function jumpToEvidence(evId: string) {
+    setTab("evidence");
+    setHighlightEvidence(evId);
+    setTimeout(() => setHighlightEvidence((cur) => (cur === evId ? null : cur)), 2000);
+  }
+  React.useEffect(() => {
+    const id = highlightCall ? `tc-${CSS.escape(highlightCall)}` : highlightEvidence ? `ev-${CSS.escape(highlightEvidence)}` : null;
+    if (!id) return;
+    // Wait a tick for the tab panel to mount before scrolling.
+    const t = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [highlightCall, highlightEvidence, tab]);
 
   async function copyReport() {
     if (!st?.report_markdown) return;
@@ -348,6 +394,40 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
     } catch {
       setCopied(false);
     }
+  }
+
+  function downloadReport() {
+    if (!st?.report_markdown) return;
+    const blob = new Blob([st.report_markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dsa-report-${run.id.slice(0, 12)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Artifacts grouped by kind. Paths are server-local (no file-serving
+  // endpoint exists), so the honest action is copy-path, not a fake link.
+  const artifactGroups = React.useMemo(() => {
+    const groups = new Map<string, NonNullable<RunDetail["state"]>["artifacts"]>();
+    for (const a of st?.artifacts ?? []) {
+      const kind = String(a.metadata?.kind ?? a.type ?? "other");
+      const arr = groups.get(kind) ?? [];
+      arr.push(a);
+      groups.set(kind, arr);
+    }
+    return [...groups.entries()];
+  }, [st?.artifacts]);
+
+  function kindIcon(kind: string) {
+    if (kind.includes("markdown") || kind === "report") return FileText;
+    if (kind.includes("json") || kind.includes("experiment") || kind.includes("evidence")) return FileJson;
+    if (kind.includes("reproduce") || kind.includes("script") || kind.endsWith(".sh")) return TerminalSquare;
+    if (kind.includes("notebook") || kind.includes("ipynb")) return BookOpen;
+    return FileText;
   }
 
   const mi = machineIndex(statusNow, stepsDone, validations.length > 0);
@@ -418,7 +498,7 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
       {isReview && <ApprovalCard runId={run.id} />}
       <FailureCard run={run} />
 
-      <Tabs defaultValue="overview">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="trace">Trace ({st?.tool_calls.length ?? 0})</TabsTrigger>
@@ -428,6 +508,19 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
         </TabsList>
 
         <TabsContent value="overview">
+          {limitations.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTab("insights")}
+              className={`mb-4 flex w-full items-center gap-2 rounded-xl border p-3 text-left text-xs leading-5 shadow-sm ${severeCount > 0 ? "border-red-200 bg-red-50/60 text-red-800" : "border-amber-200 bg-amber-50/60 text-amber-800"}`}
+            >
+              <AlertTriangle className="size-4 shrink-0" aria-hidden />
+              <span>
+                <strong>{limitations.length} caveat{limitations.length === 1 ? "" : "s"}{severeCount > 0 ? ` (${severeCount} critical)` : ""}</strong>
+                {" — review limitations before trusting these findings. View Insights →"}
+              </span>
+            </button>
+          )}
           <div className="grid items-start gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <Card>
               <CardHeader>
@@ -519,7 +612,10 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
                     <TableBody>
                       {toolCalls.map((tc) => (
                         <React.Fragment key={tc.call_id}>
-                          <TableRow>
+                          <TableRow
+                            id={`tc-${tc.call_id}`}
+                            className={highlightCall === tc.call_id ? "bg-amber-50" : undefined}
+                          >
                             <TableCell><code className="font-mono text-xs">{tc.tool}</code></TableCell>
                             <TableCell>
                               <Badge variant={tc.status === "ok" ? "success" : "destructive"}>{tc.status}</Badge>
@@ -534,6 +630,21 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
                             </TableCell>
                             <TableCell><code className="font-mono text-xs">{tc.call_id.slice(0, 12)}</code></TableCell>
                             <TableCell>
+                              {(callToEvidence.get(tc.call_id) ?? []).length > 0 && (
+                                <span className="mb-1 flex flex-wrap gap-1">
+                                  {(callToEvidence.get(tc.call_id) ?? []).map((eid) => (
+                                    <button
+                                      key={eid}
+                                      type="button"
+                                      onClick={() => jumpToEvidence(eid)}
+                                      title={`View evidence ${eid}`}
+                                      className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-[11px] text-emerald-700 hover:bg-emerald-100"
+                                    >
+                                      {eid}
+                                    </button>
+                                  ))}
+                                </span>
+                              )}
                               <details>
                                 <summary className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900">
                                   <ChevronDown className="size-3" aria-hidden /> input/output
@@ -571,12 +682,23 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
             )}
             <ul className="grid gap-3">
               {(st?.evidence ?? []).map((ev) => (
-                <li key={ev.id}>
-                  <Card>
+                <li key={ev.id} id={`ev-${ev.id}`} className="scroll-mt-24">
+                  <Card className={highlightEvidence === ev.id ? "border-amber-300 bg-amber-50/50" : undefined}>
                     <CardContent className="space-y-2 p-4 pt-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <code className="font-mono text-xs text-zinc-500">{ev.id} · {ev.source_type} → {ev.source_id}</code>
-                        <span className="text-xs font-medium tabular-nums text-emerald-700">conf {ev.confidence.toFixed(2)}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs font-medium tabular-nums text-emerald-700">conf {ev.confidence.toFixed(2)}</span>
+                          {(callToEvidence.has(ev.source_id) || (st?.tool_calls ?? []).some((tc) => tc.call_id === ev.source_id)) && (
+                            <button
+                              type="button"
+                              onClick={() => jumpToCall(ev.source_id)}
+                              className="rounded-lg border border-zinc-200 bg-white px-2 py-0.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+                            >
+                              View tool call →
+                            </button>
+                          )}
+                        </span>
                       </div>
                       <Progress value={ev.confidence * 100} aria-label={`Confidence ${ev.confidence.toFixed(2)}`} />
                       <p className="text-sm font-medium leading-6">{ev.claim}</p>
@@ -602,12 +724,18 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
                 <CardContent className="space-y-2 p-4 pt-4">
                   <p className="text-sm leading-6">{ins.finding}</p>
                   <p className="text-xs text-zinc-500">Evidence: {ins.evidence_ids.join(", ") || "—"}</p>
-                  {ins.limitation && (
-                    <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs leading-5 text-amber-800" role="note">
-                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                      <span><strong>Limitation:</strong> {ins.limitation}</span>
-                    </p>
-                  )}
+                  {ins.limitation && (() => {
+                    const sev = limitationSeverity(ins.limitation);
+                    return (
+                      <p
+                        role="note"
+                        className={`flex items-start gap-2 rounded-lg border p-2.5 text-xs leading-5 ${sev === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                        <span><strong>{sev === "error" ? "Critical limitation:" : "Limitation:"}</strong> {ins.limitation}</span>
+                      </p>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))}
@@ -619,21 +747,37 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Artifacts ({st?.artifacts.length ?? 0})</CardTitle>
-                <CardDescription className="text-xs">Files generated during the run.</CardDescription>
+                <CardDescription className="text-xs">Files generated during the run. Paths are server-local — copy a path to retrieve it from the host.</CardDescription>
               </CardHeader>
-              <CardContent>
-                {(st?.artifacts.length ?? 0) === 0 ? (
+              <CardContent className="space-y-3">
+                {(st?.artifacts.length ?? 0) === 0 && (
                   <p className="text-sm text-zinc-500">No artifacts.</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {(st?.artifacts ?? []).map((a) => (
-                      <li key={a.id} className="flex items-center gap-2 font-mono text-xs">
-                        <FileText className="size-3.5 shrink-0 text-zinc-400" aria-hidden />
-                        <span className="truncate" title={a.path}>{a.type} — {a.path}</span>
-                      </li>
-                    ))}
-                  </ul>
                 )}
+                {artifactGroups.map(([kind, items]) => {
+                  const Icon = kindIcon(kind);
+                  return (
+                    <div key={kind}>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">{kind} ({items.length})</p>
+                      <ul className="space-y-1.5">
+                        {items.map((a) => (
+                          <li key={a.id} className="flex items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1.5">
+                            <Icon className="size-3.5 shrink-0 text-zinc-400" aria-hidden />
+                            <span className="min-w-0 flex-1 truncate font-mono text-xs" title={a.path}>{a.path.split("/").pop()}</span>
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(a.path).catch(() => {})}
+                              title={`Copy path: ${a.path}`}
+                              aria-label={`Copy path of ${a.path.split("/").pop()}`}
+                              className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                            >
+                              <Copy className="size-3.5" aria-hidden />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
             <Card>
@@ -643,15 +787,25 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
                   <CardDescription className="text-xs">Reproducible Markdown preserved with the run.</CardDescription>
                 </div>
                 {st?.report_markdown && (
-                  <Button variant="secondary" size="sm" onClick={copyReport}>
-                    {copied ? <><Check className="size-3.5" aria-hidden /> Copied</> : <><Copy className="size-3.5" aria-hidden /> Copy Markdown</>}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={copyReport}>
+                      {copied ? <><Check className="size-3.5" aria-hidden /> Copied</> : <><Copy className="size-3.5" aria-hidden /> Copy Markdown</>}
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={downloadReport}>
+                      <Download className="size-3.5" aria-hidden /> .md
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
               <CardContent>
                 {st?.report_markdown ? (
                   <>
-                    <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-3 text-xs leading-6 text-zinc-200">{st.report_markdown.slice(0, 6000)}</pre>
+                    <div className="max-h-96 overflow-auto rounded-lg border border-zinc-100 p-3">
+                      <Markdown text={st.report_markdown.slice(0, 6000)} />
+                      {st.report_markdown.length > 6000 && (
+                        <p className="mt-2 text-xs text-zinc-400">Preview truncated — download or open the full report.</p>
+                      )}
+                    </div>
                     <a href={reportUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium underline">
                       Open full Markdown report ↗
                     </a>
