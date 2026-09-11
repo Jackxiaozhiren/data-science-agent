@@ -149,6 +149,13 @@ jobs:
           fi
 
           release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" 2>/dev/null || true)"
+          # NOTE (2026-09-11 fix): `gh api` prints the 404 error JSON
+          # ({"message":"Not Found",...}) to STDOUT, so a missing release
+          # looks non-empty. Gate on .tag_name instead of string emptiness —
+          # the old test skipped creation and died at upload for v4.3.2–v4.4.0.
+          if ! jq -e '.tag_name' <<<"${release_json}" >/dev/null 2>&1; then
+            release_json=""
+          fi
           if [[ -z "${release_json}" ]]; then
             echo "No GitHub Release exists yet; creating a draft so assets are uploaded before immutable publication."
             gh release create "${RELEASE_TAG}" "${release_files[@]}" \

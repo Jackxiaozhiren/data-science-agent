@@ -29,9 +29,9 @@
 | BR-1 | Automated CI on every change | **PASS** | `.github/workflows/ci.yml` (pytest, mypy, ruff, web build, docker config, SBOM check, vendor sync check, `uv lock --check`). |
 | BR-2 | Reproducible builds / pinned dependencies | **PASS** | `uv.lock` committed + CI `uv lock --check`; npm lockfile committed; `scripts/sync_vendor.py --check` guards vendoring drift. |
 | BR-3 | Releases produced by a dedicated workflow | **PASS** | `publish.yml` (PyPI Trusted Publishing, OIDC, no long-lived token — `grep PYPI_API_TOKEN .github/ → 0`). |
-| BR-4 | Release provenance / attestations | **PARTIAL** | PEP 740 PyPI publish attestations **empirically digest-verified** for 4.2.10 (`docs/security/VERIFY_RELEASE.md`; DSSE subject digest == wheel). GitHub **build** provenance (`attest-build-provenance`) NOT IMPLEMENTED — `docs/v4_3/SUPPLY_CHAIN_SECURITY.md` item 4. |
+| BR-4 | Release provenance / attestations | **PASS** | PEP 740 PyPI publish attestations empirically digest-verified (4.2.10); GitHub build provenance **verified live 2026-09-11**: `gh attestation verify jack_data_science_agent-4.4.0-py3-none-any.whl` → exit 0 (Sigstore, GitHub issuer). |
 | BR-5 | SBOM shipped with releases | **PASS** | `release/sbom.json` (CycloneDX, 192 components at 4.3.2), CI enforces currency via `--check`. |
-| BR-6 | Signed release artifacts (Sigstore/GH build attestation) | **PARTIAL** | `attest-build-provenance@v2` (SHA-pinned) wired into `publish.yml` 2026-09-05 with `attestations: write`; live `gh attestation verify` pending the next tag push. |
+| BR-6 | Signed release artifacts (Sigstore/GH build attestation) | **PASS** | Same live verification as BR-4 (2026-09-11, v4.4.0 wheel). |
 
 ## 3. Documentation
 
@@ -78,22 +78,21 @@
 
 | Status | Count | Items |
 |---|---:|---|
-| PASS | 23 | AC-1, AC-2, BR-1, BR-2, BR-3, BR-5, DOC-1..7, BUG-1..3, M-1..3, VM-1..4 |
-| PARTIAL | 3 | BR-4 (PyPI attestations verified; GH build provenance wired, live check pending), BR-6 (same), VM-6 |
+| PASS | 25 | AC-1, AC-2, BR-1..6, DOC-1..7, BUG-1..3, M-1..3, VM-1..4 |
+| PARTIAL | 1 | VM-6 (fix/release coordination documented; no explicit runbook) |
 | FAIL | 0 | — |
 | NOT VERIFIED | 3 | AC-3 (2FA), AC-4 (env approval), VM-5 (native push protection) |
 | NOT APPLICABLE | 0 | — |
 
-*29 items assessed; counts match the per-section rows above (updated 2026-09-05:
-DOC-6 + BUG-3 closed, BR-6 wired).*
+*29 items assessed; counts match the per-section rows above (updated 2026-09-11:
+BR-4/BR-6 verified live).*
 
 **Open items, in priority order (substantive fixes first, per §91/§92 — never badge-chasing):**
 
-1. **BR-4/BR-6 live check:** run `gh attestation verify` against the next tag's
-   artifacts; flip both to PASS with the command output.
-2. **NOT VERIFIED trio (owner action, §128):** confirm 2FA, `pypi` environment
+1. **NOT VERIFIED trio (owner action, §128):** confirm 2FA, `pypi` environment
    approval rules, and GitHub push protection in the repository settings console;
-   update this file with the confirmation date.
+   update this file with the confirmation date. Everything else verifiable
+   locally is now PASS.
 
 **Cross-references:** `docs/v4_3/SUPPLY_CHAIN_SECURITY.md` (per-check classification),
 `docs/v4_3/SCORECARD.md` (OpenSSF Scorecard 4.6/10 with honest blind spots),
