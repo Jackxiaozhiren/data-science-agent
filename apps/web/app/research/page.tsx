@@ -7,13 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatCard } from "@/app/components/data/StatCard";
 import { EmptyState } from "@/app/components/data/States";
-import { DataTable } from "@/app/components/data/DataTable";
+import { ExperimentsTable } from "@/app/research/ExperimentsTable";
 
 function experiments(): string[] {
   try {
-    const dir = join(process.cwd(), "research", "results");
-    if (!existsSync(dir)) return [];
-    return readdirSync(dir).filter((f) => f.startsWith("ablation_")).slice(0, 10);
+    const roots = [process.cwd(), join(process.cwd(), "..", "..")];
+    for (const r of roots) {
+      const dir = join(r, "research", "results");
+      if (existsSync(dir)) return readdirSync(dir).filter((f) => f.startsWith("ablation_")).slice(0, 10);
+    }
+    return [];
   } catch {
     return [];
   }
@@ -45,12 +48,7 @@ export default function ResearchPage() {
         </CardHeader>
         <CardContent>
           {exps.length ? (
-            <DataTable<{ name: string } & Record<string, unknown>>
-              caption="Recent ablation experiments"
-              keyOf={(r) => r.name}
-              rows={exps.map((name) => ({ name }))}
-              columns={[{ key: "name", header: "File", render: (r) => <code className="font-mono text-xs">{r.name}</code> }]}
-            />
+            <ExperimentsTable files={exps} />
           ) : (
             <EmptyState
               title="No results yet"

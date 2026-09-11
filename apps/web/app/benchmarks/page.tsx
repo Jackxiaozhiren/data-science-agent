@@ -8,10 +8,21 @@ import { EmptyState } from "@/app/components/data/States";
 import { CompareBarChart, DonutChart } from "@/app/components/ui/chart";
 import { CopyButton } from "@/app/benchmarks/CopyButton";
 
+function firstExisting(...segments: string[]): string | null {
+  // process.cwd() is apps/web locally but the repo root in some deploys —
+  // try both so frozen benchmark files resolve in either layout.
+  const roots = [process.cwd(), join(process.cwd(), "..", "..")];
+  for (const r of roots) {
+    const p = join(r, ...segments);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 function benchStats(): { n: number; task_success_rate: unknown; evidence_coverage: unknown; sql_accuracy: unknown; unsupported_claim_rate: unknown; mean_latency_ms: unknown } | null {
   try {
-    const p = join(process.cwd(), "benchmarks", "baseline", "summary.json");
-    if (!existsSync(p)) return null;
+    const p = firstExisting("benchmarks", "baseline", "summary.json");
+    if (!p) return null;
     return JSON.parse(readFileSync(p, "utf-8"));
   } catch {
     return null;
@@ -20,8 +31,8 @@ function benchStats(): { n: number; task_success_rate: unknown; evidence_coverag
 
 function v2Stats(): { tasks: number; byCat: Record<string, number>; datasets: number } | null {
   try {
-    const p = join(process.cwd(), "benchmarks", "v2", "catalog.json");
-    if (!existsSync(p)) return null;
+    const p = firstExisting("benchmarks", "v2", "catalog.json");
+    if (!p) return null;
     const cat = JSON.parse(readFileSync(p, "utf-8")) as { tasks?: { category: string }[]; datasets?: number };
     const tasks = cat.tasks || [];
     const byCat: Record<string, number> = {};

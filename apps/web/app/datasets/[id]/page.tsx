@@ -7,9 +7,9 @@ import { Badge } from "@/app/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/app/components/ui/tabs";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatCard } from "@/app/components/data/StatCard";
-import { DataTable } from "@/app/components/data/DataTable";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
+import { SchemaTable } from "@/app/datasets/[id]/SchemaTable";
 
 type ColumnProfile = {
   name: string;
@@ -152,18 +152,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
           ) : (
             <Card>
               <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
-                <DataTable<ColumnProfile & Record<string, unknown>>
-                  caption={`Schema of ${ds.filename}`}
-                  keyOf={(c) => c.name}
-                  rows={prof.column_profiles as (ColumnProfile & Record<string, unknown>)[]}
-                  columns={[
-                    { key: "name", header: "Column", sortable: true, render: (c) => <code className="font-mono text-xs">{c.name}</code> },
-                    { key: "dtype", header: "Dtype", sortable: true, render: (c) => <span className="font-mono text-xs">{c.dtype}</span> },
-                    { key: "kind", header: "Kind", sortable: true, render: (c) => <Badge variant="outline">{c.kind}</Badge> },
-                    { key: "null_count", header: "Nulls", sortable: true, render: (c) => <span className="tabular-nums">{c.null_count}</span> },
-                    { key: "unique_count", header: "Uniques", sortable: true, render: (c) => <span className="tabular-nums">{c.unique_count ?? "—"}</span> },
-                  ]}
-                />
+                <SchemaTable columns={prof.column_profiles} filename={ds.filename} />
               </CardContent>
             </Card>
           )}

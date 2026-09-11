@@ -7,6 +7,7 @@ import { Sidebar } from "@/app/components/layout/Sidebar";
 export const metadata: Metadata = {
   title: "Data Science Agent — Verifiable AI Data Science",
   description: "The AI data scientist that shows its work. Ask questions about your data and inspect the evidence behind the answer.",
+  icons: { icon: "/icon.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

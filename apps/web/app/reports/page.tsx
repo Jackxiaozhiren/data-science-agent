@@ -4,9 +4,8 @@ import { apiUrl } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
-import { StatusBadge } from "@/app/components/data/StatusBadge";
-import { DataTable } from "@/app/components/data/DataTable";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
+import { ReportsTable } from "@/app/reports/ReportsTable";
 
 type RunItem = { id: string; dataset_id: string; status: string; user_query: string; created_at: string | null };
 
@@ -46,17 +45,7 @@ export default async function ReportsPage() {
               action={<Link href="/analysis"><Button size="sm">Start your first analysis →</Button></Link>}
             />
           ) : (
-            <DataTable<RunItem & Record<string, unknown>>
-              caption="Reports"
-              keyOf={(r) => r.id}
-              rows={runs as (RunItem & Record<string, unknown>)[]}
-              columns={[
-                { key: "id", header: "Run", render: (r) => <Link href={`/analysis/${r.id}`} className="font-mono text-xs underline">{r.id.slice(0, 14)}</Link> },
-                { key: "status", header: "Status", sortable: true, render: (r) => <StatusBadge status={r.status} /> },
-                { key: "user_query", header: "Query", render: (r) => <span className="block max-w-[360px] truncate" title={r.user_query}>{r.user_query}</span> },
-                { key: "created_at", header: "Created", sortable: true, render: (r) => <span className="whitespace-nowrap text-xs text-zinc-500">{r.created_at?.slice(0, 19).replace("T", " ") || "—"}</span> },
-              ]}
-            />
+            <ReportsTable runs={runs} />
           )}
         </CardContent>
       </Card>
