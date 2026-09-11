@@ -221,13 +221,31 @@ mismatch). The machinery cannot be gamed with stub runs — verified, not assume
 - Prior attempts 2026-08-30 (runs 33291103265, 33297462359): `startup_failure`
   before any row executed (workflow-level, no model calls, $0 spent).
 
-## Free-lane smoke results (2026-09-09/10, ollama qwen3:8b, $0)
+## RQ3 answer (2026-09-11): full-v1 paired — no critic effect detected
 
-Full 4-way ABAB completed 2026-09-10: each variant ×4 rounds alternating
-(dsa/no-critic block, then llm-tools/llm-only block), same 5 tasks
-(eda-01..05), think on, temp 0.1, python-tree guard per step (one aborted
-batch re-run after a concurrent branch checkout; invalid runs discarded with
-cause, never silently kept).
+Primary evidence (ollama qwen3:8b, think on, temp 0.1, same 50 v1 tasks,
+dsa arm then nc arm; no python/benchmark changes during either run —
+verified via git log; raw pairs retained off-repo at `~/ollama-runs/full150/`):
+
+| Arm | Pass | Wilson 95% |
+|---|---:|---|
+| dsa (critic on) | 40/50 (0.80) | [0.670, 0.888] |
+| dsa-no-critic | 42/50 (0.84) | [0.715, 0.917] |
+
+Paired McNemar on 50 tasks: both-pass 38, dsa-only 2 (`dq-03`, `ts-01`),
+nc-only 4 (`clf-01`, `clf-05`, `reg-02`, `viz-03`), both-fail 6 —
+**exact two-sided p = 0.6875, not significant**. Point estimate leans
+no-critic (+0.04), opposite to the ABAB smoke lean (−0.20, p≈0.29): the two
+small-sample readings disagree with each other, which is itself evidence
+that planner-flake noise dominates any critic signal at this scale.
+
+Honest RQ3 verdict (free lane): **no evidence that the evidence critic
+changes end-to-end task success**; all observed gaps are noise-sized.
+Whether the critic improves *claim quality* (vs binary success) remains
+unmeasured — that needs human judgment, i.e. discussion #69, not more runs.
+
+*Superseded smoke history retained below for audit trail (n=5 ABAB + early
+repeats — the full-v1 paired result above governs).*
 
 | Variant | Rounds | Pooled | Wilson 95% |
 |---|---:|---:|---|
