@@ -12,6 +12,20 @@ type Dataset = {
   created_at: string | null;
 };
 
+async function errorMessage(res: Response): Promise<string> {
+  // Never dump raw response bodies: a misconfigured API URL returns a full
+  // HTML error page, which is unreadable and leaks internals. One human line.
+  let hint = "";
+  try {
+    const body = await res.text();
+    const clean = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    if (clean) hint = `: ${clean.slice(0, 160)}`;
+  } catch {
+    hint = "";
+  }
+  return `Request failed (HTTP ${res.status})${hint}. Check API diagnostics below.`;
+}
+
 export default function DatasetsPage() {
   const [items, setItems] = useState<Dataset[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -24,7 +38,7 @@ export default function DatasetsPage() {
     try {
       const res = await fetch(apiUrl("/api/v1/datasets/"));
       if (!res.ok) {
-        setErr(await res.text());
+        setErr(await errorMessage(res));
         return;
       }
       const data = (await res.json()) as { datasets: Dataset[] };
@@ -55,7 +69,7 @@ export default function DatasetsPage() {
         body: fd,
       });
       if (!res.ok) {
-        setErr(await res.text());
+        setErr(await errorMessage(res));
         return;
       }
       await load();
