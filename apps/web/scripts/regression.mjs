@@ -88,9 +88,11 @@ try {
       if (msg.type() !== "error") return;
       const text = msg.text();
       // Expected environmental noise, not app bugs: the tour is
-      // backend-independent, so failed API fetches (refused/CORS on a
-      // non-allowlisted preview port) are filtered. Same-origin asset
-      // failures (chunks, favicon) still count.
+      // backend-independent, so failed API fetches are filtered —
+      // refused (backend down, message carries no URL) and CORS
+      // failures naming the API origin. Same-origin asset failures
+      // always include a URL and still count.
+      if (/Failed to load resource: net::ERR_CONNECTION_REFUSED/i.test(text) && !/https?:\/\//.test(text)) return;
       if (/Failed to load resource/i.test(text) && /localhost:8000|127\.0\.0\.1:8000/.test(text)) return;
       if (/CORS policy/i.test(text) && /localhost:8000|127\.0\.0\.1:8000/.test(text)) return;
       consoleErrors.push(text.slice(0, 200));
