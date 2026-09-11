@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SiteHeader } from "@/app/components/layout/SiteHeader";
+import { SiteFooter } from "@/app/components/layout/SiteFooter";
+import { Sidebar } from "@/app/components/layout/Sidebar";
 
 export const metadata: Metadata = {
   title: "Data Science Agent — Verifiable AI Data Science",
@@ -10,22 +13,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen bg-zinc-50 text-zinc-900">
-        <header className="border-b bg-white">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-            <a href="/" className="font-semibold">Data Science Agent</a>
-            <div className="flex flex-wrap items-center justify-end gap-4 text-sm">
-              <a href="/datasets" className="font-medium hover:underline">Try DSA</a>
-              <a href="/analysis" className="hover:underline">Analysis</a>
-              <a href="/benchmarks" className="hover:underline">Evaluation</a>
-              <a href="/research" className="hover:underline">Research</a>
-              <a href="https://github.com/Jackxiaozhiren/data-science-agent" className="hover:underline" target="_blank" rel="noreferrer">GitHub ↗</a>
-            </div>
-          </nav>
-        </header>
-        <main className="mx-auto max-w-6xl px-6 py-6">{children}</main>
-        <footer className="mx-auto max-w-6xl px-6 py-8 text-center text-xs text-zinc-500">
-          Evidence before claim · Ask. Analyze. Verify. Reproduce.
-        </footer>
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded-lg focus:bg-zinc-900 focus:px-3 focus:py-2 focus:text-sm focus:text-white">
+          Skip to content
+        </a>
+        <SiteHeader />
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row">
+          <Sidebar />
+          <main id="main" className="min-w-0 flex-1">
+            {children}
+          </main>
+        </div>
+        <SiteFooter />
       </body>
     </html>
   );
