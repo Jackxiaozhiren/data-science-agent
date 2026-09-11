@@ -28,6 +28,8 @@ Ask questions about CSV files and databases in natural language. DSA runs SQL, s
 
 Live browser demo: [upload a dataset and run DSA](https://data-science-agent-web.vercel.app/datasets) · Static artifact tour: [browse verified runs](https://jackxiaozhiren.github.io/data-science-agent/)
 
+> **Reviewers wanted:** try DSA on your own CSV (~30 min, no experience needed) and tell us what broke — [independent review call](https://github.com/Jackxiaozhiren/data-science-agent/discussions/69) · [review kit](external-validation/). Raw feedback archived verbatim; anonymous OK.
+
 </div>
 
 ---
