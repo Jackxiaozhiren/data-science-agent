@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from dsa_api.core.config import settings
-from dsa_api.core.database import Base, engine
+from dsa_api.core.database import init_db
+from dsa_api.core.security import RateLimitMiddleware, SecurityHeadersMiddleware
 
 # Import ORM models so their tables register on Base.metadata before create_all.
 from dsa_api.models import analysis as _analysis_models  # noqa: F401
@@ -31,8 +32,7 @@ except Exception:  # pragma: no cover
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Create ORM tables on startup so fresh databases (e.g. Render sqlite)
     accept writes immediately. Safe on existing databases (checkfirst)."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await init_db()
     yield
 
 
@@ -46,6 +46,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(health_router)
 app.include_router(datasets_router)

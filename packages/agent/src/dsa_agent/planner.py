@@ -220,36 +220,45 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
     cat_cols = [c for c in cols if c not in numeric_cols]
     cat = cat_cols[0] if cat_cols else (cols[0] if cols else "category")
     num = numeric_cols[0] if numeric_cols else (cols[-1] if cols else "value")
+    cat_q, num_q = _ident(cat), _ident(num)
     # Highest/total patterns — prefer SUM + ORDER BY + LIMIT for top-key questions
     if "highest total revenue" in q:
         if "region" in cols and "revenue" in cols:
             return "SELECT region, SUM(revenue) as total FROM dataset GROUP BY region ORDER BY total DESC LIMIT 1"
-        return f"SELECT {cat}, SUM({num}) as total FROM dataset GROUP BY {cat} ORDER BY total DESC LIMIT 1"
+        return f"SELECT {cat_q}, SUM({num_q}) as total FROM dataset GROUP BY {cat_q} ORDER BY total DESC LIMIT 1"
     if "highest total value" in q and "key" in cols:
         return (
             "SELECT key, SUM(value) as total FROM dataset GROUP BY key ORDER BY total DESC LIMIT 1"
         )
     if "average" in q and "where" in q:
-        return f"SELECT AVG({num}) as avg_val FROM dataset WHERE {cat} IS NOT NULL"
+        return f"SELECT AVG({num_q}) as avg_val FROM dataset WHERE {cat_q} IS NOT NULL"
     if "total revenue by region" in q or ("total" in q and "revenue" in q and "region" in q):
         return "SELECT region, SUM(revenue) as total_revenue FROM dataset GROUP BY region"
     if "area > 2000" in q:
         return "SELECT AVG(price) as avg_price FROM dataset WHERE area > 2000"
     if "average price by category" in q or "average" in q:
-        return f"SELECT {cat}, AVG({num}) as avg_val FROM dataset GROUP BY {cat}"
+        return f"SELECT {cat_q}, AVG({num_q}) as avg_val FROM dataset GROUP BY {cat_q}"
     if "top 5" in q:
-        return f"SELECT * FROM dataset ORDER BY {num} DESC LIMIT 5"
+        return f"SELECT * FROM dataset ORDER BY {num_q} DESC LIMIT 5"
     if "rows per group" in q or "having" in q:
-        return f"SELECT {cat}, COUNT(*) as cnt FROM dataset GROUP BY {cat} HAVING COUNT(*) > 100"
+        return (
+            f"SELECT {cat_q}, COUNT(*) as cnt FROM dataset GROUP BY {cat_q} HAVING COUNT(*) > 100"
+        )
     if "survival rate by sex" in q:
         return "SELECT sex, AVG(survived) as survival_rate FROM dataset GROUP BY sex"
     if "avg of f0 by target" in q or ("avg" in q and "target" in q and "f0" in cols):
         return "SELECT target, AVG(f0) as avg_f0 FROM dataset GROUP BY target"
     if "café" in q or "contains" in q:
-        return f"SELECT AVG({num}) as avg_val FROM dataset WHERE {cat} LIKE '%café%'"
+        return f"SELECT AVG({num_q}) as avg_val FROM dataset WHERE {cat_q} LIKE '%café%'"
     if "cluster" in q and "value distribution" in q:
-        return f"SELECT {cat}, AVG({num}) as avg_val FROM dataset GROUP BY {cat}"
-    return f"SELECT {cat}, COUNT(*) as cnt, AVG({num}) as avg_{num} FROM dataset GROUP BY {cat}"
+        return f"SELECT {cat_q}, AVG({num_q}) as avg_val FROM dataset GROUP BY {cat_q}"
+    alias = re.sub(r"[^A-Za-z0-9_]", "_", num)[:32] or "val"
+    return f"SELECT {cat_q}, COUNT(*) as cnt, AVG({num_q}) as avg_{alias} FROM dataset GROUP BY {cat_q}"
+
+
+def _ident(name: str) -> str:
+    """Quote a dataset-derived identifier for DuckDB (headers are user input)."""
+    return '"' + name.replace('"', '""') + '"'
 
 
 def _has_time_data(dataset_path: str | None) -> bool:

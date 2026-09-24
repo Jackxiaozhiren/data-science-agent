@@ -39,7 +39,7 @@ async def test_upload_csv_and_get(client_with_tmp_db: AsyncClient) -> None:
     csv_bytes = b"a,b,c\n1,hello,2024-01-01\n2,world,2024-01-02\n3,foo,2024-01-03\n"
     files: Any = {"file": ("sales.csv", csv_bytes, "text/csv")}
     r = await ac.post("/api/v1/datasets/", files=files)
-    assert r.status_code == 200, r.text
+    assert r.status_code == 201, r.text
     data: Any = r.json()
     assert data["filename"] == "sales.csv"
     assert data["format"] == "csv"
@@ -68,7 +68,7 @@ async def test_upload_parquet(client_with_tmp_db: AsyncClient) -> None:
         parquet_bytes = p.read_bytes()
     files2: Any = {"file": ("t.parquet", parquet_bytes, "application/octet-stream")}
     r = await ac.post("/api/v1/datasets/", files=files2)
-    assert r.status_code == 200, r.text
+    assert r.status_code == 201, r.text
     data: Any = r.json()
     assert data["format"] == "parquet"
     assert data["rows"] == 3
@@ -85,7 +85,7 @@ async def test_large_file_csv(client_with_tmp_db: AsyncClient) -> None:
     csv_bytes = buf.getvalue().encode()
     files: Any = {"file": ("large.csv", csv_bytes, "text/csv")}
     r = await ac.post("/api/v1/datasets/", files=files)
-    assert r.status_code == 200, r.text
+    assert r.status_code == 201, r.text
     assert r.json()["rows"] == n
 
 
@@ -94,8 +94,8 @@ async def test_malformed_csv_handled(client_with_tmp_db: AsyncClient) -> None:
     ac = client_with_tmp_db
     files: Any = {"file": ("bad.csv", b"", "text/csv")}
     r = await ac.post("/api/v1/datasets/", files=files)
-    assert r.status_code in (200, 400)
-    if r.status_code == 200:
+    assert r.status_code in (201, 400)
+    if r.status_code == 201:
         assert r.json()["rows"] == 0
 
 

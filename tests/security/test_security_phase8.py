@@ -213,10 +213,10 @@ async def test_human_review_approve(ac: AsyncClient) -> None:
     # Workaround: create run normally, then approve should 409 if not HUMAN_REVIEW; test that 409 is returned
     csv = b"a,b\n1,2\n3,4\n"
     r = await ac.post("/api/v1/datasets/", files={"file": ("t.csv", csv, "text/csv")})
-    assert r.status_code == 200
+    assert r.status_code == 201
     ds_id = r.json()["id"]
     r2 = await ac.post("/api/v1/analysis/", json={"dataset_id": ds_id, "user_query": "hello"})
-    assert r2.status_code == 200
+    assert r2.status_code == 201
     run_id = r2.json()["id"]
     # Not HUMAN_REVIEW, so approve should 409
     r3 = await ac.post(f"/api/v1/analysis/{run_id}/approve", json={"note": "approve"})

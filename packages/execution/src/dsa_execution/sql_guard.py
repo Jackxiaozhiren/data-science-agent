@@ -10,13 +10,25 @@ _DENY_PATTERNS = [
     r"\bUPDATE\b",
     r"\bINSERT\b",
     r"\bALTER\b",
+    r"\bCREATE\b",
     r"\bATTACH\b",
     r"\bDETACH\b",
-    r"\bCOPY\b.*\bTO\b",
+    r"\bCOPY\b",
     r"\bEXPORT\b",
     r"\bIMPORT\b",
+    r"\bINSTALL\b",
     r"\bPRAGMA\b",
     r"\bLOAD\b",
+    r"\bCALL\b",
+    r"\bVACUUM\b",
+    r"\bCHECKPOINT\b",
+    # File / network table functions: the sandbox exposes only the `dataset`
+    # view, so any direct file or remote scan is an exfiltration vector.
+    r"\bread_\w+",
+    r"\bglob\s*\(",
+    r"\w+_scan\s*\(",
+    r"\bparquet_(metadata|schema)\b",
+    r"\bpragma_\w+",
     r";\s*--",
 ]
 

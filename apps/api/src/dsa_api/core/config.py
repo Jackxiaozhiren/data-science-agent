@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     # (allow_credentials=False) and every endpoint is reachable by curl
     # regardless, so CORS only governs browser UX, not access control.
     cors_origin_regex: str = ""
+    # Abuse protection for expensive endpoints (no auth on the public demo;
+    # limits are per-IP sliding windows, 429 + Retry-After on breach).
+    rate_limit_enabled: bool = True
+    rate_limit_analysis_per_min: int = 60
+    rate_limit_upload_per_min: int = 30
 
     @property
     def cors_origin_list(self) -> list[str]:

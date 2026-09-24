@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dsa_api.core.database import get_session
@@ -18,9 +18,13 @@ router = APIRouter(prefix="/api/v1/datasets", tags=["datasets"])
 
 
 @router.get("/")
-async def list_datasets_route(session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
-    items = await list_datasets(session)
-    return {"datasets": items}
+async def list_datasets_route(
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    items, total = await list_datasets(session, limit=limit, offset=offset)
+    return {"datasets": items, "total": total}
 
 
 @router.get("/{dataset_id}")
@@ -33,8 +37,9 @@ async def get_dataset_route(
     return ds
 
 
-@router.post("/")
+@router.post("/", status_code=201)
 async def create_dataset_route(
+    response: Response,
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
@@ -62,6 +67,7 @@ async def create_dataset_route(
         result = await save_dataset(
             session, file.filename, tmp_path, size, content_type=ct, head=head
         )
+        response.headers["Location"] = f"/api/v1/datasets/{result['id']}"
         return result
     except (ValidationError, UnsupportedFormatError, FileTooLargeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

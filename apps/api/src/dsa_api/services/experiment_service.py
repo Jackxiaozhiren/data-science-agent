@@ -10,13 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dsa_api.models.experiment import ExperimentORM
 
 
-async def _ensure(session: AsyncSession) -> None:
-    from dsa_api.core.database import Base, engine
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
 async def create_experiment(
     session: AsyncSession,
     run_id: str,
@@ -26,7 +19,6 @@ async def create_experiment(
     metrics: dict[str, Any] | None = None,
     artifact_path: str | None = None,
 ) -> dict[str, Any]:
-    await _ensure(session)
     exp_id = f"exp-{uuid.uuid4().hex[:10]}"
     orm = ExperimentORM(
         id=exp_id,
@@ -44,18 +36,22 @@ async def create_experiment(
 
 
 async def list_experiments(
-    session: AsyncSession, run_id: str | None = None
-) -> list[dict[str, Any]]:
-    await _ensure(session)
-    q = select(ExperimentORM).order_by(ExperimentORM.created_at.desc())
+    session: AsyncSession, run_id: str | None = None, limit: int = 100, offset: int = 0
+) -> tuple[list[dict[str, Any]], int]:
+    from sqlalchemy import func as _func
+
+    base = select(ExperimentORM)
+    count_q = select(_func.count()).select_from(ExperimentORM)
     if run_id:
-        q = q.where(ExperimentORM.run_id == run_id)
+        base = base.where(ExperimentORM.run_id == run_id)
+        count_q = count_q.where(ExperimentORM.run_id == run_id)
+    total = (await session.execute(count_q)).scalar_one()
+    q = base.order_by(ExperimentORM.created_at.desc()).limit(limit).offset(offset)
     rows = (await session.execute(q)).scalars().all()
-    return [r.to_dict() for r in rows]
+    return [r.to_dict() for r in rows], total
 
 
 async def get_experiment(session: AsyncSession, exp_id: str) -> dict[str, Any] | None:
-    await _ensure(session)
     row = (
         (await session.execute(select(ExperimentORM).where(ExperimentORM.id == exp_id)))
         .scalars()

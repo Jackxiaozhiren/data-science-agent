@@ -89,7 +89,7 @@ async def test_api_analysis_flow() -> None:
         csv_bytes = b"a,b,group,target\n1,2.0,A,0\n2,3.5,B,1\n3,4.1,A,0\n4,6.0,B,1\n5,7.2,A,0\n6,8.1,B,1\n7,9.0,A,0\n8,10.2,B,1\n9,11.1,A,0\n10,12.3,B,1\n11,13.0,A,0\n12,14.5,B,1\n"
         files = {"file": ("t.csv", csv_bytes, "text/csv")}
         r = await ac.post("/api/v1/datasets/", files=files)
-        assert r.status_code == 200, r.text
+        assert r.status_code == 201, r.text
         ds_id = r.json()["id"]
 
         # create analysis
@@ -100,7 +100,7 @@ async def test_api_analysis_flow() -> None:
                 "user_query": "Analyze correlation between a and b and test group differences",
             },
         )
-        assert r2.status_code == 200, r2.text
+        assert r2.status_code == 201, r2.text
         data = r2.json()
         assert "id" in data
         assert data["status"] in ("COMPLETED", "FAILED")

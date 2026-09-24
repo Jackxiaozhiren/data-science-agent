@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,15 +23,19 @@ from dsa_api.services.analysis_service import (
 
 router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
 
+log = logging.getLogger(__name__)
+
 
 class CreateAnalysisBody(BaseModel):
     dataset_id: str
     user_query: str = ""
 
 
-@router.post("/")
+@router.post("/", status_code=201)
 async def create_analysis(
-    body: CreateAnalysisBody, session: AsyncSession = Depends(get_session)
+    body: CreateAnalysisBody,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     if not body.dataset_id or not body.user_query.strip():
         raise HTTPException(status_code=400, detail="dataset_id and user_query required")
@@ -38,17 +43,27 @@ async def create_analysis(
         result = await create_analysis_run(session, body.dataset_id, body.user_query)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {e}") from e
+    except Exception:
+        # Never leak internals to clients; the traceback goes to server logs.
+        log.exception("analysis run failed", extra={"dataset_id": body.dataset_id})
+        raise HTTPException(
+            status_code=500, detail="Analysis failed unexpectedly. Please retry shortly."
+        ) from None
+    response.headers["Location"] = f"/api/v1/analysis/{result['id']}"
     return result
 
 
 @router.get("/")
 async def list_analyses(
-    dataset_id: str | None = None, session: AsyncSession = Depends(get_session)
+    dataset_id: str | None = None,
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    items = await list_analysis_runs(session, dataset_id=dataset_id)
-    return {"analyses": items}
+    items, total = await list_analysis_runs(
+        session, dataset_id=dataset_id, limit=limit, offset=offset
+    )
+    return {"analyses": items, "total": total}
 
 
 @router.get("/{run_id}")

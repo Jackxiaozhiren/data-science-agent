@@ -140,3 +140,86 @@ def test_large_file_handling_streaming_csv() -> None:
         assert df.shape[0] == n
         profile = build_profile(df, "ds-large", "large.csv", DatasetFormat.csv)
         assert profile.rows == n
+
+
+def _write_xlsx(path: Path, header: list[str], rows: list[list[object]]) -> None:
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(header)
+    for r in rows:
+        ws.append(r)
+    wb.save(path)
+
+
+def test_load_xlsx_small() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "t.xlsx"
+        _write_xlsx(p, ["a", "b"], [[1, "x"], [2, "y"]])
+        df = load_dataframe(p, DatasetFormat.excel)
+        assert df.shape == (2, 2)
+        assert list(df.columns) == ["a", "b"]
+
+
+def test_load_xlsx_streaming_matches_fast_path() -> None:
+    # RED: forces the streaming reader via tiny threshold; must equal fast path.
+    from dsa_datasets.loader import _load_excel_streaming
+
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "t.xlsx"
+        rows = [[i, f"name-{i}", float(i) * 1.5] for i in range(2000)]
+        _write_xlsx(p, ["id", "name", "v"], rows)
+        fast = load_dataframe(p, DatasetFormat.excel)
+        streamed = _load_excel_streaming(p)
+        assert streamed.shape == fast.shape == (2000, 3)
+        assert list(streamed.columns) == ["id", "name", "v"]
+        assert streamed["id"].to_list()[:3] == [0, 1, 2]
+
+
+def test_load_xlsx_large_uses_streaming_by_size() -> None:
+    # Files over the streaming threshold must not take the openpyxl DOM path.
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "big.xlsx"
+        rows = [[i, f"v-{i}"] for i in range(3000)]
+        _write_xlsx(p, ["id", "v"], rows)
+        df = load_dataframe(p, DatasetFormat.excel, stream_threshold_bytes=1)
+        assert df.shape == (3000, 2)
+
+
+def test_load_json_empty_and_invalid_raise() -> None:
+    from dsa_datasets.errors import DatasetError
+
+    with tempfile.TemporaryDirectory() as td:
+        empty = Path(td) / "e.json"
+        empty.write_text("", encoding="utf-8")
+        with pytest.raises(DatasetError):
+            load_dataframe(empty, DatasetFormat.json)
+        bad = Path(td) / "b.json"
+        bad.write_text("{not json", encoding="utf-8")
+        with pytest.raises(DatasetError):
+            load_dataframe(bad, DatasetFormat.json)
+
+
+def test_load_unsupported_format_raises() -> None:
+    from dsa_datasets.errors import UnsupportedFormatError
+
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "t.csv"
+        p.write_text("a\n1\n", encoding="utf-8")
+        with pytest.raises(UnsupportedFormatError):
+            load_dataframe(p, "exe")  # type: ignore[arg-type]
+
+
+def test_duckdb_query_csv_and_xlsx_fallback() -> None:
+    from dsa_datasets.loader import duckdb_query_parquet_or_csv
+
+    with tempfile.TemporaryDirectory() as td:
+        csv = Path(td) / "t.csv"
+        csv.write_text("a,b\n1,x\n2,y\n", encoding="utf-8")
+        rows = duckdb_query_parquet_or_csv(csv, "SELECT COUNT(*) FROM dataset")
+        assert rows[0][0] == 2
+        xlsx = Path(td) / "t.xlsx"
+        _write_xlsx(xlsx, ["a", "b"], [[1, "x"], [2, "y"]])
+        rows2 = duckdb_query_parquet_or_csv(xlsx, "SELECT COUNT(*) FROM dataset")
+        assert rows2[0][0] == 2

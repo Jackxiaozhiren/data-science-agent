@@ -12,7 +12,12 @@ RUN npm ci --legacy-peer-deps && npm run build
 
 FROM node:20-alpine
 WORKDIR /app
-COPY --from=builder /app/apps/web/.next ./.next
-COPY --from=builder /app/apps/web/package.json ./package.json
+# node_modules is required at runtime (`next start`); public/ for static assets.
+COPY --from=builder --chown=node:node /app/apps/web/.next ./.next
+COPY --from=builder --chown=node:node /app/apps/web/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/apps/web/package.json ./package.json
+USER node
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s \
+    CMD wget -qO- http://127.0.0.1:3000/ > /dev/null || exit 1
 CMD ["npm", "start"]

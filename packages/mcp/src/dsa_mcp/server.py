@@ -127,7 +127,7 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
     )
 
 
-async def stdio_main() -> None:
+async def stdio_main() -> None:  # pragma: no cover - blocking stdio loop, exercised manually
     import asyncio
 
     loop = asyncio.get_event_loop()

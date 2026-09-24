@@ -98,6 +98,39 @@ def test_sql_injection_blocked() -> None:
             validate_sql(payload)
 
 
+def test_sql_file_and_extension_bypass_blocked() -> None:
+    # File-read / extension / DDL vectors must not pass the read-only guard.
+    for payload in [
+        "SELECT * FROM read_csv('/etc/passwd')",
+        "SELECT * FROM read_parquet('/tmp/x.parquet')",
+        "SELECT * FROM read_json('/tmp/x.json')",
+        "SELECT * FROM glob('/tmp/*.csv')",
+        "COPY dataset FROM '/etc/passwd'",
+        "CREATE TABLE pwn AS SELECT * FROM dataset",
+        "INSTALL httpfs",
+        "SELECT * FROM postgres_scan('host=evil', 't')",
+    ]:
+        blocked = False
+        try:
+            validate_sql(payload)
+        except Exception:
+            blocked = True
+        assert blocked, f"payload not blocked: {payload!r}"
+
+
+def test_heuristic_sql_quotes_column_identifiers() -> None:
+    from dsa_agent.planner import _heuristic_sql
+    from dsa_execution.sql_guard import validate_sql as _validate
+
+    # Hostile/odd header names must be quoted, never interpolated raw.
+    sql = _heuristic_sql("highest total revenue", ['a"b', "select", "北京"], ["revenue) DESC --"])
+    assert '"a""b"' in sql
+    assert '"revenue) DESC --"' in sql
+    assert "revenue) DESC --" not in sql.replace('"revenue) DESC --"', "")
+    # Quoted output must still pass the read-only guard.
+    _validate(sql)
+
+
 def test_python_sandbox_shell_and_network_blocked() -> None:
     from dsa_execution.python_sandbox import SandboxViolation, _check_ast
 

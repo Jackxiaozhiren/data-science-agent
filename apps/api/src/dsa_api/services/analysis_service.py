@@ -11,19 +11,11 @@ from dsa_api.models.analysis import AnalysisRunORM
 from dsa_api.models.dataset import DatasetORM
 
 
-async def _ensure_tables(session: AsyncSession) -> None:
-    from dsa_api.core.database import Base, engine
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
 async def create_analysis_run(
     session: AsyncSession,
     dataset_id: str,
     user_query: str,
 ) -> dict[str, Any]:
-    await _ensure_tables(session)
     result = await session.execute(select(DatasetORM).where(DatasetORM.id == dataset_id))
     ds = result.scalars().first()
     if ds is None:
@@ -64,22 +56,26 @@ async def create_analysis_run(
 
 
 async def get_analysis_run(session: AsyncSession, run_id: str) -> dict[str, Any] | None:
-    await _ensure_tables(session)
     result = await session.execute(select(AnalysisRunORM).where(AnalysisRunORM.id == run_id))
     row = result.scalars().first()
     return row.to_dict() if row else None
 
 
 async def list_analysis_runs(
-    session: AsyncSession, dataset_id: str | None = None
-) -> list[dict[str, Any]]:
-    await _ensure_tables(session)
-    q = select(AnalysisRunORM).order_by(AnalysisRunORM.created_at.desc())
+    session: AsyncSession, dataset_id: str | None = None, limit: int = 100, offset: int = 0
+) -> tuple[list[dict[str, Any]], int]:
+    from sqlalchemy import func as _func
+
+    base = select(AnalysisRunORM)
+    count_q = select(_func.count()).select_from(AnalysisRunORM)
     if dataset_id:
-        q = q.where(AnalysisRunORM.dataset_id == dataset_id)
+        base = base.where(AnalysisRunORM.dataset_id == dataset_id)
+        count_q = count_q.where(AnalysisRunORM.dataset_id == dataset_id)
+    total = (await session.execute(count_q)).scalar_one()
+    q = base.order_by(AnalysisRunORM.created_at.desc()).limit(limit).offset(offset)
     result = await session.execute(q)
     rows = result.scalars().all()
-    return [r.to_dict() for r in rows]
+    return [r.to_dict() for r in rows], total
 
 
 def sse_events_for_state(state_dict: dict[str, Any]) -> list[dict[str, Any]]:

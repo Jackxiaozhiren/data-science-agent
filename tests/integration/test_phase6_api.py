@@ -29,13 +29,13 @@ async def ac():
 async def _upload_and_run(ac: AsyncClient) -> tuple[str, str]:
     csv = b"a,b,group\n1,2.0,A\n2,3.5,B\n3,4.1,A\n4,6.0,B\n5,7.2,A\n6,8.1,B\n7,9.0,A\n8,10.2,B\n9,11.1,A\n10,12.3,B\n11,13.0,A\n12,14.5,B\n"
     r = await ac.post("/api/v1/datasets/", files={"file": ("t.csv", csv, "text/csv")})
-    assert r.status_code == 200, r.text
+    assert r.status_code == 201, r.text
     ds_id = r.json()["id"]
     r2 = await ac.post(
         "/api/v1/analysis/",
         json={"dataset_id": ds_id, "user_query": "Analyze correlation between a and b"},
     )
-    assert r2.status_code == 200, r2.text
+    assert r2.status_code == 201, r2.text
     return ds_id, r2.json()["id"]
 
 

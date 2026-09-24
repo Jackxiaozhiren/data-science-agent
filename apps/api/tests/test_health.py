@@ -1,6 +1,8 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 
+from dsa_api.core.database import engine, init_db, is_ephemeral_database
 from dsa_api.main import app
 
 
@@ -51,3 +53,20 @@ async def test_local_web_origin_is_allowed_by_default() -> None:
         )
         assert r.status_code == 200
         assert r.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+@pytest.mark.asyncio
+async def test_init_db_is_idempotent() -> None:
+    # RED: single lifespan-owned table bootstrap, safe to call twice.
+    await init_db()
+    await init_db()
+    async with engine.begin() as conn:
+        result = await conn.execute(text("SELECT 1"))
+        assert result.scalar() == 1
+
+
+def test_ephemeral_database_detection() -> None:
+    assert is_ephemeral_database("sqlite+aiosqlite:////tmp/dsa.db") is True
+    assert is_ephemeral_database("sqlite+aiosqlite:///:memory:") is True
+    assert is_ephemeral_database("sqlite+aiosqlite:///./data/dsa.db") is False
+    assert is_ephemeral_database("postgresql+asyncpg://db/dsa") is False

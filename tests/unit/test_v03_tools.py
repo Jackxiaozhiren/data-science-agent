@@ -112,7 +112,7 @@ async def test_experiments_crud_and_compare() -> None:
                 "metrics": {"accuracy": 0.8},
             },
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         id1 = r.json()["id"]
         r2 = await ac.post(
             "/api/v1/experiments/",
@@ -123,7 +123,7 @@ async def test_experiments_crud_and_compare() -> None:
                 "metrics": {"accuracy": 0.9},
             },
         )
-        assert r2.status_code == 200
+        assert r2.status_code == 201
         id2 = r2.json()["id"]
         r3 = await ac.get("/api/v1/experiments/", params={"run_id": "run-1"})
         assert r3.status_code == 200
