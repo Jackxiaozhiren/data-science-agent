@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased — Quality-gate hardening (P0/P1 audit follow-through)
+
+No public API breakage except documented REST contract corrections below.
+Measured on 2026-09-24: `ruff check` clean (was 54 errors), `ruff format`
+clean, `mypy .` clean on 114 files (was duplicate-module crash; scoped-only
+before), `pytest 395 passed` (was 345), coverage **80.04%** with
+`fail_under = 79` ratchet (was 0% — source misconfigured + `_vendor`
+shadowing + missing greenlet concurrency).
+
+### Fixed
+
+- `mypy .` now passes: `explicit_package_bases`, non-shipped excludes,
+  `dsa_jupyter` IPython-shim typing fixes.
+- Coverage now measures workspace source (`dsa_viz` name fix), demotes
+  `_vendor` in `conftest.py`, tracks SQLAlchemy greenlets.
+- 79 MB xlsx OOM: `openpyxl` read-only streaming above 10 MB
+  (`stream_threshold_bytes`).
+- Ephemeral DB: lifespan-owned `init_db()` (+ `/tmp` warning); per-request
+  `create_all` removed from all three services.
+- API abuse surface: security headers, per-IP rate limits (analysis 60/min,
+  upload 30/min, 429 + `Retry-After`), generic 500s (frontend `detail`
+  envelope unchanged).
+- SQL sandbox: `read_*`/`glob(`/`*_scan`/COPY-any/`CREATE`/`INSTALL` denied;
+  planner identifiers double-quote escaped.
+- REST: creates return 201 + `Location`; lists paginated (`limit`/`offset` +
+  additive `total`). Frontend uses `res.ok`, unaffected.
+- Web: `next.config.mjs` security headers (verified live, 200 + headers).
+- Docker: non-root users (`appuser`/`node`) + `HEALTHCHECK`; both images
+  boot-tested healthy (also fixed web image missing `node_modules`).
+- Docs: `docs/api.md` contract table; ROADMAP #8/#9/#10 marked closed;
+  `.gitignore` covers `/output/`, `.playwright-cli/`, `*.tsbuildinfo`.
+
 ## 4.4.0 — Free-Model Lane + Export Track + CLI Fix (minor, no breaking change)
 
 New surfaces since 4.3.3: `export_artifact` tool, `ollama` / `openai-compat`

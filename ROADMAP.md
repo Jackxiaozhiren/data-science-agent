@@ -23,9 +23,9 @@ This roadmap communicates project direction so contributors can see **what matte
 
 ### Contributor onboarding
 
-- [#8 — Verified Windows quickstart](https://github.com/Jackxiaozhiren/data-science-agent/issues/8)
-- [#9 — Benchmark-task contribution walkthrough](https://github.com/Jackxiaozhiren/data-science-agent/issues/9)
-- [#10 — Hello-world plugin walkthrough](https://github.com/Jackxiaozhiren/data-science-agent/issues/10)
+- [x] [#8 — Verified Windows quickstart](https://github.com/Jackxiaozhiren/data-science-agent/issues/8) (closed)
+- [x] [#9 — Benchmark-task contribution walkthrough](https://github.com/Jackxiaozhiren/data-science-agent/issues/9) (closed)
+- [x] [#10 — Hello-world plugin walkthrough](https://github.com/Jackxiaozhiren/data-science-agent/issues/10) (closed)
 - Maintain structured bug, benchmark-gap, reproducibility, feature, and plugin issue routes.
 
 ### Public evaluation surface
