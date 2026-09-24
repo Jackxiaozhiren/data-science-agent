@@ -311,6 +311,32 @@ def test_jupyter_load_ipython_extension_tolerant() -> None:
     load_ipython_extension(None)  # type: ignore[arg-type]  # must not raise
 
 
+def test_jupyter_magic_analyze_small_csv(tmp_path: Path) -> None:
+    from dsa_jupyter.magic import DSAMagic
+
+    csv = tmp_path / "tiny.csv"
+    csv.write_text("a,b\n1,2\n3,4\n5,6\n", encoding="utf-8")
+    result = DSAMagic._handle_analyze(
+        _dummy_magic(), [str(csv), "--task", "Summarize columns a and b"]
+    )
+    assert result is not None
+    assert result.status in ("COMPLETED", "FAILED")
+
+
+def test_jupyter_magic_benchmark_failure_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import data_science_agent as _dsa
+    from dsa_jupyter.magic import DSAMagic
+
+    class _Boom:
+        def run(self, *args: object, **kwargs: object) -> object:
+            raise RuntimeError("no runtime in unit test")
+
+    monkeypatch.setattr(_dsa, "Benchmark", _Boom)
+    assert DSAMagic._handle_benchmark(_dummy_magic(), ["--limit", "1"]) is None
+
+
 async def test_mcp_adapter_resources_and_discovery() -> None:
     from dsa_mcp.adapter import _discover_datasets, list_resources, list_tools, read_resource
 
