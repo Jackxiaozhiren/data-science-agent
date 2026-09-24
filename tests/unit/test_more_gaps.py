@@ -5,14 +5,41 @@ import tempfile
 from pathlib import Path
 
 import polars as pl
+from fastapi.testclient import TestClient
 
 
 def test_train_evaluate_routers_and_llm_provider_more() -> None:
-    from fastapi.testclient import TestClient
+    import asyncio as _asyncio
 
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from dsa_api.core.database import Base, get_session
     from dsa_api.main import app
 
-    c = TestClient(app)
+    # Isolated tmp DB: bare TestClient skips lifespan, so own the schema here.
+    _engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+
+    async def _setup() -> None:
+        async with _engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    _asyncio.run(_setup())
+    _factory = async_sessionmaker(_engine, expire_on_commit=False)
+
+    async def _get_session():
+        async with _factory() as s:
+            yield s
+
+    app.dependency_overrides[get_session] = _get_session
+    try:
+        with TestClient(app) as c:
+            _assert_router_branches(c)
+    finally:
+        app.dependency_overrides.clear()
+        _asyncio.run(_engine.dispose())
+
+
+def _assert_router_branches(c: TestClient) -> None:
     # hit more router branches: datasets upload with bad file should 400 or 422
     r = c.post("/api/v1/datasets/", files={"file": ("bad.exe", b"xxx", "application/octet-stream")})
     assert r.status_code in (400, 422, 500)

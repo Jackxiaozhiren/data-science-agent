@@ -8,22 +8,45 @@ import polars as pl
 
 
 def test_routers_and_llm_env_provider() -> None:
-    from fastapi.testclient import TestClient
+    import asyncio
 
+    from fastapi.testclient import TestClient
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from dsa_api.core.database import Base, get_session
     from dsa_api.main import app
 
-    c = TestClient(app)
-    # health / metrics / version
-    assert c.get("/health").status_code in (200, 500)  # degraded if db not ready
-    assert c.get("/ready").status_code in (200, 500)
-    assert c.get("/version").status_code == 200
-    assert c.get("/metrics").status_code == 200
-    # experiments list (may be empty)
-    assert c.get("/api/v1/experiments/").status_code in (200, 404)
-    # datasets list
-    assert c.get("/api/v1/datasets/").status_code == 200
-    # analysis list
-    assert c.get("/api/v1/analysis/").status_code == 200
+    # Isolated tmp DB: bare TestClient skips lifespan, so own the schema here.
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+
+    async def _setup() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.run(_setup())
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _get_session():
+        async with session_factory() as s:
+            yield s
+
+    app.dependency_overrides[get_session] = _get_session
+    try:
+        with TestClient(app) as c:
+            # health / metrics / version
+            assert c.get("/health").status_code in (200, 500)
+            assert c.get("/ready").status_code in (200, 500)
+            assert c.get("/version").status_code == 200
+            assert c.get("/metrics").status_code == 200
+            # experiments list (may be empty)
+            assert c.get("/api/v1/experiments/").status_code in (200, 404)
+            # datasets list
+            assert c.get("/api/v1/datasets/").status_code == 200
+            # analysis list
+            assert c.get("/api/v1/analysis/").status_code == 200
+    finally:
+        app.dependency_overrides.clear()
+        asyncio.run(engine.dispose())
 
     # LLM env provider smoke — without keys it should fallback ok
     from dsa_llm.providers import EnvLLMProvider
