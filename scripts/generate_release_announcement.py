@@ -42,9 +42,11 @@ def request_json(method: str, path: str, payload: dict[str, Any] | None = None) 
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
 
-    request = urllib.request.Request(f"{API}{path}", data=data, headers=headers, method=method)
+    request = urllib.request.Request(  # noqa: S310 - API=https hardcoded above, path internal
+        f"{API}{path}", data=data, headers=headers, method=method
+    )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 - API=https hardcoded above, path internal
             body = response.read().decode("utf-8")
             return json.loads(body) if body else None
     except urllib.error.HTTPError as exc:
@@ -138,7 +140,9 @@ def main() -> int:
         raise RuntimeError("Could not load repository metadata")
     branch = str(repo.get("default_branch") or "main")
 
-    release = request_json("GET", f"/repos/{repository}/releases/tags/{urllib.parse.quote(tag, safe='')}")
+    release = request_json(
+        "GET", f"/repos/{repository}/releases/tags/{urllib.parse.quote(tag, safe='')}"
+    )
     if not isinstance(release, dict):
         raise RuntimeError(f"Release {tag!r} was not found")
 

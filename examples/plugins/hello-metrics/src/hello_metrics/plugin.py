@@ -5,8 +5,9 @@ import json
 from statistics import fmean
 from typing import Literal
 
-from dsa_plugins.plugin import BasePlugin
 from pydantic import BaseModel, Field
+
+from dsa_plugins.plugin import BasePlugin
 
 
 class MetricsInput(BaseModel):

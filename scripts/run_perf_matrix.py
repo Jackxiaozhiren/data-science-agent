@@ -12,10 +12,13 @@ from data_science_agent import Agent, Benchmark
 def p50_p95_p99(times):
     s = sorted(times)
     n = len(s)
+
     def pct(p):
         idx = int(p * n)
         return s[min(idx, n - 1)]
+
     return pct(0.5), pct(0.95), pct(0.99)
+
 
 def run_benchmark_concurrency():
     results = {}
@@ -40,6 +43,7 @@ def run_benchmark_concurrency():
                     return (time.time() - s) * 1000, None
                 except Exception as e:
                     return None, str(e)
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=conc) as ex:
                 futs = [ex.submit(_one) for _ in range(conc)]
                 for f in concurrent.futures.as_completed(futs):
@@ -59,14 +63,17 @@ def run_benchmark_concurrency():
             "throughput_per_s": round(1000 / p50, 2) if p50 else 0,
             "elapsed_ms": round(elapsed, 1),
         }
-        print(f"conc {conc}: p50={p50:.1f} p95={p95:.1f} p99={p99:.1f} err={errors}/{conc} thr={results[conc]['throughput_per_s']}/s")
+        print(
+            f"conc {conc}: p50={p50:.1f} p95={p95:.1f} p99={p99:.1f} err={errors}/{conc} thr={results[conc]['throughput_per_s']}/s"
+        )
     return results
+
 
 def run_sdk_perf():
     agent = Agent()
     out = {}
     s = time.time()
-    prof = agent.profile("benchmarks/v2/datasets/sales.csv")
+    _prof = agent.profile("benchmarks/v2/datasets/sales.csv")
     out["profile_ms"] = round((time.time() - s) * 1000, 1)
     s = time.time()
     r = agent.analyze_sync("benchmarks/v2/datasets/sales.csv", "Analyze revenue")
@@ -76,22 +83,33 @@ def run_sdk_perf():
     _ = r.evidence[0] if r.evidence else None
     out["evidence_lookup_ms"] = round((time.time() - s) * 1000, 3)
     out["report_len"] = len(r.report_markdown or "")
-    print(f"SDK profile {out['profile_ms']}ms analysis {out['analysis_ms']}ms evidence {out['evidence']}")
+    print(
+        f"SDK profile {out['profile_ms']}ms analysis {out['analysis_ms']}ms evidence {out['evidence']}"
+    )
     return out
+
 
 def run_plugin_overhead():
     from dsa_plugins.registry import disable_plugin, enable_plugin
+
     enable_plugin("dsa-time-series")
     s = time.time()
-    r1 = Agent().analyze_sync("benchmarks/v2/datasets/sales.csv", "Analyze revenue")
+    _r1 = Agent().analyze_sync("benchmarks/v2/datasets/sales.csv", "Analyze revenue")
     t_plus = (time.time() - s) * 1000
     disable_plugin("dsa-time-series")
     s = time.time()
-    r2 = Agent().analyze_sync("benchmarks/v2/datasets/sales.csv", "Analyze revenue")
+    _r2 = Agent().analyze_sync("benchmarks/v2/datasets/sales.csv", "Analyze revenue")
     t_core = (time.time() - s) * 1000
     enable_plugin("dsa-time-series")
-    print(f"plugin overhead core {t_core:.1f}ms plus {t_plus:.1f}ms ratio {t_plus/max(t_core,1):.2f}")
-    return {"core_ms": round(t_core,1), "plus_ms": round(t_plus,1), "ratio": round(t_plus/max(t_core,1),2)}
+    print(
+        f"plugin overhead core {t_core:.1f}ms plus {t_plus:.1f}ms ratio {t_plus / max(t_core, 1):.2f}"
+    )
+    return {
+        "core_ms": round(t_core, 1),
+        "plus_ms": round(t_plus, 1),
+        "ratio": round(t_plus / max(t_core, 1), 2),
+    }
+
 
 def main():
     print("=== W9 Performance Matrix ===")
@@ -121,7 +139,7 @@ def main():
     # Write markdown
     md = f"""# Performance / Compatibility / Reliability — W9 §51-55
 
-> Generated {report['generated']} via `scripts/run_perf_matrix.py` (limit=1, 3 samples per conc).
+> Generated {report["generated"]} via `scripts/run_perf_matrix.py` (limit=1, 3 samples per conc).
 
 ## §51 Benchmark Concurrency
 
@@ -140,21 +158,21 @@ def main():
 
 | Operation | ms |
 |-----------|-----|
-| dataset load (via profile) | {sdk['profile_ms']} |
-| profile | {sdk['profile_ms']} |
-| analysis | {sdk['analysis_ms']} |
-| report (len {sdk['report_len']}) | included in analysis |
-| evidence lookup | {sdk['evidence_lookup_ms']} |
-| evidence count | {sdk['evidence']} |
+| dataset load (via profile) | {sdk["profile_ms"]} |
+| profile | {sdk["profile_ms"]} |
+| analysis | {sdk["analysis_ms"]} |
+| report (len {sdk["report_len"]}) | included in analysis |
+| evidence lookup | {sdk["evidence_lookup_ms"]} |
+| evidence count | {sdk["evidence"]} |
 
 ## §53 Plugin Overhead
 
 | Mode | ms | ratio |
 |------|-----|-------|
-| Core only | {plugin['core_ms']} | 1.0 |
-| Core + Plugin (dsa-time-series) | {plugin['plus_ms']} | {plugin['ratio']} |
+| Core only | {plugin["core_ms"]} | 1.0 |
+| Core + Plugin (dsa-time-series) | {plugin["plus_ms"]} | {plugin["ratio"]} |
 
-Plugin overhead < 2.5× (generous) — actual {plugin['ratio']}×.
+Plugin overhead < 2.5× (generous) — actual {plugin["ratio"]}×.
 
 ## §54 Large Dataset
 
@@ -176,6 +194,7 @@ No exaggeration (§54) — documented as per `tests/perf/test_w9_performance.py:
 """
     out_path.write_text(md)
     print(f"Wrote {out_path}")
+
 
 if __name__ == "__main__":
     main()

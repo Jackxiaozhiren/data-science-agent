@@ -93,12 +93,14 @@ the `sha256` of the dataset it ran on. Output also includes a reproducibility bu
 import asyncio
 from data_science_agent import Agent
 
-result = asyncio.run(Agent().analyze(
-    "examples/datasets/sales.csv",
-    "What drives revenue by region?",
-))
+result = asyncio.run(
+    Agent().analyze(
+        "examples/datasets/sales.csv",
+        "What drives revenue by region?",
+    )
+)
 print(result.report_markdown)  # prose + charts, every claim cited
-print(result.evidence)         # Insight → Evidence → ToolCall → Dataset(hash)
+print(result.evidence)  # Insight → Evidence → ToolCall → Dataset(hash)
 ```
 
 ## Run the API server

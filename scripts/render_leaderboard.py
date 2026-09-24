@@ -115,7 +115,9 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="fail if README is not synchronized")
-    mode.add_argument("--write", action="store_true", help="rewrite the generated leaderboard table")
+    mode.add_argument(
+        "--write", action="store_true", help="rewrite the generated leaderboard table"
+    )
     args = parser.parse_args()
 
     entries = load_entries()
@@ -128,7 +130,9 @@ def main() -> int:
         return 0
 
     if current != expected:
-        print("Leaderboard README is out of sync. Run: python scripts/render_leaderboard.py --write")
+        print(
+            "Leaderboard README is out of sync. Run: python scripts/render_leaderboard.py --write"
+        )
         return 1
     print(f"Leaderboard is valid and synchronized ({len(entries)} entries).")
     return 0

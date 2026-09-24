@@ -11,28 +11,39 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from IPython.core.magic import Magics, line_cell_magic, magics_class  # type: ignore[import-not-found]
-    from IPython.display import HTML, Markdown, display  # type: ignore[import-not-found]
-except Exception:  # pragma: no cover
-    Magics = object  # type: ignore[assignment]
+    from IPython.core.magic import Magics as _Magics
+    from IPython.core.magic import line_cell_magic as _line_cell_magic
+    from IPython.core.magic import magics_class as _magics_class
+    from IPython.display import HTML as _HTML2
+    from IPython.display import Markdown as _Markdown2
+    from IPython.display import display as _display2
 
-    def magics_class(cls):  # type: ignore[no-redef]
+    Magics: Any = _Magics
+    magics_class: Any = _magics_class
+    line_cell_magic: Any = _line_cell_magic
+    HTML: Any = _HTML2
+    Markdown: Any = _Markdown2
+    display: Any = _display2
+except Exception:  # pragma: no cover
+    Magics = object
+
+    def magics_class(cls: Any) -> Any:
         return cls
 
-    def line_cell_magic(func):  # type: ignore[no-redef]
+    def line_cell_magic(func: Any) -> Any:
         return func
 
-    HTML = Markdown = display = None  # type: ignore[assignment]
+    HTML = Markdown = display = None
 
 from dsa_jupyter.display import display_analysis
 from dsa_jupyter.metadata import collect_notebook_metadata
 
 
-def _run_sync(coro_factory):  # type: ignore[no-untyped-def]
+def _run_sync(coro_factory: Any) -> Any:
     """Run coroutine factory in a way that works inside Jupyter's running loop (§29)."""
     # Try nest_asyncio first
     try:
-        import nest_asyncio  # type: ignore[import-not-found]
+        import nest_asyncio
 
         nest_asyncio.apply()
     except Exception:
@@ -45,7 +56,7 @@ def _run_sync(coro_factory):  # type: ignore[no-untyped-def]
             result: list[Any] = []
             exc: list[BaseException] = []
 
-            def _thread():
+            def _thread() -> None:
                 try:
                     result.append(asyncio.run(coro_factory()))
                 except BaseException as ex:
@@ -63,7 +74,7 @@ def _run_sync(coro_factory):  # type: ignore[no-untyped-def]
 
 
 @magics_class
-class DSAMagic(Magics):
+class DSAMagic(Magics):  # type: ignore[misc]
     """%dsa magic — §28 MVP.
 
     Usage:
@@ -78,7 +89,7 @@ class DSAMagic(Magics):
     def __init__(self, shell: Any) -> None:
         super().__init__(shell)
 
-    @line_cell_magic
+    @line_cell_magic  # type: ignore[untyped-decorator]
     def dsa(self, line: str, cell: str | None = None) -> Any:
         # cell magic: cell content is task if provided
         raw = line.strip()
@@ -194,7 +205,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             display(HTML(html))
             # also show as table via polars if available
             try:
-                import polars as pl  # type: ignore[import-not-found]
+                import polars as pl
 
                 from dsa_datasets.loader import load_dataframe
                 from dsa_datasets.validate import detect_format
@@ -241,10 +252,10 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
 
         try:
             # Use _run_sync to handle Jupyter loop (§29 Show Progress)
-            def _factory():
+            def _factory() -> Any:
                 return Agent().analyze(ns.dataset, ns.task)
 
-            result = _run_sync(_factory)  # type: ignore[arg-type]
+            result = _run_sync(_factory)
         except Exception as e:
             if display is not None:
                 display(HTML(f"<b style='color:red;'>Analysis failed: {e}</b>"))

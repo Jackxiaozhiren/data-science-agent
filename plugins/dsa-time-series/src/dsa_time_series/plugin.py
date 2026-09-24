@@ -7,14 +7,13 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from dsa_plugins.plugin import BasePlugin
-
 import matplotlib
+
+from dsa_plugins.plugin import BasePlugin
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import polars as pl
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
@@ -79,10 +78,11 @@ class TimeSeriesPlugin(BasePlugin):
         Splits dataset sequentially into folds, each fold holds out last 20% for test.
         Returns per-fold metrics and aggregate.
         """
+        from sklearn.linear_model import LinearRegression
+
         from dsa_datasets.loader import load_dataframe
         from dsa_datasets.validate import detect_format
         from dsa_tools.tools.forecast import _detect_cols
-        from sklearn.linear_model import LinearRegression
 
         p = Path(dataset_path)
         if not p.exists():
@@ -121,16 +121,36 @@ class TimeSeriesPlugin(BasePlugin):
             rmse = float(np.sqrt(mean_squared_error(y_test, pred)))
             mape = float(np.mean(np.abs((y_test - pred) / np.where(y_test == 0, 1, y_test))) * 100)
             per_fold.append(
-                {"fold": i + 1, "train_end": train_end, "test_end": test_end, "mae": mae, "rmse": rmse, "mape": mape, "n_test": len(y_test)}
+                {
+                    "fold": i + 1,
+                    "train_end": train_end,
+                    "test_end": test_end,
+                    "mae": mae,
+                    "rmse": rmse,
+                    "mape": mape,
+                    "n_test": len(y_test),
+                }
             )
         agg = {
             "mae_mean": float(np.mean([f["mae"] for f in per_fold])) if per_fold else 0.0,
             "rmse_mean": float(np.mean([f["rmse"] for f in per_fold])) if per_fold else 0.0,
             "mae_std": float(np.std([f["mae"] for f in per_fold])) if per_fold else 0.0,
         }
-        return {"dataset_path": str(p), "date_col": date_c, "value_col": value_c, "method": method, "folds": per_fold, "aggregate": agg}
+        return {
+            "dataset_path": str(p),
+            "date_col": date_c,
+            "value_col": value_c,
+            "method": method,
+            "folds": per_fold,
+            "aggregate": agg,
+        }
 
-    def metrics(self, forecast_result: dict[str, Any] | None = None, y_true: list[float] | None = None, y_pred: list[float] | None = None) -> dict[str, Any]:
+    def metrics(
+        self,
+        forecast_result: dict[str, Any] | None = None,
+        y_true: list[float] | None = None,
+        y_pred: list[float] | None = None,
+    ) -> dict[str, Any]:
         """Metrics (§27) — compute MAE/RMSE/MAPE from forecast holdout or explicit arrays."""
         if forecast_result and "metrics" in forecast_result:
             # passthrough from forecast tool
@@ -220,7 +240,11 @@ class TimeSeriesPlugin(BasePlugin):
             fname = f"{uuid.uuid4().hex[:10]}_forecast.png"
             out_path = out_dir / fname
             out_path.write_bytes(png)
-            return {"artifact_path": str(out_path), "base64_png": b64, "diagnostics": {"date_col": date_c, "value_col": value_c, "periods": len(fc)}}
+            return {
+                "artifact_path": str(out_path),
+                "base64_png": b64,
+                "diagnostics": {"date_col": date_c, "value_col": value_c, "periods": len(fc)},
+            }
         except Exception:
             plt.close(fig)
             raise
@@ -239,13 +263,21 @@ class TimeSeriesPlugin(BasePlugin):
         fc = forecast_result.get("forecast", [])
         metrics = forecast_result.get("metrics", {})
         mae = metrics.get("mae")
-        default_claim = f"Forecast {forecast_result.get('value_col')} for {len(fc)} periods, holdout MAE={mae:.3f}" if mae is not None else f"Forecast {len(fc)} periods"
+        default_claim = (
+            f"Forecast {forecast_result.get('value_col')} for {len(fc)} periods, holdout MAE={mae:.3f}"
+            if mae is not None
+            else f"Forecast {len(fc)} periods"
+        )
         return {
             "id": f"ev-{uuid.uuid4().hex[:8]}",
             "claim": claim or default_claim,
             "source_type": "model",
-            "source_id": source_id or f"forecast:{forecast_result.get('method','unknown')}",
-            "result": {"forecast": fc[:5], "metrics": metrics, "diagnostics": forecast_result.get("diagnostics", {})},
+            "source_id": source_id or f"forecast:{forecast_result.get('method', 'unknown')}",
+            "result": {
+                "forecast": fc[:5],
+                "metrics": metrics,
+                "diagnostics": forecast_result.get("diagnostics", {}),
+            },
             "confidence": 0.8 if mae is not None and mae < 10 else 0.6,
             "validation_status": "pending",
         }
@@ -263,10 +295,20 @@ class TimeSeriesPlugin(BasePlugin):
     ) -> dict[str, Any]:
         """Full pipeline: forecast→backtest→metrics→viz→evidence (§27 integration)."""
         fr = self.forecast(dataset_path, date_col, value_col, periods, method)
-        bt = self.backtest(dataset_path, fr["date_col"], fr["value_col"], method) if do_backtest else None
+        bt = (
+            self.backtest(dataset_path, fr["date_col"], fr["value_col"], method)
+            if do_backtest
+            else None
+        )
         viz = self.forecast_viz(dataset_path, fr) if do_viz else None
         ev = self.evidence(dataset_path, fr)
-        return {"forecast": fr, "backtest": bt, "metrics": fr.get("metrics"), "visualization": viz, "evidence": ev}
+        return {
+            "forecast": fr,
+            "backtest": bt,
+            "metrics": fr.get("metrics"),
+            "visualization": viz,
+            "evidence": ev,
+        }
 
 
 def register() -> TimeSeriesPlugin:

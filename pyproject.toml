@@ -139,14 +139,29 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+explicit_package_bases = true
 exclude = [
     "src/data_science_agent/_vendor/",  # vendored copy of dsa_* — checked at its source
+    # Non-shipped tooling/docs — style-covered by ruff, not strict-typed:
+    "tests/",
+    "scripts/",
+    "research/",
+    "benchmarks/",
+    "examples/",
+    "case-studies/",
+    "reproduction/",
+    "demo/",
 ]
 # Workspace is a multi-project src layout installed as PEP 660 editable shims;
 # mypy cannot statically follow the .pth-based editable installs, so resolve all
 # dsa_*/dsa_api packages deterministically from their source trees (fixes CI-only
 # `no-any-return` where `dsa_api.models.*` was seen as Any).
 mypy_path = "apps/api/src:apps/jupyter/src:packages/agent/src:packages/datasets/src:packages/evaluation/src:packages/evidence/src:packages/execution/src:packages/llm/src:packages/mcp/src:packages/ml/src:packages/plugins/src:packages/reports/src:packages/statistics/src:packages/tools/src:packages/visualization/src:src"
+
+[[tool.mypy.overrides]]
+module = "dsa_jupyter.*"
+# IPython.display has no inline types in this env (optional dep); calls are guarded by try/except.
+disable_error_code = "no-untyped-call"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "apps/api/tests"]
@@ -159,11 +174,17 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["packages", "apps/api/src"]
+# Editable src-layout: measure by import package name, not source dir path
+# (source=["packages",...] never matches installed dsa_* and yields 0%).
+source = ["dsa_agent", "dsa_api", "dsa_datasets", "dsa_evaluation", "dsa_evidence", "dsa_execution", "dsa_jupyter", "dsa_llm", "dsa_mcp", "dsa_ml", "dsa_plugins", "dsa_reports", "dsa_statistics", "dsa_tools", "dsa_viz", "data_science_agent"]
 branch = true
+omit = ["*/_vendor/*", "*/__pycache__/*"]
+concurrency = ["thread", "greenlet"]
 
 [tool.coverage.report]
 skip_empty = true
+# Ratchet at 79 (measured 80.0 on 2026-09-24; 1pt margin for platform noise).
+fail_under = 79
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/data_science_agent"]

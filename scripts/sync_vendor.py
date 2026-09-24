@@ -50,8 +50,16 @@ def sync() -> list[str]:
             continue
         dst = VENDOR / name
         # Compare file set (excluding __pycache__) to decide if anything changed.
-        src_files = {p.relative_to(src).as_posix() for p in src.rglob("*") if p.is_file() and "__pycache__" not in p.parts}
-        dst_files = {p.relative_to(dst).as_posix() for p in dst.rglob("*") if p.is_file() and "__pycache__" not in p.parts}
+        src_files = {
+            p.relative_to(src).as_posix()
+            for p in src.rglob("*")
+            if p.is_file() and "__pycache__" not in p.parts
+        }
+        dst_files = {
+            p.relative_to(dst).as_posix()
+            for p in dst.rglob("*")
+            if p.is_file() and "__pycache__" not in p.parts
+        }
         if src_files == dst_files and not changed:
             # same file names — check content hashes
             same = True
@@ -71,7 +79,9 @@ def sync() -> list[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Sync vendored dsa_* modules")
-    ap.add_argument("--check", action="store_true", help="Verify _vendor is in sync (exit 1 if not)")
+    ap.add_argument(
+        "--check", action="store_true", help="Verify _vendor is in sync (exit 1 if not)"
+    )
     args = ap.parse_args()
 
     # Snapshot current state
@@ -95,7 +105,10 @@ def main() -> None:
         if before == after:
             print("OK: vendored dsa_* is in sync")
         else:
-            print("DRIFT: vendored dsa_* differs from source — run `python scripts/sync_vendor.py`", file=sys.stderr)
+            print(
+                "DRIFT: vendored dsa_* differs from source — run `python scripts/sync_vendor.py`",
+                file=sys.stderr,
+            )
             sys.exit(1)
     else:
         if changed:

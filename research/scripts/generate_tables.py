@@ -44,7 +44,10 @@ def main() -> None:
     _write_benchmark_table()
     _write_claim_evidence_table()
     # Ablation table placeholder (derived from research/results)
-    (TABLES / "ablation.md").write_text("# Ablation A–F (post-hoc §27)\n\nSee research/V3_RESEARCH_REPORT.md Results.\n", encoding="utf-8")
+    (TABLES / "ablation.md").write_text(
+        "# Ablation A–F (post-hoc §27)\n\nSee research/V3_RESEARCH_REPORT.md Results.\n",
+        encoding="utf-8",
+    )
     print(f"  wrote {TABLES / 'ablation.md'}")
     print("done")
 

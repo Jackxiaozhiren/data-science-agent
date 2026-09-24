@@ -48,6 +48,7 @@ Or use the SDK directly on your file:
 
 ```python
 from data_science_agent import Agent
+
 r = Agent().analyze_sync("my_data.csv", "What drives revenue by region and category?")
 print(r.status, len(r.evidence), r.report[:300])
 ```

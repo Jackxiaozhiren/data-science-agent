@@ -8,9 +8,17 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from IPython.display import HTML, Image, Markdown, display  # type: ignore[import-not-found]
+    from IPython.display import HTML as _HTML
+    from IPython.display import Image as _Image
+    from IPython.display import Markdown as _Markdown
+    from IPython.display import display as _display
+
+    HTML: Any = _HTML
+    Image: Any = _Image
+    Markdown: Any = _Markdown
+    display: Any = _display
 except Exception:  # pragma: no cover
-    HTML = Image = Markdown = display = None  # type: ignore[assignment]
+    HTML = Image = Markdown = display = None
 
 from dsa_jupyter.metadata import collect_notebook_metadata
 
@@ -178,7 +186,7 @@ def register_formatter(ipython: Any) -> None:
 
         # HTML formatter
         html_formatter = ipython.display_formatter.formatters["text/html"]
-        html_formatter.for_type(Analysis, lambda obj, p, cycle: format_analysis_html(obj))  # type: ignore[attr-defined]
+        html_formatter.for_type(Analysis, lambda obj, p, cycle: format_analysis_html(obj))
         # Also plain
         plain = ipython.display_formatter.formatters["text/plain"]
         plain.for_type(

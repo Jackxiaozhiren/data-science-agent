@@ -43,9 +43,11 @@ def request_json(method: str, path: str, payload: dict[str, Any] | None = None) 
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
 
-    request = urllib.request.Request(f"{API}{path}", data=data, headers=headers, method=method)
+    request = urllib.request.Request(  # noqa: S310 - API=https hardcoded above, path internal
+        f"{API}{path}", data=data, headers=headers, method=method
+    )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 - https only, no file: scheme
             body = response.read().decode("utf-8")
             return json.loads(body) if body else None
     except urllib.error.HTTPError as exc:
@@ -68,11 +70,7 @@ def fetch_contributors(repository: str) -> list[dict[str, Any]]:
 def is_bot(item: dict[str, Any]) -> bool:
     login = str(item.get("login") or "")
     normalized = login.lower()
-    return (
-        item.get("type") == "Bot"
-        or normalized.endswith("[bot]")
-        or normalized.endswith("bot")
-    )
+    return item.get("type") == "Bot" or normalized.endswith("[bot]") or normalized.endswith("bot")
 
 
 def render(repository: str, contributors: list[dict[str, Any]]) -> str:
@@ -122,7 +120,9 @@ Start with the [Contributing Guide](CONTRIBUTING.md) or browse [good first issue
 
 def current_file(repository: str, branch: str) -> tuple[str, str]:
     path = urllib.parse.quote(TARGET, safe="/")
-    current = request_json("GET", f"/repos/{repository}/contents/{path}?ref={urllib.parse.quote(branch)}")
+    current = request_json(
+        "GET", f"/repos/{repository}/contents/{path}?ref={urllib.parse.quote(branch)}"
+    )
     if not isinstance(current, dict) or not current.get("sha") or not current.get("content"):
         raise RuntimeError(f"Could not load {TARGET}")
     existing = base64.b64decode(str(current["content"])).decode("utf-8")

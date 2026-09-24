@@ -229,6 +229,7 @@ Core workflows can coordinate:
 import asyncio
 from data_science_agent import Agent
 
+
 async def main():
     result = await Agent().analyze(
         "sales.csv",
@@ -236,6 +237,7 @@ async def main():
     )
 
     print(result.report_markdown)
+
 
 asyncio.run(main())
 ```

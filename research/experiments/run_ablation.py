@@ -10,7 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT / "packages" / "evaluation" / "src"))
 
-from ablation_matrix import ablation_configs, git_commit
+from ablation_matrix import (  # noqa: E402 - sys.path setup required first
+    ablation_configs,
+    git_commit,
+)
 
 
 def _run_once(catalog: Path, datasets_dir: Path, out_dir: Path, limit: int | None = None) -> dict:
@@ -38,11 +41,18 @@ def _metric_summary(payload: dict) -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Ablation A–F runner — real benchmark with provenance and significance helpers")
+    ap = argparse.ArgumentParser(
+        description="Ablation A–F runner — real benchmark with provenance and significance helpers"
+    )
     ap.add_argument("--out", type=Path, default=Path(__file__).parent.parent / "results")
     ap.add_argument("--catalog", type=Path, default=ROOT / "benchmarks" / "v2" / "catalog.json")
     ap.add_argument("--datasets", type=Path, default=ROOT / "benchmarks" / "v2" / "datasets")
-    ap.add_argument("--limit", type=int, default=20, help="Limit tasks for quick research run (default 20); use 100 for full")
+    ap.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Limit tasks for quick research run (default 20); use 100 for full",
+    )
     ap.add_argument("--full", action="store_true", help="Run full benchmark (ignore --limit)")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
@@ -54,7 +64,10 @@ def main() -> None:
     try:
         from dsa_evaluation.significance import bootstrap_ci
 
-        successes = [1.0 if r.get("metrics", {}).get("task_success") else 0.0 for r in payload.get("results", [])]
+        successes = [
+            1.0 if r.get("metrics", {}).get("task_success") else 0.0
+            for r in payload.get("results", [])
+        ]
         mean, lo, hi = bootstrap_ci(successes, n_boot=500, seed=42)
         ci = {"task_success_mean": mean, "lo": lo, "hi": hi}
     except Exception as e:  # pragma: no cover
