@@ -32,11 +32,24 @@ def _dataset_available(row: DatasetORM) -> bool:
         return False
 
 
-async def ensure_tables(session: AsyncSession) -> None:
-    from dsa_api.core.database import Base, engine
+async def list_datasets(
+    session: AsyncSession, limit: int = 100, offset: int = 0
+) -> tuple[list[dict[str, Any]], int]:
+    result = await session.execute(select(DatasetORM).order_by(DatasetORM.created_at.desc()))
+    rows = result.scalars().all()
+    # Runtime uploads live on ephemeral storage on the free hosted demo. If an
+    # instance restart removes a file, do not keep offering its stale DB record
+    # to the analysis UI.
+    available = [r.to_dict() for r in rows if _dataset_available(r)]
+    return available[offset : offset + limit], len(available)
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+
+async def get_dataset(session: AsyncSession, dataset_id: str) -> dict[str, Any] | None:
+    result = await session.execute(select(DatasetORM).where(DatasetORM.id == dataset_id))
+    row = result.scalars().first()
+    if row is None or not _dataset_available(row):
+        return None
+    return row.to_dict()
 
 
 async def save_dataset(
@@ -82,22 +95,3 @@ async def save_dataset(
     await session.commit()
     await session.refresh(orm)
     return orm.to_dict()
-
-
-async def list_datasets(session: AsyncSession) -> list[dict[str, Any]]:
-    await ensure_tables(session)
-    result = await session.execute(select(DatasetORM).order_by(DatasetORM.created_at.desc()))
-    rows = result.scalars().all()
-    # Runtime uploads live on ephemeral storage on the free hosted demo. If an
-    # instance restart removes a file, do not keep offering its stale DB record
-    # to the analysis UI.
-    return [r.to_dict() for r in rows if _dataset_available(r)]
-
-
-async def get_dataset(session: AsyncSession, dataset_id: str) -> dict[str, Any] | None:
-    await ensure_tables(session)
-    result = await session.execute(select(DatasetORM).where(DatasetORM.id == dataset_id))
-    row = result.scalars().first()
-    if row is None or not _dataset_available(row):
-        return None
-    return row.to_dict()
