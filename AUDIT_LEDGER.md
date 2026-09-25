@@ -397,7 +397,74 @@ rather than judged.
 
 ### Fixes applied
 
-_None. §18 approval gate not passed; no source file edited. Ledger commits: `b4f3bf6` (baseline, §N10), `888ae36` (enumeration + findings)._
+Approved by the maintainer ("我都听你的，请按照你的思路建议进行", read as approval of
+the presented §18 plan including the §R7 workflow edits). Executed per §19: one
+finding = one change = one commit, each with a captured failing output before it.
+
+| finding | commit | verify_before (red) | verify_after (green) |
+|---|---|---|---|
+| D-L1-01 pipeline masking | `4ffc7b7` | guard test named `ci.yml:39,:89,:161,:162,:163`, `1 failed` exit 1; real gate exit 2 unwrapped vs exit 0 piped | `2 passed` exit 0 |
+| D-L1-06 mypy path | `0f16921` | guard names `ci.yml, publish.yml`, `1 failed`; mypy reported `unused section(s): … dsa_jupyter.*` over `108 source files` | `no issues found in 112 source files`, unused-section note gone |
+| D-L1-05 mkdocs link signal | `c44cf3a` | guard failed quoting `{'not_found': 'ignore', 'absolute_links': 'ignore'}`; scratch build with that block + broken link → exit 0 under `--strict` | `3 passed`; real `--strict` exits 1 naming 7 links (the gate acquired the ability to fail) |
+| **D-L1-13** (new) 7 broken links | `1e000b7` | `strict_exit=1`, 7 × `WARNING - Doc file … target is not found` | `strict_exit=0`, WARNING/ERROR count 0, `](../` in `docs/**/*.md` → 0 |
+| D-L1-04 vendor orphan blind spot | `c0a008d` | scratch `_vendor/dsa_gone/old.py`, no source → 15 × `WARN: missing source` then `OK`, exit **0** | same tree → `DRIFT: … no workspace source: dsa_gone` exit **1**; deleted → 0; **real repo still 0** (no false positive: `_vendor` = the 15 `SOURCES` keys + `__pycache__`, which the rule excludes) |
+| D-L1-07 import-identity guard | `01cbb7d` | §N3 caveat honoured — no ordinary red exists for a green-on-arrival guard, so a **negative control** test asserts the broken resolution (`dsa_agent` → `_vendor/…`) really occurs, which is what makes the companion assertion non-vacuous | `3 passed`; no `noqa` added; the one `S603` that `tests/**` hides is recorded as Legitimate, not suppressed |
+| D-L1-03 (partial) dead `EXPECTED` keys | `fcf702a` | differential rather than red/green: `✓ No stale claims detected — 0 issues` exit 0 with 19 unreferenced keys | identical output and exit; re-read reports `unreferenced: []`; module's 13 tests pass |
+| self-inflicted format violation | `b2d76bf` | `ruff format --check` → `1 file would be reformatted → tests/test_ci_gate_integrity.py:84`, introduced by my own `c44cf3a` | `181 files already formatted`, guards still pass |
+
+**My own §27 proposal P-7(c) refuted by measurement.** I had proposed dropping
+`docs/` from the checker's skip list. Running `scan_file` across all 47 tracked
+`docs/*.md` with today's context handling yields **8 findings, all 8 false
+positives** — `docs/v4_3/V4_2_FINAL_TRUTH.md` quotes `86+ tests`, `81 source
+files` and `pip install data-science-agent` *in order to record their absence* —
+and 2 are `old_package_pip`, which is in the fail list, so the change would have
+made the gate red on correct prose. The skip list is crude but is currently
+suppressing false positives, not real ones. Filed as **D-L1-14**; not attempted.
+
+### Findings added during repair
+
+### D-L1-13
+| field | value |
+|---|---|
+| claim | Seven links in `docs/` point outside the docs tree and 404 on the rendered site. |
+| lane | L1 (surfaced by an L1 gate repair; the defect class is L5's) |
+| evidence_tier | T0 |
+| severity | S2 |
+| location | `docs/README.md:12,15,16,17,18`; `docs/announcements/latest.md:35`; `docs/announcements/v4.2.10.md:35` |
+| mechanism | mkdocs resolves links only inside `docs_dir`, so a relative `../CHANGELOG.md` can never resolve even though the target exists in the repository. Invisible until D-L1-05 gave `--strict` a link signal. |
+| evidence_command | `uv run python -m mkdocs build --strict` |
+| output_excerpt | before `strict_exit=1` + 7 WARNING lines; after `strict_exit=0`, `WARNING/ERROR count: 0` |
+| reproducible | deterministic |
+| fix_sketch | applied — repointed at canonical repo blob URLs; `absolute_links: ignore` retained so external refs stay unchecked by design |
+| blast_radius | 3 docs files; no code, no contract |
+| verify_before | `strict_exit=1`, 7 named warnings |
+| verify_after | `strict_exit=0`, 0 warnings |
+| expected_delta | docs-gate WARNING count 7 → 0 |
+| status | fixed |
+| commit | `1e000b7` |
+| protected | no |
+
+### D-L1-14
+| field | value |
+|---|---|
+| claim | The claim checker cannot distinguish a stale value from a document quoting that value to assert its absence, so its `docs/` skip is load-bearing false-positive suppression. |
+| lane | L1 |
+| evidence_tier | T0 |
+| severity | S1 |
+| location | `scripts/check_public_claims.py:106-134` (`scan_file` context window), `:222-233` (skip list) |
+| mechanism | `scan_file` whitelists by filename fragments (`CHANGELOG.md`, `MIGRATION`, `QUANTITATIVE_CLAIMS`, `"V4.1 live"`, `"Historical"`) rather than by whether a match is an affirmative or a negated/historical mention. `docs/v4_3/` matches no carve-out, so widening the scan flags the reports that are *auditing* the old numbers. Consequence: the superficially honest fix (drop the skip) breaks the gate, so the gate's reach cannot widen until the matcher is reworked. |
+| evidence_command | `importlib` load of the module + `scan_file` over `git ls-files docs` (see session log) |
+| output_excerpt | `docs/*.md tracked: 47` / `findings if docs/ were scanned: {'stale_version': 2, 'stale_test_counts': 2, 'stale_mypy': 2, 'old_package_pip': 2} total: 8` |
+| reproducible | deterministic |
+| fix_sketch | Needs a decision, not a diff: extend the filename carve-outs to `docs/v4_3/` (cheap, keeps the blind spot) or make the matcher negation-aware (real work; every added carve-out risks hiding a true stale claim — §N6 cuts both ways). Not attempted. |
+| blast_radius | the checker's detection strategy; 47 `docs/` files |
+| verify_before | 8 findings, all false, 2 build-failing |
+| verify_after | — not attempted |
+| expected_delta | deliberately unstated; would need a labelled true-vs-negative set first |
+| status | open |
+| commit | — |
+| protected | no |
+
 
 ### Deliberate non-actions
 
@@ -451,47 +518,68 @@ gate duplicates `ci.yml` and slows every commit for signal CI already produces.
 
 ### 21.1 Executive summary
 
-The repository is green, honest about its debt markers (0 `TODO`/`FIXME`, 0
-`mark.skip`/`xfail`), and 397 tests pass at 80.24% coverage against a ratchet of
-79 — so on the surface this is a healthy tree. The lane's answer to *can any
-signal be trusted* is nonetheless no: **nine of §23's thirteen gates cannot fail
-on something they claim to check or are not wired the way §23 implies** (lint,
-types, vendor drift, leaderboard, claims, docs, SBOM, benchmark, frontend), one
-carries a count-blindness caveat (tests), two are clean (format, npm lock), and
-one was catalogued but not probed (build). The two strongest results were
-produced here rather than taken from the seed: five CI steps whose exit code
-belongs to `tail`, and a bandit `S110` rule that is enabled and then disabled in
-twelve trees, reporting "All checks passed!" over 42 live instances. Nothing was
-fixed: §18 requires approval first, so the output is this committed ledger plus a
-ranked plan. What needs a decision beyond approval: three workflow-edit findings,
-the `CODEOWNERS` handle, and the 1.1 GB nested `data-science-agent/`.
+The repository was green, honest about its debt markers (0 `TODO`/`FIXME`, 0
+`mark.skip`/`xfail`), and 397 tests passed at 80.24% coverage against a ratchet
+of 79. The lane's answer to *can any signal be trusted* was still no: **nine of
+§23's thirteen gates could not fail on something they claimed to check, or were
+not wired the way §23 implies** — and the two largest were found here rather than
+taken from the seed: five CI steps whose exit code belonged to `tail`, and a
+bandit `S110` rule enabled and then disabled in twelve trees, reporting
+"All checks passed!" over 42 live instances.
+
+Seven fixes landed, one commit each, every one red-before-green or
+differential-verified: the pipeline masking, the mypy coverage gap, the docs
+gate's missing link signal (plus the 7 genuinely broken links it then exposed),
+the vendor orphan blind spot, the import-identity guard, and the claim checker's
+19 dead expectation keys. Tests 397 → 403, coverage held at 80.24%, all ten
+non-mutating §23 gates exit 0.
+
+Two things were deliberately **not** done, and each is a decision rather than an
+omission: **D-L1-02** (narrowing `S110`) was left because landing it turns 35
+sites red and classifying them is L3's work under §5.3's ordering — I kept the
+measured violation list instead; and my own proposal to drop the checker's
+`docs/` skip was **refuted by measurement** (8 findings, all false, 2 of them
+build-failing), which is now D-L1-14. Still open for the maintainer: the
+`CODEOWNERS` handle, the 1.1 GB nested `data-science-agent/`, wiring the claim
+checker into CI at all, and making `--check` stop mutating the tree it audits.
 
 ### 21.2 Repairs
 
 | id | severity | what was wrong | commit | verify_before | verify_after |
 |---|---|---|---|---|---|
-| — | — | none; §18 approval gate closed, no source file edited | — | — | — |
-
-Audit-artifact commits: `b4f3bf6` (baseline), `888ae36` (enumeration + findings),
-plus this report's commit.
+| D-L1-01 | S1 | 5 CI steps piped a gate into `tail`/`head`; Actions' default shell has no `pipefail`, so the step reported the truncator's status | `4ffc7b7` | guard named all 5 lines, `1 failed` exit 1; real gate exit 2 direct vs **0 piped** | `2 passed`, exit 0 |
+| D-L1-06 | S3 | `apps/jupyter` linted but never type-checked; mypy called its own override unused | `0f16921` | `108 source files` + `unused section(s)` | `112 source files`, note gone, exit 0 |
+| D-L1-05 | S2 | `--strict` had no link signal; `CONTRIBUTING.md:28` mandates it anyway | `c44cf3a` | scratch build with the repo's block + broken link → exit 0 | real `--strict` exit 1, 7 links named |
+| D-L1-13 | S2 | 7 out-of-tree docs links, 404 on the site | `1e000b7` | exit 1, 7 WARNINGs | exit 0, 0 WARNINGs, 0 `](../` left |
+| D-L1-04 | S1 | `--check` blind to a vendored copy whose source is gone | `c0a008d` | orphan present → `OK`, exit 0 | → `DRIFT`, exit 1; real repo still exit 0 |
+| D-L1-07 | S3 | nothing pinned which copy of `dsa_*` tests import | `01cbb7d` | negative control shows `_vendor` resolution is reachable | `3 passed`, guard non-vacuous |
+| D-L1-03 | S1 | 19 of 20 `EXPECTED` keys dead, under a comment claiming they were live | `fcf702a` | `0 issues`, 19 unreferenced | same output, `unreferenced: []` |
+| own slip | — | I committed an unformatted line; the format gate caught it | `b2d76bf` | `1 file would be reformatted` | `181 files already formatted` |
 
 ### 21.3 Numeric attestation
 
 | metric | baseline | after | delta | command |
 |---|---|---|---|---|
-| tests passed | 397 | 397 | 0 | `uv run pytest -q --cov --cov-report=term-missing`, count derived from `-q` row characters (see D-L1-10) |
-| coverage % | 80.24 | not re-run | — | same command; no code changed so no re-run was warranted |
-| ruff errors (configured set) | 0 | 0 | 0 | `uv run ruff check packages apps/api tests src apps/jupyter` |
-| ruff S110 live instances | 0 reported / **42 actual** | unchanged | 0 | `--select S110` vs `--isolated --select S110` |
-| ruff format | 0 would reformat (179 files) | unchanged | 0 | `uv run ruff format --check …` |
-| mypy issues / files | 0 / 108 | unchanged | 0 | `uv run mypy packages apps/api src --ignore-missing-imports` |
-| tracked files | 730 | **731** | **+1** | `git ls-files \| wc -l` — the ledger itself, the only intended addition |
-| skip+xfail marks | 0 | 0 | 0 | grep, method in the baseline block |
-| TODO/FIXME/HACK/XXX | 0 | 0 | 0 | grep, `.py` under `packages apps/api src tests scripts docs` |
+| tests passed | 397 | **403** | +6 | `uv run pytest -q --cov --cov-report=term-missing`, counted over the `%`-bearing progress rows (D-L1-10 means the gate still prints no count) |
+| coverage % | 80.24 | **80.24** | 0.00 | same command; TOTAL 7643 stmts / 1267 miss unchanged — my edits touched tests, `scripts/` and docs, none in coverage `source` |
+| skip / xfail | 0 | 0 | 0 | character scan of the progress rows: no `s/S/x/X/f/F/e/E` marks. First count attempt returned 6 `s` and was **wrong** — it had read the warnings block's file paths; corrected in the session log |
+| ruff errors | 0 | 0 | 0 | `uv run ruff check packages apps/api tests src apps/jupyter` |
+| ruff format | 0 (179 files) | 0 (**181** files) | +2 files, 0 violations | `uv run ruff format --check …` |
+| mypy issues / files | 0 / 108 | 0 / **112** | +4 files covered | `uv run … mypy packages apps/api src apps/jupyter …` (the widened CI form) |
+| tracked files | 730 | **733** | **+3** | `git ls-files \| wc -l`; `git diff --name-status 150b54f..HEAD --diff-filter=A` lists exactly AUDIT_LEDGER.md + the 2 new test files |
+| TODO/FIXME/HACK/XXX | 0 | 0 | 0 | grep, `.py` under `packages apps/api src tests scripts docs`, `_vendor` excluded |
+| ruff S110 live instances | 0 reported / 42 actual | **unchanged** | 0 | D-L1-02 was deliberately **not** landed this session; see §21.5 |
 | vendor drift | in sync | in sync | 0 | `uv run python scripts/sync_vendor.py --check` |
+| npm lock / leaderboard / claims | 0 / 0 / 0 | 0 / 0 / 0 | 0 | the three `--check` gates, all exit 0 |
+| docs `--strict` | exit 0 but **unable to fail on links** | exit 0, 0 WARNINGs, **now able to fail** | capability, not a number | `uv run python -m mkdocs build --strict` |
+| benchmark | not run | exit 0, 5 tasks, success 1.0 | — | `uv run dsa --limit 5 …`; harness/stub figure, **not** real-model quality (§32.3) |
 
-§16's regression tripwire is satisfied: no skip, xfail or debt marker was added.
-The single non-zero delta is the tracked-file count, and it is the ledger.
+**Not run at session end, stated rather than implied:** `generate_sbom.py` (§R8,
+mutates a tracked file), `uv build`, the web build / `regression.mjs` /
+`npm audit`, and the Docker steps. `ruff format --check` and `pytest --cov` were
+re-run after the last commit; the two commits after the final full pytest run are
+formatting-only and a ledger edit, so no gate result is stale except by that
+reasoning.
 
 ### 21.4 Non-findings and protected items (mandatory, §N11)
 
@@ -548,31 +636,36 @@ The single non-zero delta is the tracked-file count, and it is the ledger.
 
 ### 21.5 Decisions required
 
-1. **`ci.yml` pipeline masking (D-L1-01) + mypy path (D-L1-06) + SBOM assertion
-   (D-L1-08).** All three need a workflow edit, which §R7 reserves. Options:
-   (a) apply all three as one audit commit; (b) apply 01+06 and defer 08;
-   (c) defer all. **Recommendation (a)**, sequenced so 01 lands *before* any
-   gate-widening change — otherwise a newly-honest CI fails for reasons that look
-   unrelated. Cost of deferring: every future "CI is green" statement in this
-   audit and in normal review stays partly unearned, which is the exact condition
-   §10 says L1 exists to remove.
-2. **`CODEOWNERS` handle.** Local evidence shows `@jackson` against
-   `jackxiaozhiren` / `CommandCodeBot`; only a human with org access can say
-   whether `@jackson` resolves. Deferring costs a silently ineffective review
-   auto-assignment in a repo that carries security-scanning workflows.
-3. **Nested `data-science-agent/`, 1.1 GB, untracked, not ignored.** §15.2's
-   decision, surfaced here because it is the only dirty entry and therefore the
-   reason §24 R1 forbids `git add -A`. **Recommendation: add to `.gitignore`**
-   (reversible, non-destructive, removes the double-counting hazard). Relocate if
-   it is live work; delete only on the owner's instruction — §26 explicitly warns
-   it holds the only copy of `FRONTEND_REDESIGN_PROMPT.md`.
-4. **Scope of D-L1-02.** Narrowing `S110` ignores is cheap to write and expensive
-   to land, because it converts 35 unclassified sites into CI failures at once.
-   Options: (a) narrow one package per commit, starting with `packages/agent`
-   (7 sites) and `packages/evidence` (2); (b) narrow all, accept red CI, and
-   classify in a follow-up session; (c) hold D-L1-02 as documentation and start
-   L3 from the `--isolated` list instead. **Recommendation (a)** — it keeps §19's
-   one-finding-one-commit discipline and each commit stays revertable.
+1. **`ci.yml` pipeline masking (D-L1-01) + mypy path (D-L1-06) — APPROVED and
+   DONE** (`4ffc7b7`, `0f16921`), sequenced as recommended so 01 landed first and
+   the newly-honest docs gate could then expose D-L1-13 rather than look like an
+   unrelated failure. **SBOM assertion (D-L1-08) still deferred**: it needs a
+   content predicate, and I declined the one-liner in P-3 as unreadable — the
+   honest shape is a `scripts/check_sbom.py`, which is a new file plus a workflow
+   line, i.e. two more approvals.
+2. **`CODEOWNERS` handle — STILL OPEN.** Local evidence shows `@jackson` while
+   `pyproject.toml:9-10` names `jackxiaozhiren` and the git author is
+   `CommandCodeBot`. Only a human with org access can say whether `@jackson`
+   resolves. Deferring costs a silently ineffective review auto-assignment in a
+   repo that carries security-scanning workflows.
+3. **Nested `data-science-agent/`, 1.1 GB, untracked, not ignored — STILL OPEN.**
+   Recommendation unchanged: add to `.gitignore` (reversible). Relocate if it is
+   live work; delete only on the owner's instruction — §26 warns it holds the
+   only copy of `FRONTEND_REDESIGN_PROMPT.md`.
+4. **Scope of D-L1-02 — NOT LANDED, decision still live.** Measured inventory,
+   `_vendor` duplicates excluded: `packages/evaluation` 8, `apps/jupyter` 8,
+   `packages/agent` 7, `packages/tools` 3, `apps/api` 3, `packages/mcp` 2,
+   `packages/evidence` 2, `packages/llm` 1, `packages/datasets` 1,
+   `packages/plugins` 0, `packages/execution` 0 → **35 shipped**, 7 in `tests`.
+   Option (a) — narrow one package per commit — remains the recommendation, but
+   each commit turns CI red until those sites are classified
+   Hiding/Downgrading/Legitimate, which is L3's lane and follows L2 in §5.3.
+   Landing it inside an L1 session would have spent L3's budget on red CI.
+5. **`sync_vendor --check` still mutates what it audits** (`:85` → `sync()` →
+   `rmtree`/`copytree` at `:74-75`), and §24 R3 / §33 still describe `--check`
+   as the non-writing form. Deliberately left out of `c0a008d`: making it
+   hash-compare without copying is a behaviour change to a CI-critical script and
+   needs its own verification. Recommend it as the first item of the next session.
 
 ### 21.6 Self-audit — every factual claim mapped to its command
 
@@ -611,12 +704,31 @@ The single non-zero delta is the tracked-file count, and it is the ledger.
 | nothing in the repo was edited this session | `git status --short` after all probes → `?? REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md`, `?? data-science-agent/`; the only commits are `b4f3bf6`, `888ae36` and the ledger commits |
 | my own enumeration preceded the seed's wording | §N9 disclosure at the head of the enumeration block: full-document reading means the ordering is not literally satisfiable; mitigation was a seed-unaware second enumeration plus re-verification |
 
-**Unchecked §30 boxes, reported rather than implied (Definition of Done).**
-Captured and committed: baseline, enumeration-before-diff, tier-before-severity,
-severity ceilings, ledger-before-code, §21.4, §21.6, clean `git status`.
-**Not** satisfied, because §18 has not been passed: red-then-green fix pairs, the
-full §23 end-of-session gate set, and §21.2 repairs. That is the intended state
-at an approval gate, not a shortfall to wave through.
+| 403 tests after repair, 0 skips | progress rows only: 5×72 + 43 dots, `s/S/x/X/f/F/e/E` scan over those rows → empty; `Required test coverage of 79.0% reached. Total coverage: 80.24%` |
+| 733 tracked files, +3 | `git ls-files \| wc -l`; `git diff --name-status 150b54f..HEAD --diff-filter=A` → exactly 3 `A` lines |
+| the 6 `s` I first counted were my error | `grep -o '[sSxX]'` over `sed -n '1,8p'` included the warnings block's file paths; per-line character analysis showed rows 1-6 carry no marks. Corrected, not caveated |
+| 35 shipped / 7 test S110 sites, per tree | `uv run ruff check --isolated --select S110 --output-format=concise …` then `_vendor` split, re-listed in §21.5(4) |
+| docs gate went 1→0 on warnings, links | `uv run python -m mkdocs build --strict` before and after `1e000b7`; `grep -cE "^(WARNING\|ERROR)"` 7 → 0 |
+| vendor orphan: 0→1, real repo still 0 | `/tmp/svprobe3` exit 1 `DRIFT … dsa_gone`; `/tmp/svprobe4` control exit 0; `uv run python scripts/sync_vendor.py --check` exit 0 |
+| 8 false positives from scanning docs/ | `importlib` load of `check_public_claims.py` + `scan_file` over `git ls-files docs` → `total: 8`, samples show negation sentences |
+| `EXPECTED` cleanup behaviour-preserving | same output/exit before and after; `unreferenced: []`; `tests/test_automation_scripts.py` → `13 passed` |
+| benchmark exit 0, 5 tasks, rate 1.0 | `uv run dsa --limit 5 …` → `Task success rate: 1.0`; §32.3: harness figure, not real-model quality |
+| no `noqa`/exclusion/threshold added | `git diff 150b54f..HEAD` contains no `noqa`, no `per-file-ignores` edit, no `fail_under` change; the two candidate suppressions in my own new test file were removed, and the remaining `S603` is disclosed as hidden-by-config |
+| workflow edits were authorised | maintainer message 2026-09-25: "我都听你的，请按照你的思路建议进行", following a §18 list that named ci.yml/publish.yml edits as needing approval |
+
+**§30 Definition of Done — what is met and what is not.**
+Met: baseline captured and committed before any code (§N10, `b4f3bf6`);
+enumeration before the lead diff; tier before severity, no ceiling exceeded;
+one finding = one change = one commit, each with a captured before/after pair;
+§21.4 and §21.6 present; no suppression, exclusion, threshold or dependency
+change; vendor drift re-checked; `git status --short` clean apart from the two
+expected untracked entries; ≤8 fixes (7) and ≤2 structural (1 — the `ci.yml`
+gate semantics).
+**Not met, stated plainly:** the *full* §23 table did not run — SBOM, `uv build`,
+the web build / `regression.mjs` / `npm audit`, and Docker were skipped, and the
+`mkdocs`/benchmark gates were run directly rather than through a real Actions
+runner, so the pipefail repair is verified by shell semantics, not by an
+observed CI run. D-L1-02's fix is therefore the only high-ranked item still open.
 
 **D-L1-10 mechanism: now experimentally confirmed, previously inferred.** The
 symptom (no `passed` line) was T0 at filing, but the *cause* — doubled `-q` — was
@@ -769,15 +881,24 @@ captured: `/tmp/mkprobe` with this block verbatim + a broken internal link → e
   Committed `888ae36`.
 - 2026-09-25T03:07Z — §17.2 lead-register diff (CONFIRMED / REFUTED / INCOMPLETE
   / OUT-OF-LANE per seed), §18 ranked triage, §21 report with 21.4 non-findings
-  and 21.6 claim-to-command self-audit. **STOPPED at the §18 approval gate.** No
-  source file edited; `git status --short` shows only the two expected untracked
-  entries. Resumable state = this ledger + §16 baseline + Appendix B.
+  and 21.6 claim-to-command self-audit. Stopped at the §18 approval gate; no
+  source file edited. Resumable state = this ledger + §16 baseline + Appendix B.
+- 2026-09-25, repair phase — maintainer approved. Seven findings fixed, one
+  commit each: `4ffc7b7` (D-L1-01), `0f16921` (D-L1-06), `c44cf3a` (D-L1-05),
+  `1e000b7` (D-L1-13, new), `c0a008d` (D-L1-04), `01cbb7d` (D-L1-07),
+  `fcf702a` (D-L1-03 partial), plus `b2d76bf` formatting a line my own commit had
+  broken. Three of my own claims died in the process and are recorded as such:
+  P-7(c) refuted by measurement (→ D-L1-14), a 6-skip count that was my grep
+  reading the warnings block, and a guessed "+8" tracked-file delta that
+  measured +3.
+- Session end: 403 tests, coverage 80.24%, ten non-mutating §23 gates exit 0.
+  SBOM / `uv build` / web / Docker not run — see §30 note above.
 
 **Next session (resume instructions, §5.2).** Read only: this ledger, the
-baseline block, Appendix B, and the §27 proposed-diff appendix above. If the
-maintainer approves items 2–6 of the triage, enter §19 one finding at a time —
-start with D-L1-02 (patch P-4), whose red is already captured
-(`--select S110` → `All checks passed!` over 35 shipped instances, 42 including
-`tests/**`). Before any L2 work, note §17.6: L2's evidence about swallowed
-exceptions and claim checks rests on the gates D-L1-02/03 found broken, so
-re-derive rather than reuse.
+baseline block, Appendix B, and the §27 proposed-diff appendix above. Suggested
+order: (1) make `--check` hash-compare without mutating (§21.5(5)); (2) settle
+D-L1-14's matcher question, then wire the claim checker (§21.5(1)); (3) take
+D-L1-02 package-by-package as L3 work; (4) the two human decisions,
+`CODEOWNERS` and `data-science-agent/`. Before any L2 work, note §17.6: L2's
+evidence on swallowed exceptions and claim checks still rests on gates
+D-L1-02/03 found broken, so re-derive rather than reuse.
