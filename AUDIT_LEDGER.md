@@ -386,7 +386,7 @@ rather than judged.
 | `_vendor` excluded from ruff, mypy and coverage — "what do the exclusions cost" | **CONFIRMED, cost ≈ nil today** | exclusions at `pyproject.toml:113`, `:143-154`, `:181`; the same bytes are linted and type-checked at source (`ruff check` → `All checks passed!`, `mypy` → `108 source files`, both exit 0) and `sync_vendor --check` reports in-sync, so the source path is authoritative. **No finding opened** — manufacturing one here would be §25 A1. The real gap adjacent to it is D-L1-02 (S110 is off in the *live* trees, which the exclusion question distracts from). |
 | `conftest.py` root-only with a `_vendor` sys.path shim — "what if it were wrong, would a test notice" | **CONFIRMED, answer: no test would notice** → D-L1-07 | only one conftest (`git ls-files \| grep conftest`); shim proven load-bearing (with it `packages/agent/src`, without it `_vendor/dsa_agent/__init__.py`); `except Exception: pass` at `:35`; identity-assertion grep → 0 relevant hits; `tests/test_automation_scripts.py` asserts on pure helpers only |
 | `.pre-commit-config.yaml` — state the delta; does any doc imply sufficiency | **CONFIRMED** → D-L1-09 | `grep -rn "pre-commit" .github/` → exit 1 (absent from CI); both hooks mutate. Delta = 2 of ~13 §23 gates. No doc claiming sufficiency found by this lane's scoped greps — **INCOMPLETE on that sub-question**, since a positive claim could sit in `docs/` under different wording. |
-| `.github/CODEOWNERS` handle vs the org's real identity | **BLOCKED / INCOMPLETE** | file assigns `/packages/mcp/`, `/docs/`, `/benchmarks/` → `@jackson`, while `pyproject.toml:9-10` names `jackxiaozhiren` and the git author is `CommandCodeBot`. Confirming which handle exists requires an identity lookup; §33 authorizes no network command and §26 forbids fetching external state. Needs a human (§27). Flagged as a possible silent review-assignment no-op. |
+| `.github/CODEOWNERS` handle vs the org's real identity | **BLOCKED → RESOLVED, and the finding was real** | At filing time §33 authorized no network command, so the row could only say "needs a human". On 2026-09-25 the maintainer explicitly asked for the identity lookup, which authorized four read-only `gh api` calls: `gh api user` → login **`Jackxiaozhiren`** (id 104724357, `type=User`); `gh api users/jackson` → **a different person** (id 4491093); `gh api repos/.../collaborators/jackson` → **404**, and the collaborator list is `[Jackxiaozhiren]` alone; `gh api repos/Jackxiaozhiren/data-science-agent` → `private=false`, `owner.type=User`. So all 7 `@jackson` entries are an invalid owner → GitHub treats the file as not-configured, and review auto-assignment was a silent no-op exactly as feared. No leakage risk (that account holds no permission here). Repaired by pointing all 7 at `@Jackxiaozhiren`, structure kept so per-path ownership stays readable. |
 | `ci.yml` pinned version strings | **CONFIRMED, and inert twice over** | `ci.yml:164` step name "Verify **v4.3.0** release candidate" while `pyproject.toml:3` is `4.4.0`; `:165` gates it on `github.event.pull_request.number == 47`, so it can fire on at most one PR ever. `.venv/bin/dsa verify-release v4.3.0 --json` is the sole reference to that checker in `.github/`. Not filed as a separate finding because it is a workflow edit (§R7); folded into §21.5 decisions. |
 | `pytest.mark.skip`/`xfail` = 0 (regression tripwire, §3.1/§16) | **CONFIRMED for marks; the tripwire has a hole** → D-L1-11 | marks grep → `0`; `importorskip` grep → `2`, both on mandatory deps (`pyproject.toml:31-32`) with a "not yet required" reason |
 | §32.2 "~48 swallowed-exception sites" vs §12's snippet returning 176 | **RECONCILED — counting-method artifact, and my instrument lands near the 48** | ruff S110 on the same paths: `All checks passed!` (0) as configured, `42` live with `--isolated` (35 shipped + 7 tests), `77` including `_vendor`'s 35 duplicates. So 0 / 42 / 77 / 176 are four different questions. The seed's own point stands: the count is not the finding, the per-site class is (§12). |
@@ -643,15 +643,29 @@ reasoning.
    content predicate, and I declined the one-liner in P-3 as unreadable — the
    honest shape is a `scripts/check_sbom.py`, which is a new file plus a workflow
    line, i.e. two more approvals.
-2. **`CODEOWNERS` handle — STILL OPEN.** Local evidence shows `@jackson` while
-   `pyproject.toml:9-10` names `jackxiaozhiren` and the git author is
-   `CommandCodeBot`. Only a human with org access can say whether `@jackson`
-   resolves. Deferring costs a silently ineffective review auto-assignment in a
-   repo that carries security-scanning workflows.
-3. **Nested `data-science-agent/`, 1.1 GB, untracked, not ignored — STILL OPEN.**
-   Recommendation unchanged: add to `.gitignore` (reversible). Relocate if it is
-   live work; delete only on the owner's instruction — §26 warns it holds the
-   only copy of `FRONTEND_REDESIGN_PROMPT.md`.
+2. **`CODEOWNERS` handle — CLOSED and REPAIRED (2026-09-25).** The maintainer
+   asked for the identity lookup, which settled what §33 had blocked: the account
+   is `Jackxiaozhiren`, `@jackson` is an unrelated person who is not a
+   collaborator here (`gh api .../collaborators/jackson` → 404; sole collaborator
+   is the owner). All 7 entries now read `@Jackxiaozhiren`. Evidence in the
+   lead-register row above.
+3. **Nested `data-science-agent/`, 1.1 GB — CLOSED, and it is NOT junk.** It is a
+   second clone of this repository: `git -C data-science-agent remote -v` → same
+   `origin`, HEAD `e49a441` dated 2026-08-30 (the v4.3.0 line, while the outer
+   tree is 4.4.0), and `git -C data-science-agent status --short` shows
+   **uncommitted** work: 4 modified (`apps/web/app/globals.css`,
+   `apps/web/package.json`, `apps/web/tailwind.config.js`, `package-lock.json`)
+   plus 4 untracked paths. I tested each untracked path against the outer tree
+   with `[ -e ]`: `FRONTEND_REDESIGN_PROMPT.md`, `apps/web/components/`,
+   `apps/web/lib/format.ts`, `apps/web/lib/theme.tsx` are **all MISSING outside**.
+   So §26's warning is understated — four paths, not one, exist only there.
+   Resolution: `/data-science-agent/` added to `.gitignore` with a comment naming
+   the constraint. Not deleted, not moved — moving a directory containing a live
+   `.git` and uncommitted work is destructive-adjacent and was not authorized.
+   Verified the ignore rule cannot hide tracked work: `git ls-files -i -c
+   --exclude-standard` → empty, `git ls-files | wc -l` still 733, and no gate
+   reads `git status`/`--porcelain` (`git grep -l` over scripts/tests/.github →
+   no hits), so nothing's dirtiness check was weakened.
 4. **Scope of D-L1-02 — NOT LANDED, decision still live.** Measured inventory,
    `_vendor` duplicates excluded: `packages/evaluation` 8, `apps/jupyter` 8,
    `packages/agent` 7, `packages/tools` 3, `apps/api` 3, `packages/mcp` 2,
@@ -867,7 +881,7 @@ any, so absence of warnings is not evidence of absence of broken links. Keeping
 captured: `/tmp/mkprobe` with this block verbatim + a broken internal link → exit
 0; must become exit 1.
 
-## §27 Proposed diffs end — approval still outstanding
+## §27 Proposed diffs end — approved 2026-09-25 and executed; the session log below records what landed and what was refuted
 
 ## Session log
 
@@ -893,12 +907,24 @@ captured: `/tmp/mkprobe` with this block verbatim + a broken internal link → e
   measured +3.
 - Session end: 403 tests, coverage 80.24%, ten non-mutating §23 gates exit 0.
   SBOM / `uv build` / web / Docker not run — see §30 note above.
+- 2026-09-25, follow-up — the two human decisions closed; 2 files, 1 commit. The
+  maintainer authorized the identity lookup §33 had ruled out, and it confirmed
+  rather than dissolved the finding: `@jackson` is a real but unrelated account
+  with no permission here, so CODEOWNERS was inert. Both repairs are config-only
+  (`.github/CODEOWNERS`, `.gitignore`); no `_vendor` touch, no workflow touch.
+  Verification actually run for this step: `git check-ignore -v` matches on two
+  paths (exit 0), `git ls-files -i -c --exclude-standard` → empty, `git ls-files`
+  still 733, `git grep -l` for porcelain / `diff --exit-code` gates → no hits, and
+  `tests/test_ci_gate_integrity.py` + `tests/test_import_identity.py` → 6 passed.
+  The full 403-test suite and coverage were NOT re-run for a config-only change;
+  the figures on the line above still describe the repair phase, not this one.
 
 **Next session (resume instructions, §5.2).** Read only: this ledger, the
 baseline block, Appendix B, and the §27 proposed-diff appendix above. Suggested
-order: (1) make `--check` hash-compare without mutating (§21.5(5)); (2) settle
-D-L1-14's matcher question, then wire the claim checker (§21.5(1)); (3) take
-D-L1-02 package-by-package as L3 work; (4) the two human decisions,
-`CODEOWNERS` and `data-science-agent/`. Before any L2 work, note §17.6: L2's
-evidence on swallowed exceptions and claim checks still rests on gates
-D-L1-02/03 found broken, so re-derive rather than reuse.
+order: (1) make `--check` hash-compare without mutating (§21.5(5)) — its own
+commit and its own verification, since it is a behavior change to a CI-critical
+script; (2) settle D-L1-14's matcher question, then wire the claim checker
+(§21.5(1)); (3) take D-L1-02 package-by-package as L3 work. The two human
+decisions are closed and no longer sit in the queue. Before any L2 work, note
+§17.6: L2's evidence on swallowed exceptions and claim checks still rests on
+gates D-L1-02/03 found broken, so re-derive rather than reuse.
