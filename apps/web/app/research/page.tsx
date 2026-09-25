@@ -8,6 +8,21 @@ import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatCard } from "@/app/components/data/StatCard";
 import { EmptyState } from "@/app/components/data/States";
 import { ExperimentsTable } from "@/app/research/ExperimentsTable";
+import { TrackedExperimentsTable } from "@/app/research/TrackedExperimentsTable";
+import { apiUrl } from "@/lib/api";
+
+type Tracked = { id: string; name: string; run_id: string; created_at: string | null };
+
+async function fetchTracked(): Promise<Tracked[]> {
+  try {
+    const res = await fetch(apiUrl("/api/v1/experiments/?limit=20"), { cache: "no-store" });
+    if (!res.ok) return [];
+    const d = (await res.json()) as { experiments: Tracked[] };
+    return Array.isArray(d.experiments) ? d.experiments : [];
+  } catch {
+    return [];
+  }
+}
 
 function experiments(): string[] {
   try {
@@ -24,8 +39,9 @@ function experiments(): string[] {
 
 const RUNNER = "uv run python research/experiments/run_ablation.py --limit 20 --out research/results";
 
-export default function ResearchPage() {
+export default async function ResearchPage() {
   const exps = experiments();
+  const tracked = await fetchTracked();
   return (
     <div className="space-y-4">
       <PageHeader
@@ -53,6 +69,22 @@ export default function ResearchPage() {
             <EmptyState
               title="No results yet"
               description={`Run the ablation runner to produce the first result files: ${RUNNER}`}
+            />
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">API-tracked experiments ({tracked.length})</CardTitle>
+          <CardDescription className="text-xs">Named runs recorded via POST /api/v1/experiments/ (SDK/scripts). Empty when the API is unreachable or no runs were tracked.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {tracked.length ? (
+            <TrackedExperimentsTable rows={tracked} />
+          ) : (
+            <EmptyState
+              title="No tracked runs"
+              description="Record one programmatically (POST /api/v1/experiments/) to compare named runs here."
             />
           )}
         </CardContent>

@@ -10,6 +10,9 @@ Conventions:
 - Errors keep the `{detail: string}` envelope (the web UI renders `detail`).
 - Expensive `POST`s are IP rate-limited (analysis 60/min, upload 30/min;
   429 + `Retry-After`; disable with `DSA_RATE_LIMIT_ENABLED=false`).
+- Opt-in auth: set `DSA_AUTH_TOKEN` to require
+  `Authorization: Bearer <token>` on all `/api/*` routes
+  (`/health`, `/ready`, `/version` stay public). Empty = public demo mode.
 - Responses carry `X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`, and a minimal `Content-Security-Policy`.
 
@@ -27,7 +30,7 @@ Conventions:
 | GET | `/api/v1/analysis/{id}/artifacts` | artifacts + tool_calls + progress |
 | GET | `/api/v1/analysis/{id}/evidence/{eid}` | evidence → tool_call → insights → dataset trace |
 | POST | `/api/v1/analysis/{id}/approve` | HUMAN_REVIEW approval |
-| POST | `/api/v1/experiments/` | programmatic experiment record → 201 (used by SDK/scripts; the web UI compares analyses directly and does not call this yet) |
+| POST | `/api/v1/experiments/` | programmatic experiment record → 201 (surfaced read-only in the web UI research page) |
 | GET | `/api/v1/experiments/` | list + `total` (paginated, optional `?run_id=`) |
 | GET | `/api/v1/experiments/{id}` | one record |
 | POST | `/api/v1/experiments/compare` | rank records by shared metric (`{ids}`) |

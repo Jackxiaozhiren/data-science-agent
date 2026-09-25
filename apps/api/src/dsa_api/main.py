@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from dsa_api.core.config import settings
 from dsa_api.core.database import init_db
-from dsa_api.core.security import RateLimitMiddleware, SecurityHeadersMiddleware
+from dsa_api.core.security import AuthMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 
 # Import ORM models so their tables register on Base.metadata before create_all.
 from dsa_api.models import analysis as _analysis_models  # noqa: F401
@@ -47,6 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(AuthMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(health_router)

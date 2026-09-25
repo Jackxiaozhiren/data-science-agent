@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     rate_limit_analysis_per_min: int = 60
     rate_limit_upload_per_min: int = 30
+    # Opt-in bearer-token auth for self-hosters. Empty (default) = public demo
+    # mode with no auth; set DSA_AUTH_TOKEN to require it on all /api/* routes
+    # (probes /health, /ready, /version stay public; OPTIONS preflight exempt).
+    auth_token: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
