@@ -32,6 +32,13 @@ shadowing + missing greenlet concurrency).
 - Docs: `docs/api.md` contract table; ROADMAP #8/#9/#10 marked closed;
   `.gitignore` covers `/output/`, `.playwright-cli/`, `*.tsbuildinfo`.
 
+### Added (unreleased, non-breaking)
+
+- Opt-in bearer-token auth: `DSA_AUTH_TOKEN` requires
+  `Authorization: Bearer <token>` on `/api/*` (probes stay public);
+  empty = demo unchanged.
+- Research page shows API-tracked experiments (read-only, graceful empty).
+
 ## 4.4.0 — Free-Model Lane + Export Track + CLI Fix (minor, no breaking change)
 
 New surfaces since 4.3.3: `export_artifact` tool, `ollama` / `openai-compat`
