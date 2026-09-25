@@ -10,28 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 
-# Expected current values (from pyproject/CITATION live)
+# Only `version` is read, by check_version_consistency(). The test-count, mypy,
+# coverage, route and SBOM figures that used to sit here were never referenced --
+# the patterns below hard-code their own literals instead -- so listing them read
+# as live expectations while nothing compared against them.
 EXPECTED = {
     "version": "4.4.0",
-    "prev_version": "4.1.1",
-    "prev_versions": ["4.0.0", "3.0.0", "2.0.0"],
-    "pytest": "324",  # live merged tree 2026-09-05 (was 253 pre-merge; +adoption-lineage suites)
-    "pytest_old": ["155", "86+", "86"],
-    "mypy": "104",  # with src
-    "mypy_alt": "102",  # without src (also valid)
-    "mypy_old": ["81", "92"],
-    "coverage": "79%",
-    "coverage_old": "81%",
-    "routes": "13",
-    "routes_old": ["7"],
-    "benchmark_v1": "50/50",
-    "benchmark_v2": "100/100",
-    "sbom": "192",
-    "sbom_old": "193",  # transient duplicate
-    "package": "jack-data-science-agent",
-    "package_old": "data-science-agent",
-    "repo_old": "your-org/data-science-agent",
-    "repo_new": "Jackxiaozhiren/data-science-agent",
 }
 
 # Files to scan (public surfaces §24)
