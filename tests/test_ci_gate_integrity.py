@@ -81,7 +81,9 @@ def test_mkdocs_strict_has_a_link_signal() -> None:
     )
     modes = _link_validation_modes(cfg.read_text(encoding="utf-8"))
     assert "not_found" in modes, f"no validation.links.not_found key in {cfg}"
-    assert not ignore_only, f"not_found is set to ignore, so --strict has nothing to escalate: {modes}"
+    assert not ignore_only, (
+        f"not_found is set to ignore, so --strict has nothing to escalate: {modes}"
+    )
 
 
 def _link_validation_modes(text: str) -> dict[str, str]:
