@@ -42,5 +42,5 @@ nav:
 
 validation:
   links:
-    not_found: ignore
+    not_found: warn
     absolute_links: ignore

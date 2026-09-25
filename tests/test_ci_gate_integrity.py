@@ -67,3 +67,38 @@ def test_mypy_steps_type_check_every_shipped_tree() -> None:
                 missing.append(name)
     assert seen > 0, "no mypy step found in ci.yml or publish.yml -- the parser broke"
     assert not missing, f"mypy omits apps/jupyter in: {', '.join(missing)}"
+
+
+# `--strict` escalates warnings to errors, but `validation.links.not_found:
+# ignore` stops mkdocs emitting the warning in the first place, so the docs gate
+# CI runs (and CONTRIBUTING.md:28 mandates) cannot fail on a broken link.
+def test_mkdocs_strict_has_a_link_signal() -> None:
+    cfg = Path(__file__).resolve().parents[1] / "mkdocs.yml"
+    ignore_only = all(
+        mode == "ignore"
+        for key, mode in _link_validation_modes(cfg.read_text(encoding="utf-8")).items()
+        if key == "not_found"
+    )
+    modes = _link_validation_modes(cfg.read_text(encoding="utf-8"))
+    assert "not_found" in modes, f"no validation.links.not_found key in {cfg}"
+    assert not ignore_only, f"not_found is set to ignore, so --strict has nothing to escalate: {modes}"
+
+
+def _link_validation_modes(text: str) -> dict[str, str]:
+    """Read the two `validation.links` sub-modes without needing a YAML parser."""
+    modes: dict[str, str] = {}
+    in_links = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == "links:":
+            in_links = True
+            continue
+        if in_links:
+            if ":" not in stripped or stripped.startswith("#"):
+                break
+            key, _, value = stripped.partition(":")
+            if key.strip() in {"not_found", "absolute_links"}:
+                modes[key.strip()] = value.strip()
+            else:
+                break
+    return modes
