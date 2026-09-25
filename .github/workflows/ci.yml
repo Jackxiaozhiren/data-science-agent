@@ -83,7 +83,7 @@ jobs:
       - run: npm --prefix apps/web audit --audit-level=high
       - run: uv run ruff check packages apps/api tests src apps/jupyter
       - run: uv run ruff format --check packages apps/api tests src apps/jupyter
-      - run: uv run mypy packages apps/api src --ignore-missing-imports
+      - run: uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM
       - run: set -o pipefail; uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20

@@ -50,3 +50,20 @@ def test_piped_ci_steps_declare_pipefail() -> None:
     assert not offenders, "piped steps report tail's exit code, not the gate's:\n" + "\n".join(
         offenders
     )
+
+
+# (`ruff check` / `ruff format --check`) lists apps/jupyter, so the surface is
+# style-checked and never type-checked; mypy itself reports the dsa_jupyter.*
+# override in pyproject.toml as an unused section on every CI run.
+def test_mypy_steps_type_check_every_shipped_tree() -> None:
+    missing: list[str] = []
+    seen = 0
+    for name in ("ci.yml", "publish.yml"):
+        for _, cmd in _single_line_run_steps((WORKFLOWS / name).read_text(encoding="utf-8")):
+            if "mypy" not in cmd:
+                continue
+            seen += 1
+            if "apps/jupyter" not in cmd:
+                missing.append(name)
+    assert seen > 0, "no mypy step found in ci.yml or publish.yml -- the parser broke"
+    assert not missing, f"mypy omits apps/jupyter in: {', '.join(missing)}"
