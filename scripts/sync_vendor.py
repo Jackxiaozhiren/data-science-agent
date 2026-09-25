@@ -102,8 +102,21 @@ def main() -> None:
                 after[(name, p.relative_to(dst).as_posix())] = p.read_bytes()
 
     if args.check:
-        if before == after:
+        # `sync()` skips sources that no longer exist, so a copy whose source has
+        # been deleted never changes bytes and stays invisible to the before/after
+        # comparison. Check the directory set itself, or a package removed from
+        # the workspace keeps shipping inside the wheel with CI reporting OK.
+        vendored = {p.name for p in VENDOR.iterdir() if p.is_dir() and p.name != "__pycache__"}
+        orphans = sorted(vendored - set(SOURCES))
+        if before == after and not orphans:
             print("OK: vendored dsa_* is in sync")
+        elif orphans:
+            print(
+                "DRIFT: vendored copies exist with no workspace source: "
+                f"{', '.join(orphans)} — delete them from _vendor and re-run",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         else:
             print(
                 "DRIFT: vendored dsa_* differs from source — run `python scripts/sync_vendor.py`",
