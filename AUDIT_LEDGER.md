@@ -372,18 +372,271 @@ S0 would be §25 A4.
 
 ### Lead-register diff
 
-_Status: pending._
+Opened **after** the enumeration block above was committed at `888ae36` (§17.2).
+Scope note: §32 mixes lanes, so seeds belonging to L2-L6 are marked out-of-lane
+rather than judged.
+
+| Seed (§32) | Verdict | Evidence that decided it |
+|---|---|---|
+| `check_public_claims.py` written-never-run; exit path filters to 3 kinds; skip-prefix excludes most targets | **CONFIRMED** → D-L1-03 | `grep -rn check_public_claims .github/` exit 1; six scratch injections P0-P5, of which P1/P5 print findings at **exit 0** and P2 reaches exit 1 |
+| — same seed, extent: "report what it would catch *if it ran*" | **EXTENDED beyond the seed** | P4 (`999 tests / mypy 555 / coverage 12%`) → `0 issues`. Root cause the seed does not name: only `EXPECTED["version"]` is ever read (`:172-187`), so 19 of 20 keys are dead and no metric claim is checkable at all. Four of twelve `SCAN_GLOBS` are enumerated then discarded. **[blind-agent]** additionally measured `packages/**/README.md` matching 0 files. |
+| `mkdocs.yml` validation block may neuter `--strict`; `CONTRIBUTING.md` mandates it | **CONFIRMED** → D-L1-05 | `mkdocs.yml:43-46` both modes `ignore`; scratch project with the repo's exact block + broken internal link → `--strict` exit **0**; real build exit 0 with `grep -cE "WARNING\|ERROR"` → **0**; mandate at `CONTRIBUTING.md:28` |
+| — not in the seed | **NEW** → D-L1-01 | `ci.yml:39,89,161,162,163` pipe gates to `tail`/`head` with no `pipefail`; Actions default shell proven `step_exit=0` vs `-o pipefail` `step_exit=1`; real gate `mkdocs_direct_exit=2` / `mkdocs_piped_exit=0`. So the docs gate is suppressed twice, not once. |
+| Coverage gate `fail_under = 79` vs ~80%; "is the margin documented or folklore" | **CONFIRMED, and the answer is "documented"** | measured `80.24%` against the gate; `pyproject.toml:186` carries `# Ratchet at 79 (measured 80.0 on 2026-09-24; 1pt margin for platform noise)`. Headroom 1.24 pt. Same-day comment says 80.0 vs measured 80.24 — a rounding difference, not drift. **No action recommended; recorded as reviewed-correct.** |
+| `_vendor` excluded from ruff, mypy and coverage — "what do the exclusions cost" | **CONFIRMED, cost ≈ nil today** | exclusions at `pyproject.toml:113`, `:143-154`, `:181`; the same bytes are linted and type-checked at source (`ruff check` → `All checks passed!`, `mypy` → `108 source files`, both exit 0) and `sync_vendor --check` reports in-sync, so the source path is authoritative. **No finding opened** — manufacturing one here would be §25 A1. The real gap adjacent to it is D-L1-02 (S110 is off in the *live* trees, which the exclusion question distracts from). |
+| `conftest.py` root-only with a `_vendor` sys.path shim — "what if it were wrong, would a test notice" | **CONFIRMED, answer: no test would notice** → D-L1-07 | only one conftest (`git ls-files \| grep conftest`); shim proven load-bearing (with it `packages/agent/src`, without it `_vendor/dsa_agent/__init__.py`); `except Exception: pass` at `:35`; identity-assertion grep → 0 relevant hits; `tests/test_automation_scripts.py` asserts on pure helpers only |
+| `.pre-commit-config.yaml` — state the delta; does any doc imply sufficiency | **CONFIRMED** → D-L1-09 | `grep -rn "pre-commit" .github/` → exit 1 (absent from CI); both hooks mutate. Delta = 2 of ~13 §23 gates. No doc claiming sufficiency found by this lane's scoped greps — **INCOMPLETE on that sub-question**, since a positive claim could sit in `docs/` under different wording. |
+| `.github/CODEOWNERS` handle vs the org's real identity | **BLOCKED / INCOMPLETE** | file assigns `/packages/mcp/`, `/docs/`, `/benchmarks/` → `@jackson`, while `pyproject.toml:9-10` names `jackxiaozhiren` and the git author is `CommandCodeBot`. Confirming which handle exists requires an identity lookup; §33 authorizes no network command and §26 forbids fetching external state. Needs a human (§27). Flagged as a possible silent review-assignment no-op. |
+| `ci.yml` pinned version strings | **CONFIRMED, and inert twice over** | `ci.yml:164` step name "Verify **v4.3.0** release candidate" while `pyproject.toml:3` is `4.4.0`; `:165` gates it on `github.event.pull_request.number == 47`, so it can fire on at most one PR ever. `.venv/bin/dsa verify-release v4.3.0 --json` is the sole reference to that checker in `.github/`. Not filed as a separate finding because it is a workflow edit (§R7); folded into §21.5 decisions. |
+| `pytest.mark.skip`/`xfail` = 0 (regression tripwire, §3.1/§16) | **CONFIRMED for marks; the tripwire has a hole** → D-L1-11 | marks grep → `0`; `importorskip` grep → `2`, both on mandatory deps (`pyproject.toml:31-32`) with a "not yet required" reason |
+| §32.2 "~48 swallowed-exception sites" vs §12's snippet returning 176 | **RECONCILED — counting-method artifact, and my instrument lands near the 48** | ruff S110 on the same paths: `All checks passed!` (0) as configured, `42` live with `--isolated` (35 shipped + 7 tests), `77` including `_vendor`'s 35 duplicates. So 0 / 42 / 77 / 176 are four different questions. The seed's own point stands: the count is not the finding, the per-site class is (§12). |
+| §32.2 three-way metric contradiction (324 / 395 / 257 / ~302) | **PARTIALLY RESOLVED** | authoritative figure this session: **397** collected, by character count of the `-q` rows (method in the baseline block). Why the repo's own checker cannot arbitrate: D-L1-03(iv). The reconciliation of the other three figures is L5's, not L1's. |
+| §32.2 "23 orphaned docs vs nav ~24 of 47" | **NOT ADJUDICATED — out of L1 scope, and my first measurement was method-unsafe** | `git ls-files 'docs/**/*.md'` → 21 vs 24 nav lines by a hand-rolled regex; two methods I would not stake a finding on. Left for L5 with the warning that both counts above are pattern-dependent. |
+| §32.1 repro-bundle `except: pass`, `critic.py` vacuous pass, `validator.py` never raises | **OUT OF LANE** (L2) | not investigated; §5.3 orders L2 after L1. Note the dependency §17.6 creates: D-L1-02 and D-L1-03 mean a future L2 green must not be read as "the swallow and the claim were checked". |
+| §32.2 two engines, god files, stub packages, import cycle, frontend, SECURITY.md | **OUT OF LANE** (L3-L6) | untouched this session |
 
 ### Fixes applied
 
-_None. §18 approval gate not passed; no file edited._
+_None. §18 approval gate not passed; no source file edited. Ledger commits: `b4f3bf6` (baseline, §N10), `888ae36` (enumeration + findings)._
 
 ### Deliberate non-actions
 
-_None yet — completed at §21.4._
+- Did not open a finding for the `_vendor` exclusions' cost, the coverage ratchet's
+  margin, the case-study count, or `sync_vendor --check` passing. Each was
+  measured and found correct or immaterial; see §21.4.
+- Did not touch any §32.3 protected item. Verification that each was *looked at*
+  is in §21.4, including the case-study count method trap (`ls -d case-studies/*/`
+  → **9**, numbered studies → **8**, README claim **8**: the naive count is wrong,
+  the claim is right, so the claim was left alone).
+- Did not propose widening or narrowing any exclusion to turn a number green.
+  D-L1-02 *narrows* an exclusion, which adds signal; §R11/§N6 prohibit the
+  opposite and this session did neither.
+- Did not run `generate_sbom.py` or `render_leaderboard.py --write` (§R8, §R10) —
+  both mutate tracked files, and §23's `--check` variants sufficed.
+- Did not "fix" D-L1-01's severity upward on the strength of how alarming a
+  falsely-green CI sounds; `README.md:18-21` carries no CI status badge, so the
+  §8 S0 test (outward status wrong) is not met and S1 stands.
+
+## Phase 2 — Triage (approval gate, §18)
+
+Priority = Impact × Risk ÷ Effort, with §18's R-B (prefer fixes that make a
+silent gate able to fail) applied as the ordering override. Two hard rules bound
+the list: no S0 exists in this lane, and three items are `BLOCKED` because they
+require a workflow edit (§R7).
+
+| # | id | sev | tier | I | R | E | I×R/E | blocked? | one-line mechanism | what could get worse |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | D-L1-01 | S1 | T0 | 5 | 5 | 1 | **25** | **yes** (§R7) | Actions' default shell has no `pipefail`, so five steps report `tail`'s exit code, not the gate's | Latent web-build / benchmark / docs failures surface at once and CI goes red on `main` for the first time |
+| 2 | D-L1-02 | S1 | T0 | 4 | 3 | 3 | **4.0** | no | `select` includes bandit `S`, then `per-file-ignores` turn `S110` off in 12 trees | CI turns red on 35 shipped sites; each needs a Hiding/Downgrading/Legitimate call (§12), so the churn is real |
+| 3 | D-L1-03 | S1 | T0 | 4 | 3 | 2 | **6.0** | partly (CI wiring = §R7) | Unwired, filtered to 3 of 9 kinds, skips its own listed targets, 19/20 `EXPECTED` keys dead | Wiring it makes previously-invisible stale claims fail the build; the `docs/` population has never been scanned, so volume is unknown |
+| 4 | D-L1-04 | S1 | T0 | 4 | 2 | 2 | **4.0** | no | `--check` skips absent sources and always runs `sync()`, so orphaned vendor copies pass and the auditor mutates | A genuine orphan surfaced today would mean the published wheel ships code with no source |
+| 5 | D-L1-07 | S3 | T0/T3 | 3 | 1 | 1 | **3.0** | no | Nothing pins which copy of `dsa_*` the suite imports; the demotion sits in `except Exception: pass` | Near-nil. Note §N3 caveat: the guard is green on arrival, so its red must come from an injected shim failure |
+| 6 | D-L1-05 | S2 | T0 | 2 | 2 | 1 | **2.0** | no | `not_found: ignore` means `--strict` has no link signal | Real broken relative links newly fail the docs build |
+| 7 | D-L1-06 | S3 | T0 | 2 | 1 | 1 | **2.0** | **yes** (§R7) | mypy's CI path list omits `apps/jupyter`; mypy itself reports that override as unused | Nothing measured — `apps/jupyter` type-checks clean today (4 files), so this is a zero-violation extension |
+| 8 | D-L1-10 | S3 | T0 | 2 | 1 | 1 | **2.0** | no | `addopts -q` + `-q` = `-qq`, so the tests gate prints no count | Cosmetic: every CI log gains a line |
+| 9 | D-L1-11 | S3 | T1 | 1 | 1 | 1 | **1.0** | no | `importorskip` on two mandatory deps; the mark-based tripwire cannot see it | A dev environment missing a required dep silently skips instead of erroring |
+| 10 | D-L1-12 | S3 | T0 | 1 | 1 | 1 | **1.0** | no (doc text) | `python scripts/render_leaderboard.py --check` → exit 127; §4's untracked-line list contradicts §24 R1 | None |
+| 11 | D-L1-08 | S3 | T2 | 2 | 1 | 2 | **1.0** | **yes** (§R7) | `generate_sbom.py && test -f <file it just wrote>` is self-satisfying | Content assertions could fail on a real SBOM mismatch |
+| — | D-L1-09 | S3 | T0/T2 | — | — | — | **not recommended for fix** | | pre-commit absent from CI and mutating by design | Informational; any change is a contributor-workflow decision |
+
+**Recommended this session if approved:** 2, 3 (its non-workflow parts), 4, 5, 6,
+8, 9 — seven findings, all §19 red-then-green capable, none requiring a workflow
+edit. Items 1, 7, 11 are ready as diffs but are `BLOCKED` on §R7/§27 approval;
+item 10 is a documentation edit to the prompt file, not to the repository.
+
+**Not recommended for fixing:** D-L1-09 (pre-commit) — repairing it into a real
+gate duplicates `ci.yml` and slows every commit for signal CI already produces.
+
+## Phase 5 — Report
+
+### 21.1 Executive summary
+
+The repository is green, honest about its debt markers (0 `TODO`/`FIXME`, 0
+`mark.skip`/`xfail`), and 397 tests pass at 80.24% coverage against a ratchet of
+79 — so on the surface this is a healthy tree. The lane's answer to *can any
+signal be trusted* is nonetheless no: **nine of §23's thirteen gates cannot fail
+on something they claim to check or are not wired the way §23 implies** (lint,
+types, vendor drift, leaderboard, claims, docs, SBOM, benchmark, frontend), one
+carries a count-blindness caveat (tests), two are clean (format, npm lock), and
+one was catalogued but not probed (build). The two strongest results were
+produced here rather than taken from the seed: five CI steps whose exit code
+belongs to `tail`, and a bandit `S110` rule that is enabled and then disabled in
+twelve trees, reporting "All checks passed!" over 42 live instances. Nothing was
+fixed: §18 requires approval first, so the output is this committed ledger plus a
+ranked plan. What needs a decision beyond approval: three workflow-edit findings,
+the `CODEOWNERS` handle, and the 1.1 GB nested `data-science-agent/`.
+
+### 21.2 Repairs
+
+| id | severity | what was wrong | commit | verify_before | verify_after |
+|---|---|---|---|---|---|
+| — | — | none; §18 approval gate closed, no source file edited | — | — | — |
+
+Audit-artifact commits: `b4f3bf6` (baseline), `888ae36` (enumeration + findings),
+plus this report's commit.
+
+### 21.3 Numeric attestation
+
+| metric | baseline | after | delta | command |
+|---|---|---|---|---|
+| tests passed | 397 | 397 | 0 | `uv run pytest -q --cov --cov-report=term-missing`, count derived from `-q` row characters (see D-L1-10) |
+| coverage % | 80.24 | not re-run | — | same command; no code changed so no re-run was warranted |
+| ruff errors (configured set) | 0 | 0 | 0 | `uv run ruff check packages apps/api tests src apps/jupyter` |
+| ruff S110 live instances | 0 reported / **42 actual** | unchanged | 0 | `--select S110` vs `--isolated --select S110` |
+| ruff format | 0 would reformat (179 files) | unchanged | 0 | `uv run ruff format --check …` |
+| mypy issues / files | 0 / 108 | unchanged | 0 | `uv run mypy packages apps/api src --ignore-missing-imports` |
+| tracked files | 730 | **731** | **+1** | `git ls-files \| wc -l` — the ledger itself, the only intended addition |
+| skip+xfail marks | 0 | 0 | 0 | grep, method in the baseline block |
+| TODO/FIXME/HACK/XXX | 0 | 0 | 0 | grep, `.py` under `packages apps/api src tests scripts docs` |
+| vendor drift | in sync | in sync | 0 | `uv run python scripts/sync_vendor.py --check` |
+
+§16's regression tripwire is satisfied: no skip, xfail or debt marker was added.
+The single non-zero delta is the tracked-file count, and it is the ledger.
+
+### 21.4 Non-findings and protected items (mandatory, §N11)
+
+**Seeds refuted or narrowed, with the command that did it.**
+
+- "26 commits past the tag is drift to fix" — refuted as a defect.
+  `git describe --tags` → `v4.4.0-26-g150b54f`, and `check_public_claims.py`'s
+  version gate accepts it because `base_tag` is `v4.4.0`; the fail-closed control
+  proved that same gate fires on a real mismatch (`pyproject=4.3.9 != expected
+  4.4.0`, exit 1). Left alone (§32.3).
+- "`sync_vendor --check` passing means the mechanism is healthy, nothing to say"
+  — narrowed, not refuted: content drift *is* caught, orphan drift is not
+  (D-L1-04). The scratch probe printed `WARN: missing source` ×15 and then `OK`,
+  exit 0, with an orphaned file present.
+- "`_vendor` exclusions must cost something" — measured as ≈ nil today and **no
+  finding filed** (see the diff table).
+- "The coverage margin is folklore" — refuted: it is dated in
+  `pyproject.toml:186` and matches the measurement to 0.24 pt.
+- "My first probe found a `conftest.py` path-string mismatch" — **retracted as
+  my own measurement error.** The probe used `Path('conftest.py').parent`, which
+  yields a relative string, and compared it to an absolute `sys.path` entry. The
+  mismatch was in my probe, not in `conftest.py`, and the demotion demonstrably
+  works. D-L1-07 is therefore about the *absence of a guard*, not a broken shim.
+
+**Examined and judged correct, with the reason.**
+
+- Case-study count: `ls -d case-studies/*/ \| wc -l` → 9, numbered → 8, README
+  claim → 8. The claim is right and the naive count is the error; untouched.
+- `filterwarnings` entries at `pyproject.toml:170-174`. Measured precision:
+  `StarletteDeprecationWarning.__mro__` is `[…, UserWarning, …]`, so
+  `ignore::DeprecationWarning:fastapi.testclient` can never bind — which is why
+  the warning is still visible in the baseline log. **No action recommended, and
+  specifically do not "correct" the filter to suppress it**: the warning is a
+  real signal, and silencing it is §N6. The inert line neither adds nor removes
+  signal today, matching §32.3's "not a defect today".
+- `ci.yml`'s `# §46 dependency pinning` / `# §47 SBOM` comments are audit-item
+  section numbers, not counts — the §32.3 false-positive trap, avoided.
+- CHANGELOG, ROADMAP, leaderboard stub row, the "4 checks" figure: untouched.
+- Working-tree hygiene: after every probe, including a real `mkdocs build`,
+  `git status --short` shows only `?? REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md`
+  and `?? data-science-agent/`.
+
+**Open hypotheses and what would confirm or kill them.**
+
+- `check_public_claims.py`'s `maturity` findings can never fail the build
+  (kind `maturity` is outside the three prefixes at `:251`) — asserted from the
+  filter's code and its exit path; **not exercised**, because triggering it needs
+  a `README.md` edit. Confirm by editing a scratch README's `V4 adds:` line so
+  Jupyter precedes `Experimental` and observing `⚠ … ` with exit 0.
+- Whether pre-commit sufficiency is claimed anywhere in `docs/` — INCOMPLETE; a
+  broader wording search is L5's.
+- Whether `publish.yml`'s reduced gate set (no format/vendor/npm/leaderboard/
+  mkdocs/SBOM steps) is intentional — unknown; a human question, not a finding.
+
+### 21.5 Decisions required
+
+1. **`ci.yml` pipeline masking (D-L1-01) + mypy path (D-L1-06) + SBOM assertion
+   (D-L1-08).** All three need a workflow edit, which §R7 reserves. Options:
+   (a) apply all three as one audit commit; (b) apply 01+06 and defer 08;
+   (c) defer all. **Recommendation (a)**, sequenced so 01 lands *before* any
+   gate-widening change — otherwise a newly-honest CI fails for reasons that look
+   unrelated. Cost of deferring: every future "CI is green" statement in this
+   audit and in normal review stays partly unearned, which is the exact condition
+   §10 says L1 exists to remove.
+2. **`CODEOWNERS` handle.** Local evidence shows `@jackson` against
+   `jackxiaozhiren` / `CommandCodeBot`; only a human with org access can say
+   whether `@jackson` resolves. Deferring costs a silently ineffective review
+   auto-assignment in a repo that carries security-scanning workflows.
+3. **Nested `data-science-agent/`, 1.1 GB, untracked, not ignored.** §15.2's
+   decision, surfaced here because it is the only dirty entry and therefore the
+   reason §24 R1 forbids `git add -A`. **Recommendation: add to `.gitignore`**
+   (reversible, non-destructive, removes the double-counting hazard). Relocate if
+   it is live work; delete only on the owner's instruction — §26 explicitly warns
+   it holds the only copy of `FRONTEND_REDESIGN_PROMPT.md`.
+4. **Scope of D-L1-02.** Narrowing `S110` ignores is cheap to write and expensive
+   to land, because it converts 35 unclassified sites into CI failures at once.
+   Options: (a) narrow one package per commit, starting with `packages/agent`
+   (7 sites) and `packages/evidence` (2); (b) narrow all, accept red CI, and
+   classify in a follow-up session; (c) hold D-L1-02 as documentation and start
+   L3 from the `--isolated` list instead. **Recommendation (a)** — it keeps §19's
+   one-finding-one-commit discipline and each commit stays revertable.
+
+### 21.6 Self-audit — every factual claim mapped to its command
+
+| Claim in this report | Command / evidence |
+|---|---|
+| 397 passed, 0 failed | `head -6 /tmp/audit0/02d_pytest.log \| grep -o '^\.\+' \| awk '{s+=length($0)}'` → `dots=397`; non-`.` status chars → 0 |
+| coverage 80.24%, gate 79 | `Required test coverage of 79.0% reached. Total coverage: 80.24%` in the same log; `pyproject.toml:187` |
+| ruff 0 errors / format 0 / mypy 0 over 108 files | exit codes 0,0,0 with `All checks passed!`, `179 files already formatted`, `Success: no issues found in 108 source files` |
+| `uv sync --dev`, `uv lock --check` exit 0 | `/tmp/audit0/01a_sync.log`, `01b_lockcheck.log`, both `uv_sync_exit=0` / `uv_lock_check_exit=0` |
+| 730 → 731 tracked files, tag `v4.4.0-26-g150b54f` | `git ls-files \| wc -l`, `git describe --tags` |
+| five CI steps pipe a gate and lose its code | `grep -rn "run:.*\|.*\(tail\|head\|grep\|tee\)" .github/workflows/`; `grep -n "shell:\|pipefail"` shows the 5 lack the header the others have |
+| Actions' shell yields the pipe's last status | `bash --noprofile --norc -e -c 'false \| tail -n 1'` → `step_exit=0`; with `-o pipefail` → `step_exit=1` |
+| the real docs gate is masked | `mkdocs_direct_exit=2` vs `mkdocs_piped_exit=0` on identical arguments |
+| mkdocs has no link signal | `/tmp/mkprobe` with `mkdocs.yml:43-46` verbatim + broken internal link → `direct_exit=0`; real build `43` lines, `WARNING\|ERROR` count `0` |
+| S110 configured-clean over 42 live instances | `--select S110` → `All checks passed!`; `--isolated --select S110` → `Found 77 errors`, `_vendor` 35, live 42, shipped 35 / tests 7 |
+| 12 trees carry the S110 ignore, `select` includes `S` | `pyproject.toml:114` and `:118-131`, read directly |
+| `check_public_claims` unwired | `grep -rn "check_public_claims" .github/ pyproject.toml` → exit 1 (also §0 step 5's own grep) |
+| its severity filter exits 0 on findings | scratch P1 and P5: `[stale_version:README.md] '4.0.0'` / `[stale_test_counts…]` with `⚠ Low/medium`, exit 0 |
+| it ignores `docs/` entirely | scratch P3: three stale versions in `docs/foo.md` → `0 issues`, exit 0 |
+| metric claims are unchecked | scratch P4: `999 tests / mypy 555 / coverage 12%` → `0 issues`, exit 0 |
+| 19 of 20 `EXPECTED` keys unreferenced | `grep -n 'EXPECTED\[' scripts/check_public_claims.py` → only lines 172,173,184,185,187, all `version` |
+| its version check is fail-closed | scratch `pyproject.toml` at 4.3.9 → `[version_consistency] … != expected 4.4.0`, exit 1 |
+| `--check` cannot see orphaned vendor copies | `/tmp/svprobe`: 15 × `WARN: missing source` then `OK: vendored dsa_* is in sync`, `check_exit=0` with the orphan present; identical output with it deleted |
+| `--check` mutates, and did not in the real repo | `sync_vendor.py:85` (`changed = sync()`), `:74-75` (`rmtree`/`copytree`); real repo `--check` exit 0 then `git status --short` unchanged |
+| the conftest shim is load-bearing | `dsa_agent.__file__` → `…/_vendor/dsa_agent/__init__.py` without demotion, `…/packages/agent/src/…` with it |
+| no test pins import identity | `grep -rnE "__file__\|_vendor\|sys\.path" tests apps/api/tests --include='*.py'` → 5 hits, all unrelated `REPO`/path constants |
+| no test asserts a checker's exit code or stdout | `tests/test_automation_scripts.py` symbol scan: asserts target `is_bot`, render helpers, `load_entries`, `replace_block`, `_is_release_candidate_ref` |
+| pre-commit absent from CI, covers 2 gates | `grep -rn "pre-commit\|pre_commit" .github/` → exit 1; `.pre-commit-config.yaml:1-7` |
+| leaderboard gate never runs on a normal PR | `leaderboard.yml:3-13` path filter; `render_leaderboard_check_exit=127` for `python`, exit 0 via `uv run python` |
+| `verify-release` is pinned to 4.3.0 and PR-47-gated | `ci.yml:164-169`, `pyproject.toml:3` = `4.4.0` |
+| `apps/jupyter` untype-checked in CI, clean when asked | `ci.yml:86` / `publish.yml:58` path lists; mypy's `unused section(s): … dsa_jupyter.*`; `uv run mypy apps/jupyter …` → `no issues found in 4 source files` |
+| 0 marks, 2 `importorskip`, 0 TODO/FIXME | the three greps in the baseline block, methods stated there |
+| no CI badge in README | `grep -n "actions/workflow\|badge\|shields.io" README.md` → four badges, none a workflow-status badge |
+| case-study claim 8 is correct | `ls -d case-studies/*/ \| wc -l` → 9; numbered → 8; `README.md:8` "8 verified case studies" |
+| `filterwarnings` line is inert because of class, not module | `StarletteDeprecationWarning.__mro__` → `[…, 'UserWarning', …]`; `issubclass(…, DeprecationWarning)` → `False` |
+| nothing in the repo was edited this session | `git status --short` after all probes → `?? REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md`, `?? data-science-agent/`; the only commits are `b4f3bf6`, `888ae36` and the ledger commits |
+| my own enumeration preceded the seed's wording | §N9 disclosure at the head of the enumeration block: full-document reading means the ordering is not literally satisfiable; mitigation was a seed-unaware second enumeration plus re-verification |
+
+**Unchecked §30 boxes, reported rather than implied (Definition of Done).**
+Captured and committed: baseline, enumeration-before-diff, tier-before-severity,
+severity ceilings, ledger-before-code, §21.4, §21.6, clean `git status`.
+**Not** satisfied, because §18 has not been passed: red-then-green fix pairs, the
+full §23 end-of-session gate set, and §21.2 repairs. That is the intended state
+at an approval gate, not a shortfall to wave through.
 
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
   `/tmp/audit0/`. Baseline block written from measured output. Ledger committed
   before any source edit (§N10).
+- 2026-09-24T13:07–13:14Z — L1 enumeration: 18 gate surfaces inventoried, 6
+  scratch-copy injection probes (`/tmp/claims_probe`, `/tmp/svprobe`,
+  `/tmp/mkprobe`), 12 findings filed, 1 self-refuted probe retracted. Blind
+  seed-unaware enumeration obtained and its claims re-verified against source.
+  Committed `888ae36`.
+- 2026-09-25T03:07Z — §17.2 lead-register diff (CONFIRMED / REFUTED / INCOMPLETE
+  / OUT-OF-LANE per seed), §18 ranked triage, §21 report with 21.4 non-findings
+  and 21.6 claim-to-command self-audit. **STOPPED at the §18 approval gate.** No
+  source file edited; `git status --short` shows only the two expected untracked
+  entries. Resumable state = this ledger + §16 baseline + Appendix B.
+
+**Next session (resume instructions, §5.2).** Read only: this ledger, the
+baseline block, Appendix B. If the maintainer approves items 2–6 of the triage,
+enter §19 one finding at a time — start with D-L1-02, whose red is already
+captured (`--select S110` → `All checks passed!` over 42 instances). Before any
+L2 work, note §17.6: L2's evidence about swallowed exceptions and claim checks
+rests on the gates D-L1-02/03 found broken, so re-derive rather than reuse.
