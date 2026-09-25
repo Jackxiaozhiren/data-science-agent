@@ -96,10 +96,15 @@ def check() -> list[str]:
     """Report why `_vendor` is stale. Writes nothing, creates nothing."""
     problems: list[str] = []
     for name, src in sorted(SOURCES.items()):
+        dst = VENDOR / name
         if not src.is_dir():
+            # sync() cannot repair this, so without a verdict here a module whose
+            # source was deleted keeps shipping while --check reports OK.
+            if dst.is_dir():
+                problems.append(f"{name}: vendored copy has no source to rebuild it from")
             print(f"WARN: missing source {src}", file=sys.stderr)
             continue
-        reason = _diff(name, src, VENDOR / name)
+        reason = _diff(name, src, dst)
         if reason is not None:
             problems.append(reason)
     vendored: set[str] = set()

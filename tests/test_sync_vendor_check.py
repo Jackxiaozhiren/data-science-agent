@@ -75,6 +75,17 @@ def test_check_sees_a_vendored_copy_no_workspace_source_backs(tmp_path: Path) ->
     assert "dsa_gone" in result.stderr
 
 
+def test_check_sees_a_copy_whose_named_source_was_deleted(tmp_path: Path) -> None:
+    root = _scratch(tmp_path)
+    _make(root, VENDOR / "dsa_reports", {"__init__.py": b"STALE\n"})
+
+    result = _run(root, "--check")
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "dsa_reports" in result.stderr
+    assert (root / VENDOR / "dsa_reports/__init__.py").read_bytes() == b"STALE\n"
+
+
 def test_sync_names_only_the_package_that_actually_changed(tmp_path: Path) -> None:
     root = _scratch(tmp_path)
     _make(root, AGENT_SRC, {"__init__.py": b"AGENT\n"})
