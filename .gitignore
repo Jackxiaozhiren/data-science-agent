@@ -49,3 +49,7 @@ apps/vscode/node_modules/
 benchmarks/external/datascibench/.workspace/
 # GT-run checkpoint (resume state; canonical artifact is results/raw_runs.json)
 benchmarks/external/datascibench/results/raw_runs.partial.jsonl
+
+# Nested v4.3.0 clone with uncommitted frontend-redesign WIP; FRONTEND_REDESIGN_PROMPT.md
+# and apps/web/{components,lib/format.ts,lib/theme.tsx} exist nowhere else. Ignored, not deleted.
+/data-science-agent/
