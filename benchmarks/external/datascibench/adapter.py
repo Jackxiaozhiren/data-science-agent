@@ -58,7 +58,7 @@ HF_GT_DATASET = "zd21/DataSciBench"
 #: Adapter conversion-layer version. v1 materialized trajectory → logs.txt
 #: only; v2 additionally maps genuine agent artifacts onto the exact output
 #: filenames the metric functions read (see _materialize_expected_files).
-ADAPTER_VERSION = "2.0"
+ADAPTER_VERSION = "3.0"
 
 #: Categories this adapter version drives through ``experiments/evaluate.py``.
 #: ``bcb_*`` tasks score through the separate ``evaluate_tmc.py`` path, which is
@@ -217,13 +217,35 @@ class DataSciBenchAdapter:
             if not question:
                 continue
             self._task_dirs[task_id] = task_dir
+            primary = _pick_primary_input(task_dir)
+            if primary is None:
+                # v3: prompt-only dirs (upstream ships no data file) are
+                # reported unsupported instead of feeding the directory itself
+                # to the agent (which produced 0-evidence stubs, CR 0 — Z1
+                # cluster). Same §26 precedent as dl_/bcb* scope exclusions.
+                tasks.append(
+                    ExternalTask(
+                        task_id=task_id,
+                        question=question,
+                        dataset_path=str(task_dir),
+                        benchmark_name=self.name,
+                        benchmark_task_ref=f"DataSciBench@{UPSTREAM_COMMIT[:8]}#{task_id}",
+                        gold={},
+                        supported=False,
+                        unsupported_reason=(
+                            "no data file shipped upstream (prompt-only task dir); "
+                            "agent runs on empty input cannot score (§26)"
+                        ),
+                    )
+                )
+                continue
             tasks.append(
                 ExternalTask(
                     task_id=task_id,
                     question=question,
                     # §25 task mapping: the agent consumes the task's primary
-                    # input file (task dir itself when no data file is shipped).
-                    dataset_path=str(_pick_primary_input(task_dir) or task_dir),
+                    # input file.
+                    dataset_path=str(primary),
                     benchmark_name=self.name,
                     benchmark_task_ref=f"DataSciBench@{UPSTREAM_COMMIT[:8]}#{task_id}",
                     gold={},  # GT stays behind the boundary; applied inside evaluate()

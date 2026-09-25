@@ -49,7 +49,25 @@ def _fake_workspace(tmp_path: Path) -> Path:
         d = ws / "data" / task_id
         d.mkdir(parents=True)
         (d / "prompt.json").write_text(json.dumps({"prompt": prompt}), encoding="utf-8")
+        # Adapter v3 requires a shipped data file for support; keep these
+        # fixtures supported with a minimal input (prompt-only dirs are
+        # covered by test_prompt_only_task_dir_is_unsupported).
+        (d / "data.csv").write_text("a,b\n1,2\n", encoding="utf-8")
     return ws
+
+
+def test_prompt_only_task_dir_is_unsupported(dsc: Any, tmp_path: Path) -> None:
+    ws = tmp_path / "workspace"
+    d = ws / "data" / "human_99"
+    d.mkdir(parents=True)
+    (d / "prompt.json").write_text(
+        json.dumps({"prompt": "Analyze the missing dataset."}), encoding="utf-8"
+    )
+    adapter = _adapter(dsc, ws)
+    tasks = {t.task_id: t for t in adapter.list_tasks()}
+    assert not tasks["human_99"].supported
+    assert "no data file" in (tasks["human_99"].unsupported_reason or "")
+    assert tasks["human_99"].dataset_path == str(d)
 
 
 def _adapter(dsc: Any, ws: Path) -> Any:
@@ -104,7 +122,9 @@ def test_run_task_supported_invokes_runner_and_materializes_logs(dsc: Any, tmp_p
     task = next(t for t in adapter.list_tasks() if t.task_id == "human_2")
     run = adapter.run_task(task, RunConfig(model="deterministic"))
     assert run.status == "COMPLETED" and run.run_id == "run-x"
-    run_dir = Path(task.dataset_path) / "dsa_run-x"
+    # Run dirs live under the task dir (upstream contract), not dataset_path
+    # (which is the input FILE since adapter v3).
+    run_dir = adapter._task_dirs["human_2"] / "dsa_run-x"
     logs = (run_dir / "logs.txt").read_text(encoding="utf-8")
     assert "## Current Plan" in logs and "## Current Task" in logs
     plan_json = logs.split("## Current Plan\n")[1].split("## Current Task")[0]

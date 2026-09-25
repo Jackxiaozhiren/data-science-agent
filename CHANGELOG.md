@@ -39,6 +39,14 @@ shadowing + missing greenlet concurrency).
   empty = demo unchanged.
 - Research page shows API-tracked experiments (read-only, graceful empty).
 
+### Corrections to published numbers (no code change)
+
+- GT-lane figures in 4.4.0/4.3.3 (5/44, mean CR 0.088, gap 0.886) were measured
+  with the `deterministic-local` runner (heuristic planner, no LLM —
+  `benchmarks/external/datascibench/results/raw_runs.json:config`). They are the
+  heuristic floor, not real-model quality; the real-model GT lane is unmeasured.
+  Same qualifier added to `CROSS_BENCHMARK_MATRIX.md` and `gt_scores.md`.
+
 ## 4.4.0 — Free-Model Lane + Export Track + CLI Fix (minor, no breaking change)
 
 New surfaces since 4.3.3: `export_artifact` tool, `ollama` / `openai-compat`

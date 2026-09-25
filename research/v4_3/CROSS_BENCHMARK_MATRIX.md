@@ -55,6 +55,11 @@ is **not alone statistically meaningful**; accompanied by:
 > **"DSA achieves 1.00 internally (150/150 v1+v2). Externally (DataSciBench GT lane v2,
 > 44 scored): pass rate 0.114, mean CR 0.088 — gap = 0.886 (descriptive, §53 caveat:
 > closed exact-match vs open GT-scored measure different constructs)."**
+>
+> Runner qualifier: the external lane ran `deterministic-local` (heuristic planner,
+> no LLM — `raw_runs.json:config`). The gap therefore mixes construct difference
+> with model absence; the real-model GT lane is unmeasured — do not read 0.088 as
+> system quality with an LLM.
 
 v1 GT history (0/44, mean 0.026, gap 1.000) kept in git — the v1→v2 delta (+5 passes,
 +0.062 mean CR) isolates the output-layout share honestly.

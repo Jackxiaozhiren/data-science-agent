@@ -1,6 +1,11 @@
 # DataSciBench — GT-lane scores (Phase F §43, original evaluator)
 
 > 44/45 tasks scored; pass = CR >= 0.5; pass rate 5/44 (Wilson 95% [0.0495, 0.2398]); mean CR 0.0881.
+>
+> Runner config: `deterministic-local` (heuristic planner, **no LLM** — see
+> `benchmarks/external/datascibench/results/raw_runs.json:config`). These numbers
+> measure the heuristic floor, not real-model quality; the real-model GT lane is
+> unmeasured.
 
 | category | scored | passed | pass rate | Wilson 95% | mean CR | max CR |
 |---|---:|---:|---:|---|---:|---:|
