@@ -883,6 +883,50 @@ captured: `/tmp/mkprobe` with this block verbatim + a broken internal link → e
 
 ## §27 Proposed diffs end — approved 2026-09-25 and executed; the session log below records what landed and what was refuted
 
+## §34 Follow-up lane — `--check` non-mutation, closed same day
+
+**D-L1-05 residual, CLOSED (`5400c01`).** The open question from §27 was whether
+`--check` should stop calling `sync()` at all. It did, and the reason it had to is
+sharper than "it mutates": the old `main()` snapshotted bytes, called `sync()`
+(which rewrites `_vendor`), then compared its own repair against the state it had
+replaced. So a DRIFT verdict described a condition that no longer existed by the
+time anyone could look at it. `check()` now compares source bytes to vendored
+bytes and writes nothing; `sync()` calls the same `_diff`, so "check says OK" and
+"sync says nothing to do" are one judgement instead of two overlapping ones.
+
+**Unplanned sub-finding, folded into the same commit.** `sync()`'s fast path was
+guarded by `if src_files == dst_files and not changed:`. `changed` accumulates
+across packages, so once any package drifted, every later package was rmtree'd,
+recopied, and appended — `Synced: dsa_agent, dsa_api` for a copy that had not
+moved. Dropped because sharing `_diff` made the guard wrong, not to tidy.
+
+**D-L1-15 — NEW, filed and FIXED (`544eedd`), S2.** `SOURCES` keys the orphan
+check, so a package whose directory is deleted while its vendored copy remains is
+not an orphan by that test: `--check` printed WARN, found nothing, and exited 0
+with a stale module still headed for the wheel — the exact scenario §27's own
+comment says the orphan check was added to catch. Red captured by injection
+(§9.2): scratch tree with `_vendor/dsa_reports/` and no source → `exit=0`,
+stdout `OK: vendored dsa_* is in sync`. Safety of the tightened verdict measured
+first: all 15 declared sources exist and the real `--check` emits zero WARN
+lines, so the new branch cannot fire outside its scenario.
+
+**Verification run for this lane.** `tests/test_sync_vendor_check.py`, 5 cases,
+scratch-tree subprocesses only — the real `_vendor` is never reachable from them.
+Two of the five are genuinely red-then-green against `git show HEAD:scripts/…`
+(deterministic, captured in the commit messages); three were green on arrival and
+say so: the faithful-copy case guards against the opposite failure (phantom drift
+→ permanently red CI), and the two orphan cases are regression tripwires whose red
+exists only by deleting the guard. Real tree after both commits: `--check` exit 0,
+`git status -- src/.../\_vendor` empty. Full suite **408 passed**, coverage
+**80.24%** (gate 79), ruff and `ruff format --check` clean on `scripts` and
+`tests`, mypy `Success: no issues found in 108 source files`.
+
+**Budget, stated plainly.** §28 caps a lane at 8 fixes. L1 has now landed **9**
+(7 in the repair phase, plus `5400c01` and `544eedd`), plus 3 config/ledger
+commits. I proceeded past the cap on the maintainer's standing instruction to
+follow my own recommended order, and record the overrun rather than renumbering
+the findings to hide it.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -907,24 +951,37 @@ captured: `/tmp/mkprobe` with this block verbatim + a broken internal link → e
   measured +3.
 - Session end: 403 tests, coverage 80.24%, ten non-mutating §23 gates exit 0.
   SBOM / `uv build` / web / Docker not run — see §30 note above.
-- 2026-09-25, follow-up — the two human decisions closed; 2 files, 1 commit. The
-  maintainer authorized the identity lookup §33 had ruled out, and it confirmed
-  rather than dissolved the finding: `@jackson` is a real but unrelated account
-  with no permission here, so CODEOWNERS was inert. Both repairs are config-only
-  (`.github/CODEOWNERS`, `.gitignore`); no `_vendor` touch, no workflow touch.
+- 2026-09-25, follow-up — the two human decisions closed; 2 files, **3** commits
+  (`ccbb66a` CODEOWNERS, `1e733d4` `.gitignore`, `0552996` this ledger). First
+  draft of this line said "1 commit", which was wrong at the time of writing it.
+  The maintainer authorized the identity lookup §33 had ruled out, and it
+  confirmed rather than dissolved the finding: `@jackson` is a real but unrelated
+  account with no permission here, so CODEOWNERS was inert. Both repairs are
+  config-only (`.github/CODEOWNERS`, `.gitignore`); no `_vendor` touch, no
+  workflow touch.
   Verification actually run for this step: `git check-ignore -v` matches on two
   paths (exit 0), `git ls-files -i -c --exclude-standard` → empty, `git ls-files`
   still 733, `git grep -l` for porcelain / `diff --exit-code` gates → no hits, and
   `tests/test_ci_gate_integrity.py` + `tests/test_import_identity.py` → 6 passed.
   The full 403-test suite and coverage were NOT re-run for a config-only change;
-  the figures on the line above still describe the repair phase, not this one.
+  the figures two lines above still describe the repair phase, not this one.
+- 2026-09-25, §34 lane — D-L1-05 residual and D-L1-15 closed in `5400c01` and
+  `544eedd`, with `tests/test_sync_vendor_check.py` added (5 cases). Numbers for
+  this step are the current ones: **408 passed**, coverage **80.24%**, mypy 108
+  files clean, ruff and format clean on `scripts` + `tests`, real `--check` exit 0
+  with `_vendor` unmodified. This took the lane to 9 fixes against §28's cap of 8;
+  §34 says so instead of renumbering.
 
 **Next session (resume instructions, §5.2).** Read only: this ledger, the
-baseline block, Appendix B, and the §27 proposed-diff appendix above. Suggested
-order: (1) make `--check` hash-compare without mutating (§21.5(5)) — its own
-commit and its own verification, since it is a behavior change to a CI-critical
-script; (2) settle D-L1-14's matcher question, then wire the claim checker
-(§21.5(1)); (3) take D-L1-02 package-by-package as L3 work. The two human
-decisions are closed and no longer sit in the queue. Before any L2 work, note
-§17.6: L2's evidence on swallowed exceptions and claim checks still rests on
-gates D-L1-02/03 found broken, so re-derive rather than reuse.
+baseline block, Appendix B, and §27 / §34 above. Suggested order: (1) settle
+D-L1-14's matcher question, then wire the claim checker (§21.5(1)) — until the
+matcher separates "stale value" from "document quoting that value to disclaim it",
+wiring it buys a red build on 8 known-false findings, 2 of them build-failing;
+(2) D-L1-02 package-by-package as L3 work, 35 shipped sites, one package per
+commit; (3) the not-yet-run §23 gates — `generate_sbom.py` (§R8), `uv build`, the
+web build / `regression.mjs` / `npm audit`, Docker — all still unmeasured, so
+§30's "met" box covers the gates that ran, not the release surface. The `--check`
+non-mutation item and the two human decisions are closed and out of the queue.
+Before any L2 work, note §17.6: L2's evidence on swallowed exceptions and claim
+checks still rests on gates D-L1-02/03 found broken, so re-derive rather than
+reuse.
