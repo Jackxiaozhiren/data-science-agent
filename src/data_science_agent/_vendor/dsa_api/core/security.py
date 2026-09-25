@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 import time
 from collections import deque
@@ -110,4 +111,31 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         headers={"Retry-After": "60"},
                     )
                 break
+        return await call_next(request)
+
+
+# Probes and preflight never require auth (hosting health checks, browsers).
+_AUTH_PUBLIC_PATHS = frozenset({"/health", "/ready", "/version"})
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """Opt-in bearer-token auth. No-op unless DSA_AUTH_TOKEN is set."""
+
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        from dsa_api.core.config import settings  # deferred: avoids import cycle
+
+        token = settings.auth_token
+        if (
+            not token
+            or request.url.path in _AUTH_PUBLIC_PATHS
+            or request.method == "OPTIONS"
+            or not request.url.path.startswith("/api/")
+        ):
+            return await call_next(request)
+        presented = request.headers.get("authorization", "")
+        expected = f"Bearer {token}"
+        if not presented or not hmac.compare_digest(presented, expected):
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
         return await call_next(request)
