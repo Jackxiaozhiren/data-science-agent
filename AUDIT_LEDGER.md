@@ -618,6 +618,145 @@ severity ceilings, ledger-before-code, §21.4, §21.6, clean `git status`.
 full §23 end-of-session gate set, and §21.2 repairs. That is the intended state
 at an approval gate, not a shortfall to wave through.
 
+**D-L1-10 mechanism: now experimentally confirmed, previously inferred.** The
+symptom (no `passed` line) was T0 at filing, but the *cause* — doubled `-q` — was
+inference. Tested: `uv run pytest tests/unit/test_data_engine.py -q` (effective
+`-qq`) → `grep -c passed` = **0**; the same target with
+`-o addopts="--asyncio-mode=auto"` (single `-q`) → `1 passed in 0.06s`. Mechanism
+confirmed; the finding stands and the fix shape is now known to be
+command-side rather than `addopts`-side.
+
+## §27 Proposed diffs for BLOCKED findings (required, previously missing)
+
+§27 obliges a BLOCKED workflow finding to arrive "with a diff in the report".
+These are **proposals only — none is applied**; every path below is untouched, as
+`git status --short` in the session log confirms. Job context: `web:` starts at
+`ci.yml:16`, `ci:` at `ci.yml:48`.
+
+### P-1 · D-L1-01 — restore exit codes on five steps (`ci.yml`)
+
+```diff
+       - run: npx playwright install --with-deps chromium
+-      - run: npm --prefix apps/web run build 2>&1 | tail -n 10
++      - name: Build web (fail on the build's own status)
++        run: set -o pipefail; npm --prefix apps/web run build 2>&1 | tail -n 10
+       - run: node apps/web/scripts/regression.mjs
+```
+```diff
+-      - run: uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
++      - run: set -o pipefail; uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
+```
+```diff
+       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
+-      - run: npm --prefix apps/web run build 2>&1 | tail -n 20
+-      - run: docker compose config 2>&1 | head -n 40
+-      - run: uv run python -m mkdocs build --strict 2>&1 | tail -n 50
++      - run: set -o pipefail; npm --prefix apps/web run build 2>&1 | tail -n 20
++      - run: set -o pipefail; docker compose config 2>&1 | head -n 40
++      - run: set -o pipefail; uv run python -m mkdocs build --strict 2>&1 | tail -n 50
+```
+
+`set -o pipefail` inside a single-line `run:` keeps the log truncation the author
+wanted and repairs only the status propagation. The file's multi-line steps
+already use `shell: bash` + `set -euo pipefail` (`:61-63` etc.), so this matches
+the house style rather than inventing a second convention. Verified predicate:
+`bash --noprofile --norc -e -c 'false | tail -n 1'` → 0; with `-o pipefail` → 1.
+
+### P-2 · D-L1-06 — type-check `apps/jupyter` in CI
+
+```diff
+-.github/workflows/ci.yml:86
+-      - run: uv run mypy packages apps/api src --ignore-missing-imports
++      - run: uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
+-.github/workflows/publish.yml:58   (same change)
+```
+Zero-violation: `uv run mypy apps/jupyter --ignore-missing-imports` →
+`Success: no issues found in 4 source files`. Expected CI delta: `108 source
+files` → `112`, and mypy's `unused section(s): … dsa_jupyter.*` note disappears.
+
+### P-3 · D-L1-08 — make the SBOM step assert something checkable
+
+```diff
+-      - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM
++      - run: uv run python scripts/generate_sbom.py && uv run python -c "import json;s=json.load(open('release/sbom.json'));v=json.load(open('pyproject.toml'.replace('x','x'))) if False else __import__('re').search(r'version = \"([^\"]+)\"',open('pyproject.toml').read()).group(1);assert s['version']==v,(s['version'],v);assert s['packages'],'empty SBOM'"  # §47 SBOM
+```
+Flagged as ugly-on-purpose: the honest recommendation is a
+`scripts/check_sbom.py` that compares `release/sbom.json` against
+`pyproject.toml`, which is a new file plus a workflow line and therefore two
+approvals. Not measured — `generate_sbom.py` writes a tracked file (§R8), so this
+diff is unexecuted by choice and its violation count is **unknown**.
+
+### P-4 · D-L1-02 — remove `S110` from shipped trees only (`pyproject.toml`)
+
+Measured per-tree live counts (`--isolated --select S110`, `_vendor`'s 35
+duplicates excluded): `evaluation` 8, `apps/jupyter` 8, `packages/agent` 7,
+`tools` 3, `apps/api` 3, `mcp` 2, `evidence` 2, `llm` 1, `datasets` 1,
+`plugins` 0, `execution` 0, `routers` ⊂ apps/api → **35 shipped**, 7 in tests.
+
+```diff
+-"apps/api/src/dsa_api/routers/*" = ["B008", "S110", "SIM105"]
++"apps/api/src/dsa_api/routers/*" = ["B008", "SIM105"]
+-"packages/agent/src/dsa_agent/*" = ["F841", "E402", "S110", …]
++"packages/agent/src/dsa_agent/*" = ["F841", "E402", …]
+-… (same deletion in plugins, datasets, evaluation, evidence, execution, tools, mcp, apps/jupyter)
+-"packages/llm/**/*" = ["S110"]        # deletion empties the key
++delete the "packages/llm/**/*" line
+-"tests/**/*" = ["S101", …, "S110", …]  # UNCHANGED — see below
+```
+
+**Recommended scope, and a correction to my own finding.** Land shipped trees
+only (35 sites), leaving `tests/**` as-is: an `except: pass` in a test teardown is
+overwhelmingly the legitimate class, and switching it on buys classification
+churn, not signal. D-L1-02's `expected_delta` therefore reads
+`All checks passed!` → **`Found 35 errors`** for the recommended scope, and 42
+only if `tests/**` is included; the ledger's earlier single-figure 42 was
+imprecise about scope. Sequencing per §21.5(4): `packages/agent` (7) and
+`packages/evidence` (2) first, one commit each, each with §19's red-then-green.
+§R11/§N6 are respected — this *narrows* an exclusion, adding signal; the
+prohibited direction (widening, lowering `fail_under`) appears nowhere above.
+
+### P-5 · D-L1-04 — orphan detection in `sync_vendor.py --check`
+
+Sketch, not a tested patch: after the `SOURCES` loop, treat any
+`VENDOR/<name>` directory with no `SOURCES` key, and any `SOURCES` key whose
+source directory is absent while its vendored directory exists, as drift →
+`DRIFT: …` + `sys.exit(1)`. Predicate already captured: the `/tmp/svprobe`
+injection printed `OK: vendored dsa_* is in sync` at exit 0 with an orphan
+present, and must print `DRIFT` at exit 1 after the change. Separate sub-finding
+to settle in the same edit: whether `--check` should stop calling `sync()`
+entirely (it currently mutates the tree it audits, contra §24 R3's premise) —
+that is a behavior change to a CI-critical script, so it needs its own commit and
+its own verification, not a ride-along.
+
+### P-6 · D-L1-07 — import-identity guard (new test, no source change)
+
+```python
+def test_workspace_source_not_vendored_copy() -> None:
+    import dsa_agent
+    assert "_vendor" not in dsa_agent.__file__, dsa_agent.__file__
+```
+§N3 caveat stated plainly: this is **green on arrival**, so its red must be
+produced by disabling the demotion in a fixture (monkeypatched `sys.path`) and
+observing the same assertion fail. `expected_delta`: collected 397 → 398.
+
+### P-7 · D-L1-05 — give the docs gate a link signal (`mkdocs.yml`)
+
+```diff
+ validation:
+   links:
+-    not_found: ignore
++    not_found: warn
+     absolute_links: ignore
+```
+Predicted violation count: **low but unknown** — the real build currently emits
+`0` WARNING/ERROR lines, yet `not_found: ignore` means it could not have reported
+any, so absence of warnings is not evidence of absence of broken links. Keeping
+`absolute_links: ignore` preserves legitimate cross-site references. Predicate
+captured: `/tmp/mkprobe` with this block verbatim + a broken internal link → exit
+0; must become exit 1.
+
+## §27 Proposed diffs end — approval still outstanding
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -635,8 +774,10 @@ at an approval gate, not a shortfall to wave through.
   entries. Resumable state = this ledger + §16 baseline + Appendix B.
 
 **Next session (resume instructions, §5.2).** Read only: this ledger, the
-baseline block, Appendix B. If the maintainer approves items 2–6 of the triage,
-enter §19 one finding at a time — start with D-L1-02, whose red is already
-captured (`--select S110` → `All checks passed!` over 42 instances). Before any
-L2 work, note §17.6: L2's evidence about swallowed exceptions and claim checks
-rests on the gates D-L1-02/03 found broken, so re-derive rather than reuse.
+baseline block, Appendix B, and the §27 proposed-diff appendix above. If the
+maintainer approves items 2–6 of the triage, enter §19 one finding at a time —
+start with D-L1-02 (patch P-4), whose red is already captured
+(`--select S110` → `All checks passed!` over 35 shipped instances, 42 including
+`tests/**`). Before any L2 work, note §17.6: L2's evidence about swallowed
+exceptions and claim checks rests on the gates D-L1-02/03 found broken, so
+re-derive rather than reuse.
