@@ -1,0 +1,52 @@
+"""Lane L1 guard: a CI step must report the status of the gate it runs.
+
+GitHub Actions runs a bare ``- run:`` line with ``bash --noprofile --norc -e``,
+which enables errexit but *not* pipefail. A pipeline therefore reports the exit
+status of its last command, so ``uv run python -m mkdocs build --strict 2>&1 |
+tail -n 50`` stays green even when mkdocs aborts. Any step that pipes a gate has
+to opt into pipefail explicitly.
+"""
+
+import re
+from pathlib import Path
+
+WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+
+# `| tail`, `| head`, `| grep`, `| tee`, `| jq` -- the truncators used in this repo.
+_PIPE = re.compile(r"\|\s*(?:tail|head|grep|tee|jq)\b")
+_RUN = re.compile(r"^\s*- run:\s*(.+)$")
+_BLOCK = re.compile(r"^\s*run:\s*\|\s*$")
+
+
+def _single_line_run_steps(text: str) -> list[tuple[int, str]]:
+    out: list[tuple[int, str]] = []
+    in_block = False
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if _BLOCK.match(line):
+            in_block = True
+            continue
+        if in_block:
+            # A multi-line block carries its own `set -euo pipefail`; skip its body
+            # until indentation drops back to the step level.
+            if re.match(r"^      - ", line) or re.match(r"^        [a-z]+:", line):
+                in_block = False
+            else:
+                continue
+        match = _RUN.match(line)
+        if match:
+            out.append((lineno, match.group(1)))
+    return out
+
+
+def test_piped_ci_steps_declare_pipefail() -> None:
+    offenders: list[str] = []
+    checked = 0
+    for wf in sorted(WORKFLOWS.glob("*.yml")):
+        for lineno, cmd in _single_line_run_steps(wf.read_text(encoding="utf-8")):
+            checked += 1
+            if _PIPE.search(cmd) and "pipefail" not in cmd:
+                offenders.append(f"{wf.name}:{lineno}: {cmd[:90]}")
+    assert checked > 0, "no single-line run steps found -- the parser broke"
+    assert not offenders, "piped steps report tail's exit code, not the gate's:\n" + "\n".join(
+        offenders
+    )
