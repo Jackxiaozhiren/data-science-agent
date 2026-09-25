@@ -8,7 +8,8 @@ from `packages/*/src` and `apps/*/src` into `_vendor`, keeping the vendored
 copies in sync with the source of truth.
 
 Run `python scripts/sync_vendor.py` and commit the result whenever a dsa_*
-module changes. CI runs this with `--check` to catch drift.
+module changes. CI runs this with `--check`, which compares without writing:
+an auditor that repairs what it audits cannot report what it found.
 """
 
 from __future__ import annotations
@@ -41,6 +42,39 @@ SOURCES: dict[str, Path] = {
 }
 
 
+def _package_files(base: Path) -> dict[str, bytes]:
+    """Map every vendorable file under `base` to its bytes.
+
+    A missing `base` yields an empty map, so comparing a source against a
+    vendored copy that was never made is the same comparison as a partial one.
+    """
+    return {
+        p.relative_to(base).as_posix(): p.read_bytes()
+        for p in base.rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts
+    }
+
+
+def _diff(name: str, src: Path, dst: Path) -> str | None:
+    """Describe why `dst` is not a faithful copy of `src`, or None if it is."""
+    src_files = _package_files(src)
+    dst_files = _package_files(dst)
+    if src_files == dst_files:
+        return None
+    shared = set(src_files) & set(dst_files)
+    differs = sum(1 for rel in shared if src_files[rel] != dst_files[rel])
+    missing = len(set(src_files) - set(dst_files))
+    extra = len(set(dst_files) - set(src_files))
+    parts = []
+    if differs:
+        parts.append(f"{differs} file(s) differ")
+    if missing:
+        parts.append(f"{missing} file(s) absent from _vendor")
+    if extra:
+        parts.append(f"{extra} file(s) only in _vendor")
+    return f"{name}: " + ", ".join(parts)
+
+
 def sync() -> list[str]:
     VENDOR.mkdir(parents=True, exist_ok=True)
     changed: list[str] = []
@@ -49,81 +83,57 @@ def sync() -> list[str]:
             print(f"WARN: missing source {src}", file=sys.stderr)
             continue
         dst = VENDOR / name
-        # Compare file set (excluding __pycache__) to decide if anything changed.
-        src_files = {
-            p.relative_to(src).as_posix()
-            for p in src.rglob("*")
-            if p.is_file() and "__pycache__" not in p.parts
-        }
-        dst_files = {
-            p.relative_to(dst).as_posix()
-            for p in dst.rglob("*")
-            if p.is_file() and "__pycache__" not in p.parts
-        }
-        if src_files == dst_files and not changed:
-            # same file names — check content hashes
-            same = True
-            for rel in src_files:
-                s = (src / rel).read_bytes()
-                d = (dst / rel).read_bytes() if (dst / rel).is_file() else b""
-                if s != d:
-                    same = False
-                    break
-            if same:
-                continue
+        reason = _diff(name, src, dst)
+        if reason is None:
+            continue
         shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         changed.append(name)
     return changed
 
 
+def check() -> list[str]:
+    """Report why `_vendor` is stale. Writes nothing, creates nothing."""
+    problems: list[str] = []
+    for name, src in sorted(SOURCES.items()):
+        if not src.is_dir():
+            print(f"WARN: missing source {src}", file=sys.stderr)
+            continue
+        reason = _diff(name, src, VENDOR / name)
+        if reason is not None:
+            problems.append(reason)
+    vendored: set[str] = set()
+    if VENDOR.is_dir():
+        vendored = {p.name for p in VENDOR.iterdir() if p.is_dir() and p.name != "__pycache__"}
+    orphans = sorted(vendored - set(SOURCES))
+    if orphans:
+        problems.append(f"no workspace source backs: {', '.join(orphans)}")
+    return problems
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Sync vendored dsa_* modules")
     ap.add_argument(
-        "--check", action="store_true", help="Verify _vendor is in sync (exit 1 if not)"
+        "--check",
+        action="store_true",
+        help="Verify _vendor is in sync without writing (exit 1 if not)",
     )
     args = ap.parse_args()
 
-    # Snapshot current state
-    before: dict[str, bytes] = {}
-    for name in SOURCES:
-        dst = VENDOR / name
-        for p in dst.rglob("*"):
-            if p.is_file() and "__pycache__" not in p.parts:
-                before[(name, p.relative_to(dst).as_posix())] = p.read_bytes()
-
-    changed = sync()
-
-    after: dict[str, bytes] = {}
-    for name in SOURCES:
-        dst = VENDOR / name
-        for p in dst.rglob("*"):
-            if p.is_file() and "__pycache__" not in p.parts:
-                after[(name, p.relative_to(dst).as_posix())] = p.read_bytes()
-
     if args.check:
-        # `sync()` skips sources that no longer exist, so a copy whose source has
-        # been deleted never changes bytes and stays invisible to the before/after
-        # comparison. Check the directory set itself, or a package removed from
-        # the workspace keeps shipping inside the wheel with CI reporting OK.
-        vendored = {p.name for p in VENDOR.iterdir() if p.is_dir() and p.name != "__pycache__"}
-        orphans = sorted(vendored - set(SOURCES))
-        if before == after and not orphans:
-            print("OK: vendored dsa_* is in sync")
-        elif orphans:
+        problems = check()
+        if problems:
             print(
-                "DRIFT: vendored copies exist with no workspace source: "
-                f"{', '.join(orphans)} — delete them from _vendor and re-run",
+                "DRIFT: vendored dsa_* differs from its sources (nothing was written).\n"
+                "Fix with `python scripts/sync_vendor.py`, then commit the result:",
                 file=sys.stderr,
             )
+            for reason in problems:
+                print(f"  - {reason}", file=sys.stderr)
             sys.exit(1)
-        else:
-            print(
-                "DRIFT: vendored dsa_* differs from source — run `python scripts/sync_vendor.py`",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+        print("OK: vendored dsa_* is in sync")
     else:
+        changed = sync()
         if changed:
             print(f"Synced: {', '.join(changed)}")
         else:
