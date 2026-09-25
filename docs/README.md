@@ -9,13 +9,13 @@
 - [MCP Design](./MCP_DESIGN.md) — Stateless 2026-07-28 adapter over Tool Layer
 - [API](./api.md) — `/api/v1` endpoints incl. `/health /ready /version`
 - [Frontend IA](./FRONTEND_IA.md) — routes & data flow
-- [Benchmark README](../benchmarks/ds-agent-benchmark/README.md) — 20 datasets / 50 tasks / metrics + `dsa benchmark` CLI
+- [Benchmark README](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/benchmarks/ds-agent-benchmark/README.md) — 20 datasets / 50 tasks / metrics + `dsa benchmark` CLI
 - [Security](./security.md) — file / SQL / Python / prompt / output guardrails
 - [Research](./research.md) — benchmark + report stub
-- [Examples](../examples/README.md) — `sales.csv / titanic.csv` + curl examples
-- [README](../README.md) — Project overview & quick start
-- [Changelog](../CHANGELOG.md) — `0.1.0 → 1.2.0`
-- [Third-Party Licenses](../THIRD_PARTY_LICENSES.md) — runtime / frontend / datasets
+- [Examples](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/examples/README.md) — `sales.csv / titanic.csv` + curl examples
+- [README](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/README.md) — Project overview & quick start
+- [Changelog](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md) — `0.1.0 → 1.2.0`
+- [Third-Party Licenses](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/THIRD_PARTY_LICENSES.md) — runtime / frontend / datasets
 
 To serve: `uv sync --dev && uv run mkdocs serve` (or `uv run mkdocs build --strict` for CI gate).
 

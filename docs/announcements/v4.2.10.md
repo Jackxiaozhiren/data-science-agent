@@ -32,7 +32,7 @@ The GitHub Release includes wheel/sdist publishing attestations. They can be ins
 
 - [GitHub Release](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.2.10)
 - [PyPI](https://pypi.org/project/jack-data-science-agent/)
-- [Changelog](../../CHANGELOG.md)
+- [Changelog](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md)
 
 ## Share-ready summary
 
