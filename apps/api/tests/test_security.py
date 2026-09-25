@@ -106,11 +106,7 @@ async def test_auth_enforced_when_token_set(
         r = await ac.get("/api/v1/datasets/")
         assert r.status_code == 401
         assert isinstance(r.json()["detail"], str)
-        ok = await ac.get(
-            "/api/v1/datasets/", headers={"Authorization": "Bearer secret-token"}
-        )
+        ok = await ac.get("/api/v1/datasets/", headers={"Authorization": "Bearer secret-token"})
         assert ok.status_code == 200
-        wrong = await ac.get(
-            "/api/v1/datasets/", headers={"Authorization": "Bearer wrong"}
-        )
+        wrong = await ac.get("/api/v1/datasets/", headers={"Authorization": "Bearer wrong"})
         assert wrong.status_code == 401
