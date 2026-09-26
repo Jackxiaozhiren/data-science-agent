@@ -1101,6 +1101,46 @@ while gathering this: I first reported "no docs job on push" because `head -40`
 truncated the 31-step job list — the mkdocs step was there all along, and the
 conclusion I withdrew was an artifact of my own pipeline, not of the workflow.
 
+## §39 mypy over `scripts/`: 59 → 37, and one real defect under the annotations
+
+Done per the queue's item 4, three commits (`ef47c3b`, `0f5662a`, `d023d26`):
+
+| File | before → after | what it actually was |
+|---|---|---|
+| `check_public_claims.py` | 11 → **0** | 4 missing annotations, plus **three live defects** |
+| `generate_sbom.py` | 10 → 1 | one reused loop variable, one dead fallback, one Any leak |
+| `check_npm_workspace_lock.py` | 1 → **0** | Any through a `dict[str, Any]` signature |
+| `generate_benchmark_datasets.py` | 1 → **0** | missing `-> None` |
+
+**The one that mattered was not a typing problem.** `check_version_consistency()`
+called `re.search(...).group(1)` on three files; when a pattern is absent that
+raises `AttributeError`, which the two-lines-below `except Exception` converted
+into a single `"version check error: …"` string — retiring the entire five-way
+consistency check, including the sbom and git-tag comparisons that never ran.
+Same signature as D-L1-02's swallowed swallows, found by *following* an
+annotation error instead of silencing it. Verified by execution, not argument: on
+a tree with no `version = ` line, HEAD returned the one swallowed message while
+the fixed module returns three named mismatches; the regression test fails
+against HEAD's copy, so it is not green-on-arrival.
+
+**Two things I declined.** `generate_sbom.py:182` needs the components list
+hoisted out of the SBOM literal to type honestly, and the only way to verify a
+rewrite there is to run a script that overwrites tracked `release/sbom.json`,
+which §R8 forbids — so one error stands rather than an unverifiable edit. I also
+nearly filed the `Path`-indexed-as-dict cluster as a runtime crash; reading the
+file showed each loop rebinds `p`, so it was shadowing, not a bug, and the fix is
+a rename rather than a defect report.
+
+**Suite after all of it: 416 passed**, `ruff check`/`format` clean on `scripts`,
+and the npm lock gate re-executed to confirm unchanged behaviour.
+
+**Lane status, plainly.** This takes §28's cap of 8 from a stretch to 14 landed
+changes. The remaining 37 mypy errors are in `generate_benchmark_v2` (23) and
+`run_perf_matrix` (13) — research-side generators, not gates, and the kind of
+work L3's lane is scoped for. The highest-value move is no longer to write more
+fixes but to get these nine local commits pushed so Actions, not this laptop,
+rules on them.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -1179,6 +1219,12 @@ conclusion I withdrew was an artifact of my own pipeline, not of the workflow.
   smoke test and both Dockerfiles are green on a clean runner. Withdrew my own
   "no docs job on push" reading: `head -40` had truncated a 31-step job list, so
   the missing step was my pipeline, not the workflow.
+- 2026-09-26, §39 — took item 4: mypy over `scripts/` 59 → 37 in three commits,
+  including one genuine silent-failure repair inside the version-consistency
+  check. Declined the one edit that could not be verified without overwriting
+  tracked `release/sbom.json`, and withdrew a crash I had nearly reported. Suite
+  416 passed. Lane now stands at 14 changes against a cap of 8, so the
+  recommendation is to stop repairing and get the nine commits pushed.
 
 **Next session (resume instructions, §5.2).** Step nil: re-measure before
 trusting any number in this ledger — HEAD was `7397c47` at the time of writing
