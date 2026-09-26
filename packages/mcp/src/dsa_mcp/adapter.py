@@ -390,8 +390,13 @@ async def read_resource(uri: str) -> dict[str, Any]:
                     "mimeType": "application/json",
                     "text": eg.read_text(encoding="utf-8"),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            return {
+                "uri": uri,
+                "mimeType": "text/plain",
+                "text": f"evidence for {run_id} unreadable: {e}",
+                "isError": True,
+            }
         return {
             "uri": uri,
             "mimeType": "text/plain",
@@ -419,8 +424,13 @@ async def read_resource(uri: str) -> dict[str, Any]:
                     "mimeType": "text/markdown",
                     "text": rp.read_text(encoding="utf-8"),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            return {
+                "uri": uri,
+                "mimeType": "text/plain",
+                "text": f"report for {run_id} unreadable: {e}",
+                "isError": True,
+            }
         return {
             "uri": uri,
             "mimeType": "text/plain",
