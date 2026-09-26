@@ -44,5 +44,6 @@ def test_rss_mb_uses_the_platform_unit(
     after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
     assert out["rss_mb"] is not None
-    # ru_maxrss is a high-water mark, so the handler may read slightly more.
-    assert (before / divisor) <= out["rss_mb"] <= (after / divisor) * 1.05
+    # ru_maxrss is a process high-water mark, so the handler's reading sits between
+    # these two; the handler rounds to 2dp, which is the only slack allowed here.
+    assert (before / divisor) - 0.01 <= out["rss_mb"] <= (after / divisor) + 0.01
