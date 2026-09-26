@@ -1034,6 +1034,37 @@ ledger to satisfy a gate that does not exist. Separately, my per-file error spli
 first summed to 61 against mypy's own "59 errors in 6 files" because the pattern
 also caught `note:` lines; recounted with `NN: error:` it matches.
 
+## §37 D-L1-16 landed, and why the vendor sync was declined
+
+**Landed (`7bd7b78`).** `ci.yml` `ruff check` + `ruff format --check` and
+`publish.yml` `ruff check` now name `scripts`. Verified by running the three
+edited commands verbatim, exit codes captured unpiped: all 0, and the format line
+now reports 193 files. mypy was deliberately left out (59 errors / 6 files).
+Two side observations, not landed: `publish.yml` has **no** `ruff format --check`
+step at all, so the release pipeline checks style but not formatting — the same
+species of asymmetry as the mypy-path bug filed as D-L1-06.
+
+**Item 1 (sync `_vendor`) — measured, and the premise was wrong.** HEAD's
+`packages/evaluation/src/dsa_evaluation/external_validation.py` and its vendored
+copy hash identically (`9a9b385e…` both), so `origin/main` is consistent and
+remote CI is not red. The drift exists only as another session's uncommitted
++44/−9 source edit. And `ci.yml:75` already runs `sync_vendor.py --check`, so
+whichever commit introduces source-without-sync is caught there — now honestly
+(exit 1, naming `dsa_evaluation: 1 file(s) differ`) rather than repaired-and-
+passed, which is what the pre-`5400c01` code did.
+Syncing anyway would have written a vendored copy of unreviewed third-party WIP
+into *my* commit while its source stayed uncommitted, manufacturing exactly the
+source/vendor inconsistency the gate exists to prevent. The 415-passing figure is
+not evidence that the wheel is fine either: `conftest.py` puts workspace `src`
+ahead of `_vendor`, so the suite exercises the new source while the stale copy
+would be what ships — which is precisely the case line 75 stands between.
+Handed back to the owner as the one-liner: `uv run python scripts/sync_vendor.py`
+inside the same commit as their source change.
+
+**Budget.** Eleven landed changes in this lane versus §28's cap of 8. The last
+one is a gate addition rather than a defect repair, which is arguably the safer
+half of the overrun; recorded rather than reframed.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -1097,6 +1128,13 @@ also caught `note:` lines; recounted with `NN: error:` it matches.
   gates; 2 of 3 close for free today, mypy needs 59 fixes). Retracted my own
   invented root-level format gate instead of editing the ledger to please it.
 
+- 2026-09-26, §37 — D-L1-16 landed in `7bd7b78` (three ruff lines now name
+  `scripts`; verified by running the edited commands, all exit 0). The vendor
+  sync the maintainer approved was **not** run: measured first, it turned out
+  HEAD and `origin/main` are source/vendor consistent and `ci.yml:75` already
+  gates the drift, so syncing would only have committed another session's
+  unreviewed WIP into the wheel path out from under its own source.
+
 **Next session (resume instructions, §5.2).** Step nil: re-measure before
 trusting any number in this ledger — HEAD was `7397c47` at the time of writing
 and another session is committing to the same branch. Then: (1) decide D-L1-14's
@@ -1108,8 +1146,8 @@ claim checker into CI only after (1), and note the CI-critical-script change get
 its own commit; (3) D-L1-02 package-by-package as L3 work, 35 shipped sites;
 (4) the §23 gates never run — `generate_sbom.py` (§R8), `uv build`, the web
 build / `regression.mjs` / `npm audit`, Docker — so §30's "met" box covers the
-gates that ran, not the release surface; (5) on one word of approval, append
-`scripts` to CI's two ruff lines — §36 measured both clean today, so it is free,
-while mypy stays out until 59 errors across 6 files are fixed. Before any L2
-work, note §17.6: L2's evidence on swallowed exceptions and claim checks rests on
-gates D-L1-02/03 found broken, so re-derive rather than reuse.
+gates that ran, not the release surface; (5) §37 landed the free half of
+D-L1-16 — what remains is mypy over `scripts/*.py` (59 errors across 6 files,
+split in §36) and the absent `ruff format --check` step in `publish.yml`. Before
+any L2 work, note §17.6: L2's evidence on swallowed exceptions and claim checks
+rests on gates D-L1-02/03 found broken, so re-derive rather than reuse.
