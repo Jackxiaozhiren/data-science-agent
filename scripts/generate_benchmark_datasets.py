@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1] / "benchmarks" / "ds-agent-benchmark"
 ROOT.mkdir(parents=True, exist_ok=True)
 
 
-def write_csv(path: Path, header: list[str], rows: list[list[object]]):
+def write_csv(path: Path, header: list[str], rows: list[list[object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)

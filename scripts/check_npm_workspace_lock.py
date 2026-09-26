@@ -14,7 +14,8 @@ MANIFEST_SECTIONS = (
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return data
 
 
 def _normalized_section(data: dict[str, Any], section: str) -> dict[str, Any]:
