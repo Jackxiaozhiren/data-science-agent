@@ -980,6 +980,60 @@ describe an older HEAD and every inherited figure needs re-measuring before use.
 **Budget.** That makes **10** fixes landed in this lane against §28's cap of 8.
 Recorded as an overrun under standing maintainer instruction, not renumbered.
 
+## §36 Re-baseline at `77587f1` — one real catch, one instrument error of mine, one new finding
+
+**Position.** HEAD `77587f1`, `main` is **ahead 2 / behind 0** of `origin/main`:
+the parallel session's chain was pushed, this lane's last two commits were not,
+and nothing here pushed anything. No new commits appeared since §35.
+
+**Gate battery** (each exit code captured unpiped into its own log — the masking
+pattern this lane was chartered to remove): pytest **415 passed**, ruff
+`All checks passed!`, mypy `Success: no issues found in 112 source files`,
+claims `0 issues (scanned 14; 51 skipped as historical)`, mkdocs `--strict` 0,
+**`sync_vendor --check` → 1**.
+
+**The vendor exit-1 is the §34 fix earning its keep.** Output names the culprit:
+`- dsa_evaluation: 1 file(s) differ`, and `git status -- _vendor` is empty, so
+the *source* is ahead of the vendored copy: another session has
+`packages/evaluation/src/dsa_evaluation/external_validation.py` modified and
+unsynced. Under the pre-`5400c01` code this exact invocation would have rewritten
+`_vendor`, then compared its own repair and printed `OK: vendored dsa_* is in
+sync`. Write mode was deliberately not run — silently absorbing someone else's
+in-flight work is the failure being fixed, not a fix.
+
+**D-L1-16 (mine to report, not to hide): `scripts/` is outside every static gate.**
+`git ls-files scripts` → 12 entries (11 `.py` + `dev.sh`), and none of the three
+CI commands name it: `ruff check packages apps/api tests src apps/jupyter`,
+`ruff format --check packages apps/api tests src apps/jupyter`, `mypy packages
+apps/api src apps/jupyter`. Measured cost of closing it today: `ruff check
+scripts` → 0 and `ruff format --check scripts` → 0, so **two of the three gates
+are free right now**; `mypy scripts/*.py` → **59 errors in 6 files**
+(`generate_benchmark_v2` 23, `run_perf_matrix` 13, `check_public_claims` 11,
+`generate_sbom` 10, `generate_benchmark_datasets` 1, `check_npm_workspace_lock`
+1). It matters because workflows execute these files: `update_contributors.py`,
+`render_leaderboard.py`, `generate_release_announcement.py` and
+`write_real_model_workflow_manifest.py` all run in CI with no static gate between
+them and a runtime failure. `sync_vendor.py` is mypy-clean, which is why today's
+rewrite type-checks; `check_public_claims.py`, edited in §35, carries 11 of the 59.
+**Not landed**: appending `scripts` to the two ruff lines is a two-token edit of
+`.github/workflows/*`, which §24 gates behind approval, and it binds every future
+edit of those 11 files. The diff, for a yes/no:
+
+```diff
+-- run: uv run ruff check packages apps/api tests src apps/jupyter
+-- run: uv run ruff format --check packages apps/api tests src apps/jupyter
++- run: uv run ruff check packages apps/api tests src apps/jupyter scripts
++- run: uv run ruff format --check packages apps/api tests src apps/jupyter scripts
+```
+
+**Instrument error, retracted rather than worked around.** My first battery run
+used `ruff format --check .`, which is wider than any CI gate; it returned 1 and
+the offender was `AUDIT_LEDGER.md:862`, a code fence inside this audit log. There
+is no repo-root format gate, so there was nothing to fix: I did not reshape the
+ledger to satisfy a gate that does not exist. Separately, my per-file error split
+first summed to 61 against mypy's own "59 errors in 6 files" because the pattern
+also caught `note:` lines; recounted with `NN: error:` it matches.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -1036,6 +1090,13 @@ Recorded as an overrun under standing maintainer instruction, not renumbered.
   that I never opened), my six commits verified intact, and the suite count
   consequently re-measured at 415 / 80.40% on a tree that is partly not mine.
 
+- 2026-09-26, §36 — re-baselined after the branch moved: 415 passed, mypy 112
+  files clean, claims honest, mkdocs strict clean, and `sync_vendor --check`
+  exit 1 on real third-party drift — which the pre-`5400c01` code would have
+  erased and reported as OK. Filed D-L1-16 (`scripts/` outside all three static
+  gates; 2 of 3 close for free today, mypy needs 59 fixes). Retracted my own
+  invented root-level format gate instead of editing the ledger to please it.
+
 **Next session (resume instructions, §5.2).** Step nil: re-measure before
 trusting any number in this ledger — HEAD was `7397c47` at the time of writing
 and another session is committing to the same branch. Then: (1) decide D-L1-14's
@@ -1047,6 +1108,8 @@ claim checker into CI only after (1), and note the CI-critical-script change get
 its own commit; (3) D-L1-02 package-by-package as L3 work, 35 shipped sites;
 (4) the §23 gates never run — `generate_sbom.py` (§R8), `uv build`, the web
 build / `regression.mjs` / `npm audit`, Docker — so §30's "met" box covers the
-gates that ran, not the release surface. Before any L2 work, note §17.6: L2's
-evidence on swallowed exceptions and claim checks rests on gates D-L1-02/03 found
-broken, so re-derive rather than reuse.
+gates that ran, not the release surface; (5) on one word of approval, append
+`scripts` to CI's two ruff lines — §36 measured both clean today, so it is free,
+while mypy stays out until 59 errors across 6 files are fixed. Before any L2
+work, note §17.6: L2's evidence on swallowed exceptions and claim checks rests on
+gates D-L1-02/03 found broken, so re-derive rather than reuse.
