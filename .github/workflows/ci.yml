@@ -81,8 +81,8 @@ jobs:
       # `npm ci` reports vulnerabilities but exits successfully. Enforce the Web
       # runtime policy explicitly so High/Critical advisories cannot hide in logs.
       - run: npm --prefix apps/web audit --audit-level=high
-      - run: uv run ruff check packages apps/api tests src apps/jupyter
-      - run: uv run ruff format --check packages apps/api tests src apps/jupyter
+      - run: uv run ruff check packages apps/api tests src apps/jupyter scripts
+      - run: uv run ruff format --check packages apps/api tests src apps/jupyter scripts
       - run: uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM

@@ -56,7 +56,7 @@ jobs:
       - run: npm --prefix apps/vscode ci --legacy-peer-deps
       - run: npm --prefix apps/web ci --legacy-peer-deps
       - run: uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
-      - run: uv run ruff check packages apps/api tests src apps/jupyter
+      - run: uv run ruff check packages apps/api tests src apps/jupyter scripts
       - run: uv run pytest -q --cov --cov-report=term-missing
       - run: rm -rf dist && uv build
       - name: Verify release distributions
