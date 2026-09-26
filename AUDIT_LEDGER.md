@@ -1743,3 +1743,69 @@ docs-only commit.
    the next lane's first item: §28's ceiling is 8 fixes per session, L3 spent them on the
    eight trees, and landing a partial mitigation of an S0 while `(ii)`/`(iii)` remain open is
    how a ledger ends up claiming a finding is half-fixed.
+
+## §45 D-L3-04 (i) landed as the maintainer-released ninth change, and what it pointedly does not fix
+
+1. **Authorization, recorded because §28's ceiling is the point of the record.** §43(5)(a)
+   and §44(5) both placed fix `(i)` in the *next* lane, on the grounds that L3's eight fixes
+   were spent and that a partial S0 mitigation left the ledger holding a half-fixed finding.
+   The maintainer released that constraint for this one change ("一并放开 D-L3-04 的 (i)
+   修复"), so it landed as `2ed7a90` — ninth change of the session, first of D-L3-04, and the
+   ceiling now stands released for exactly this item and nothing else.
+
+2. **The change is four lines in `_run_tool`** (`graph.py:93-108`): a non-`ok` result returns
+   the same `(None, False, error)` tuple to its caller but is no longer written to
+   `_TOOL_CACHE`. Nothing about status semantics moved — the caller still sees `ok=False` —
+   the failure simply stops being remembered. New test
+   `tests/unit/test_tool_cache_failure_not_stored.py`, written and run red first:
+
+   ```
+   AssertionError: failure was cached: 'File not found: .../ds.csv'
+   assert ('profile_dataset', 'cf921c53f33e7eb3bf30c33d') not in
+     {('profile_dataset', 'cf921c53f33e7eb3bf30c33d'): (None, False, 'File not found: ...')}
+   ```
+
+   which is the mechanism, not an incidental break: the tuple is literally sitting under the
+   success key. After the fix that test passes, and §43's independent probe now prints
+   `cached: False`, `run2 (file now valid) ok=True`, `failure replayed …: False`.
+   The test's final two assertions exist because of §44(5)'s objection to a partial fix in
+   the other direction: a "fix" that deletes the cache entirely also turns the failure case
+   green, so the test requires that a *success* is still cached and served by identity.
+
+3. **Mode (a) is untouched, and that is the load-bearing line of this section.** Fix `(i)`
+   addresses poisoned failures. It does nothing to stale successes: the key is still
+   `(tool_name, sha256(inputs))` and `inputs` carries the dataset **path string**. Re-running
+   §43's stale probe verbatim after this commit still reports
+
+   ```
+   mean reported run1   : [2.5]
+   mean reported run2   : [2.5]   <-- served from cache, file already changed
+   mean reported run3   : [250.0] <-- after evicting the key
+   run2 == run1 (stale) : True
+   ```
+
+   So **D-L3-04 is now "partially mitigated", not fixed**: `(b)` closed, `(a)` open, `(iii)`
+   (the dict is never evicted) open. `(ii)` — run or content identity in the key — is the one
+   that closes (a); it is a signature change reaching all three `_run_tool` call sites
+   (`graph.py:324`, `graph.py:439`, `langgraph_graph.py:91`) and it changes how many times
+   tools execute in a notebook or benchmark run, so it needs a decision about whether a cached
+   result may cross a run boundary at all. That is not a four-line change and it is not done
+   here. Anyone reading only the table in §43(1) should read this paragraph with it.
+
+4. **§44's blast-radius table is now stale in one row.** `dsa_agent/graph.py` measured 13
+   changed source-vs-mirror lines at `6b604f7` and **21** at `2ed7a90`. The file count is
+   unchanged — still exactly **14** files, still all of them this lane's committed source,
+   still no `pyproject.toml` / ledger / test path, because the mirror covers only `src/`
+   trees. The per-package totals `--check` prints are likewise unchanged (`dsa_agent` 3).
+   The resync's acceptance test from §44(3) still applies: a regeneration diff containing an
+   `external_validation.py` hunk ran too early.
+
+5. **Gates, state, and what is still owed.** ruff rc=0, format rc=0 (184 files, +1 for the new
+   test), mypy rc=0 (112 files), `pytest -q --cov` rc=0 at **80.52%** (7656 statements),
+   `fail_under` 79 untouched, no `# noqa`, no new ignore entry, `_vendor` untouched (§R3 — this
+   commit deepens the drift rather than papering over it). Re-measured: the concurrent session
+   had still not landed at `2ed7a90`, so the §43(3) precondition for the resync remains false and
+   `origin/main` is still `06a22c6` behind a local `main` that is now 13 commits ahead. **Not
+   pushed.** Outstanding, in order: the `_vendor` resync once that session lands, then
+   `packages/evaluation`'s 8 S110 sites (which is what closes D-L1-02), then D-L3-04 `(ii)` and
+   `(iii)`, then D-L3-01's anti-leak pin and D-L3-03's `passed: True`-on-error sweep.
