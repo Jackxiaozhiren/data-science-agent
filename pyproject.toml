@@ -117,7 +117,7 @@ select = ["E", "F", "I", "B", "UP", "SIM", "S"]
 ignore = ["S101", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"apps/api/src/dsa_api/routers/*" = ["B008", "S110", "SIM105"]
+"apps/api/src/dsa_api/routers/*" = ["B008"]
 "tests/**/*" = ["S101", "S108", "B017", "S602", "S603", "S607", "S608", "F841", "I001", "B905", "SIM105", "S110", "F401", "UP042", "UP046", "S311", "SIM102", "SIM103", "SIM110", "SIM222", "B904", "E402", "E702", "B007", "S110"]
 "packages/agent/src/dsa_agent/*" = ["F841", "E402", "SIM102", "S608", "B904", "UP042", "SIM222", "S311", "UP046", "B905"]
 "packages/plugins/**/*" = ["S101", "S112", "S603", "S607", "S608", "F841", "B904", "SIM105", "SIM108", "SIM110", "S110", "F401", "E501"]

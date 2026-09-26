@@ -1,3 +1,4 @@
+import contextlib
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -74,7 +75,5 @@ async def create_dataset_route(
     except DatasetError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
-        try:
+        with contextlib.suppress(OSError):
             tmp_path.unlink(missing_ok=True)
-        except Exception:
-            pass
