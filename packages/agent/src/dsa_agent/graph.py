@@ -98,9 +98,11 @@ async def _run_tool(tool_name: str, inputs: dict[str, Any]) -> tuple[Any, bool, 
 
     tool = get_tool(tool_name)
     result = await tool.run(inputs)
-    val: tuple[Any, bool, str | None] = (
-        (result.output, True, None) if result.status == "ok" else (None, False, result.error)
-    )
+    if result.status != "ok":
+        # A failure stored under this key would be replayed to every later call
+        # for the life of the process, so only successes are cached.
+        return (None, False, result.error)
+    val: tuple[Any, bool, str | None] = (result.output, True, None)
     _TOOL_CACHE[key] = val
     return val
 
