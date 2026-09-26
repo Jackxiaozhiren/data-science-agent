@@ -1379,3 +1379,192 @@ before the `scripts` gates and the `--check` repair landed.
 
 7. **Budget.** §28 allows ≤8 fixes per lane; this lane landed ~15 and says so in
    §39/§40. That overrun is this lane's recorded debt, not a precedent for L3.
+
+## §42 L3 execution of D-L1-02 — 27 of the 35 sites, eight trees, and the §41 claim about vendor sync that was wrong
+
+**Context, in one line each.** L3 ran the §41 dispatch at `06a22c6` (§41 measured at
+`fc9485f`; the one commit between them is §41 itself, so the inventory was current).
+Eight commits, one per tree, 27 sites; `packages/evaluation`'s 8 sites were left
+untouched as instructed, and the concurrent session's three dirty files were never
+staged. Everything below was measured in this session; where §41 and this section
+disagree, §42 is right about the tree as it now stands and §41 was right about the
+tree as it stood at `fc9485f` — except item (3), which is a factual error in §41.
+
+1. **Re-baseline confirmed §41's inventory exactly.** At `06a22c6`,
+   `ruff check --isolated --select S110 packages apps/api apps/jupyter` reports **35
+   sites**, by package `evaluation` 8, `apps/jupyter` 8, `agent` 7, `tools` 3,
+   `apps/api` 3, `mcp` 2, `evidence` 2, `llm` 1, `datasets` 1, and `plugins`/
+   `execution` 0 — the nine-tree split in §41(1), file for file. `--select SIM105`
+   reports 8 sites in 8 files, none of them in a file lacking S110 hits, so §41(3)'s
+   per-file-multiset argument holds and the overlap was not re-derived by line
+   number. Baseline gates before any edit: ruff rc=0, format rc=0 (182 files),
+   mypy rc=0 (112 source files), `pytest -q --cov` rc=0 at **80.40%**, `fail_under` 79.
+
+2. **The eight trees, and what each site turned out to be.** Per-tree red was
+   captured by deleting that tree's `S110` (and `SIM105` where the line carried it)
+   and counting what ruff then reported; every count matched §41(1) before the code
+   was touched. Class is §12's.
+
+   | tree | commit | red | classes | what the fix was |
+   |---|---|---|---|---|
+   | `packages/agent` | `25443fd` | 7 | 5 Downgrading, 1 Hiding, 1 dead-code deletion | an incomplete reproducibility bundle and a failed report write are recorded (`evidence_bundle` / `langgraph_fallback` failed ValidationResults, `analysis2["error"]`); silent re-runs of the non-LangGraph engine now say so; the ground-truth block is gone (D-L3-01) |
+   | `apps/jupyter` | `a1eea4d` | 8 | 7 Downgrading, 1 Legitimate | chart/preview/formatter/magic-registration failures print what they skipped; `nest_asyncio` probe became `contextlib.suppress` |
+   | `packages/tools` | `b4f3edf` | 3 | 2 unreachable, 1 Legitimate | two dead handlers deleted so a surprise raises; `con.close()` in `finally` is `contextlib.suppress(Exception)` |
+   | `apps/api` | `f415f61` | 3 | 1 Hiding (real bug), 2 Legitimate | rss unit fix + falsifiable test (D-L3-02); `unlink` and `_TOOL_CACHE` narrowed to `suppress(OSError)` / `suppress(ImportError)` |
+   | `packages/mcp` | `e745563` | 2 | 2 Hiding | an unreadable artifact says `unreadable: <err>` instead of `not found` |
+   | `packages/evidence` | `4ed13e6` | 2 | 2 Downgrading | missing package version recorded as `not-installed`/`unreadable`; a failed `chmod` is disclosed inside `reproduce.sh` |
+   | `packages/llm` | `e4a6776` | 1 | 1 Legitimate | `suppress(ValidationError)` — the exception the file already imports and handles at 225/380 — and the now-empty ignore **line** deleted rather than left as `[]` |
+   | `packages/datasets` | `ea25851` | 1 | 1 Hiding-by-erasure | per-statistic `_as_float`; a bulk `except: pass` could erase six already-computed statistics |
+
+   Three sites — two in `packages/tools` and the one in `packages/datasets` — deserve
+   the specific note that they were **not** reachable: `assumption_check.py` raises
+   `ToolExecutionError` for any non-numeric column before the Levene cast, and the
+   Levene cast uses that same `cols[0]`; `evaluate_model.py`'s split uses
+   `stratify=y` for a binary target, which guarantees both classes in `y_test`; and
+   in `profiler.py` polars returns null — not an error — for every numeric edge case
+   probed (all-null, empty, single-row, NaN/Inf, UInt64 near 2**63). So the honest
+   repair was deletion, not invented handling.
+
+   How much each commit was differentially probed, stated exactly: `packages/datasets`
+   + `packages/llm` were (6 series × full `ColumnProfile` dump, and three stub-schema
+   cases, diffed against `git show HEAD:` copies of the same files — byte-identical),
+   and `packages/agent`'s planner was (all 15 `expected_tool: run_sql` questions plus
+   two controls, byte-identical — see (4)). The two `packages/tools` deletions were
+   **not** differentially probed; they rest on the guard argument above and on the
+   suite, and a probe of them would have needed the exception branch to be reachable,
+   which is the thing being denied.
+
+3. **§41(1) is wrong: this finding does need a vendor sync, and the lane was not
+   authorized to run it.** §41(1) concluded "`_vendor` holds 35 duplicates and is
+   excluded by `pyproject.toml:113`, so no per-file-ignore in the list governs it —
+   which is why this finding needs no vendor sync." The first half is true and
+   irrelevant: `_vendor` is excluded from *linting*, but it is a **copy of the
+   sources**, so editing a source drifts the mirror by construction. Measured at
+   `25443fd`, i.e. after tree 1 alone, `scripts/sync_vendor.py --check` exits **1**
+   naming `dsa_agent: 2 file(s) differ`. At lane end (`ea25851`) it exits **1**
+   across eight mirrors — `dsa_agent` 3, `dsa_api` 2, `dsa_tools` 3, `dsa_jupyter` 2,
+   `dsa_datasets` 1, `dsa_evidence` 1, `dsa_llm` 1, `dsa_mcp` 1 = **14 files from this
+   lane**, plus `dsa_evaluation` 1, which is the concurrent session's uncommitted
+   edit and not mine.
+   Why the mandated per-commit gates could not catch this: the four gates this lane
+   was told to run (ruff / format / mypy / pytest) do not include `sync_vendor
+   --check`; it lives at `ci.yml:75`, one line above the ruff gate at `ci.yml:84`. And
+   `tests/test_sync_vendor_check.py` builds **scratch trees in tmp_path** — it proves
+   the checker audits honestly, and asserts nothing about the real mirror. So nine
+   consecutive green `pytest -q --cov` runs said nothing about drift. §N-level lesson:
+   a gate that audits a generated copy is not the same as a test that audits it.
+   **BLOCKED, decision for the maintainer, recommendation: run
+   `uv run python scripts/sync_vendor.py` and commit the regeneration as its own
+   explicit change** (§R8's "if you must regenerate, commit the regeneration"). L3
+   did not do it because this lane's rails forbid bare invocation of that script, and
+   hand-editing `_vendor` is forbidden by §R3 — repairing the mirror silently is
+   exactly the unreviewable diff §R8 exists to prevent. **Until that commit exists,
+   pushing `06a22c6..ea25851` turns `ci.yml:75` red.** That is a correct red, and the
+   next lane must not resolve it by re-adding anything.
+
+4. **D-L3-01 — shipped planning code consulted the benchmark answer key (S1, T0,
+   confirmed, leak removed).** `packages/agent/src/dsa_agent/planner.py` read
+   `ground_truth.expected_tool` out of `benchmarks/v2/catalog.json` and forced
+   `wants_sql = True` whenever a user query matched a catalog `question`, inside
+   `heuristics_plan` — the default planner, because `plan_analysis` routes
+   `DSA_LLM_MODE` stub/heuristic (the CI/benchmark mode, `ci.yml:128`) straight to it.
+   15 of the 100 catalog tasks have `expected_tool: run_sql`, and those same tasks
+   carry `required_tools: ["run_sql"]` / `gold_method: "run_sql"`, which is what
+   `generate_benchmark_v2.py:160-161` derives the scoreable fields from.
+   It never executed: `_P(__file__).resolve().parents[3]` from
+   `packages/agent/src/dsa_agent/planner.py` is `packages/`, so the probe path is
+   `packages/benchmarks/v2/catalog.json`, which does not exist (measured: `EXISTS:
+   False`; `parents[4]` is the repo root). Plans for all 15 run_sql questions plus two
+   controls are byte-identical before and after the deletion.
+   The second-order finding is worse than the first, and it is an **absence**: no
+   test keys on the v2 planner consulting ground truth at all. `grep -rn "leakage"
+   tests/` returns exactly one hit, `tests/evals/test_external_benchmark.py:124`
+   `"gold leakage firewall"`, which guards the *external* benchmark path, not
+   `heuristics_plan`. The only reason the leak was not live is that a path constant
+   is off by one — so the suite cannot distinguish "no leak" from "leak code that
+   never runs", and any future change that repairs the path silently enables it.
+   **Recommendation for the next lane:** a source-level pin asserting no shipped
+   module under `packages/` or `apps/` reads `benchmarks/**` or the `expected_tool`
+   key (`git ls-files | grep -c "^benchmarks/"` = 70, and `benchmarks/v2/catalog.json`
+   is tracked, so the answer key is present in every checkout, including CI). Not
+   added here: it is a new test surface, outside this lane's 8 fixes.
+
+5. **D-L3-02 — `/metrics` under-reported RSS by 1024x on Linux (S2, T0, FIXED in
+   `f415f61`).** `apps/api/src/dsa_api/routers/health.py` carried a
+   "macOS reports bytes, Linux reports KB — normalize" comment and then applied the
+   identical bytes formula on both branches, so a Linux process divided kilobytes by
+   1024\*1024. The `except Exception: pass` wrapped the whole block, so a wrong number
+   and an unavailable `resource` module looked the same from outside. The unit was
+   measured rather than assumed: allocating 64 MiB on this Mac moved `ru_maxrss` by
+   67,092,480, i.e. bytes, so the bytes formula is the macOS-correct one. The fix is
+   the per-platform divisor plus `tests/unit/test_metrics_rss_unit.py`, parametrised
+   over Darwin/Linux: against the pre-fix handler the Linux case fails
+   (`((122404864 / 1024) - 0.01) <= 116.73`), against the fix it passes. Nobody saw it
+   because macOS is the branch the old code got right, and this lane's machine is a
+   Mac — CI's Linux runners are the ones that were reading wrong numbers, and `/metrics`
+   has no assertion on `rss_mb` at all today.
+
+6. **Filed, not fixed.** Kept short and deliberate; §19 step 10.
+   - **D-L3-03 (S2, reachable, Hiding-class, not an S110 site).**
+     `assumption_check.py` records a check that *failed to run* as
+     `{"error": ..., "passed": True}` in two places (normality at line 84, levene at
+     line 126, measured at `ea25851`). `overall_pass` — and therefore the
+     recommendation "Assumptions hold (p>0.05)." — is unaffected by that error, so an
+     assumption check that could not execute reports the assumption as satisfied.
+     This is the same defect class as D-L1-02 but invisible to S110, because the
+     handler is not `pass`. Worth sweeping for across `packages/tools`.
+   - **D-L3-04 (§12 ambient state, untouched by design; S0-candidate for the next
+     lane).** `apps/api` `/metrics` reads `dsa_agent.graph._TOOL_CACHE` and publishes
+     its length as `tool_calls_total` — in a multi-worker API process that number is
+     one worker's count, labelled as a total. The cache itself is the larger question:
+     `_TOOL_CACHE: dict[tuple[str, str], tuple[Any, bool, str | None]]` at
+     `graph.py:45`, keyed by `(tool_name, sha256(inputs))` at `graph.py:88-90`, written
+     and read at `graph.py:94-104` — **no run identity and no dataset-content
+     component**, so a tool called with the same `dataset_path` in a later run gets the
+     first run's result even if the file on disk changed. §12 names exactly this shape
+     as an S0. L3 narrowed only the exception that swallow at the metrics endpoint; the
+     key needs its own lane (invalidation policy, and a bounded cache — it never
+     evicts).
+   - **D-L3-05 (config hygiene, three dead exclusions).** `packages/plugins` and
+     `packages/execution` still list `S110`+`SIM105` while measuring **0** sites, so
+     both entries govern nothing — §R11's direction. Separately, `ignore = ["S101",
+     "E501"]` at `pyproject.toml:117` already disables E501 globally, which makes the
+     `"E501"` entries in the `plugins` and `apps/jupyter` lines no-ops by
+     construction; and the `tests/**` line lists `"S110"` **twice**. All four are
+     deletable with zero behavioural risk and were left alone because they are not
+     this lane's finding.
+
+7. **What remains of D-L1-02.** Eight shipped trees are clean; the in-scope measure
+   is now `ruff check --isolated --select S110 packages/agent packages/tools
+   packages/mcp packages/evidence packages/llm packages/datasets apps/api
+   apps/jupyter` → **All checks passed** (was 27). The whole inventory is at 8, all in
+   `packages/evaluation`, which is out of scope for L3 and blocked behind the
+   concurrent session's uncommitted `external_validation.py` (3 of the 8). Order for
+   whoever picks it up: let that session land, then `evaluation`'s line 125 loses
+   `S110`+`SIM105` **last**, then delete the two dead lines from (6), and only then can
+   §41(6)'s acceptance ("S110 gone from all shipped lines") be claimed.
+   Rails held: `tests/**` line 121 untouched (P-4), `fail_under` still 79, **zero** new
+   `# noqa` across all nine commits (verified by grepping `git diff 06a22c6..HEAD` for
+   the string: 0 matches), no new ignore entry anywhere, nothing under `_vendor`
+   edited, no dependency, no push, no branch/tag/PR.
+
+8. **An error of my own, recorded because the lane's point is honest numbers.**
+   `f415f61` shipped `test_metrics_rss_unit.py` with a strict lower bound comparing an
+   unrounded `before/divisor` against a value the handler rounds to 2dp. It passed in
+   isolation and passed four full-suite runs, and failed on the fifth: `ru_maxrss` is
+   a high-water mark, so under memory pressure the reading was 470.2839…, rounded to
+   470.28, and `470.2839 <= 470.28` is false. Fixed in `a680b80` with a ±0.01 bound
+   that still fails against the pre-fix handler; run 5/5 to show it is not order-dependent.
+   Green-on-arrival is not the same as green-always, and a test that only fails under
+   load is still a test that can fail.
+
+9. **Budget.** §28 allows ≤8 fixes: this lane landed exactly **8 tree fixes** plus one
+   commit correcting a test its own tree 4 introduced (`a680b80`), which is
+   bookkeeping, not a ninth fix. Coverage, baseline then after trees 1→8 in order:
+   80.40, 80.40, 80.42, 80.47, 80.53, 80.53, 80.50, 80.51, 80.51 — never below the 79
+   floor, and the only dip (`4ed13e6`, evidence) is two failure-path handlers the suite
+   does not exercise, recorded there rather than avoided by deleting the branches.
+   Statements 7676 → 7654 across the lane (the deletions in trees 3, 7, 8). The four
+   gates ran before every commit and returned rc=0, rc=0, rc=0, rc=0, except the one
+   genuine red in (8). **Not pushed.** The vendor regeneration in (3) is the first
+   thing any push needs.
