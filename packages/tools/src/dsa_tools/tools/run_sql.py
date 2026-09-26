@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -61,7 +62,5 @@ class RunSQLTool(BaseTool[RunSQLInput, RunSQLOutput]):
         except Exception as e:
             raise ToolExecutionError(f"SQL execution failed: {e}") from e
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 con.close()
-            except Exception:
-                pass

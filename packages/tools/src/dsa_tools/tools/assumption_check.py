@@ -103,11 +103,10 @@ class AssumptionCheckTool(BaseTool[AssumptionCheckInput, AssumptionCheckOutput])
             if len(groups) >= 2:
                 arrays = []
                 for g in groups[:6]:  # cap
+                    # Every column in `cols` already cast to float in the loop above,
+                    # so a subset of one of them cannot fail to cast.
                     vals = df.filter(pl.col(inp.group_col) == g)[cols[0]].drop_nulls().to_numpy()
-                    try:
-                        arrays.append(vals.astype(float))
-                    except Exception:
-                        pass
+                    arrays.append(vals.astype(float))
                 if len(arrays) >= 2 and all(len(a) >= 3 for a in arrays):
                     try:
                         stat, pval = stats.levene(*arrays)
