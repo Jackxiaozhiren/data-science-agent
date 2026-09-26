@@ -86,7 +86,7 @@ PATTERNS = {
 
 
 # Maturity check: README V4 line should match RELEASE_MATRIX (§23)
-def check_maturity():
+def check_maturity() -> list[str]:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     # Find V4 line
     v4_line = ""
@@ -94,7 +94,7 @@ def check_maturity():
         if "V4 adds:" in line:
             v4_line = line
             break
-    issues = []
+    issues: list[str] = []
     if not v4_line:
         return issues
     # Check: Stable should contain Time Series, Experimental should contain Jupyter
@@ -122,12 +122,12 @@ def check_maturity():
     return issues
 
 
-def scan_file(path: Path):
+def scan_file(path: Path) -> list[tuple[str, str, str]]:
     try:
         text = path.read_text(encoding="utf-8")
     except Exception:
         return []
-    findings = []
+    findings: list[tuple[str, str, str]] = []
     # Check each pattern but allow historical versioned context
     for name, pat in PATTERNS.items():
         for m in pat.finditer(text):
@@ -165,20 +165,31 @@ def _is_release_candidate_ref(version: str) -> bool:
     return bool(re.fullmatch(rf"release/v{re.escape(version)}-rc\d*", ref))
 
 
-def check_version_consistency():
-    issues = []
+def _first_group(pattern: str, path: Path) -> str:
+    """Read `path` and return the first capture group, or "?" if the pattern is absent.
+
+    A missing pattern is reported as `?=4.4.0` by the caller rather than raising:
+    an AttributeError here used to be swallowed by the blanket handler below, which
+    silently retired all five version checks instead of reporting one.
+    """
+    match = re.search(pattern, path.read_text(encoding="utf-8"))
+    return match.group(1) if match else "?"
+
+
+def check_version_consistency() -> list[str]:
+    issues: list[str] = []
     # Check pyproject vs CITATION vs __init__ vs sdk vs sbom vs README title
     try:
-        py_ver = re.search(r'version = "([^"]+)"', (ROOT / "pyproject.toml").read_text()).group(1)
+        py_ver = _first_group(r'version = "([^"]+)"', ROOT / "pyproject.toml")
         cit_text = (ROOT / "CITATION.cff").read_text()
         m = re.search(r"^version: ([0-9.]+)", cit_text, re.MULTILINE)
         cit_ver = m.group(1) if m else "?"
-        init_ver = re.search(
-            r'__version__ = "([^"]+)"', (ROOT / "src/data_science_agent/__init__.py").read_text()
-        ).group(1)
-        sdk_ver = re.search(
-            r'self\._version = "([^"]+)"', (ROOT / "src/data_science_agent/sdk.py").read_text()
-        ).group(1)
+        init_ver = _first_group(
+            r'__version__ = "([^"]+)"', ROOT / "src/data_science_agent/__init__.py"
+        )
+        sdk_ver = _first_group(
+            r'self\._version = "([^"]+)"', ROOT / "src/data_science_agent/sdk.py"
+        )
         sbom_ver = __import__("json").loads((ROOT / "release/sbom.json").read_text())["version"]
         # README intentionally does not pin a version in the title (modern OSS pattern).
         for name, ver in [
@@ -209,7 +220,7 @@ def check_version_consistency():
     return issues
 
 
-def main():
+def main() -> int:
     all_findings = []
     # Version consistency
     ver_issues = check_version_consistency()

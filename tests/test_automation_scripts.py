@@ -198,6 +198,28 @@ def test_leaderboard_replace_block_requires_markers() -> None:
         leaderboard.replace_block("# no generated block", "generated")
 
 
+def test_missing_version_pattern_is_reported_not_swallowed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "src/data_science_agent").mkdir(parents=True)
+    (tmp_path / "release").mkdir()
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "x"\n', encoding="utf-8")
+    (tmp_path / "CITATION.cff").write_text("cff-version: 1.2.0\n", encoding="utf-8")
+    (tmp_path / "src/data_science_agent/__init__.py").write_text(
+        '__version__ = "4.4.0"\n', encoding="utf-8"
+    )
+    (tmp_path / "src/data_science_agent/sdk.py").write_text(
+        'self._version = "4.4.0"\n', encoding="utf-8"
+    )
+    (tmp_path / "release/sbom.json").write_text('{"version": "4.4.0"}', encoding="utf-8")
+    monkeypatch.setattr(public_claims, "ROOT", tmp_path)
+
+    issues = public_claims.check_version_consistency()
+
+    assert any("pyproject=?" in issue for issue in issues), issues
+    assert not any("check error" in issue for issue in issues), issues
+
+
 def test_scan_scope_separates_declared_scope_from_surface_actually_read() -> None:
     root = public_claims.ROOT
     scanned, skipped = public_claims.scan_scope(root)
