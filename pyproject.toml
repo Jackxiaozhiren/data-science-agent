@@ -128,7 +128,7 @@ ignore = ["S101", "E501"]
 "packages/llm/**/*" = ["S110"]
 "packages/tools/**/*" = ["S110", "SIM105", "UP042", "UP046", "SIM102", "SIM103", "SIM110", "SIM222", "F401", "E402", "S608", "B904", "B905", "F841", "S311", "E702", "B007", "SIM103", "UP046"]
 "packages/mcp/**/*" = ["S101", "S110", "S603", "S607", "F401", "I001", "B904", "E402", "SIM105"]
-"apps/jupyter/**/*" = ["S101", "S112", "F401", "I001", "E501", "S603", "S607", "S110", "SIM105", "F841", "B904", "E402"]
+"apps/jupyter/**/*" = ["S101", "S112", "F401", "I001", "E501", "S603", "S607", "F841", "B904", "E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dsa_api", "dsa_agent", "dsa_tools", "dsa_execution", "dsa_statistics", "dsa_ml", "dsa_viz", "dsa_evidence", "dsa_reports", "dsa_datasets", "dsa_llm", "dsa_mcp", "dsa_evaluation", "dsa_plugins"]

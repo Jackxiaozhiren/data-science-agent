@@ -159,8 +159,8 @@ def display_analysis(analysis: Any, dataset: str | None = None, task: str | None
         if art_type == "chart" and art_path and Path(art_path).exists() and Image is not None:
             try:
                 display(Image(filename=str(art_path)))
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[dsa] Chart artifact not shown ({art_path}): {exc}")
             break
     # Also handle base64 in tool outputs? For ForecastTool viz, not yet — artifact is file.
     # If analysis has tool_calls with base64_png, show it
@@ -171,8 +171,8 @@ def display_analysis(analysis: Any, dataset: str | None = None, task: str | None
             try:
                 png = base64.b64decode(result["base64_png"])
                 display(Image(data=png))
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[dsa] Inline chart from tool output not shown: {exc}")
             break
 
 
@@ -195,5 +195,5 @@ def register_formatter(ipython: Any) -> None:
                 f"Analysis({obj.run_id}, {obj.status}, {len(obj.evidence)} evidence)"
             ),
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[dsa] Analysis auto-display not registered: {exc}")
