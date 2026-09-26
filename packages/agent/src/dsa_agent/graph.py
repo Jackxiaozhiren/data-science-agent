@@ -592,8 +592,17 @@ async def run_analysis(
                             metadata={"kind": kind},
                         )
                     )
-        except Exception:
-            pass
+        except Exception as exc:
+            state.validation_results.append(
+                ValidationResult(
+                    check="evidence_bundle",
+                    passed=False,
+                    message=(
+                        "Reproducibility bundle incomplete: evidence graph, experiment.json, "
+                        f"reproduce.sh or notebook was not written ({type(exc).__name__}: {exc})"
+                    ),
+                )
+            )
     except Exception as e:
         state.error = f"Report write failed: {e}"
 
