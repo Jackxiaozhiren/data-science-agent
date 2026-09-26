@@ -1568,3 +1568,105 @@ tree as it stood at `fc9485f` — except item (3), which is a factual error in �
    gates ran before every commit and returned rc=0, rc=0, rc=0, rc=0, except the one
    genuine red in (8). **Not pushed.** The vendor regeneration in (3) is the first
    thing any push needs.
+
+## §43 D-L3-04 promoted from inference to reproduction, plus the vendor-sync runbook §42(3) leaves behind
+
+**Context, in one line each.** With L3's eight trees committed and nothing pushed, the two
+open items were the one §42 filed but did not fix (the tool cache's invalidation key) and
+the one §42 blocked on a maintainer decision (regenerating `_vendor`). The first was still
+free to work on and needed no authorization; this section is what measuring it produced,
+and then the runbook for the second.
+
+1. **D-L3-04 is real, and it is worse than §42 said.** §42 inferred the defect from the key's
+   shape. Reproduced now, in one process, deterministic, no mocking.
+
+### D-L3-04
+| field | value |
+|---|---|
+| claim | `_TOOL_CACHE` keys on the tool name plus the hashed *input dict*, which carries the dataset **path string**, so a long-lived process replays one run's result — success or failure — to every later run that names the same path, whatever the file now contains |
+| lane | L3 (§12 ambient state) |
+| evidence_tier | T0 (executed against the shipped module, deterministic) |
+| severity | **S0** |
+| location | `packages/agent/src/dsa_agent/graph.py:45` (declaration), `:85-90` (key), `:93-106` (get/set); mirrored byte-for-byte at `src/data_science_agent/_vendor/dsa_agent/graph.py:45,85,95-96,104`, so the published wheel carries it too |
+| mechanism | Two failure modes, not one. (a) *Stale success*: the key cannot see content change, so a profile computed before a dataset is overwritten is handed to the run after it, and the run's evidence, insights and report all describe data that no longer exists. (b) *Poisoned failure*: line 101-104 stores `(None, False, error)` under the same key as a success, so one transient miss — file not yet written, a mount that lagged — makes that dataset permanently unreadable **for the lifetime of the process**, and every later retry gets the first error back rather than executing the tool. (a) is silently wrong numbers in a product whose guarantee is verifiable numbers; (b) turns a momentary fault into a stuck run with no path to recovery short of a restart |
+| evidence_command | re-create the two probes from (2) below (they write only under `/tmp`, deliberately not committed) and run `NO_PROXY='*' no_proxy='*' uv run python /tmp/dl304/repro2.py`, then `… repro4.py` |
+| output_excerpt | repro2: `mean reported run1 : [2.5]` / `mean reported run2 : [2.5] <-- served from cache, file already changed` / `mean reported run3 : [250.0] <-- after evicting the key`; repro4: `run1 (no such file) ok=False err='File not found: /tmp/dl304/ds4.csv'` / `run2 (file now valid) ok=False err='File not found: ...'` / `run3 (fresh key) ok=True` / `=> failure replayed for an identical, now-valid dataset: True`; both scripts exit 0 |
+| reproducible | deterministic |
+| fix_sketch | Three separable pieces, cheapest first: **(i)** stop caching failures — on `ok=False` return without storing, which alone kills mode (b) in four lines; **(ii)** put run identity in the key by threading `run_id` into `_run_tool`, which is the §12 requirement and kills (a) across runs while preserving within-run dedup, at the cost of a signature change reaching all three call sites (enumerated in `blast_radius` below); **(iii)** bound it — the dict is written and never evicted anywhere (`grep -rn "_TOOL_CACHE"` returns only the declare/read/write plus the metrics read), so a long-lived API process grows it without limit, and `len()` of that growth is what `/metrics` publishes as `tool_calls_total`. What it would break: any test or product path that relies on the cache to avoid re-executing a tool across runs; the cache is also what makes a notebook re-run cheap, so (ii) should keep within-run hits |
+| blast_radius | `packages/agent` — all three `_run_tool` call sites are affected (`graph.py:324`, `graph.py:439`, `langgraph_graph.py:91`), the `_vendor` mirror and therefore the wheel, every long-lived consumer (`apps/api` worker, Jupyter kernel), plus `/metrics`' reported number |
+| verify_before | `repro2.py` above: `run2 == run1 (stale) : True` with the file already rewritten |
+| verify_after | the same script prints `run2 == run1 (stale) : False`, and `repro4.py`'s last line flips to `False` once failures are not stored |
+| expected_delta | `repro2` run2 mean `[2.5]` → `[250.0]`; `repro4` run2 `ok=False` → `ok=True`; `/metrics` `tool_calls_total` should stop being reported as a process-global count or be renamed to say so |
+| status | **open** — not fixed in L3: it is a structural change (§28 caps structural edits at two, and this lane spent its budget on the eight trees), and (ii) needs a decision about whether a cached result is allowed to cross a run boundary at all |
+| commit | — |
+| protected | no |
+
+2. **The two probes, verbatim, so the claim survives this session.**
+
+   ```python
+   # repro2 — stale success. File is rewritten between run1 and run2; same inputs.
+   DS.write_text("v\n1\n2\n3\n4\n")            # mean 2.5
+   o1, _, _ = await _run_tool("profile_dataset", {"path": str(DS)})
+   DS.write_text("v\n100\n200\n300\n400\n")    # mean 250.0
+   o2, _, _ = await _run_tool("profile_dataset", {"path": str(DS)})
+   _TOOL_CACHE.pop(_tool_cache_key("profile_dataset", {"path": str(DS)}), None)
+   o3, _, _ = await _run_tool("profile_dataset", {"path": str(DS)})
+   # -> mean_of(o1)==[2.5]  mean_of(o2)==[2.5]  mean_of(o3)==[250.0]
+
+   # repro4 — poisoned failure. The FIRST call is the one that fails, so the error is stored.
+   # (an earlier draft of this probe put the deletion second and proved nothing: with one
+   # key, every later call is a cache hit and the tool never ran — the test was vacuous.)
+   o1, ok1, e1 = await _run_tool("profile_dataset", {"path": str(DS)})   # file absent
+   DS.write_text("v\n100\n200\n300\n")
+   o2, ok2, e2 = await _run_tool("profile_dataset", {"path": str(DS)})   # same key
+   o3, ok3, e3 = await _run_tool("profile_dataset", {"path": str(DS2)})  # copy, new key
+   # -> ok1=False  ok2=False (identical error text)  ok3=True
+   ```
+
+   The control that makes both readings mean something is the *different key* case: the same
+   bytes at a second path profile fine while the first path is still returning a stale or
+   errored result. That isolates the cache as the cause and rules out the loader.
+
+3. **Runbook: regenerating `_vendor` once the concurrent session lands.** This is the step
+   §42(3) blocked on, written so it is executable rather than described. It mutates tracked
+   files, which is why it was not run here, and it is the only thing standing between this
+   lane and a green `ci.yml:75`.
+
+   1. Confirm the other session has committed: `git status --short` must show no ` M` entries
+      for `packages/evaluation/**`, and `git log --oneline -1` must be ahead of `9a085fd`.
+      If it has not landed, stop — see step 5 for why.
+   2. Re-measure the drift so the commit's scope is known before it is made, not after:
+      `uv run python scripts/sync_vendor.py --check` (expect rc=1, and it prints the per-package
+      counts; `--check` writes nothing).
+   3. Regenerate: `uv run python scripts/sync_vendor.py` (bare invocation **writes**; the script's
+      own message says "then commit the result").
+   4. Stage the mirror **by directory, then verify it is only the mirror**:
+      `git add src/data_science_agent/_vendor` followed by `git diff --cached --name-only`, and
+      confirm every path starts with `src/data_science_agent/_vendor/`. Commit as its own
+      `chore(vendor): resync _vendor after D-L1-02 tree fixes` — §R8 says a regeneration is its
+      own explicit change, never folded into the source commit that caused it.
+   5. Why the ordering in step 1 is not caution-for-its-own-sake: the writer is a **global
+      synchroniser** — it copies every listed source tree from the *working tree*, so running it
+      while another session's `external_validation.py` hunk is uncommitted bakes an unreviewed
+      change into the mirror and into this lane's commit. That is the exact collision §41(4)
+      predicted, arriving through a generated file instead of a source file.
+   6. Then the two gates that were red become green and must be reported as such:
+      `uv run python scripts/sync_vendor.py --check` → rc=0, and `uv run pytest -q --cov` stays
+      rc=0. Pushing `06a22c6..9a085fd` **before** step 4 is a known-red range on `ci.yml:75`.
+
+4. **What I did not do, and why.** Did not fix D-L3-04: it is one of §28's two allowed
+   structural changes, L3's eight fixes are spent, and the shape of the key is a decision
+   (may a cached tool result cross a run boundary?) rather than a defect with an obvious
+   patch — §18's gate says surface it, so it is surfaced. Did not run the bare sync in (3):
+   this lane's rails forbid it and the precondition in step 1 is not yet true. Did not push,
+   tag, branch, or open a PR (§R14). Nothing under `_vendor` was hand-edited (§R3) — the probes
+   import it only to compare line numbers. No `# noqa`, no new ignore, `fail_under` still 79.
+   Working tree is exactly the other session's three files plus the untracked prompt document.
+
+5. **Suggested order for whoever picks this up next.** (a) the four-line `(i)` in D-L3-04 —
+   it is not structural, it is strictly more signal than today, and it removes the stuck-run
+   failure mode immediately; (b) the `_vendor` resync per (3) once the evaluation session
+   lands; (c) then `packages/evaluation`'s remaining 8 S110 sites, which is what closes
+   D-L1-02 outright; (d) then the dead exclusions and the duplicated `"S110"` in the `tests/**`
+   line from §42(6); (e) D-L3-04 `(ii)`/`(iii)` last, because they need a decision and a
+   benchmark re-run, not a patch.
