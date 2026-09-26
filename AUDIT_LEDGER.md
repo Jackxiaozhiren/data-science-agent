@@ -927,6 +927,59 @@ commits. I proceeded past the cap on the maintainer's standing instruction to
 follow my own recommended order, and record the overrun rather than renumbering
 the findings to hide it.
 
+## §35 D-L1-14 — the root cause was not the matcher, it was a lying scope
+
+**Measured.** `SCAN_GLOBS` advertises `docs/**/*.md`, `plugins/**/README.md` and
+`src/data_science_agent/sdk.py`; an anonymous skip list inside `main()` then
+dropped every one of those matches. Per-glob counts (matched → scanned):
+`docs/**/*.md` 47 → **0**, `plugins/**/README.md` 2 → **0**,
+`src/.../sdk.py` 1 → **0**, and `packages/**/README.md` 0 → 0 (a fourth entry
+that matches nothing at all, for a different reason). 51 files declared as
+public surface, never opened, while the tool printed `0 issues`.
+
+**Why the skip is load-bearing, and stays.** Running the current `PATTERNS`
+across those 51 yields **34 findings, of which 0 are real and 2 are
+build-failing**. Both HIGH hits are `old_package_pip` matching the sentence
+"no `pip install data-science-agent` (old package)" — a document asserting the
+*absence* of the command. `stale_test_counts`/`stale_mypy` fire the same way on
+"no stale `86+ tests`". ~25 of the 34 are `stale_version '4.0.0'` from SDK
+docstring maturity labels ("Stable since 4.0.0"), which the release matrix
+requires. So D-L1-14 is two defects, not one, and only one is fixable by a
+narrower regex: the dead-glob lie is fixed now; the negation blindness is what
+still blocks widening scope, and the checker is **still not wired into CI** —
+wiring it today buys a red build on 8 known-false findings.
+
+**Landed (`dcc99f5`).** `NOISE_SUBSTRINGS` + `HISTORICAL_PREFIXES` are now named
+at module level with the measurement in the comment, `scan_scope()` is the one
+place that splits declared from read, and the verdict prints its own
+denominator: `✓ No stale claims detected — 0 issues (scanned 14 file(s); 51
+skipped as historical)`. Two tests in `tests/test_automation_scripts.py`:
+`scan_scope` on the real tree (glob advertised, skip non-empty, partition is
+clean) and a scratch pair where byte-identical text under `docs/` and
+`README.md` gets opposite verdicts — that pair *is* the blind spot, written as
+an assertion, and it will fail on the day someone teaches the matcher negation.
+Red basis: `scan_scope` does not exist in HEAD's copy (executed:
+`hasattr(old, 'scan_scope')` → `False`), so both are new-capability tests, not
+red-then-green in the D-L1-05 sense.
+
+**Concurrent history — the tree moved under this lane.** Between `e1ecb6f` and
+this section, five more commits landed on `main` that this session did not make
+(`6680b37` opt-in bearer auth, `7bf7408` `dsa_api` vendor sync, `4ca9c69` ruff
+format, `e28c184` changelog, `7397c47` benchmark adapter v3), and three files
+are dirty that I never opened (`README.md`,
+`packages/evaluation/src/dsa_evaluation/external_validation.py`,
+`tests/evals/test_external_validation.py`). Checked rather than assumed: all
+six of this lane's commits are ancestors of HEAD (`merge-base --is-ancestor`),
+`CODEOWNERS` still reads `@Jackxiaozhiren`, ci.yml still has 5 `set -o pipefail`,
+`mkdocs.yml` still `not_found: warn`, and all three guard-test files exist in
+HEAD. Those three dirty files were left alone and are not in any commit of mine.
+Consequence for the record: the suite count moved **408 → 415** and coverage
+**80.24% → 80.40%** because of someone else's added tests, so the §34 numbers
+describe an older HEAD and every inherited figure needs re-measuring before use.
+
+**Budget.** That makes **10** fixes landed in this lane against §28's cap of 8.
+Recorded as an overrun under standing maintainer instruction, not renumbered.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -972,16 +1025,28 @@ the findings to hide it.
   with `_vendor` unmodified. This took the lane to 9 fixes against §28's cap of 8;
   §34 says so instead of renumbering.
 
-**Next session (resume instructions, §5.2).** Read only: this ledger, the
-baseline block, Appendix B, and §27 / §34 above. Suggested order: (1) settle
-D-L1-14's matcher question, then wire the claim checker (§21.5(1)) — until the
-matcher separates "stale value" from "document quoting that value to disclaim it",
-wiring it buys a red build on 8 known-false findings, 2 of them build-failing;
-(2) D-L1-02 package-by-package as L3 work, 35 shipped sites, one package per
-commit; (3) the not-yet-run §23 gates — `generate_sbom.py` (§R8), `uv build`, the
-web build / `regression.mjs` / `npm audit`, Docker — all still unmeasured, so
-§30's "met" box covers the gates that ran, not the release surface. The `--check`
-non-mutation item and the two human decisions are closed and out of the queue.
-Before any L2 work, note §17.6: L2's evidence on swallowed exceptions and claim
-checks still rests on gates D-L1-02/03 found broken, so re-derive rather than
-reuse.
+- 2026-09-26, §35 — D-L1-14 root-caused and half-closed in `dcc99f5`. The
+  finding as filed ("matcher mishandles negation") was really two defects
+  sharing a symptom, and the bigger one was invisible: 51 files declared in
+  `SCAN_GLOBS` and silently dropped by a skip list inside `main()`, so `0
+  issues` never meant the public surface was clean. Scope honesty landed; the
+  negation blindness is documented as what still blocks widening, and the
+  checker is deliberately still not wired into CI. Two new tests. Also recorded:
+  HEAD moved under this lane (five commits by another session, three files dirty
+  that I never opened), my six commits verified intact, and the suite count
+  consequently re-measured at 415 / 80.40% on a tree that is partly not mine.
+
+**Next session (resume instructions, §5.2).** Step nil: re-measure before
+trusting any number in this ledger — HEAD was `7397c47` at the time of writing
+and another session is committing to the same branch. Then: (1) decide D-L1-14's
+remaining half — teach `PATTERNS` to separate "disclaims this old number" from
+"asserts it" (measured cost of not doing so: 34 matches, 0 real, 2 build-failing,
+over the 51 files still excluded), or retire the numeric patterns and keep only
+version-consistency + maturity, which are mechanically decidable; (2) wire the
+claim checker into CI only after (1), and note the CI-critical-script change gets
+its own commit; (3) D-L1-02 package-by-package as L3 work, 35 shipped sites;
+(4) the §23 gates never run — `generate_sbom.py` (§R8), `uv build`, the web
+build / `regression.mjs` / `npm audit`, Docker — so §30's "met" box covers the
+gates that ran, not the release surface. Before any L2 work, note §17.6: L2's
+evidence on swallowed exceptions and claim checks rests on gates D-L1-02/03 found
+broken, so re-derive rather than reuse.
