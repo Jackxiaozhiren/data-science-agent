@@ -1141,6 +1141,32 @@ work L3's lane is scoped for. The highest-value move is no longer to write more
 fixes but to get these nine local commits pushed so Actions, not this laptop,
 rules on them.
 
+## §40 The push, its result, and a number of mine that was tree-contaminated
+
+**Pushed** `7397c47..2d1e72f` (10 commits, fast-forward, no force). The three
+files belonging to the concurrent session stayed uncommitted and did not go.
+Before pushing I refused to treat "my working tree is green" as "HEAD is green":
+a detached worktree at `2d1e72f`, driven with the existing `.venv/bin/ruff`,
+`ruff check`/`format --check` (193 files), `sync_vendor --check` and the claim
+checker all exit 0 on HEAD alone, then the worktree was removed.
+
+**Result.** Run `36220751348`: `conclusion=success`, jobs `ci` and
+`web-regression`, with the steps this lane rewrote executing as written —
+`ruff check … scripts`, `ruff format --check … scripts`, `sync_vendor --check`,
+mypy over `apps/jupyter`, `generate_sbom.py`, and four `set -o pipefail` steps
+including mkdocs `--strict`. The remote reported `Required status check "ci" is
+expected`, so **`scripts/` is now linted and format-gated by a merge-blocking
+check** — D-L1-16 closed by CI rather than by my machine.
+
+**Correction, by addendum.** §35 and §39 quote `scanned 14 file(s)`. On a clean
+checkout of the same commit the checker says **10**. The four extras were
+untracked build residue in this working tree that `SCAN_GLOBS` matches, so the
+number described my machine, not the repository. Nothing in the argument changes
+— 51 files are still declared and never read, on either count — but the habit
+that produced it is the same one §36 caught: an instrument reading taken in a
+dirty tree is not a fact about the commit. Any future count should be quoted from
+a clean worktree or from CI.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -1225,6 +1251,11 @@ rules on them.
   tracked `release/sbom.json`, and withdrew a crash I had nearly reported. Suite
   416 passed. Lane now stands at 14 changes against a cap of 8, so the
   recommendation is to stop repairing and get the nine commits pushed.
+- 2026-09-26, §40 — pushed (10 commits, fast-forward) after verifying HEAD alone
+  in a throwaway worktree; Actions came back green on both jobs with the new
+  `scripts` gates running as a required check. Corrected my own `scanned 14`
+  figure to 10 on a clean checkout — a dirty-tree measurement posing as a
+  commit fact.
 
 **Next session (resume instructions, §5.2).** Step nil: re-measure before
 trusting any number in this ledger — HEAD was `7397c47` at the time of writing
