@@ -1670,3 +1670,76 @@ and then the runbook for the second.
    D-L1-02 outright; (d) then the dead exclusions and the duplicated `"S110"` in the `tests/**`
    line from §42(6); (e) D-L3-04 `(ii)`/`(iii)` last, because they need a decision and a
    benchmark re-run, not a patch.
+
+## §44 The exact blast radius of the blocked `_vendor` resync, measured read-only
+
+**Why this section exists at all.** §43(3) step 2 tells the next person to "re-measure the
+drift so the commit's scope is known before it is made", and the only tool for that is
+`sync_vendor.py --check`, which reports **per-package counts** — enough to know a resync is
+needed, not enough to review one. The inventory below came from a read-only `cmp` loop over
+source-versus-mirror, so a reviewer can now check the regeneration's diff against a named
+file list instead of a count. Nothing was written to produce it, and no gate was rerun for a
+docs-only commit.
+
+1. **Status of the two gates at `6b604f7`.** The concurrent session had **not** landed:
+   `README.md`, `packages/evaluation/src/dsa_evaluation/external_validation.py` and
+   `tests/evals/test_external_validation.py` were still ` M`, so §43(3) step 1's precondition
+   fails and the resync is correctly still blocked. `origin/main` was still `06a22c6` with
+   local `main` ahead 11, so pushing this range would publish a known-red `ci.yml:75`.
+
+2. **The 14 files a resync would write — all of them mine, all of them pure copies of
+   already-committed source.** `diff` line counts are source-vs-mirror, so they double-count
+   each changed line (`<` and `>`); they size the review, they are not the commit's `+/-`.
+
+   | mirror file | changed lines |
+   |---|---|
+   | `dsa_agent/langgraph_graph.py` | 55 |
+   | `dsa_datasets/profiler.py` | 29 |
+   | `dsa_jupyter/magic.py` | 21 |
+   | `dsa_evidence/repro.py` | 20 |
+   | `dsa_mcp/adapter.py` | 18 |
+   | `dsa_api/routers/health.py` | 17 |
+   | `dsa_agent/planner.py` | 16 |
+   | `dsa_agent/graph.py` | 13 |
+   | `dsa_jupyter/display.py` | 12 |
+   | `dsa_tools/tools/evaluate_model.py` | 11 |
+   | `dsa_llm/providers.py` | 10 |
+   | `dsa_tools/tools/assumption_check.py` | 7 |
+   | `dsa_api/routers/datasets.py` | 5 |
+   | `dsa_tools/tools/run_sql.py` | 5 |
+
+   Per-package this is `dsa_agent` 3, `dsa_api` 2, `dsa_jupyter` 2, `dsa_tools` 3,
+   `datasets`/`evidence`/`llm`/`mcp` 1 each — identical to the counts `--check` prints, which
+   is what makes the loop trustworthy rather than merely convenient. `pyproject.toml`,
+   `AUDIT_LEDGER.md` and `tests/unit/test_metrics_rss_unit.py` appear nowhere, because the
+   mirror covers only the shipped `src/` trees — so the resync cannot touch test or config
+   surface, and a reviewer who sees either of those in the regeneration diff should stop.
+
+3. **The one file that must not be taken yet.** `dsa_evaluation/external_validation.py` also
+   differs, but its source side is the other session's **uncommitted** hunk. This is the whole
+   reason §43(3) sequences the resync after their landing: `sync_vendor.py` is a global
+   synchroniser that copies from the working tree, so running it now writes an unreviewed
+   change into the mirror and into this lane's commit. When the regeneration happens, its diff
+   should be exactly the 14 rows above; if it contains an `external_validation.py` hunk, it
+   ran too early.
+
+4. **The read-only check, for reuse.**
+
+   ```bash
+   git diff --name-only <lane-base>..HEAD | grep -E '^(packages|apps)/.*/src/.*\.py$' | while read src; do
+     pkg=$(echo "$src" | sed -E 's#^(packages|apps)/([^/]+)/src/([^/]+)/.*#\3#')
+     rel=$(echo "$src" | sed -E 's#^(packages|apps)/[^/]+/src/[^/]+/##')
+     mir="src/data_science_agent/_vendor/$pkg/$rel"
+     [ -f "$mir" ] && { cmp -s "$src" "$mir" && echo "in sync  $mir" || echo "DIFFERS  $mir"; }
+   done
+   ```
+
+5. **Not done, deliberately.** `tests/**` still lists `"S110"` twice — §43(5)(d) proposed
+   deleting that duplicate, and it is now recorded as **not** proposable: §41(6) names the
+   `tests/**` line as an acceptance condition ("`tests/**` line 121 untouched (P-4's scope
+   decision)"), so editing it, even to delete a redundant token, breaks this finding's own
+   stated acceptance before `evaluation` has landed. It belongs to whatever lane decides to
+   reopen P-4, not to a hygiene sweep. Likewise D-L3-04 `(i)` (do not cache failures) stays
+   the next lane's first item: §28's ceiling is 8 fixes per session, L3 spent them on the
+   eight trees, and landing a partial mitigation of an S0 while `(ii)`/`(iii)` remain open is
+   how a ledger ends up claiming a finding is half-fixed.
