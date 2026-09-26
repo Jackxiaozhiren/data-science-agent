@@ -198,6 +198,33 @@ def test_leaderboard_replace_block_requires_markers() -> None:
         leaderboard.replace_block("# no generated block", "generated")
 
 
+def test_scan_scope_separates_declared_scope_from_surface_actually_read() -> None:
+    root = public_claims.ROOT
+    scanned, skipped = public_claims.scan_scope(root)
+    prefixes = tuple(public_claims.HISTORICAL_PREFIXES)
+
+    assert "docs/**/*.md" in public_claims.SCAN_GLOBS
+    assert skipped, "the checker reads a fraction of what its globs advertise"
+    assert all(str(p.relative_to(root)).startswith(prefixes) for p in skipped)
+    assert not any(str(p.relative_to(root)).startswith(prefixes) for p in scanned)
+
+
+def test_identical_text_is_flagged_only_outside_a_historical_prefix(tmp_path: Path) -> None:
+    body = "The suite is 155 tests today.\n"
+    (tmp_path / "README.md").write_text(body, encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "guide.md").write_text(body, encoding="utf-8")
+
+    scanned, skipped = public_claims.scan_scope(tmp_path)
+
+    assert [p.name for p in scanned] == ["README.md"]
+    assert [p.name for p in skipped] == ["guide.md"]
+    # Byte-identical text, opposite verdicts: the exclusion keys off the path, so
+    # a clean run says nothing about anything under a historical prefix.
+    assert public_claims.scan_file(scanned[0])
+    assert public_claims.scan_file(skipped[0])
+
+
 def test_public_claims_release_candidate_ref_is_narrow(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

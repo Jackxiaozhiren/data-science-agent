@@ -18,6 +18,25 @@ EXPECTED = {
     "version": "4.4.0",
 }
 
+# Build/dependency trees that never carry a public claim.
+NOISE_SUBSTRINGS = [".venv", "node_modules", ".git", "site", "dist", ".mypy_cache", ".ruff_cache"]
+
+# Paths whose whole purpose is to quote superseded numbers: migration guides,
+# release-integrity reports, and SDK docstrings labelling maturity as
+# "Stable since 4.0.0". They cannot simply be scanned -- PATTERNS has no notion
+# of negation, so measured across these prefixes it yields 34 matches, 0 of them
+# real and 2 build-failing. Skipping them is the lesser error, but it also means
+# "0 issues" describes a smaller surface than SCAN_GLOBS advertises, so the
+# skipped set is counted and printed rather than left invisible.
+HISTORICAL_PREFIXES = [
+    "docs/",
+    "research/",
+    "benchmarks/",
+    "plugins/",
+    "apps/jupyter/",
+    "src/data_science_agent/",
+]
+
 # Files to scan (public surfaces §24)
 SCAN_GLOBS = [
     "README.md",
@@ -34,6 +53,22 @@ SCAN_GLOBS = [
     "apps/**/package.json",
     "src/data_science_agent/sdk.py",
 ]
+
+
+def scan_scope(root: Path = ROOT) -> tuple[list[Path], list[Path]]:
+    """Split SCAN_GLOBS matches into (scanned, skipped-as-historical)."""
+    scanned: list[Path] = []
+    skipped: list[Path] = []
+    for pattern in SCAN_GLOBS:
+        for path in root.glob(pattern):
+            if any(x in str(path) for x in NOISE_SUBSTRINGS):
+                continue
+            if any(str(path.relative_to(root)).startswith(p) for p in HISTORICAL_PREFIXES):
+                skipped.append(path)
+            else:
+                scanned.append(path)
+    return scanned, skipped
+
 
 # Patterns per §25
 PATTERNS = {
@@ -185,46 +220,19 @@ def main():
     for iss in check_maturity():
         all_findings.append(("maturity", iss, ""))
 
-    # Scan files - exclude historical docs per §18 (V2/V3/V4 historical reports)
-    for pattern in SCAN_GLOBS:
-        for path in ROOT.glob(pattern):
-            if any(
-                x in str(path)
-                for x in [
-                    ".venv",
-                    "node_modules",
-                    ".git",
-                    "site",
-                    "dist",
-                    ".mypy_cache",
-                    ".ruff_cache",
-                ]
-            ):
-                continue
-            # Skip historical docs that are expected to contain old numbers (§18 Valid Historical) - completely skip stale checks
-            rel = str(path.relative_to(ROOT)) if path.is_absolute() else str(path)
-            if any(
-                rel.startswith(pfx)
-                for pfx in [
-                    "docs/",
-                    "research/",
-                    "benchmarks/",
-                    "plugins/",
-                    "apps/jupyter/",
-                    "src/data_science_agent/",
-                ]
-            ):
-                continue
-            findings = scan_file(path)
-            for kind, match, line in findings:
-                all_findings.append((f"{kind}:{path.relative_to(ROOT)}", match, line))
+    # Scan files, minus the historical prefixes scan_scope() documents.
+    scanned, skipped = scan_scope()
+    for path in scanned:
+        for kind, match, line in scan_file(path):
+            all_findings.append((f"{kind}:{path.relative_to(ROOT)}", match, line))
 
+    scope = f"scanned {len(scanned)} file(s); {len(skipped)} skipped as historical"
     # Report
     if not all_findings:
-        print("✓ No stale claims detected — 0 issues")
+        print(f"✓ No stale claims detected — 0 issues ({scope})")
         return 0
 
-    print(f"Found {len(all_findings)} potential stale claim(s):")
+    print(f"Found {len(all_findings)} potential stale claim(s) ({scope}):")
     for kind, match, line in all_findings:
         print(f"  [{kind}] {match!r} — {line[:120]}")
 
