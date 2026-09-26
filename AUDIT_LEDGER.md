@@ -1256,6 +1256,15 @@ a clean worktree or from CI.
   `scripts` gates running as a required check. Corrected my own `scanned 14`
   figure to 10 on a clean checkout — a dirty-tree measurement posing as a
   commit fact.
+- 2026-09-26, §41 — `fc9485f` pushed on its own (fast-forward) and Actions run
+  `36223063691` returned `success` on `ci` and `web-regression`, closing the
+  "five unpushed commits unverified" caveat §40 left in item (4) above. Then
+  wrote the L3 dispatch block: re-measured D-L1-02 at 35 shipped / 19 files
+  (unchanged by this lane's 15 commits), found 8 of those blocks silenced twice
+  by a co-ignored `SIM105`, caught and corrected my own 43-site count that came
+  from keying by reported line when the two rules point at different lines of
+  one block, and flagged that 3 of the 35 sit in the file another session has
+  open.
 
 **Next session (resume instructions, §5.2).** Step nil: re-measure before
 trusting any number in this ledger — HEAD was `7397c47` at the time of writing
@@ -1288,3 +1297,85 @@ exactly the drift being policed (prospective value, not measured: they report
 0 findings there today). So the open question is narrower than filed — it is
 which corpora are safe to scan, now that §35 made that choice visible — not
 whether the matcher can be made to understand negation.
+
+## §41 L3 dispatch block for D-L1-02 — re-measured at `fc9485f` so the next lane does not inherit this lane's stale numbers
+
+**Context, in one line each.** This lane (L1) is closed: `fc9485f` is the last
+commit, pushed, and Actions run `36223063691` came back `conclusion=success` on
+jobs `ci` and `web-regression` — so the pushed head is green under every gate
+this lane added, including `ruff check … scripts` as a required check. The only
+high-ranked finding left is D-L1-02, and §10 puts it in L3, not here. What
+follows is measured, not recalled. Where this block and the "Next session" list
+above disagree about D-L1-02's shape, §41 governs — the numbers there were taken
+before the `scripts` gates and the `--check` repair landed.
+
+1. **The inventory survived 15 commits.** At `fc9485f`,
+   `ruff check --isolated --select S110 packages apps/api apps/jupyter` reports
+   **35 shipped sites across 19 files** — identical to §21.5(4) and P-4. By
+   package: `evaluation` 8, `apps/jupyter` 8, `agent` 7, `tools` 3, `apps/api` 3,
+   `mcp` 2, `evidence` 2, `llm` 1, `datasets` 1; `plugins` and `execution` 0.
+   By file the load-bearing ones are `langgraph_graph.py` 5, `magic.py` 5,
+   `external_validation.py` 3, `display.py` 3, then `adapter.py`/`repro.py`/
+   `research_manifest.py`/`routers/health.py` 2 each.
+   `src/data_science_agent` outside `_vendor` has **0** sites; `_vendor` holds 35
+   duplicates and is excluded by `pyproject.toml:113`, so no per-file-ignore in
+   the list governs it — which is why this finding needs no vendor sync (§R3,
+   §R4 untouched).
+
+2. **New sub-finding: 8 of the 35 blocks are silenced by two ignore entries at
+   once.** 9 of the 11 shipped lines in `pyproject.toml:120-131` carry `SIM105`
+   alongside `S110`, and `--select SIM105` reports 8 sites — all 8 inside blocks
+   already counted under S110, established in (3). Two
+   consequences. (a) For a tree whose line carries both, drop **both** in the
+   same commit: fixing the block to `contextlib.suppress(...)` is precisely what
+   SIM105 asks for, so a leftover `SIM105` entry ends up governing nothing and
+   keeps an unused exclusion alive — the direction §R11 forbids. (b) `datasets`
+   and `llm` carry S110 only; those two lines take a single deletion.
+
+3. **How the overlap was established, and an instrument error of my own.** First
+   pass keyed locations by `path:line` and unioned the two rules, yielding "43
+   distinct sites, 8 invisible to S110". False: S110 reports the `except` line
+   and SIM105 the `try` line of the same block — read directly at
+   `packages/evidence/src/dsa_evidence/repro.py`, where `try:` at 94 draws
+   SIM105 and its `except Exception: pass` at 96 draws S110. The count was then
+   re-established **without** any line-distance heuristic, by per-file multiset:
+   `--select SIM105` puts its 8 sites in 8 files, no file has more SIM105 than
+   S110 hits, and every one of those files has S110 hits — so there is no block
+   only SIM105 can see. D-L1-02's true scope stays **35**, and any future count
+   of it must de-duplicate by block, not by reported line.
+
+4. **Ordering constraint this lane created.** 3 of the 35 live in
+   `packages/evaluation/src/dsa_evaluation/external_validation.py` — the file the
+   concurrent session has open and uncommitted (+44/−9 there, +27/−0 in its test,
+   plus an unrelated +4/−3 in `README.md`).
+   Its diff adds and removes **no** `except`/`pass` pair (verified by grepping
+   the diff), so the 3 are pre-existing and the count is stable. Still: run
+   `evaluation` **last**, after that session lands, or the L3 commit will collide
+   with someone else's unreviewed hunk. Its commit also trips `ci.yml:75`
+   (`sync_vendor --check`) unless that session syncs — that is its owner's call,
+   not L3's to make silently.
+
+5. **Per-tree recipe (§19 red-then-green, one tree per commit).** (a) Delete
+   `"S110"` — and per (2), `"SIM105"` where present — from that one
+   `pyproject.toml` line. (b) Count what that tree will report —
+   `uv run ruff check <tree> --output-format=concise`, then
+   `grep -c ": S110"` — and expect exactly that tree's number from (1), in that
+   order: 8/8/7/3/3/2/2/1/1. Two of the nine trees live under `apps/`, not
+   `packages/`. P-4's `expected_delta` was written for the whole finding.
+   (c) Classify every site Hiding / Downgrading /
+   Legitimate (§12) and fix the code, not the config: `contextlib.suppress(...)`
+   for the Legitimate ones, a real handler or a raised error for the others.
+   (d) `uv run ruff check packages apps/api tests src apps/jupyter scripts`,
+   `ruff format --check`, `mypy`, `pytest -q --cov` — all four before committing.
+   (e) Stage **by filename**: the worktree carries another session's edits and
+   `git add -A` would swallow them (§R2).
+
+6. **Acceptance, stated falsifiably.** Done = the `ruff check` invocations in
+   `ci.yml:84` and `publish.yml` exit 0 with `S110` gone from all shipped
+   lines, **no new `# noqa`** and no widened `per-file-ignores` anywhere (§R11 —
+   this finding is closed only by adding signal), `tests/**` line 121 untouched
+   (P-4's scope decision), suite green, `fail_under` unchanged at 79. A green
+   that was reached by re-adding an ignore is not done.
+
+7. **Budget.** §28 allows ≤8 fixes per lane; this lane landed ~15 and says so in
+   §39/§40. That overrun is this lane's recorded debt, not a precedent for L3.
