@@ -1065,6 +1065,42 @@ inside the same commit as their source change.
 one is a gate addition rather than a defect repair, which is arguably the safer
 half of the overrun; recorded rather than reframed.
 
+## §38 Actions corroborates the repairs — the strongest evidence this lane has had
+
+Everything asserted so far was produced by this lane running commands on this
+machine. Queried the real thing instead: `gh run view 36129208262` — workflow
+`CI`, `event=push`, `headSha=7397c47`, `conclusion=success`, jobs
+`web-regression` + `ci` (31 steps), and **`7397c47` carries all six of this
+lane's first-stage commits** (`ccbb66a … e1ecb6f` are its ancestors).
+
+Steps that executed the exact text this lane wrote, all `success`:
+
+| Repaired in | Step as it ran on GitHub's runner |
+|---|---|
+| D-L1-01 | `set -o pipefail; uv run python -m mkdocs build --strict 2>&1 \| tail -n 50` |
+| D-L1-01 | `set -o pipefail; npm --prefix apps/web run build 2>&1 \| tail -n 20` |
+| D-L1-01 | `set -o pipefail; uv run dsa --limit 5 … \| tail -n 20` |
+| D-L1-06 | `uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports` |
+| §34 | `uv run python scripts/sync_vendor.py --check` — the non-mutating `check()` |
+| D-L1-05/13 | mkdocs `--strict` passing means the 7 repointed links held in a real build and `not_found: warn` did not break it |
+| D-L1-07 | `uv run pytest -q --cov --cov-report=term-missing` — the guard tests ran on a fresh checkout |
+
+**§30's open hole is now closed by a better instrument than I am.** The gates
+this ledger kept listing as "never run" — `generate_sbom.py`, `Build wheel and
+sdist`, `Smoke-test clean wheel install`, `docker build` for both Dockerfiles,
+`npm audit --audit-level=high`, `regression.mjs`, `uv lock --check` — are all
+`success` in that run, on a clean runner, which is stronger evidence than the
+local box can give. Item (4) of the queue is therefore retired as measured.
+
+**What remains genuinely unverified:** this lane's last five commits
+(`dcc99f5`, `77587f1`, `d71cb85`, `7bd7b78`, `4708da8`) exist only locally —
+`main` is ahead 5 and pushing is not this lane's to do. Of the five, only
+`7bd7b78` touches a CI job, adding `scripts` to two ruff lines; locally both
+exit 0, and the first pushed run will be the real answer. One self-correction
+while gathering this: I first reported "no docs job on push" because `head -40`
+truncated the 31-step job list — the mkdocs step was there all along, and the
+conclusion I withdrew was an artifact of my own pipeline, not of the workflow.
+
 ## Session log
 
 - 2026-09-24T13:04Z — §0 First Ten Commands executed; exit codes captured to
@@ -1134,6 +1170,15 @@ half of the overrun; recorded rather than reframed.
   HEAD and `origin/main` are source/vendor consistent and `ci.yml:75` already
   gates the drift, so syncing would only have committed another session's
   unreviewed WIP into the wheel path out from under its own source.
+- 2026-09-26, §38 — traded local measurement for Actions evidence and the lane's
+  repairs came back corroborated: run `36129208262` on `7397c47` (which carries
+  the first six) is `success` across both jobs, with the pipefail steps, the
+  widened mypy paths, mkdocs `--strict`, the non-mutating `--check` and the
+  guard tests all executing as written. That run also closes §30's
+  release-surface hole from the better side — SBOM, wheel build, clean-install
+  smoke test and both Dockerfiles are green on a clean runner. Withdrew my own
+  "no docs job on push" reading: `head -40` had truncated a 31-step job list, so
+  the missing step was my pipeline, not the workflow.
 
 **Next session (resume instructions, §5.2).** Step nil: re-measure before
 trusting any number in this ledger — HEAD was `7397c47` at the time of writing
@@ -1144,10 +1189,25 @@ over the 51 files still excluded), or retire the numeric patterns and keep only
 version-consistency + maturity, which are mechanically decidable; (2) wire the
 claim checker into CI only after (1), and note the CI-critical-script change gets
 its own commit; (3) D-L1-02 package-by-package as L3 work, 35 shipped sites;
-(4) the §23 gates never run — `generate_sbom.py` (§R8), `uv build`, the web
-build / `regression.mjs` / `npm audit`, Docker — so §30's "met" box covers the
-gates that ran, not the release surface; (5) §37 landed the free half of
-D-L1-16 — what remains is mypy over `scripts/*.py` (59 errors across 6 files,
-split in §36) and the absent `ruff format --check` step in `publish.yml`. Before
+(4) closed by §38 — those gates are green in Actions run `36129208262`, on a
+commit carrying this lane's repairs, so the release surface was measured by a
+better instrument than a local rerun; what remains unverified is only this
+lane's five unpushed commits, and a push is not this lane's to do;
+(5) §37 landed the free half of D-L1-16 — what remains is mypy over `scripts/*.py`
+(59 errors across 6 files, split in §36) and the absent `ruff format --check`
+step in `publish.yml`. Before
 any L2 work, note §17.6: L2's evidence on swallowed exceptions and claim checks
 rests on gates D-L1-02/03 found broken, so re-derive rather than reuse.
+
+**Revised judgement on item (1), stated so the next session does not execute the
+wrong plan.** I had framed D-L1-14's remaining half as "teach `PATTERNS`
+negation, or retire the numeric patterns". Neither is right, and the reason is
+already measured in §35: retiring the numeric patterns would not unlock widening
+scope, because the *name* patterns fail on the same corpus the same way — both
+HIGH findings there were `old_package_pip` firing on a sentence that asserts the
+command is absent. And the numeric patterns do have a job on the 14 files that
+are assertion-shaped by design, where a README that still says an old count is
+exactly the drift being policed (prospective value, not measured: they report
+0 findings there today). So the open question is narrower than filed — it is
+which corpora are safe to scan, now that §35 made that choice visible — not
+whether the matcher can be made to understand negation.
