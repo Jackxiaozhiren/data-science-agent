@@ -6,12 +6,8 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tomllib
 from pathlib import Path
-
-try:
-    import tomllib  # py312
-except ImportError:
-    import tomli as tomllib  # type: ignore[import-not-found]
 
 ROOT = Path(__file__).parents[1]
 OUT = ROOT / "release" / "sbom.json"
@@ -22,7 +18,8 @@ def parse_pyproject_license(path: Path) -> str:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
         lic = data.get("project", {}).get("license")
         if isinstance(lic, dict):
-            return lic.get("text", "Unknown")
+            text = lic.get("text", "Unknown")
+            return text if isinstance(text, str) else "Unknown"
         if isinstance(lic, str):
             return lic
         return "Unknown"
@@ -124,21 +121,21 @@ def main() -> None:
     # Merge: deduplicate by name+version, prefer workspace
     seen: set[tuple[str, str]] = {(p["name"], p["version"]) for p in workspace_pkgs}
     all_pkgs = list(workspace_pkgs)
-    for p in locked:
-        key = (p["name"], p["version"])
+    for pkg in locked:
+        key = (pkg["name"], pkg["version"])
         if key not in seen:
             # try to get license from importlib if installed
             try:
                 import importlib.metadata
 
-                meta = importlib.metadata.metadata(p["name"])
+                meta = importlib.metadata.metadata(pkg["name"])
                 lic = meta.get("License", "Unknown")
                 if lic and len(lic) > 80:
                     lic = lic[:80] + "..."
-                p["license"] = lic or "Unknown"
+                pkg["license"] = lic or "Unknown"
             except Exception:
-                p["license"] = "Unknown"
-            all_pkgs.append(p)
+                pkg["license"] = "Unknown"
+            all_pkgs.append(pkg)
             seen.add(key)
     # Build SBOM
     sbom = {
@@ -154,17 +151,17 @@ def main() -> None:
         },
         "components": [
             {
-                "name": p["name"],
-                "version": p["version"],
-                "licenses": [{"license": {"id": p["license"]}}]
-                if p["license"] != "Unknown"
+                "name": pkg["name"],
+                "version": pkg["version"],
+                "licenses": [{"license": {"id": pkg["license"]}}]
+                if pkg["license"] != "Unknown"
                 else [],
-                "purl": f"pkg:pypi/{p['name']}@{p['version']}"
-                if "pypi" in p["source"]
-                else f"pkg:local/{p['name']}@{p['version']}",
-                "source": p["source"],
+                "purl": f"pkg:pypi/{pkg['name']}@{pkg['version']}"
+                if "pypi" in pkg["source"]
+                else f"pkg:local/{pkg['name']}@{pkg['version']}",
+                "source": pkg["source"],
             }
-            for p in sorted(all_pkgs, key=lambda x: x["name"].lower())
+            for pkg in sorted(all_pkgs, key=lambda x: x["name"].lower())
         ],
     }
     # Also simple flat list per §47 spec
