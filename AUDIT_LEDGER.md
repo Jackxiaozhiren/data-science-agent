@@ -1809,3 +1809,81 @@ docs-only commit.
    pushed.** Outstanding, in order: the `_vendor` resync once that session lands, then
    `packages/evaluation`'s 8 S110 sites (which is what closes D-L1-02), then D-L3-04 `(ii)` and
    `(iii)`, then D-L3-01's anti-leak pin and D-L3-03's `passed: True`-on-error sweep.
+
+## §46 The resync and the push landed, and the reason `--check` was red is not the reason CI would be red
+
+1. **Executed, under the maintainer's two authorizations** ("授权跑 sync_vendor.py"、"push"):
+   `uv run python scripts/sync_vendor.py` → `Synced: dsa_agent, dsa_api, dsa_datasets,
+   dsa_evaluation, dsa_evidence, dsa_jupyter, dsa_llm, dsa_mcp, dsa_tools`, then
+   `git restore --source=HEAD -- src/data_science_agent/_vendor/dsa_evaluation`, committed
+   as `dd8d3c9` with exactly 14 staged paths all under `_vendor/` (§44(2)'s predicted list,
+   per package 3/2/3/2/1/1/1/1) and `dsa_evaluation` count 0. Pushed `06a22c6..dd8d3c9`,
+   15 commits, fast-forward, no force; local and `origin/main` both `dd8d3c9`.
+   Gates before that commit: ruff rc=0, format rc=0 (184 files — the mirror stays excluded by
+   `pyproject.toml:113`, which is why the count did not move), mypy rc=0 (112 files),
+   `pytest -q --cov` rc=0 at 80.52%, and the suite was confirmed to import
+   `dsa_agent.graph` from `packages/agent/src/`, not from `_vendor`.
+
+2. **The restore was the whole job, and it is checkable after the fact.** `sync()` is
+   `rmtree` + `copytree` per differing package, so it copies **whatever is in the working
+   tree** — including the concurrent session's still-uncommitted `external_validation.py`.
+   Restoring that one directory returns it to HEAD's blob `014d6926439b7514…` (verified), and
+   their source file is untouched (same md5 before and after). §44(3)'s acceptance test —
+   "a regeneration diff containing an `external_validation.py` hunk ran too early" — is
+   satisfied in the strong form: the commit contains none.
+
+3. **A reasoning error of mine, caught before it became a claim: which red belongs to CI.**
+   `sync_vendor --check` reads the working tree, so it mixes the session's own drift with
+   anyone else's uncommitted edits. I began this turn suspecting §42(3)/§45 had overstated
+   the push risk ("CI checks out a commit, not a worktree") — measuring showed **both** halves:
+   - the evaluation drift I was reasoning about is invisible to CI (not in any commit), and
+   - the 14-file drift is very much visible, so "pushing `06a22c6..ea25851` is red at
+     `ci.yml:75`" was **right as written**. The ledger does not need correcting; my draft
+     self-correction did.
+   Settled with an instrument rather than by argument: compare the two sides as **committed
+   blobs** at a chosen revision, which is what a clean checkout is.
+
+   ```bash
+   # run from the repo root; prints the same kind of report as sync_vendor --check, but
+   # reads only <rev>'s objects, so a dirty worktree cannot move the verdict.
+   V=src/data_science_agent/_vendor; rev=fc9485f
+   for pkg in $(git ls-files "$V" | sed -n "s#^$V/\([^/]*\)/.*#\1#p" | sort -u); do
+     src=$(git ls-files -- "packages/$pkg/src" "apps/$pkg/src" | head -1)   # see note
+     a=$(git ls-tree -r --name-only $rev -- "${src%/*}/.." | sort)
+     b=$(git ls-tree -r --name-only $rev -- "$V/$pkg" | sort)
+     [ "$a" = "$b" ] || echo "DRIFT $pkg"
+   done
+   ```
+
+   (Path-mapping detail matters, so the version actually used resolved each package's source
+   prefix from `sync_vendor.SOURCES` rather than guessing it from directory names, and compared
+   `git rev-parse <rev>:<path>` blob ids per file — names alone would miss a content change.)
+   Verdicts, with exit codes taken unmasked: `OK at fc9485f`, rc=0 — the revision §40 records
+   as pushed and CI-green, which is the instrument's negative control; `DRIFT at HEAD`, rc=1,
+   14 files, before `dd8d3c9`; `OK at HEAD`, rc=0, after it. Post-commit, local `--check`
+   reports exactly one drifting file (`dsa_evaluation`) — the intended divergence: the gate is
+   red for the person holding that unreviewed edit, green for the tree that was pushed.
+
+4. **Residual, and it transfers.** Once the other session commits `external_validation.py`,
+   **their** commit will be red at `ci.yml:75` for the same reason mine was, and the fix on
+   their side is the same two commands with the same one-directory caveat reversed: resync and
+   let the evaluation mirror land with the evaluation source. This is not a defect to fix in
+   advance; it is the normal cost of a generated mirror plus a shared worktree, and (3)'s
+   blob view is how anyone tells the two situations apart in 30 seconds.
+
+5. **What I proposed and then declined to commit.** A `scripts/check_vendor_ci_parity.py`
+   wrapping (3) — useful, and it passed lint once written; it failed on `S603`/`S607` because
+   no script in `scripts/` had ever shelled out, and the only cheap ways past that were a
+   per-file-ignore for `scripts/` (§R11: exactly the widening this whole lane exists to stop)
+   or relocating the check into `tests/`, where those two rules are already ignored — but that
+   would install a **new blocking local gate**, which is a design decision, not a cleanup. The
+   file is not in the tree (`scripts/` clean, verified) and nothing was suppressed. If you
+   want the gate, the decision to record is: should `pytest` fail whenever `_vendor` trails a
+   committed source? Say so and it is roughly 40 lines with a scratch-repo test.
+
+6. **D-L1-02 status after the push: 27 of 35 closed, not closed.** The eight in-scope trees
+   measure 0 S110 and 0 SIM105; `packages/evaluation`'s 8 remain (3 of them in the file that
+   session still holds open), and §42(6)'s remaining items are unchanged: D-L3-04 `(ii)`/`(iii)`
+   (mode (a), stale success across runs, still fully open — `dd8d3c9` changed nothing about the
+   key), D-L3-01's anti-leak pin, D-L3-03's `passed: True`-on-error handlers, and the
+   `plugins`/`execution` dead exclusions.
