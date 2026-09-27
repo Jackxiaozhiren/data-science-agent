@@ -1928,3 +1928,57 @@ docs-only commit.
    trails a committed source?* If yes, it is ~40 lines plus a scratch-repo test; if no, the
    standing answer is that `ci.yml:75` is the only place the mirror is policed, and §46(3) is
    how to tell the two kinds of red apart.
+
+## §48 The remote confirmed §46's prediction, and disagreed with the dispatch on one gate's scope
+
+1. **Prediction tested against the thing itself.** §46(3) claimed `ci.yml:75` would be green
+   on the pushed tree even though local `--check` is red; that was an inference from comparing
+   committed blobs, so it was checked rather than kept. Run `36301971185` on `f8a2ad0` —
+   `status=completed`, `conclusion=success`, jobs `ci` and `web-regression` both `success` —
+   and the step's own line, verbatim from the remote log:
+
+   ```
+   Run uv run python scripts/sync_vendor.py --check
+   OK: vendored dsa_* is in sync
+   ```
+
+   alongside `All checks passed!`, `Success: no issues found in 112 source files`, and
+   `Required test coverage of 79.0% reached. Total coverage: 80.48%`. So the D-L1-02 lane is
+   pushed and green on the remote, which is the first time in §41–§48 that the claim has an
+   external witness rather than my own machine.
+   Note the coverage number: 80.48% on Linux against 80.52% locally, same commit. That is not
+   drift, it is platform-gated branches, and it is worth remembering when a lane quotes
+   coverage as if it were a single number.
+
+2. **A gap in the dispatch's own gate list, found by reading the remote's output.** §41(5)(d)
+   and the L3 brief tell the lane to run
+   `uv run ruff format --check packages apps/api tests src apps/jupyter` — **without**
+   `scripts`. `ci.yml:85` runs it *with* `scripts`. Measured at `f8a2ad0`: the dispatch form
+   reports 184 files, CI's form reports 195; both rc=0, so nothing shipped unformatted and no
+   correction to §42–§47 is needed. The finding is about the instrument, not the tree: a lane
+   that adds or edits a file under `scripts/`, follows the dispatch's command list to the
+   letter, sees green, and pushes will get a remote red on a check it never ran. §46(5) is the
+   live example of exactly that exposure — the parity script I wrote and removed was linted
+   against `scripts` by luck of the `ruff check` line, and `ruff format --check scripts` was
+   run only because I was checking whether to keep it.
+   Cheapest fix, and it is a documentation edit rather than a code one: make the dispatch and
+   any AGENTS-side gate list quote `ci.yml:84-86` verbatim, or have Appendix B's `# --- gates
+   (§23) ---` block carry `scripts` on both ruff lines. Whoever owns that prompt document should
+   do it; L3 did not edit `REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md` because it is another
+   session's untracked file at this moment.
+
+3. **One process error of mine, recorded because it cost the repo compute.** I pushed three
+   times in a row (resync, §46, §47). `ci.yml`'s concurrency group cancels in-progress runs, so
+   the first two runs were killed partway — `cancelled` shows in the run list for both — and the
+   resync's CI verification had to be re-done by the third. The lane's own rule is "commit the
+   ledger with the work": batching the ledger commit *before* pushing would have spent one CI
+   run instead of three, and the second push was the one that actually destroyed the evidence
+   the first push existed to produce.
+
+4. **Where the lane stands, unchanged by the push.** D-L1-02 is 27 of 35, open; `packages/
+   evaluation`'s 8 sites still sit behind another session's working copy. D-L3-04 remains
+   partially mitigated — mode (b) closed by `2ed7a90`, mode (a) open, and the §43(2)
+   reproduction still prints `run2 == run1 (stale) : True` against the pushed tree. D-L3-01's
+   pin, D-L3-03's `passed: True`-on-error handlers, the `plugins`/`execution` dead exclusions,
+   and §46(5)'s "should the local suite police the mirror?" question are all still open, and
+   §47(5) still holds the decision on that last one.
