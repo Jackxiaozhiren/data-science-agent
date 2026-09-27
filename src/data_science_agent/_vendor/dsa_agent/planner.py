@@ -365,22 +365,6 @@ def heuristics_plan(
             " f0 ",
         ]
     ) or any(k in q for k in ["group by", "order by", "having", "where", "avg("])
-    try:
-        import json as _j
-        from pathlib import Path as _P
-
-        _cat = _P(__file__).resolve().parents[3] / "benchmarks" / "v2" / "catalog.json"
-        if _cat.exists():
-            _tasks = _j.loads(_cat.read_text(encoding="utf-8")).get("tasks", [])
-            for _t in _tasks:
-                if (
-                    _t.get("ground_truth", {}).get("expected_tool") == "run_sql"
-                    and _t.get("question", "").lower() in q
-                ):
-                    wants_sql = True
-                    break
-    except Exception:
-        pass
 
     _add(
         "Profile dataset",

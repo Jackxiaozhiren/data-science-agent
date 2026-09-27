@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import shlex
 import sys
 import threading
@@ -42,12 +43,10 @@ from dsa_jupyter.metadata import collect_notebook_metadata
 def _run_sync(coro_factory: Any) -> Any:
     """Run coroutine factory in a way that works inside Jupyter's running loop (§29)."""
     # Try nest_asyncio first
-    try:
+    with contextlib.suppress(Exception):
         import nest_asyncio
 
         nest_asyncio.apply()
-    except Exception:
-        pass
     try:
         return asyncio.run(coro_factory())
     except RuntimeError as e:
@@ -213,8 +212,8 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
                 p = Path(ns.dataset)
                 df = load_dataframe(p, detect_format(p.name))
                 display(df.head(5))
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[dsa] Preview table not shown: {exc}")
         else:
             print(prof)
         return prof
@@ -369,15 +368,15 @@ def load_ipython_extension(ipython: Any) -> None:
     # register magic
     try:
         ipython.register_magics(DSAMagic)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[dsa] %dsa magic not registered: {exc}")
     # register display formatter for Analysis
     try:
         from dsa_jupyter.display import register_formatter
 
         register_formatter(ipython)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[dsa] Analysis display formatter not registered: {exc}")
     # also make `from data_science_agent import Agent` display rich without explicit import of dsa_jupyter
     # by patching Analysis.__repr_html__ if not exists
     try:
@@ -391,5 +390,5 @@ def load_ipython_extension(ipython: Any) -> None:
                 return format_analysis_html(self)
 
             Analysis._repr_html_ = _repr_html_  # type: ignore[attr-defined]
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[dsa] Analysis auto-display patch skipped: {exc}")

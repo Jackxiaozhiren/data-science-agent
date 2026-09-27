@@ -20,7 +20,10 @@ def build_experiment_json(
     out_dir: Path,
 ) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
-    # package versions best-effort
+    # package versions for the reproducibility artifact; a package whose version
+    # cannot be read is recorded as such, so "unreadable" and "absent" stay distinct
+    import importlib.metadata
+
     pkg_versions: dict[str, str] = {}
     for pkg in [
         "fastapi",
@@ -36,11 +39,11 @@ def build_experiment_json(
         "langgraph",
     ]:
         try:
-            import importlib.metadata
-
             pkg_versions[pkg] = importlib.metadata.version(pkg)
-        except Exception:
-            pass
+        except importlib.metadata.PackageNotFoundError:
+            pkg_versions[pkg] = "not-installed"
+        except Exception as exc:
+            pkg_versions[pkg] = f"unreadable: {type(exc).__name__}"
 
     payload = {
         "run_id": run_id,
@@ -93,8 +96,11 @@ print(state.model_dump_json(indent=2))
     path.write_text(script, encoding="utf-8")
     try:
         path.chmod(0o755)
-    except Exception:
-        pass
+    except OSError as exc:
+        # The exec bit is part of what makes this artifact runnable, so a failure
+        # to set it is disclosed in the script instead of left for the user to hit.
+        notice = f"\n# chmod 0755 failed ({exc}); run this file with `bash reproduce.sh`\n"
+        path.write_text(script + notice, encoding="utf-8")
     return path
 
 

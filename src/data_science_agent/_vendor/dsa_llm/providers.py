@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
@@ -100,11 +101,12 @@ class StubLLMProvider(LLMProvider):
         return f"[stub] echo: {prompt[:200]}"
 
     async def structured_output(self, prompt: str, schema: type, **kwargs: Any) -> Any:
-        try:
-            if isinstance(schema, type) and issubclass(schema, BaseModel):
+        if isinstance(schema, type) and issubclass(schema, BaseModel):
+            # The stub has no model to sample from, so an empty instance is the best it
+            # can do; a schema whose fields are all required does not validate empty,
+            # and the caller's `{}` fallback is the documented placeholder contract.
+            with contextlib.suppress(ValidationError):
                 return schema.model_validate({})
-        except Exception:
-            pass
         return {}
 
     def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:

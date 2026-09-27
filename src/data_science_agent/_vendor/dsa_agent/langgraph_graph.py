@@ -16,7 +16,7 @@ from dsa_agent.graph import (
     _run_tool,
     _tool_inputs_for_step,
 )
-from dsa_agent.state import AnalysisState, AnalysisStatus, Insight
+from dsa_agent.state import AnalysisState, AnalysisStatus, Insight, ValidationResult
 
 
 class LGState(TypedDict, total=False):
@@ -371,10 +371,21 @@ async def _node_report(state: LGState) -> dict[str, Any]:
                             }
                         )
                 analysis2["artifacts"] = arts2
-            except Exception:
-                pass
-        except Exception:
-            pass
+            except Exception as exc:
+                bundle_v = list(analysis2.get("validation_results") or [])
+                bundle_v.append(
+                    {
+                        "check": "evidence_bundle",
+                        "passed": False,
+                        "message": (
+                            "Reproducibility bundle incomplete: evidence graph, experiment.json, "
+                            f"reproduce.sh or notebook was not written ({type(exc).__name__}: {exc})"
+                        ),
+                    }
+                )
+                analysis2["validation_results"] = bundle_v
+        except Exception as exc:
+            analysis2["error"] = f"Report write failed: {exc}"
         return {
             "analysis_state": analysis2,
             "status": "COMPLETED",
@@ -413,6 +424,7 @@ async def run_analysis_langgraph(
     user_query: str,
     run_id: str | None = None,
 ) -> AnalysisState:
+    fallback_reasons: list[str] = []
     try:
         graph = build_graph(checkpoint=True)
         cfg = {"configurable": {"thread_id": run_id or f"run-{uuid.uuid4().hex[:10]}"}}
@@ -445,8 +457,11 @@ async def run_analysis_langgraph(
             state_dict.setdefault("status", out.get("status") or "COMPLETED")
             try:
                 return AnalysisState.model_validate(state_dict)
-            except Exception:
-                pass
+            except Exception as exc:
+                fallback_reasons.append(
+                    f"LangGraph state did not validate as AnalysisState "
+                    f"({type(exc).__name__}: {exc})"
+                )
             from dsa_agent.state import AnalysisState as AS
             from dsa_agent.state import Evidence as _Ev2
             from dsa_agent.state import Insight as _Ins2
@@ -471,12 +486,28 @@ async def run_analysis_langgraph(
                     report_markdown=state_dict.get("report_markdown"),
                     status=AnalysisStatus(state_dict.get("status", "COMPLETED")),
                 )
-            except Exception:
-                pass
-    except Exception:
-        pass
+            except Exception as exc:
+                fallback_reasons.append(
+                    f"LangGraph state reconstruction failed ({type(exc).__name__}: {exc})"
+                )
+    except Exception as exc:
+        fallback_reasons.append(f"LangGraph run failed ({type(exc).__name__}: {exc})")
+    if not fallback_reasons:
+        fallback_reasons.append("LangGraph returned no analysis_state")
     from dsa_agent.graph import run_analysis as _run_analysis
 
-    return await _run_analysis(
+    state = await _run_analysis(
         dataset_path=dataset_path, dataset_id=dataset_id, user_query=user_query, run_id=run_id
     )
+    for reason in fallback_reasons:
+        state.validation_results.append(
+            ValidationResult(
+                check="langgraph_fallback",
+                passed=False,
+                message=(
+                    f"{reason}; the run was repeated by the non-LangGraph engine, so this "
+                    "result may not carry the LangGraph trajectory"
+                ),
+            )
+        )
+    return state

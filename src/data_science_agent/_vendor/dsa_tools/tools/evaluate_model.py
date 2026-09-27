@@ -92,12 +92,11 @@ class EvaluateModelTool(BaseTool[EvaluateModelInput, EvaluateModelOutput]):
                 "recall": float(recall_score(y_test, y_pred, average="weighted", zero_division=0)),
                 "f1": float(f1_score(y_test, y_pred, average="weighted", zero_division=0)),
             }
-            try:
-                if len(np.unique(y)) == 2 and hasattr(clf, "predict_proba"):
-                    proba = clf.predict_proba(X_test)[:, 1]
-                    metrics["roc_auc"] = float(roc_auc_score(y_test, proba))
-            except Exception:
-                pass
+            # Stratified split above guarantees both classes in y_test for a binary
+            # target, so ROC-AUC is computed unconditionally rather than swallowed.
+            if len(np.unique(y)) == 2 and hasattr(clf, "predict_proba"):
+                proba = clf.predict_proba(X_test)[:, 1]
+                metrics["roc_auc"] = float(roc_auc_score(y_test, proba))
             cm = confusion_matrix(y_test, y_pred).tolist()
             return EvaluateModelOutput(
                 task=inp.task,

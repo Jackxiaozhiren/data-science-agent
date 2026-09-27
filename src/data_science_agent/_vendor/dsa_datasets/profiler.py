@@ -39,6 +39,11 @@ def _kind_for_dtype(dtype: Any, series: pl.Series) -> ColumnKind:
     return ColumnKind.categorical if series.n_unique() < 50 else ColumnKind.text
 
 
+def _as_float(value: Any) -> float | None:
+    """Polars aggregates return null, not an error, for empty or single-row input."""
+    return None if value is None else float(value)
+
+
 def _column_profile(series: pl.Series, total_rows: int) -> ColumnProfile:
     name = series.name
     dtype_str = str(series.dtype)
@@ -60,23 +65,13 @@ def _column_profile(series: pl.Series, total_rows: int) -> ColumnProfile:
     q25: float | None = None
     q75: float | None = None
     if kind == ColumnKind.numeric:
-        try:
-            v_any: object = series.mean()
-            mean = float(v_any) if v_any is not None else None  # type: ignore[arg-type]
-            v_any = series.std()
-            std = float(v_any) if v_any is not None else None  # type: ignore[arg-type]
-            v_any = series.min()
-            mn = float(v_any) if v_any is not None else None  # type: ignore[arg-type]
-            v_any = series.max()
-            mx = float(v_any) if v_any is not None else None  # type: ignore[arg-type]
-            v_any = series.median()
-            median = float(v_any) if v_any is not None else None  # type: ignore[arg-type]
-            v_any = series.quantile(0.25)
-            q25 = float(v_any) if v_any is not None else None
-            v_any = series.quantile(0.75)
-            q75 = float(v_any) if v_any is not None else None
-        except Exception:
-            pass
+        mean = _as_float(series.mean())
+        std = _as_float(series.std())
+        mn = _as_float(series.min())
+        mx = _as_float(series.max())
+        median = _as_float(series.median())
+        q25 = _as_float(series.quantile(0.25))
+        q75 = _as_float(series.quantile(0.75))
 
     # sample values (non-null, up to 5)
     try:
