@@ -1887,3 +1887,44 @@ docs-only commit.
    (mode (a), stale success across runs, still fully open — `dd8d3c9` changed nothing about the
    key), D-L3-01's anti-leak pin, D-L3-03's `passed: True`-on-error handlers, and the
    `plugins`/`execution` dead exclusions.
+
+## §47 Completion record for the pushed lane
+
+1. **What is now on the remote.** `06a22c6..dd8d3c9` pushed as a fast-forward — 15 commits,
+   no force, no tag, no branch, no PR; `git rev-parse HEAD` and `git rev-parse origin/main`
+   both `dd8d3c99947b50607eb2d710bb1a66b658c412a8`, and `git status -sb` reports no ahead/behind.
+   Contents: 8 D-L1-02 tree fixes (`25443fd…ea25851`), one test correction (`a680b80`), one
+   D-L3-04 fix (`2ed7a90`), four ledger sections (§42–§45), and the resync (`dd8d3c9`).
+
+2. **Gates, as observed rather than as intended.** Before the last commit: ruff rc=0, format
+   rc=0 (184 files), mypy rc=0 (112 files), `pytest -q --cov` rc=0 at 80.52%, `fail_under` 79
+   untouched, zero `# noqa` added anywhere in the lane, and `dsa_agent.graph` confirmed to
+   resolve from `packages/agent/src/` rather than `_vendor` during the suite.
+
+3. **`ci.yml:75` is green for the pushed tree, and the local gate is still red — both correct.**
+   Decided on committed blobs, not on argument: at `dd8d3c9` every vendored package matches its
+   source (the same comparison reports `OK at fc9485f` — §40's pushed-and-green revision — as
+   the instrument's negative control, and 14 files at the pre-resync `HEAD`). Meanwhile
+   `sync_vendor.py --check` in *this* work tree still exits 1 naming one file,
+   `dsa_evaluation`. That difference is the point of §46(3): the other session's uncommitted
+   edit is not in anything pushed, and it will have to be resynced by their own commit, at
+   which point the same restore caveat applies in reverse — their mirror should land with
+   their source.
+
+4. **D-L1-02 is not closed and this lane cannot close it.** 27 of 35 sites are fixed and the
+   eight in-scope trees measure 0 S110 / 0 SIM105 with their ignore entries narrowed or
+   removed; `packages/evaluation`'s 8 sites (3 inside the file that session still holds open)
+   are outstanding, plus §42(6)'s list: D-L3-04 `(ii)`/`(iii)` — **mode (a), the stale-success
+   half, is entirely unfixed by the push**; `dd8d3c9` changed generated copies, not the cache
+   key, so the reproduction in §43(2) still reports `run2 == run1 (stale): True`. Then
+   D-L3-01's anti-leak pin, D-L3-03's `passed: True`-on-error handlers, and the
+   `plugins`/`execution` dead exclusions.
+
+5. **One open design question, deliberately not answered here.** §46(5) recorded why a
+   permanent CI-parity script was not committed (its lint hit was `S603`/`S607`, and the two
+   cheap exits were a `scripts/` ignore — the §R11 widening this lane exists to oppose — or
+   moving it under `tests/`, which would make `pytest` block on `_vendor` staleness). The
+   question for the maintainer is exactly that: *should the local suite fail when `_vendor`
+   trails a committed source?* If yes, it is ~40 lines plus a scratch-repo test; if no, the
+   standing answer is that `ci.yml:75` is the only place the mirror is policed, and §46(3) is
+   how to tell the two kinds of red apart.
