@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from dsa_api.core.database import Base, get_session
 from dsa_api.main import app
+
+
+def _sse_data_frames(body: str) -> list[dict[str, object]]:
+    """Real SSE payloads only: the stream's terminating ``[DONE]`` frame is not content."""
+    frames: list[dict[str, object]] = []
+    for line in body.splitlines():
+        if not line.startswith("data: "):
+            continue
+        payload = line[len("data: ") :]
+        if payload.strip() == "[DONE]":
+            continue
+        frames.append(json.loads(payload))
+    return frames
 
 
 @pytest.fixture
@@ -47,7 +62,14 @@ async def test_sse_events_and_json_fallback(ac: AsyncClient) -> None:
     assert r.status_code == 200
     assert "text/event-stream" in r.headers.get("content-type", "")
     body = r.text
-    assert "event:" in body or "data:" in body
+    frames = _sse_data_frames(body)
+    assert frames, (
+        "the SSE stream carried no event payload, only its terminator — which the previous"
+        f" assertion also accepted: {body[:200]!r}"
+    )
+    kinds = {f.get("event") for f in frames}
+    assert kinds & {"agent_completed", "tool_completed"}, f"unexpected event shapes: {kinds}"
+    assert _sse_data_frames("data: [DONE]\n\n") == [], "the helper stopped discriminating frames"
     # JSON fallback when client prefers JSON
     r2 = await ac.get(f"/api/v1/analysis/{run_id}/events", headers={"Accept": "application/json"})
     assert r2.status_code == 200
