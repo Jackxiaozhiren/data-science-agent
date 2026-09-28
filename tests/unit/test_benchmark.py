@@ -116,3 +116,63 @@ def test_cli_dsa_benchmark_help() -> None:
     )
     assert r.returncode == 0
     assert "DS-Agent-Benchmark" in r.stdout or "catalog" in r.stdout.lower()
+
+
+def _status_run_result(status: object) -> dict:
+    return {
+        "state": {
+            "tool_calls": [{"tool": "profile_dataset", "status": "ok", "input": {}, "output": {}}],
+            "evidence": [{"id": "E-001", "result": {}}],
+            "insights": [{"id": "I-001", "finding": "hello", "evidence_ids": ["E-001"]}],
+            "validation_results": [],
+            "report_markdown": "# report",
+            "status": status,
+        },
+        "status": status,
+    }
+
+
+def test_task_success_refuses_a_run_that_reported_failure() -> None:
+    """A run the agent itself marks FAILED cannot count as a benchmark success.
+
+    ``task_success`` was ``bool(has_ok and (has_report or tcalls))`` and read the status
+    into a variable it never used again, so it scored 1.0 over failed runs -- which also
+    made the "any PR that drops task_success_rate fails CI" tolerance in
+    ``benchmarks/baseline/README.md`` a rule over a metric that cannot fall.
+    """
+    from dsa_evaluation.metrics import evaluate_task
+
+    task = next(t for t in Catalog.load(CATALOG).tasks if t.id == "eda-01")
+    ev = evaluate_task(task, _status_run_result("FAILED"), elapsed_ms=100)
+    assert ev.metrics.code_execution_success is True, "the tool did succeed; that metric stands"
+    assert ev.metrics.task_success is False
+
+
+def test_task_success_still_counts_when_status_is_absent() -> None:
+    """Not every caller hands over a status, and absence is not evidence of failure.
+
+    Summaries without the field keep the old verdict, so this tightens the metric only
+    where there is a real claim to honour.
+    """
+    from dsa_evaluation.metrics import evaluate_task
+
+    payload = _status_run_result("COMPLETED")
+    del payload["status"]
+    del payload["state"]["status"]
+    task = next(t for t in Catalog.load(CATALOG).tasks if t.id == "eda-01")
+    assert evaluate_task(task, payload, elapsed_ms=100).metrics.task_success is True
+
+
+def test_task_success_accepts_an_unserialised_status_enum() -> None:
+    """The runner can pass a live state object, so compare on the enum's value."""
+    from dsa_agent.state import AnalysisStatus
+    from dsa_evaluation.metrics import evaluate_task
+
+    task = next(t for t in Catalog.load(CATALOG).tasks if t.id == "eda-01")
+    assert (
+        evaluate_task(task, _status_run_result(AnalysisStatus.COMPLETED)).metrics.task_success
+        is True
+    )
+    assert (
+        evaluate_task(task, _status_run_result(AnalysisStatus.FAILED)).metrics.task_success is False
+    )

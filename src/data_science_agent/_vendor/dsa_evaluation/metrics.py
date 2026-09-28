@@ -74,7 +74,14 @@ def evaluate_task(
         (state.get("report_markdown") if isinstance(state, dict) else None)
         or run_result.get("report_markdown")
     )
-    metrics.task_success = bool(has_ok and (has_report or tcalls))
+    # The agent's own verdict is part of success: a run that reports FAILED -- because a
+    # tool errored or a claim went unsupported -- must not score as a task success.
+    # Absent status is not treated as failure, since callers may pass a partial summary.
+    status_value = getattr(status, "value", status)
+    verdict_ok = status_value is None or str(status_value).upper().endswith("COMPLETED")
+    if not verdict_ok:
+        details["failed_agent_verdict"] = str(status_value)
+    metrics.task_success = bool(has_ok and (has_report or tcalls) and verdict_ok)
     metrics.code_execution_success = has_ok
 
     # Evidence coverage
