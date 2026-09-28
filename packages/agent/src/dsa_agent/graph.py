@@ -42,6 +42,14 @@ def _get_columns(dataset_path: str | None) -> list[str]:
         return []
 
 
+#: Checks whose failure must change the reported status. A check that is recorded
+#: and displayed but never consulted cannot protect the product's guarantee, so the
+#: terminal status reads this set. ``evidence_coverage`` is deliberately absent:
+#: including it also fails early-stage ablation runs pinned by
+#: ``tests/test_critic_ablation.py``, which is an unresolved status-semantics
+#: decision, not an oversight.
+HARD_FAIL_CHECKS = frozenset({"budget", "evidence_bundle", "tool_errors", "unsupported_claim"})
+
 _TOOL_CACHE: dict[tuple[str, str], tuple[Any, bool, str | None]] = {}
 
 
@@ -609,7 +617,9 @@ async def run_analysis(
         state.error = f"Report write failed: {e}"
 
     # Final status
-    has_hard_fail = any(not r.passed for r in state.validation_results if r.check == "budget")
+    has_hard_fail = any(
+        not r.passed for r in state.validation_results if r.check in HARD_FAIL_CHECKS
+    )
     state.status = AnalysisStatus.FAILED if has_hard_fail else AnalysisStatus.COMPLETED
     state.touch()
     return state

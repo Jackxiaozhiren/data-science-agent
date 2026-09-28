@@ -9,7 +9,13 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from dsa_agent.critic import check_unsupported_claims, critic_validate
 from dsa_agent.graph import run_analysis
-from dsa_agent.state import AnalysisState, AnalysisStatus, Insight
+from dsa_agent.state import (
+    AnalysisPlan,
+    AnalysisState,
+    AnalysisStatus,
+    Insight,
+    ValidationResult,
+)
 from dsa_api.core.database import Base, get_session
 from dsa_api.main import app
 from dsa_tools import bootstrap
@@ -154,3 +160,57 @@ async def test_tool_budget_exceeded() -> None:
         state.budget.max_tool_calls = 5
         results = critic_validate(state)
         assert any(not r.passed and r.check == "budget" for r in results)
+
+
+@pytest.mark.asyncio
+async def test_recorded_hard_check_flips_terminal_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A run whose critic recorded a hard failure must not report COMPLETED.
+
+    The report must still be produced: this asserts the *verdict*, not an early
+    abort, so a consumer learns the run was not evidence-backed without losing
+    the artifact that explains why.
+    """
+    import dsa_agent.graph as graph
+
+    async def fake_plan_analysis(
+        user_query: str, dataset_path: str | None, columns: list[str]
+    ) -> AnalysisPlan:
+        return AnalysisPlan(objective=user_query, steps=[])
+
+    def fake_write_report_artifacts(state: object) -> dict[str, str]:
+        report = tmp_path / "report.md"
+        report.write_text("# report\n", encoding="utf-8")
+        experiment = tmp_path / "experiment.json"
+        experiment.write_text("{}\n", encoding="utf-8")
+        return {"markdown": str(report), "experiment": str(experiment)}
+
+    monkeypatch.setattr(graph, "plan_analysis", fake_plan_analysis)
+    monkeypatch.setattr(graph, "build_markdown_report", lambda state: "# report\n")
+    monkeypatch.setattr(graph, "write_report_artifacts", fake_write_report_artifacts)
+    monkeypatch.setattr(
+        graph,
+        "critic_validate",
+        lambda state: [
+            ValidationResult(
+                check="unsupported_claim",
+                passed=False,
+                message="Causal language detected without causal evidence",
+            )
+        ],
+    )
+
+    csv = tmp_path / "t.csv"
+    _make_csv(csv)
+    state = await graph.run_analysis(
+        dataset_path=str(csv),
+        dataset_id="ds-hard-status",
+        user_query="Does a cause b?",
+        run_id="r-hard-status",
+    )
+
+    failing = [r.check for r in state.validation_results if not r.passed]
+    assert failing == ["unsupported_claim"]
+    assert state.report_markdown, "the report must still be produced"
+    assert state.status is AnalysisStatus.FAILED
