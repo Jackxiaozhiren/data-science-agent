@@ -73,7 +73,8 @@ SKIP_MARK_RE = re.compile(r"pytest\.mark\.(?:skip|xfail)")
 SUPPRESSION_RE = re.compile(r"#\s*(?:noqa|type:\s*ignore)")
 SWALLOW_RE = re.compile(r"except[^\n:]*:\s*(?:#.*)?$|except.*:\s*pass$")
 DOC_LINK_RE = re.compile(r":\s*([A-Za-z0-9_./-]+\.md)")
-AUDIT_DOC_RE = re.compile(r"^(?:AUDIT_|REPO_DIAGNOSIS)[A-Z_]*\.md$")
+PROMPT_DOC_RE = re.compile(r"^[A-Z][A-Z_]*_(?:PROMPT|SPEC)\.md$")
+LEDGER_DOC_RE = re.compile(r"^AUDIT_LEDGER\.md$")
 TEST_DEF_RE = re.compile(r"^\s*(?:async\s+)?def test_", re.M)
 
 #: Keys that may carry a ceiling or floor, with the debt each one guards. Never
@@ -85,7 +86,7 @@ CEILING_KEYS: dict[str, str] = {
     "debt.suppressionDirectives": "lint and type suppressions in shipped code",
     "debt.swallowedExceptionSites": "except blocks that can hide a failure from status",
     "debt.unwiredCheckers": "checker scripts that no workflow invokes",
-    "debt.auditApparatusLines": "audit prose outgrowing the product",
+    "debt.auditApparatusLines": "prompt/spec documents an audit series keeps rewriting",
     "debt.governanceFilesMissing": "required policy files absent",
     "capabilities.packagesWithoutManifest": "package dirs that are not workspace members",
     "capabilities.memberWithoutArtifactCopy": "source packages shipped by no installed wheel",
@@ -112,6 +113,10 @@ EXCLUDED_KEYS: dict[str, str] = {
     "debt.coveragePercent": "already machine-checked by pytest's fail_under -- no second source",
     "debt.lintFindings": "already machine-checked by ruff -- no second source",
     "debt.typeErrors": "already machine-checked by mypy -- no second source",
+    "debt.ledgerLines": (
+        "the ledger is append-only session record that §N10 mandates; gating it makes honest "
+        "bookkeeping illegal -- measured for the ratio check, reviewed, never auto-failed"
+    ),
     "debt.markdownPercentClaims": (
         "counts ordinary prose percentages too, so it is too coarse to guard; L5 adjudicates"
     ),
@@ -276,12 +281,13 @@ def _missing_governance_files() -> list[str]:
     return [name for name in required if not (ROOT / name).is_file()]
 
 
-def _audit_volume() -> int:
-    total = 0
-    for path in sorted(ROOT.glob("*.md")):
-        if AUDIT_DOC_RE.match(path.name):
-            total += len(_read(path).splitlines())
-    return total
+def _volume(pattern: re.Pattern[str]) -> int:
+    """Line count of root-level markdown whose name matches `pattern`."""
+    return sum(
+        len(_read(path).splitlines())
+        for path in sorted(ROOT.glob("*.md"))
+        if pattern.match(path.name)
+    )
 
 
 def _collect_debt() -> dict[str, Any]:
@@ -294,7 +300,8 @@ def _collect_debt() -> dict[str, Any]:
         "swallowedExceptionSites": sum(1 for line in shipped if SWALLOW_RE.search(line)),
         "unwiredCheckers": len(_unwired_checkers()),
         "governanceFilesMissing": len(_missing_governance_files()),
-        "auditApparatusLines": _audit_volume(),
+        "auditApparatusLines": _volume(PROMPT_DOC_RE),
+        "ledgerLines": _volume(LEDGER_DOC_RE),
         "testFunctions": sum(1 for line in tests if TEST_DEF_RE.match(line)),
     }
 

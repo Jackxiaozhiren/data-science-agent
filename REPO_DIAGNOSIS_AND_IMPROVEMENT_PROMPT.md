@@ -175,12 +175,12 @@ A cleanup that is not guarded returns. The ceiling ledger is what converts "we f
 | `debt.suppressionDirectives` | `# noqa`, `# type: ignore`, new `exclude` entries | ceiling |
 | `debt.unwiredCheckers` | checkers under `scripts/` that no workflow invokes | ceiling |
 | `debt.swallowedExceptionSites` | bare/pass exception handlers in shipped code | ceiling |
-| `debt.auditApparatusLines` | audit and compliance prose outgrowing the product | ceiling |
+| `debt.auditApparatusLines` | prompt/spec prose the audit series keeps rewriting — **not** the ledger | ceiling |
 | `capabilities.memberWithoutArtifactCopy` | declared workspace member shipped by no build artifact | ceiling |
 | `capabilities.navOrphanPages` | docs pages on disk referenced by no nav entry | ceiling |
 | `debt.testFunctions` | coverage bought by deleting tests | floor |
 
-Two things that look like ceiling candidates but cannot be collector keys: **coverage** (a `fail_under` gate already machine-checks it, so a second source of truth creates disagreement rather than safety) and **recurrence of findings against locked files** (that needs the ledger's history, not the working tree, so §27's lock review owns it). Record both as excluded, with the reason, inside the limits file — or the next contributor re-adds them.
+Three things that look like ceiling candidates but cannot be collector keys: **coverage** (a `fail_under` gate already machine-checks it, so a second source of truth creates disagreement rather than safety), **recurrence of findings against locked files** (that needs the ledger's history, not the working tree, so §27's lock review owns it), and **the ledger's own volume** (§6.2 mandates an append-only entry per session, so gating it makes honest bookkeeping illegal — measure it, review it against source LOC, never auto-fail it). Record each as excluded, with its reason, inside the limits file — or the next contributor re-adds it.
 
 **The CI-testability gate — apply to every surviving candidate: would this key ever be able to fire in the pipeline it is supposed to protect?** If not, it is not a ceiling.
 
@@ -741,7 +741,7 @@ Targets, in value order for this repository:
 | 6 | **Developer experience** | A documented, discoverable command surface. If no task runner exists and helper scripts lack an executable bit, say so with evidence — a future agent inventing an unscoped lint command costs minutes and produces phantom findings. |
 | 7 | **Docs information architecture** | Nav coverage for orphan pages, policy-document path corrections, support tables aligned to the release line. |
 
-**Uplift discipline:** each item is its own finding, its own change, its own verification — the §23 loop still applies. "Refactor for maintainability" with no observable delta is not uplift; it is unpriced risk. Audit prose is itself guarded by `debt.auditApparatusLines`: when uplift can either add a document or add a check, add the check.
+**Uplift discipline:** each item is its own finding, its own change, its own verification — the §23 loop still applies. "Refactor for maintainability" with no observable delta is not uplift; it is unpriced risk. Prompt/spec volume is itself capped by `debt.auditApparatusLines`, so growing this document requires cutting an equal line elsewhere: when uplift can either add a document or add a check, add the check.
 
 ## 25. Phase 5 — Reporting
 

@@ -3,6 +3,7 @@
     "capabilities.largestSourceFiles": "array length is constant by construction",
     "capabilities.sourceFiles": "grows whenever anyone writes code",
     "debt.coveragePercent": "already machine-checked by pytest's fail_under -- no second source",
+    "debt.ledgerLines": "the ledger is append-only session record that \u00a7N10 mandates; gating it makes honest bookkeeping illegal -- measured for the ratio check, reviewed, never auto-failed",
     "debt.lintFindings": "already machine-checked by ruff -- no second source",
     "debt.markdownPercentClaims": "counts ordinary prose percentages too, so it is too coarse to guard; L5 adjudicates",
     "debt.typeErrors": "already machine-checked by mypy -- no second source",
@@ -21,7 +22,7 @@
     "capabilities.navDanglingEntries": "nav entries naming a file that is absent",
     "capabilities.navOrphanPages": "docs pages referenced by no nav entry",
     "capabilities.packagesWithoutManifest": "package dirs that are not workspace members",
-    "debt.auditApparatusLines": "audit prose outgrowing the product",
+    "debt.auditApparatusLines": "prompt/spec documents an audit series keeps rewriting",
     "debt.governanceFilesMissing": "required policy files absent",
     "debt.pytestSkipXfail": "tests silenced instead of fixed",
     "debt.suppressionDirectives": "lint and type suppressions in shipped code",
@@ -30,9 +31,9 @@
     "debt.unwiredCheckers": "checker scripts that no workflow invokes",
     "warnings.contradictions": "measured contradictions of any kind"
   },
-  "_seededAt": "2026-09-28T05:06:46Z",
-  "_seededAtHead": "2debeb6586ab8b1571813dbc4ec6f49ef994bc60",
-  "_seedNote": "Seeded from a working tree holding another session's uncommitted files. Measured against a pristine `git archive` export of HEAD: every key agrees except capabilities.packagesWithoutManifest (1 here, 0 clean -- the memberless dir under packages/ is untracked) and debt.testFunctions (421 here, 419 clean). Ceilings keep the dirty reading so the local gate stays honest rather than false-red, at the cost of one tolerated unit on that key; CI sees the clean value and still trips on any further regression.",
+  "_seedNote": "Option A (approved 2026-09-28): debt.auditApparatusLines now counts only prompt/spec documents -- the prose an audit series keeps rewriting -- because gating the ledger made the append-only session record that \u00a7N10 mandates a ceiling breach, i.e. honest bookkeeping was illegal. AUDIT_LEDGER.md volume moved to debt.ledgerLines: measured, reviewed against source LOC, never auto-failed. Floor debt.testFunctions is pinned to 420, the reading of a pristine `git archive` export of HEAD, NOT the 423 in this working tree: the difference is another session's uncommitted tests, and a floor above what CI can check out is a guaranteed false red. Two other divergences from the dirty tree: capabilities.packagesWithoutManifest is 1 here and 0 clean (that package dir is untracked), so the ceiling keeps the tolerant 1.",
+  "_seededAt": "2026-09-28T05:39:33Z",
+  "_seededAtHead": "56a8768523891859be562db90e683aeaa648c9f7",
   "ceiling": {
     "capabilities.artifactCopyWithoutMember": 0,
     "capabilities.entrypointsWithoutTarget": 0,
@@ -40,7 +41,7 @@
     "capabilities.navDanglingEntries": 0,
     "capabilities.navOrphanPages": 23,
     "capabilities.packagesWithoutManifest": 1,
-    "debt.auditApparatusLines": 3112,
+    "debt.auditApparatusLines": 1128,
     "debt.governanceFilesMissing": 0,
     "debt.pytestSkipXfail": 0,
     "debt.suppressionDirectives": 42,
@@ -50,6 +51,6 @@
     "warnings.contradictions": 4
   },
   "floor": {
-    "debt.testFunctions": 412
+    "debt.testFunctions": 420
   }
 }
