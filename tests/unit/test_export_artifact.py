@@ -133,17 +133,45 @@ def test_resolve_refs_step_tool_missing() -> None:
 
 
 def test_planner_export_steps_conventional_names() -> None:
-    from dsa_agent.planner import heuristics_plan
+    """Export filenames come from the question, and every source can satisfy the tool.
+
+    This asserted that ``predictions.csv`` was exported from ``train_model``. That
+    pairing could never run: ``train_model`` keeps its result in memory and
+    ``export_artifact`` refuses a source without ``columns``/``rows`` rather than
+    synthesizing one. The convention still holds for a source that is genuinely
+    tabular, which is what is checked now, plus the chart export and the negative
+    control that no benchmark-specific filename leaks in.
+    """
+    from dsa_agent.planner import _TABULAR_TOOLS, heuristics_plan
 
     plan = heuristics_plan("Predict churn for customers", "dummy.csv", ["age", "churn", "tenure"])
-    tools = [s.tool for s in plan.steps]
-    assert "export_artifact" in tools
     exp = [s for s in plan.steps if s.tool == "export_artifact"]
-    by_name = {s.inputs["filename"]: s.inputs for s in exp}
-    assert "predictions.csv" in by_name  # generic convention from "predict"
-    assert by_name["predictions.csv"]["source"] == {"$from_tool": "train_model"}
-    assert "chart.png" in by_name
-    # no benchmark knowledge: filenames come from the question, works for any user
+    plan_tools = {s.tool for s in plan.steps}
+    assert "create_chart" in plan_tools
+    assert {s.inputs["filename"] for s in exp} == {"chart.png"}, (
+        "chart export must still be planned"
+    )
+
+    for spec in exp:
+        source = spec.inputs["source"]
+        origin = source.get("$from_tool")
+        if origin is None or origin == "create_chart":
+            continue
+        assert origin in _TABULAR_TOOLS, (
+            f"{spec.inputs['filename']} sourced from {origin}, which cannot be exported"
+        )
+
+    # the tabular branch is exercised directly: heuristics_plan never emits run_sql,
+    # so reaching it through the planner would leave the assertion silently unrun
+    from types import SimpleNamespace
+
+    from dsa_agent.planner import _terminal_export_steps
+
+    steps = [SimpleNamespace(tool="profile_dataset"), SimpleNamespace(tool="run_sql")]
+    specs = _terminal_export_steps("Clean missing values and dedup", steps)
+    assert ("cleaned_data.csv", "run_sql") in [(name, src) for _, name, src, _ in specs]
+    assert all(src in _TABULAR_TOOLS for _, _, src, fmt in specs if fmt == "csv")
+
     plan2 = heuristics_plan("Analyze revenue trends", "dummy.csv", ["region", "revenue"])
     names2 = [s.inputs["filename"] for s in plan2.steps if s.tool == "export_artifact"]
     assert "predictions.csv" not in names2
@@ -193,3 +221,27 @@ def test_adapter_prefers_exact_workspace_export(tmp_path: Path) -> None:
     fmap = a._materialize_expected_files(run, run_dir)
     assert (run_dir / "predictions.csv").read_text(encoding="utf-8") == "a\n1\n"
     assert "workspace export from TC-2" in json.dumps(fmap["mapped"])
+
+
+def test_declared_tabular_sources_really_are_tabular() -> None:
+    """The planner's export source list must match what the tools actually emit.
+
+    ``_TABULAR_TOOLS`` named five tools whose output models carry no ``columns``/
+    ``rows``, and ``export_artifact`` refuses such a source by contract -- it relocates
+    bytes and never synthesizes content. Every plan whose question matched the predict
+    or evaluate intent therefore carried a step that could only fail, invisibly, until
+    status consulted ``tool_errors``. Deriving the list from the registry is what keeps
+    the declaration honest when a tool changes.
+    """
+    import dsa_tools
+    from dsa_agent.planner import _TABULAR_TOOLS
+
+    dsa_tools.bootstrap()
+    assert _TABULAR_TOOLS, "an empty list would silently disable every tabular export"
+    for name in _TABULAR_TOOLS:
+        tool = dsa_tools.get(name)
+        assert tool is not None, f"{name} is declared tabular but is not a registered tool"
+        fields = set(tool.output_model.model_fields)
+        assert {"columns", "rows"} <= fields, (
+            f"{name} is declared an exportable table but its output has {sorted(fields)}"
+        )

@@ -31,24 +31,18 @@ _REAL_MODES = {"real", "openai"}
 #: derived from the *user question* for real-user value (predictable downloads).
 #: They are never read from any benchmark definition.
 _EXPORT_FILENAME_HINTS = (
-    (("predict", "classif", "churn", "survival"), "predictions.csv", "train_model"),
-    (
-        ("metric", "accuracy", "evaluat", "score", "roc", "auc"),
-        "evaluation_metrics.csv",
-        "evaluate_model",
-    ),
     (("clean", "missing", "outlier", "dedup", "preprocess"), "cleaned_data.csv", "run_sql"),
     (("normaliz", "scal"), "normalized_data.csv", "run_sql"),
 )
 
-_TABULAR_TOOLS = (
-    "run_sql",
-    "train_model",
-    "evaluate_model",
-    "forecast",
-    "feature_importance",
-    "regression_analysis",
-)
+#: Tools whose result ``export_artifact`` can actually persist: it requires
+#: ``columns`` + ``rows`` and refuses to synthesize them, so a tool that keeps its
+#: result in memory cannot be an export source no matter how useful it would be.
+#: ``train_model``, ``evaluate_model``, ``forecast``, ``feature_importance`` and
+#: ``regression_analysis`` were all listed here and none of them emits that shape --
+#: every predict/evaluate plan therefore carried a step guaranteed to fail.
+#: Guarded by ``test_declared_tabular_sources_really_are_tabular``.
+_TABULAR_TOOLS = ("run_sql",)
 
 
 def _terminal_export_steps(q: str, steps: list[Any]) -> list[tuple[str, str, str, str]]:
