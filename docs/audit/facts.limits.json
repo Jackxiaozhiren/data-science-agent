@@ -1,0 +1,54 @@
+{
+  "_excluded": {
+    "capabilities.largestSourceFiles": "array length is constant by construction",
+    "capabilities.sourceFiles": "grows whenever anyone writes code",
+    "debt.coveragePercent": "already machine-checked by pytest's fail_under -- no second source",
+    "debt.lintFindings": "already machine-checked by ruff -- no second source",
+    "debt.markdownPercentClaims": "counts ordinary prose percentages too, so it is too coarse to guard; L5 adjudicates",
+    "debt.typeErrors": "already machine-checked by mypy -- no second source",
+    "debt.yieldSites": "a bare yield count is not a cleanup defect; that class needs the finally block read per site, which a generic probe cannot assert honestly",
+    "git.filesTouchedSinceLastCommit": "always 0 on a clean checkout; can never fire in CI",
+    "git.head": "not a quantity",
+    "runtime.*": "versions legitimately rise on upgrade; guarding them blocks upgrading"
+  },
+  "_floorKeys": {
+    "debt.testFunctions": "tests may only be added, never quietly deleted"
+  },
+  "_keys": {
+    "capabilities.artifactCopyWithoutMember": "vendored copies whose source is gone",
+    "capabilities.entrypointsWithoutTarget": "console scripts whose module cannot resolve",
+    "capabilities.memberWithoutArtifactCopy": "source packages shipped by no installed wheel",
+    "capabilities.navDanglingEntries": "nav entries naming a file that is absent",
+    "capabilities.navOrphanPages": "docs pages referenced by no nav entry",
+    "capabilities.packagesWithoutManifest": "package dirs that are not workspace members",
+    "debt.auditApparatusLines": "audit prose outgrowing the product",
+    "debt.governanceFilesMissing": "required policy files absent",
+    "debt.pytestSkipXfail": "tests silenced instead of fixed",
+    "debt.suppressionDirectives": "lint and type suppressions in shipped code",
+    "debt.swallowedExceptionSites": "except blocks that can hide a failure from status",
+    "debt.todoMarkers": "debt comments left in shipped code",
+    "debt.unwiredCheckers": "checker scripts that no workflow invokes",
+    "warnings.contradictions": "measured contradictions of any kind"
+  },
+  "_seededAt": "2026-09-28T05:06:46Z",
+  "_seededAtHead": "2debeb6586ab8b1571813dbc4ec6f49ef994bc60",
+  "ceiling": {
+    "capabilities.artifactCopyWithoutMember": 0,
+    "capabilities.entrypointsWithoutTarget": 0,
+    "capabilities.memberWithoutArtifactCopy": 0,
+    "capabilities.navDanglingEntries": 0,
+    "capabilities.navOrphanPages": 23,
+    "capabilities.packagesWithoutManifest": 1,
+    "debt.auditApparatusLines": 3112,
+    "debt.governanceFilesMissing": 0,
+    "debt.pytestSkipXfail": 0,
+    "debt.suppressionDirectives": 42,
+    "debt.swallowedExceptionSites": 180,
+    "debt.todoMarkers": 0,
+    "debt.unwiredCheckers": 1,
+    "warnings.contradictions": 4
+  },
+  "floor": {
+    "debt.testFunctions": 412
+  }
+}
