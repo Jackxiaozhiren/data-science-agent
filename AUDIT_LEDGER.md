@@ -2067,3 +2067,89 @@ happened and needs its own approval.
 **One gate derivation, one owner:** §26's derivation command now surfaces this gate
 automatically, which is the point of deriving rather than copying — a prose gate list would
 have silently gone stale again the moment this step landed.
+
+## §51 Lane L2 — status and claim correctness (first run of this lane; census said 0 ids)
+
+Census before enumerating (`grep -ohE 'D-L[0-9]+-[0-9]+' AUDIT_LEDGER.md | sort -u`): L1 16,
+L3 5, **L2/L4/L5/L6/L7/L8 zero**. L2 was unexamined, not clean. Independent enumeration was
+written before re-reading the prompt's §34; refutations of my own seeds are in 51.4.
+
+### 51.1 Findings
+
+### D-L2-01
+| field | value |
+|---|---|
+| claim | Terminal status is computed from one check name, so a run whose evidence, claim and tool checks all failed still reports `COMPLETED`. |
+| lane | L2 |
+| evidence_tier | T0 |
+| severity | S0 |
+| location | `packages/agent/src/dsa_agent/graph.py:612-613` |
+| mechanism | `has_hard_fail = any(not r.passed for r in state.validation_results if r.check == "budget")`. Shipped code emits **nine** distinct check names (`budget`, `completeness`, `evidence_bundle`, `evidence_coverage`, `langgraph_fallback`, `prompt_injection`, `resource_limits`, `tool_errors`, `unsupported_claim`); eight of them cannot influence status. So both halves of the product promise — evidence-verified claims and reproducible output — are computed, recorded, displayed in the report, and then never consulted at the single point where success is decided. |
+| probe | enumerate `check="…"` across `packages/`+`src/` (excluding `_vendor`), then apply the shipped filter to real critic output |
+| evidence_command | `uv run --frozen python` heredoc in this session: critic executed on three states |
+| output_excerpt | `3 failing checks incl. bundle+claims+tools -> status: COMPLETED` (state carried `evidence_bundle`, `unsupported_claim`, `tool_errors` all `passed=False`); `PROBE_RC=0` |
+| reproducible | deterministic |
+| fix_sketch | Widen the filter to the hard-check set, or invert it (a result is hard unless the check declares itself advisory). Breaks: runs currently reported COMPLETED will report FAILED. |
+| blast_radius | SDK + API + CLI + MCP + Jupyter status semantics; every benchmark/leaderboard run; `Analysis.status`; **measured: 2 of 5 real runs flip** (eda-01 `unsupported_claim`, eda-05 `tool_errors`) |
+| verify_before | test asserting a run with a failing non-budget check yields FAILED — RED today (status COMPLETED) |
+| expected_delta | benchmark `task_success` 1.0 → 0.6 at `--limit 5` if all hard checks gate status |
+| ceiling_key | none — a behavioural invariant, not a quantity; needs a test, and §4's floor on test count guards its removal |
+| status | open |
+
+### D-L2-02
+| field | value |
+|---|---|
+| claim | The `evidence_bundle` failure record added by `25443fd` has no consumer: it is appended and then ignored by the status computation. |
+| lane | L2 |
+| evidence_tier | T0 |
+| severity | S1 |
+| location | `packages/agent/src/dsa_agent/graph.py:597-607` vs `:612` |
+| mechanism | The L3 lane converted a silent `except Exception: pass` into a recorded `ValidationResult(check="evidence_bundle", passed=False, …)`. Visibility without enforcement means a run with an unwritten `evidence_graph.json`/`experiment.json`/`reproduce.sh` still ends `COMPLETED`. The fix landed in §45 is therefore half a fix: the signal exists for a human reading the report and for nothing that decides status. |
+| probe | read the appended check name, then the filter that consumes it |
+| output_excerpt | `checks that cannot change status: [... 'evidence_bundle' ...]`, rc=0 |
+| fix_sketch | fold into D-L2-01's widened filter; no separate change needed |
+| blast_radius | one predicate; same status semantics as D-L2-01 |
+| status | open — **crossover with L3 residual, report as the unfinished half of §45** |
+
+### D-L2-03
+| field | value |
+|---|---|
+| claim | `DSA_EVIDENCE_CRITIC=off` yields `validation_results == []` and `status == COMPLETED`, and the only record that the guarantee was skipped is on a field the public SDK object does not expose. |
+| lane | L2 |
+| evidence_tier | T0 |
+| severity | S1 |
+| location | `graph.py:464-471`, `critic.py:16-23`, `src/data_science_agent/sdk.py` (`Analysis` dataclass) |
+| mechanism | The ablation is deliberate and documented ("stays enabled by default"), but the outward consequence is silent: `Analysis` fields are `['artifacts','error','evidence','insights','raw_state','report_markdown','run_id','status','tool_calls','validation']` — `agent_messages`, which holds "Evidence critic disabled for evaluation ablation", is **not** among them. A consumer sees `status=COMPLETED, validation=[], error=None`, and `[]` is a valid outcome shape rather than a labelled skip. |
+| probe | run the graph path with the env var set, inspect `Analysis` dataclass fields |
+| output_excerpt | `ablation flag honoured: True` / `validation_results on the ablated path: []` / `agent_messages exposed outward? False`, rc=0 |
+| fix_sketch | emit one `ValidationResult(check="critic_ablated", passed=False)` (or a `skipped` marker) so the emptiness is labelled in the artifact, rather than deleting or hiding the ablation |
+| blast_radius | evaluation harness + any caller that sets the env var; no change to default-on behaviour |
+| status | open — needs a decision on whether an ablated run should report COMPLETED at all |
+
+### D-L2-04 (instrument, L1/L2 crossover)
+`benchmarks/**/raw_runs.json` records each run only under `run_result`; a first-pass script that
+looked for a top-level `validation` key returned **"0 runs captured"** and would have reported a
+blast radius of zero. The data is present as `run_result.validation_results`. A measurement that
+silently returns an empty set instead of failing is the same class as a silent-pass gate.
+
+### 51.2 Lead-register diff
+- `critic.py` early-stage vacuous pass — **CONFIRMED but reclassified `PROTECTED`**: `check_evidence_coverage` returns `passed=True` only for `UNDERSTANDING`/`PLANNING`/`DATA_PROFILING`, and returns `passed=False` at `REPORTING` (executed: `evidence_coverage passed=False No evidence collected`). Correct by design; do not "fix".
+- repro-bundle writes swallowed by `except Exception: pass` — **REFUTED as stated**: `25443fd` replaced it with a recorded result. Still defective, but as D-L2-02, not as a swallow.
+- "the report never surfaces validation" — **REFUTED by my own probe**: `build_markdown_report` does mention `evidence_coverage` and "No evidence". My negative came from grepping `packages/reports/` while the builder lives in `dsa_agent/graph.py`. Wrong location, wrong conclusion.
+
+### 51.3 Law liveness table (this lane)
+| law | state | decider |
+|---|---|---|
+| N1 no excerpt → no severity | ACTIVE | every block above carries rc + excerpt |
+| N2 baseline before change | ACTIVE | §20 baseline captured, no edit made |
+| N3 red then green | ACTIVE, unexercised | no fix attempted — Phase 2 gate not passed |
+| N9 enumerate before reading seeds | ACTIVE | 51.1 written first, 51.2 diffed after |
+| §13 measure blast radius before proposing a status change | ACTIVE | 2/5 measured, not assumed |
+| §7 tier-before-severity | ACTIVE | D-L2-01 T0→S0; D-L2-03 T0→S1 not S0 (no demonstrated user harm yet) |
+| §3 reading-wins precedence | ACTIVE | refuted two of my own premises in 51.2 |
+
+### 51.4 Deliberate non-actions
+No file edited under this lane. D-L2-01's fix is a **public status-semantics change** and is
+presented for approval, not implemented (§13, §22, anti-pattern A7). `packages/evaluation`
+untouched (foreign). No push. Benchmark output written to `/tmp/ci-bench` only; `/tmp` scratch
+removed afterwards.
