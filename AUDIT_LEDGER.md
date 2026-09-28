@@ -2692,3 +2692,112 @@ lane; §60's β annotation stands. The claims checker reports its own surface
 Gates after the commit: ruff 0 · format 0 · mypy 0 · pytest 0 · ratchet OK · mkdocs --strict 0 ·
 claims checker 0. Census: L1 16 · L2 7 · L3 5 · L4 5 · **L5 5** · L6–L8 zero. No push performed in
 this lane yet; three local commits are queued.
+
+## 62. D-L5-02 applied; two false controls found while verifying it; L8 opened
+
+Scope authorised this turn: "apply the SECURITY.md patch and start lanes L6 through L8".
+
+### 62.1 D-L5-02 — five corrections, not three
+The proposed patch named three paths. Verifying each replacement target before pointing at it
+turned up two more defects of the same class in the same section:
+
+| claim as written | truth | evidence |
+|---|---|---|
+| `packages/execution/file_validator.py` | never existed; the MIME part lives in `dsa_execution/mime_sniff.py`, the allowlist/cap/traversal/archive-bomb parts in `dsa_datasets/validate.py` | `ALLOWED_EXTS` validate.py:9, `MAX_SIZE_BYTES` :18, traversal raise :29, archive guard :57 |
+| `sql_validator.py` | never existed → `dsa_execution/sql_guard.py` | `_FORBIDDEN` :9, `_MAX_ROWS = 10000` :38, allowlist regex :57 |
+| `PROMPT_INJECTION_PATTERNS` | **phantom symbol**, real names are `_INJECTION_PATTERNS` and `contains_prompt_injection` | guardrails.py:5, :20; zero hits repo-wide for the claimed name |
+| `packages/agent/graph.py` for the budget numbers | wrong twice over: no such path, and the numbers are not in `graph.py` either | `Budget` in `dsa_agent/state.py`:94-97 |
+| `dsa_agent/critic.py` | half-path — package-relative, not a repo path; widened the new guard and it caught this | guard output below |
+
+`docs/security.md` carries neither phantom, so the defect did not replicate. Line 19's
+`python_sandbox.py` claims were checked, not just re-pointed: `_DENY_IMPORTS`/`_DENY_ATTRS`/
+`_DENY_NAMES` do deny all eight listed tokens and `_ALLOW_IMPORTS` does allow all nine listed
+modules — that sentence is true.
+
+### 62.2 Guard, and the gap it exposed in itself
+`tests/unit/test_security_doc_claims.py`: path resolution for every backticked file claim, plus
+AST- and field-level checks of the section's substantive claims. Falsified against the pre-patch
+blob, not argued: **HEAD 19 cited / 4 unresolved → patched 20 cited / 0 unresolved.**
+
+Two of my own instruments were wrong before they were right, and both were caught by running
+them rather than by reading them:
+- The first guard checked `hasattr(python_sandbox, "_safe_import")`. That function is nested, so
+  the module has no such attribute — the assertion was red on a *true* doc claim. Replaced with
+  an `ast.walk` over the module source, which finds nested defs.
+- The first resolution regex required a known top-level directory, so bare `sql_validator.py`
+  passed. Adding bare-name resolution is what surfaced the `dsa_agent/critic.py` half-path.
+- My verification *probe* had the mirror-image bug: it returned the string `"bare->0"` for
+  unmatched bare names, which is truthy, so it under-reported HEAD as 3 unresolved instead of 4.
+  Re-measured before quoting the number.
+
+### 62.3 D-L7-01 — `Budget.max_steps` is declared and never read (S1, BLOCKED)
+`grep` for `max_steps` across `packages/ src/ apps/ tests/ scripts/` returns exactly one hit:
+the field declaration at `state.py:95`. Zero readers. By contrast `max_tool_calls` and
+`max_retries` are enforced at `graph.py`:408-446. The claim is nevertheless carried as fact by
+`SECURITY.md`:21, `docs/architecture.md`:28, `docs/agent-system.md`:7,
+`docs/portfolio/PROJECT_SUMMARY.md`:18, `research/paper/paper.md`:25, `:168` ("Budgets
+**enforced**: `max_steps 20`") and `research/V3_RESEARCH_REPORT.md`:44, and it is baked into the
+frozen `reproduction/v2/*/raw_runs.json` and `demo/runs/demo/state.json` payloads.
+
+Not fixed beyond removing the false *location*. I dropped the word "enforced" by re-pointing to
+the declaration site rather than deleting the knob, because the two honest resolutions are a
+runtime behaviour change (wire it) and a seven-document rewrite (retract it) — a decision, not an
+edit. **Recommendation: wire it** (`state.budget.max_steps` compared in the exec router), which
+makes every existing claim true again with one change; it alters agent behaviour, so it is
+blocked on approval.
+
+### 62.4 D-L7-02 — the sandbox's 5 s wall-clock cannot interrupt anything (S1, BLOCKED)
+`python_sandbox.py`:162 takes `timeout_ms: int = 5000`, but the check is *after* execution
+(:194-199, `"error": "TimeoutError"` as a label on a completed run) and the comment at :176 says
+so. No preemption exists anywhere in the chain: a grep for `wait_for|asyncio.timeout|signal.|
+multiprocess|Pool(|concurrent.futures` across `packages/tools`, `packages/agent`,
+`packages/execution` returns only that label line, and `run_python.py`:52 calls `execute_python`
+synchronously.
+
+Measured, T3, with a paired control under `ulimit -t 12`: `while True: i += 1` with
+`timeout_ms=100` never returned and was killed by the CPU rlimit (rc 152 = 128+24 SIGXCPU); the
+same probe with a 10-iteration loop returned in 0.00 s. So the 5 s bound is reporting, not
+containment, and `SECURITY.md`:19 advertises it as a sandbox limit. Resolution is a code change
+(subprocess or `RLIMIT_CPU` in a forked child) — behaviour-visible, needs approval, and would
+have to be mirrored per §55's ordering hazard. Line 19 left in place for that reason: shrinking a
+security guarantee in prose is not mine to do silently.
+
+### 62.5 D-L8-01 — the LangGraph test could not tell the two engines apart (fixed)
+`tests/unit/test_langgraph.py` asserts `status in ("COMPLETED", "FAILED")` and
+`len(tool_calls) >= 1`. `run_analysis_langgraph` catches **any** exception from `graph.ainvoke`
+and re-runs the non-LangGraph engine (:500-512), so those assertions are satisfied by the
+hand-off — the test is green precisely when the feature is dead. langgraph is at **1.2.11** and
+langgraph-checkpoint at **4.2.0**; nothing guarded the new shape.
+
+Added `tests/unit/test_langgraph_engine_guard.py`: one test asserting no `langgraph_fallback`
+result survives (the engine must answer) and one asserting `get_state(cfg)` still returns
+populated thread state under the installed checkpoint major. Falsified by A/B in matched
+conditions, both with an empty tool registry: **old file rc 0 (green), new guard rc 1** with
+`ToolNotFoundError ... Available: []` quoted in the message. `langgraph_fallback` itself is
+honest — it appends `passed=False` — which is why the fix is a test and not a code change.
+
+### 62.6 D-L8-02 — checkpoints cannot be resumed across calls (S2, BLOCKED)
+Measured with the same A/B pattern: `build_graph()` builds `MemorySaver()` inside the call
+(:417) and never returns or stores it; no `get_state`/`update_state` call site exists outside
+the new guard. After a run, `get_state` on **the same** graph returns 12 state keys; on a
+**second** `build_graph()` with the identical `thread_id`, 0 keys. Pause/resume/replay/fork as
+described by seven documents therefore has no mechanism, and the only entry point
+(`run_analysis_langgraph`) is reached by tests alone — consistent with §60's finding that the
+variant is unreleased.
+
+Proposed, not applied: give `build_graph` an injectable checkpointer parameter (default keeps
+today's behaviour) so the capability becomes both real and testable, or restate the documents as
+"per-run checkpointing". Needs a decision.
+
+### 62.7 Non-findings this turn
+- pydantic 2.13.4: no `class Config:` blocks, no `.dict()`, no `parse_obj`, no `@validator` in
+  `packages/`, `apps/`, `src/` outside the vendored mirror. Clean, reported as clean.
+- SECURITY.md's supported-versions table is unchanged (D-L5-03 still open policy).
+- `scripts/check_public_claims.py` has no reference anywhere in `.github/workflows/`, so the
+  doc-claim guards that CI actually runs are the pytest ones.
+
+### 62.8 State
+Gates after this turn's edits: ruff 0 · format 0 · pytest 0 · ratchet OK · mkdocs --strict 0.
+Collected tests 452 → **454** locally; CI's 450 denominator on `0b4c50a` still explains exactly.
+Lanes L6 and L7 measured by three concurrent read-only agents; their reports land in
+`/tmp/lane_reports/` and are integrated in §63 rather than merged into this entry.
