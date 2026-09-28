@@ -2153,3 +2153,70 @@ No file edited under this lane. D-L2-01's fix is a **public status-semantics cha
 presented for approval, not implemented (§13, §22, anti-pattern A7). `packages/evaluation`
 untouched (foreign). No push. Benchmark output written to `/tmp/ci-bench` only; `/tmp` scratch
 removed afterwards.
+
+## §52 D-L2-01 fix (a) implemented — verified, and it surfaced two real defects plus one scope limit
+
+Working tree state, **not committed**: `packages/agent/src/dsa_agent/graph.py` + its vendored
+mirror + the new test in `tests/integration/test_agent_analysis.py`. Held uncommitted because
+the suite is red for a reason that is a decision, not a defect in this change (§52.3).
+
+### 52.1 The change
+`HARD_FAIL_CHECKS = frozenset({"budget","evidence_bundle","tool_errors","unsupported_claim"})`
+applied at the **terminal** predicate only (`graph.py:612`). Line 474 — the mid-loop retry gate —
+was deliberately left on `budget`, because widening it aborts the run *before any report exists*;
+that is a larger behaviour change than (a) authorised. The verdict changes, the artifact survives.
+
+### 52.2 Red then green, with exit codes taken from the commands themselves
+| step | command | result |
+|---|---|---|
+| verify_before | `pytest -k flips_terminal_status` | **rc=1** `assert COMPLETED is FAILED` — the earlier `assert failing == ["unsupported_claim"]` and the report-present assertion had already passed, so the failure is my mechanism and not setup noise |
+| verify_after | same | rc=0 |
+| pinned ablation guard | `pytest tests/test_critic_ablation.py` | rc=0 — the `COMPLETED`-when-critic-off pin is preserved |
+| lint / format / types | ruff check, ruff format --check, mypy | rc=0, rc=0 (197 files), rc=0 (112 files) |
+| mirror | scoped regeneration of `dsa_agent` only | `sync_vendor --check` rc=1 naming **only** `dsa_evaluation` (foreign WIP); my package reports in sync |
+
+Scoped regeneration was necessary, not convenient: `sync_vendor.py` exposes only `--check` and a
+bare run `rmtree`s and recopies **every** package, which would have pulled another session's
+uncommitted `dsa_evaluation` code into the shipped mirror under my commit message. **Finding
+D-INFRA-05:** the tool has no per-package repair mode, so a one-package change cannot be
+regenerated without adopting unrelated dirty state.
+
+### 52.3 What the widened predicate surfaced (two real defects, one test that encoded the bug)
+`tests/plugins/test_time_series_plugin.py::test_full_pipeline_..._integration` now fails:
+`assert r.status in ("COMPLETED","REPORTING")` got `FAILED`. Reproduced against the live source
+with the test's own dataset (`benchmarks/v2/datasets/sales.csv`, verified present, 17894 bytes):
+
+- `tool_errors passed=False — 4 tool error(s)`, namely
+  `train_model: Non-numeric features: float() argument must be a string or a real number` and
+  `export_artifact: csv/xlsx export needs source with columns+rows`, each twice.
+- `evidence_coverage`, `unsupported_claim`, `budget`, per-insight and per-evidence checks all passed.
+
+So the status flip is **correct**: that flagship integration run has been failing four tool calls
+all along, and the test passed only because nothing consulted the signal. Recorded as
+`D-L2-05` (train_model on this dataset) and `D-L2-06` (export_artifact unresolved source), both
+S1, both in `packages/tools`/`dsa_time_series` — outside the scope of (a).
+The test itself was pinned on the bug; relaxing it is **not** taken here (§N6).
+
+### 52.4 Correction to §51's numbers — my own instrument undercounted
+§51 said "nine check names, eight cannot change status", derived from grepping `check="…"`
+literals. An AST pass over `ValidationResult(...)` constructions gives **8 literal names and a
+tail of names built at runtime**, and the executed run emitted `insight_evidence`,
+`evidence_traceability` and `dataset_hash`, which appear nowhere as literals. So the real universe
+is ≥11, and the honest statement is: after (a), four named checks gate status while
+`evidence_coverage`, `dataset_hash`, `insight_evidence` and `evidence_traceability` still cannot —
+including the reproducibility chain's own dataset identity.
+
+**This is an argument for shape (b) (hard unless declared advisory) over the approved (a):** a
+name list silently omits every check that does not exist yet, and dynamic names cannot be
+enumerated from source at all.
+
+### 52.5 Method errors of mine, recorded because they cost real detours
+- Reported `PROBE_RC=0` for a selection that matched **zero tests**, then read `tail`'s exit code
+  as pytest's — the exact pipe mask §26 names. Re-ran with the code taken from pytest itself.
+- First reproduction passed `tests/fixtures/revenue.csv`, a path I invented, and reported its
+  "File not found" tool errors as the repo's. The test's real dataset is
+  `benchmarks/v2/datasets/sales.csv`; re-ran against it.
+- A probe importing `data_science_agent` resolved `dsa_agent` from `_vendor` and reported
+  `COMPLETED` for code I had already changed. In a shared tree with a demoted mirror, *which copy
+  you imported is part of the measurement*, and I had not stated it.
+- A `timeout` prefix was used on a host without it (rc=127), silently skipped.
