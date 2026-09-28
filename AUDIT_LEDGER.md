@@ -2517,3 +2517,71 @@ bump under §Immutability. mkdocs `--strict` rc=0, `pytest tests/regression` rc=
 §58's own ledger entry is committed locally and deliberately **not pushed yet**: pushing now would
 trip `ci.yml`'s `cancel-in-progress` and destroy the run watching `e86cb12`, which is the exact
 mistake §48(3) recorded.
+
+## §59 Lane L4 — architecture, boundaries, duplication (first run; census said 0 ids)
+
+Census before enumerating: L1 16 · L3 5 · **L2 now 7, L4–L8 zero**. L4 was unexamined.
+All findings below were derived from the tree by the probes named in each row; §34 was read after.
+
+### D-L4-01
+| field | value |
+|---|---|
+| claim | The installed and console-script runtime is entirely the vendored mirror, and which copy a module resolves to depends on import order — so a source edit can be inert while tests stay green. |
+| lane | L4 | evidence_tier | T0 | severity | S1 |
+| location | `packages/mcp/src/dsa_mcp/adapter.py:528`, `packages/evaluation/src/dsa_evaluation/cli.py:382,410`, `packages/evaluation/src/dsa_evaluation/external_benchmark.py:298` |
+| mechanism | Four workspace modules import the published façade `data_science_agent`, whose import inserts `_vendor` at `sys.path[0]`. A workspace package therefore imports its own vendored duplicate. Measured in a façade-first process: `dsa_evaluation.cli`, `dsa_evaluation.metrics` and `dsa_agent.state` all resolve under `_vendor`. This is not a bug in the arrangement — the single-wheel install is the point (§13.1, `PROTECTED`) — it is the arrangement's cost, and §57 already paid it: a fix to `metrics.py` had zero effect on `dsa` until the mirror was regenerated. |
+| probe | `uv run python -c "import data_science_agent, dsa_evaluation.metrics as m; print(m.__file__)"` vs the reverse order |
+| output_excerpt | `cli -> VENDOR …/\_vendor/dsa_evaluation/cli.py`, `metrics -> VENDOR`, `dsa_agent.state -> VENDOR`; `AnalysisStatus is alt.AnalysisStatus -> False`; `isinstance(...) -> False`; `== -> True`; rc=0 |
+| reproducible | deterministic |
+| blast radius | every shipped path (wheel, `dsa`, Docker, Render runtime); no test-tree effect |
+| fix_sketch | The identity half is currently latent: shipped code performs no `is`/`isinstance` comparison on these models (probe below returned nothing), so no behavioural bug to fix today. The actionable part is defence: mirror parity is guarded only by `sync_vendor --check` + the clean-install smoke, and **D-INFRA-05** (no scoped repair mode) makes the safe update path awkward. |
+| status | open — recommendation is a §4 ceiling on the *gap*, not a redesign of vendoring |
+
+### D-L4-02
+| field | value |
+|---|---|
+| claim | `dsa_execution` and `dsa_tools` depend on each other at package level, because a shared leaf type lives inside one of the two cyclic members. |
+| lane | L4 | evidence_tier | T0 | severity | S3 |
+| location | `dsa_execution/sql_guard.py:5` and `python_sandbox.py:11` → `dsa_tools.errors.ToolExecutionError`; `dsa_tools/tools/run_sql.py:12` and `run_python.py:10` → `dsa_execution.{sql_guard,python_sandbox}` |
+| mechanism | Package-granularity cycle, **not** an import cycle: `dsa_tools/errors.py` imports nothing (verified), so no deadlock is possible and none is observed. The seam that is missing is a leaf for the error type both sides need; today `dsa_execution` must reach "down" into `dsa_tools` for it, which is what closes the loop. |
+| probe | grep the four edges above, then `grep -c dsa_execution packages/tools/src/dsa_tools/errors.py` → 0 |
+| blast radius | any split or re-ordering of the two packages; dependency-direction docs |
+| fix_sketch | move `ToolExecutionError` to a leaf module (own package, or an existing lower layer) and have both sides import the leaf. Behaviour-preserving, touches imports in ~5 files + both `pyproject` dependency lists. |
+| status | open — Phase 4 candidate, not this run |
+
+### D-L4-03
+| field | value |
+|---|---|
+| claim | `langgraph_graph.py` is 513 lines of engine that nothing in `src/`, `apps/` or `packages/` can reach, yet it is a coverage source and is imported by one test — coverage bought from code no user executes. |
+| lane | L4 | evidence_tier | T0 | severity | S1 (L1/L4 crossover) |
+| location | `packages/agent/src/dsa_agent/langgraph_graph.py`; importer `tests/unit/test_langgraph.py:12,30` |
+| mechanism | Zero references outside the file itself (grep over `src apps packages` returned none). Running its only test with `--cov=dsa_agent` attributes 228 statements and leaves 36% covered, with a contiguous `221-395` block never executed at all. So the file both occupies a coverage denominator and reports protection for a path no product surface can enter. |
+| probe | `grep -rn 'run_analysis_langgraph\|build_graph' --include='*.py' src apps packages --exclude-dir=_vendor`; then `pytest tests/unit/test_langgraph.py --cov=dsa_agent --cov-report=term-missing` |
+| output_excerpt | `langgraph_graph.py 228 142 30 6 36% … 221-395, 418, 443-490`; `FAIL Required test coverage of 79.0% not reached. Total coverage: 54.26%` — that rc=1 is the narrowed `--cov` scope tripping the global floor, not a test failure, and was checked rather than assumed |
+| fix_sketch | either wire it as a real alternative engine behind a documented switch, or classify it as an experiment and move it out of the coverage source. **Deletion is `BLOCKED`** (L5 lock: coupled workspace/coverage/exclusion edits). |
+| status | open — needs the question "is this a planned surface or dead mechanism?", which is a decision, not a fix |
+
+### D-L4-04 / D-L4-05
+Stub packages: `dsa_ml`, `dsa_reports`, `dsa_viz` ship 1 module each, `dsa_statistics` and `dsa_llm` 2 — all declared workspace members and coverage sources. `packages/artifacts/` holds 0 tracked files and is not a Python package. Largest shipped modules: `sdk.py` 680, `dsa_evaluation/cli.py` 665, `dsa_agent/graph.py` 625, `planner.py` 621, `dsa_mcp/adapter.py` 606. Recorded as S3 with no line-count-only finding: a split needs the seam named first (§15.3), which belongs to Phase 4.
+
+### 59.1 Lead-register diff
+- two engines, one possibly dead — **CONFIRMED and strengthened**: unreachable from any shipped surface, not merely "reached only by a test".
+- `dsa_tools ↔ dsa_execution` cycle — **CONFIRMED but reclassified**: package-level only, no import cycle, so the honest severity is S3 not S1.
+- stub packages — **CONFIRMED**.
+- `_vendor` consequences — **CONFIRMED with a new mechanism** (§57's order-sensitive resolution) that v1 did not describe.
+- "façade import triggers a bootstrap that breaks something" — **NOT REPRODUCED** as a failure; the bootstrap is what makes single-wheel install work. `PROTECTED`.
+
+### 59.2 Self-review
+My own `tests/integration/test_agent_analysis.py` asserts `state.status is AnalysisStatus.FAILED` — an identity comparison on a model class that has two possible identities. It is correct only because root `conftest.py` demotes `_vendor`; under the installed path it would be comparing a different class object. `==` is the safe comparison here; recorded so the next lane does not copy the pattern into shipped code.
+
+### 59.3 Law liveness, this lane
+| law | state | decider |
+|---|---|---|
+| §15.1 audit consequences, not existence of the mirror | ACTIVE | D-L4-01 kept `PROTECTED` for vendoring itself |
+| §15.3 a line count is not a finding; name the seam | ACTIVE | D-L4-02 names the leaf-type seam; D-L4-05 explicitly deferred for lacking one |
+| §9 tier before severity | ACTIVE | D-L4-02 downgraded to S3 once measured as non-import cycle |
+| §7.2 attribute unexplained red before reporting it | ACTIVE | the `rc=1` above was proven to be the coverage floor, not a failure |
+| §11.1 three strikes | ACTIVE, unused | every seed above resolved by first or second probe |
+
+### 59.4 Non-actions
+No file edited in this lane; all five findings stop at the Phase 2 gate. `packages/evaluation` and `tests/evals` read but untouched (foreign WIP). L5–L8 still unrun. No push in this turn.
