@@ -63,9 +63,16 @@ class TrainModelTool(BaseTool[TrainModelInput, TrainModelOutput]):
         df = load_dataframe(p, fmt)
         if inp.target not in df.columns:
             raise ToolExecutionError(f"Target {inp.target!r} not found")
-        feat_cols = [c for c in df.columns if c != inp.target]
-        if not feat_cols:
+        all_cols = [c for c in df.columns if c != inp.target]
+        if not all_cols:
             raise ToolExecutionError("No feature columns")
+        # The baseline is numeric-only; date and label columns are not features, they are
+        # reported. load_dataframe parses ISO dates, so a text column arrives as temporal
+        # and used to kill the whole step on ordinary CSVs.
+        feat_cols = [c for c in all_cols if df.schema[c].is_numeric()]
+        excluded = [c for c in all_cols if c not in feat_cols]
+        if not feat_cols:
+            raise ToolExecutionError(f"No numeric feature columns (non-numeric: {excluded})")
         sub = df.select(feat_cols + [inp.target]).drop_nulls()
         if sub.height < 10:
             raise ToolExecutionError("Need >=10 rows")
@@ -101,5 +108,5 @@ class TrainModelTool(BaseTool[TrainModelInput, TrainModelOutput]):
             cv_std=float(np.std(scores)),
             n_rows=sub.height,
             features=feat_cols,
-            diagnostics={"target": inp.target},
+            diagnostics={"target": inp.target, "excluded_non_numeric": excluded},
         )

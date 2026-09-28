@@ -243,3 +243,31 @@ def test_registry_lists_tools() -> None:
     assert "run_python" in tools
     assert "correlation_analysis" in tools
     assert len(tools) >= 9
+
+
+@pytest.mark.asyncio
+async def test_train_model_selects_numeric_features_from_mixed_dtypes() -> None:
+    """A plain CSV with a date and a label column must still train.
+
+    The baseline took every non-target column, so ``astype(float)`` died on the text
+    ones and the whole step failed on ordinary data. The columns it drops are reported
+    in the output rather than quietly omitted.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "sales.csv"
+        pl.DataFrame(
+            {
+                "date": [f"2024-{(i % 12) + 1:02d}-01" for i in range(60)],
+                "region": ["East", "West"] * 30,
+                "price": [10.0 + i for i in range(60)],
+                "units": [i % 7 for i in range(60)],
+                "revenue": [10.0 * i for i in range(60)],
+            }
+        ).write_csv(p)
+        r = await get("train_model").run(
+            {"dataset_path": str(p), "target": "revenue", "task": "regression"}
+        )
+        assert r.status == "ok", r.error
+        assert r.output is not None
+        assert r.output.features == ["price", "units"]
+        assert r.output.diagnostics["excluded_non_numeric"] == ["date", "region"]
