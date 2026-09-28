@@ -2220,3 +2220,63 @@ enumerated from source at all.
   `COMPLETED` for code I had already changed. In a shared tree with a demoted mirror, *which copy
   you imported is part of the measurement*, and I had not stated it.
 - A `timeout` prefix was used on a host without it (rc=127), silently skipped.
+
+## §53 D-L2-05 fixed and landed; D-L2-06 is a Proposed-ADR gap, not a bug I may close alone
+
+### 53.1 D-L2-05 — landed as `c6e5e8b`
+`train_model` selected every non-target column and then `astype(float)`, so an ordinary CSV
+whose `date` column the loader parses as temporal failed the whole step. No existing test
+covered mixed dtypes (`tests/unit/test_tools.py` used an all-numeric frame). Now numeric-only,
+with dropped columns reported in `diagnostics.excluded_non_numeric` rather than quietly omitted.
+Red first (`rc=1`, exactly the `datetime.date` message) then `rc=0`; 16 tools tests green
+including the untouched all-numeric one; ruff/format/mypy rc=0; mirror regenerated for
+`dsa_tools` alone. **The commit was verified in isolation**: a `git archive` export of HEAD
+runs `tests/plugins` + `tests/unit/test_tools.py` at rc=0 and still contains zero
+`HARD_FAIL_CHECKS`, proving the dtype fix does not depend on the held (a) change.
+
+### 53.2 D-L2-06 — the root cause is a phantom capability, and it is not in `export_artifact`
+`export_artifact` behaved **correctly**. Its contract says "Byte-identical relocation only —
+never synthesizes content" (`export_artifact.py:50-52`), and it refuses a source lacking
+`columns`+`rows`. Measured against the output models of everything the planner declares
+tabular (`_TABULAR_TOOLS`):
+
+| declared tabular | emits `columns`+`rows`? | note |
+|---|---|---|
+| `run_sql` | YES | the only conforming entry |
+| `train_model` | no | fields: cv_mean, cv_scores, cv_std, diagnostics, features, model, n_rows |
+| `evaluate_model` | no | confusion_matrix, metrics, task… |
+| `forecast` | no | date_col, forecast, metrics, periods… |
+| `feature_importance` | no | **emits base64_png — it is a chart tool, declared tabular** |
+| `regression_analysis` | no | coefficients, intercept, metrics… |
+
+Isolated from the dtype bug: an **all-numeric** dataset with a "predict y from a and b" query
+still ends `FAILED`, with `export_artifact: csv/xlsx export needs source with columns+rows`,
+because the hint `("predict","classif","churn","survival") → predictions.csv ← train_model`
+pairs a filename with a source that can never satisfy it. Every plan matching
+predict / evaluate-metrics / normalize keywords therefore carries a **guaranteed-failing step**.
+
+Four sources disagree about this capability, and only the runtime tells the truth:
+`docs/ADR/ADR-002-output-artifact-export-2026-09-08.md` is **Status: Proposed** and states the
+gap plainly ("tool results stay in memory; only charts persist as files today"); the planner
+behaves as if delivered; the tool output models say non-tabular; and
+`tests/unit/test_export_artifact.py:143-144` **pins** the phantom pairing
+(`by_name["predictions.csv"]["source"] == {"$from_tool": "train_model"}`).
+
+### 53.3 Why (a) is held uncommitted
+With `HARD_FAIL_CHECKS` active, that long-invisible failing step becomes a reported run failure
+for predict / evaluate intents — which is exactly what the fix is for, and also a user-visible
+status change beyond what §52 authorised. `tests/plugins/...integration` is red for this reason
+alone. The three files stay modified in the working tree (`graph.py`, its mirror, the new
+integration test) and are not committed, because §19.2 forbids clearing that red by relaxing the
+pinned test or narrowing the predicate as a way to get green.
+
+### 53.4 Decision required — three shapes, different cost
+| option | what it is | what it costs |
+|---|---|---|
+| **I implement ADR-002's producing side** | the five tools gain tabular projections of results they already computed (a representation, not invented content) | largest change; touches five output models + their mirror; the ADR is still `Proposed`, so this is shipping a feature under a fix label |
+| **II shrink `_TABULAR_TOOLS` to what conforms** | the planner stops emitting a step that can only fail; truth-telling, ~10 lines | removes an export that never worked; **requires editing a pinned assertion** at `test_export_artifact.py:143-144`, which is §N6 territory unless you rule that the pin encodes the defect; "predict and export" users get no CSV instead of a failing CSV step |
+| **III land (a) now, accept the red plugin test** | status honesty first, D-L2-06 tracked as its own S1 | main's suite is red for a known, documented reason; contradicts §30's "only gates that actually ran are reported" |
+My recommendation is **II**, because a declared-but-impossible capability is the defect this
+document's L7 lane exists to catch, and deleting a step that cannot succeed restores the truth.
+If you want the *feature* rather than the truth-correction, that is option I and should be
+approved as ADR-002 implementation, not as a bug fix.
