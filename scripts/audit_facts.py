@@ -94,7 +94,6 @@ CEILING_KEYS: dict[str, str] = {
     "capabilities.navDanglingEntries": "nav entries naming a file that is absent",
     "capabilities.navOrphanPages": "docs pages referenced by no nav entry",
     "capabilities.entrypointsWithoutTarget": "console scripts whose module cannot resolve",
-    "warnings.contradictions": "measured contradictions of any kind",
 }
 FLOOR_KEYS: dict[str, str] = {
     "debt.testFunctions": "tests may only be added, never quietly deleted",
@@ -116,6 +115,10 @@ EXCLUDED_KEYS: dict[str, str] = {
     "debt.ledgerLines": (
         "the ledger is append-only session record that §N10 mandates; gating it makes honest "
         "bookkeeping illegal -- measured for the ratio check, reviewed, never auto-failed"
+    ),
+    "warnings.contradictions": (
+        "a composite counter: adding any new probe would trip it with no debt change, so the "
+        "individual contradiction keys are gated and this total is only reviewed"
     ),
     "debt.markdownPercentClaims": (
         "counts ordinary prose percentages too, so it is too coarse to guard; L5 adjudicates"
@@ -332,12 +335,17 @@ def _collect_capabilities() -> dict[str, Any]:
     missing_dirs = [m for m in members if not (ROOT / m).is_dir()]
     member_leaf_names = {m.split("/")[-1] for m in members}
     packages_dir = ROOT / "packages"
+    # Only a directory that ships Python can be a workspace package. Without this,
+    # packages/artifacts/ -- gitignored output the test suite itself writes -- was
+    # counted as a package lacking a manifest, so any local `pytest` run turned the
+    # ratchet red for a reason that had nothing to do with debt.
     packages_without_manifest = [
         f"packages/{path.name}"
         for path in (sorted(packages_dir.iterdir()) if packages_dir.is_dir() else [])
         if path.is_dir()
         and path.name not in member_leaf_names
         and not (path / "pyproject.toml").is_file()
+        and any(path.rglob("*.py"))
     ]
 
     mirror = ROOT / "src" / "data_science_agent" / "_vendor"
