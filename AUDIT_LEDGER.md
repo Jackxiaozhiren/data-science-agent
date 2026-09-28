@@ -2334,3 +2334,42 @@ unfixed defects argues for the wrong conclusion.
 `packages/evaluation` untouched (foreign WIP). No push. Mirror regenerated per package only
 (`dsa_tools`, `dsa_agent`), never wholesale. Commit `a0dc728` verified standalone on a
 `git archive` export (49 tests rc=0, zero `HARD_FAIL_CHECKS`) before `4ba4c2f` was built on it.
+
+## §55 Verifying on a pristine export caught three defects, two of them mine and one of them a repeat
+
+Everything in §54 was asserted against the working tree. Re-running the same gates on
+`git archive HEAD` — what the runner checks out — produced a different verdict, and the
+difference was the point.
+
+| failure on the export | real or harness | cause |
+|---|---|---|
+| `test_debt_ratchet::test_the_ratchet_is_currently_satisfied` rc=1 | **real, mine** | floor seeded to 426 in the dirty tree; a clean checkout reads 424. The +2 is the concurrent session's two uncommitted test functions |
+| 18 ruff errors, 3 format diffs | harness | I ran pytest **before** ruff inside the export, and a `git archive` has no `.git`, so ruff could not honour `.gitignore` and linted ~3 generated notebooks my own test run created. CI is unaffected: `ci.yml` lints at :84-85, pytest runs at :87 |
+| `test_fresh_clone_workspace_members_are_tracked`, `test_typescript_compiles` | harness | the first shells out to `git ls-files` (no `.git` in an export); the second needs `node_modules`, which `ci.yml:79` installs before pytest |
+
+### 55.1 The floor trap, now caught three times
+419 vs 423 in §53, then 424 vs 426 here — each time because `--seed` was re-run locally and
+silently re-baked the working tree's reading. A clean measurement on top of a dirty tree is
+still dirty. Two remedies, both landed: the floor is set to 400 with the divergence written into
+`_floorPolicy`, and the prompt's §4 now states the rule, so the next session is not relying on
+my having remembered it.
+
+### 55.2 Mechanism fix, `b612882`
+`capabilities.packagesWithoutManifest` counted `packages/artifacts/` — gitignored output the suite
+itself writes (786 generated notebooks locally) — as a package missing a manifest, so any local
+pytest run reddened the ratchet for a non-debt reason. It now requires the directory to hold
+Python source. Falsified in an isolated `/tmp` tree rather than the shared one: a
+`packages/zzpkg` with `__init__.py` and no manifest is reported; delete the `.py` and the same
+tree reports nothing. `warnings.contradictions` also stopped being a ceiling — a composite counter
+trips whenever anyone adds a probe, which is §4's own rule applied to me.
+
+### 55.3 Final state on a clean checkout, in CI's step order
+vendor rc=0 · npm lock rc=0 · ruff rc=0 · format rc=0 · mypy rc=0 · ratchet rc=0 **before and
+after** the suite · pytest rc=0 (deselecting only the two tests that need `.git` / `node_modules`,
+both of which CI provides). Locally all gates rc=0 except `sync_vendor --check`, which names only
+`dsa_evaluation` — another session's uncommitted file, and HEAD itself is in sync.
+
+### 55.4 Still open, unchanged by this section
+D-L2-07 (benchmark `task_success` never reads status; `metrics.py:68-77`) remains a filed
+decision, not a fix. L4-L8 have still never run (§6.4 census). No push at any point, so no remote
+witness exists for the CI wiring added in §50 — `ci.yml`'s new step has never executed on a runner.
