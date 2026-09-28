@@ -16,6 +16,7 @@
   "_floorKeys": {
     "debt.testFunctions": "tests may only be added, never quietly deleted"
   },
+  "_floorPolicy": "Floors are set below the committed-truth reading on purpose. debt.testFunctions is counted from files on disk, so it differs between environments: a working tree holding another session's uncommitted tests reads higher than the checkout CI builds. Seeding a floor at the exact local number therefore guarantees a false red -- this happened twice, once at 423 against CI's 419 and again at 426 against 424, both from re-running --seed locally. The floor's job is to catch mass deletion of tests, not to equal the count.",
   "_keys": {
     "capabilities.artifactCopyWithoutMember": "vendored copies whose source is gone",
     "capabilities.entrypointsWithoutTarget": "console scripts whose module cannot resolve",
@@ -50,6 +51,6 @@
     "debt.unwiredCheckers": 1
   },
   "floor": {
-    "debt.testFunctions": 426
+    "debt.testFunctions": 400
   }
 }

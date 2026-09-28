@@ -188,7 +188,7 @@ Three things that look like ceiling candidates but cannot be collector keys: **c
 - **Excluded: source-file counts and any array length that is constant by construction.** These rise with legitimate work.
 - **Excluded: any number an existing gate already machine-checks** (lint findings, type errors, coverage floor as configured in `pyproject.toml`). Adding a second source of truth for a number CI already enforces creates disagreement, not safety. Extend the existing gate instead.
 
-Record each exclusion as a comment beside the whitelist with its reason, or the next contributor re-adds it.
+Record each exclusion as a comment beside the whitelist with its reason, or the next contributor re-adds it. **Never seed a floor at the exact local reading**: disk-derived counts differ between a working tree and a CI checkout, so a floor above what CI can measure is a guaranteed false red -- seed from a clean export and keep deliberate margin, because a floor's job is to catch mass deletion, not to equal the count.
 
 **Wiring.** `--check` becomes the **first** CI step after dependency install, so debt fails before the slow build does. That is a workflow edit → §27 lock **L7**, requires approval, and a proposed diff is a Phase 2 deliverable. Until it is approved, the local invocation is part of the §26 gate set and the ledger records the wiring as an open `BLOCKED` finding.
 
