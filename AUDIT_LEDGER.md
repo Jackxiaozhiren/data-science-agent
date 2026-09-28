@@ -2585,3 +2585,42 @@ My own `tests/integration/test_agent_analysis.py` asserts `state.status is Analy
 
 ### 59.4 Non-actions
 No file edited in this lane; all five findings stop at the Phase 2 gate. `packages/evaluation` and `tests/evals` read but untouched (foreign WIP). L5–L8 still unrun. No push in this turn.
+
+## §60 L4 closed as diagnosis — one defence landed, one finding declined on cost, one awaiting a product answer
+
+### 60.1 Landed
+- **D-L4-01 defence** (`43c069c`): `tests/unit/test_vendor_parity.py` makes a stale mirror fail local
+  `pytest`, not only the CI integrity step. Per-file scope; each case asserts it compared ≥1 file.
+  Negative control by injecting drift into one mirror file → rc=1 naming `dsa_ml/__init__.py`, restored
+  byte-identical from a `/tmp` copy (never `git checkout`; shared tree).
+- **§59.2 self-review** (`29ab14c`): the status assertion I wrote last lane now compares by value.
+  Negative control by narrowing `HARD_FAIL_CHECKS` to `{budget}` → rc=1, proving the rewrite still
+  bites; `graph.py` restored byte-identical and clean.
+
+Full gates after both: ruff 0 · format 0 · mypy 0 · pytest 0 · ratchet 0 · leaderboard 0.
+
+### 60.2 Declined, with the price stated
+**D-L4-02** — I recommended doing it, then measured the work instead of assuming it, and the
+recommendation was wrong. `dsa_tools/errors.py` already imports nothing, so it *is* a leaf module;
+the cycle exists only because package = distribution unit. Removing it means a new workspace
+member (`[tool.uv.workspace]`, `[tool.uv.sources]`, both dependency lists, the coverage `source`
+list, `sync_vendor.SOURCES`, and the coupled exclusions). Spending a ≤2-per-session structural
+budget on an **S3 with no behavioural consequence** is a bad trade, so it is recorded as Phase 4
+uplift, not fixed here. Cost of the deferral: the two packages cannot be split, versioned or
+reasoned about independently, and any future reader re-derives the "is this a real cycle?"
+question this lane just answered.
+
+**D-L4-01 redesign** — rejected outright: vendoring is what makes the single-wheel install work
+(`PROTECTED`, §27 L1-adjacent). The fixable part was the missing local guard, which is now in.
+
+### 60.3 Still needs one word from the maintainer
+**D-L4-03** `langgraph_graph.py`: unreachable from `src/`, `apps/`, `packages/`; 513 lines; its own
+test leaves `221-395` never executed. Answering "planned surface" ⇒ wire it behind a documented
+switch and it earns its coverage. Answering "experiment" ⇒ move it out of the coverage `source`
+list so it stops inflating the denominator. **Not doing either** is also legitimate but must be
+recorded, because the current state is the worst of both: dead to users, alive in the metric.
+Deletion stays `BLOCKED` under lock L5 regardless.
+
+### 60.4 Lane census after this session
+L1 16 · L2 7 · L3 5 · **L4 5** · L5–L8 zero. `debt.unwiredCheckers` still names
+`scripts/check_public_claims.py`; L5–L8 remain unexamined, not clean.
