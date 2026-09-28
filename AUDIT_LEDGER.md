@@ -2472,3 +2472,48 @@ Gates on the committed tree: ruff 0 · format 0 · mypy 0 · pytest 0 · ratchet
 (`dsa_evaluation`, the foreign file only). Lanes still unrun: L4–L8. Nothing pushed since §56's
 witness, so `c1c7680` has no remote verdict yet — and it should, because it is the first change in
 this series whose correctness depends on the mirror rather than on the source.
+
+## §58 Remote witness for the metric fix; β landed; the exit-code trap fired twice on my own wrapper
+
+### 58.1 `9754e8b` verified on the runner, not inferred
+`gh run watch --exit-status` reported **0**, and independently the API reports `RUN completed
+success` with both jobs `completed success`. Step evidence, with runner timestamps:
+
+```
+08:40:14.860  audit_facts --check      -> facts ratchet: OK
+08:40:14.931  sync_vendor --check      -> OK: vendored dsa_* is in sync
+08:40:36      ruff format / mypy       -> 197 files / no issues in 112 files
+08:41:18      pytest --cov             -> coverage floor reached
+08:41:23      Build wheel and sdist    -> Successfully built …whl
+08:42:34      docker run dsa-api:ci .venv/bin/dsa --help
+```
+
+That is the first time this series' changes have been exercised through the **installed artifact and
+containers**, not just the source tree — which is the only place the mirror semantics of §57 can
+actually be falsified.
+
+### 58.2 Two reporting errors of mine, both the same class
+The earlier "CI came back green" was wrong, twice over:
+1. I read the background task's reported exit code, which was my wrapper's **last** stage
+   (`gh run view`, or `echo`) — not `gh run watch`'s. The watcher had actually died with rc=1 on a
+   network read error (`can't assign requested address`, the proxy's fake-IP range) while `ci` was
+   still in progress. A proxy failure was about to be reported as a pipeline verdict.
+2. The fix is structural, not careful: every watcher now captures its own code into a named
+   variable (`W5_REAL=$?`) and the authoritative conclusion is re-read from the API, so a green
+   wrapper can no longer be mistaken for a green run.
+
+Also caught in verification: I cited `docs/reproducibility.md §"Immutable baselines"` — the heading
+is **§Immutability**. Wrong anchor, fixed before shipping.
+
+### 58.3 β — `e86cb12`, pushed as `9754e8b..e86cb12`
+`benchmarks/baseline/README.md` now declares which evaluator produced the frozen `1.0` and states
+that a lower measured number is honesty rather than regression, with the command to reproduce it.
+Existing claims were left intact, not softened — rewriting "fails CI" into something vaguer would
+have been anti-pattern A8. Two scope limits verified rather than assumed: the regression test
+compares the **stored** file and nothing in CI recomputes the snapshot; re-freezing needs a version
+bump under §Immutability. mkdocs `--strict` rc=0, `pytest tests/regression` rc=0,
+`check_public_claims` rc=0.
+
+§58's own ledger entry is committed locally and deliberately **not pushed yet**: pushing now would
+trip `ci.yml`'s `cancel-in-progress` and destroy the run watching `e86cb12`, which is the exact
+mistake §48(3) recorded.
