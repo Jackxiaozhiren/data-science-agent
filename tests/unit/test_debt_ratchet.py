@@ -1,0 +1,110 @@
+"""The ratchet's second consumer: a red gate must survive without anyone running a CLI.
+
+A check that only exists as a command line is a check that gets skipped. These
+tests import the collector directly, so CI's ``pytest`` step fails on debt regrowth
+even if the dedicated ratchet step is dropped from a workflow.
+
+The last three tests are the point of the file: a guard nobody has watched fail is
+a guard that may be vacuous. Each fires a deliberate violation and asserts the
+ratchet names it.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+LIMITS = ROOT / "docs" / "audit" / "facts.limits.json"
+
+
+def _collector() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "audit_facts", ROOT / "scripts" / "audit_facts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="module")
+def facts() -> dict[str, Any]:
+    return _collector().collect_facts()
+
+
+def test_limits_file_is_committed_policy() -> None:
+    assert LIMITS.is_file(), "docs/audit/facts.limits.json is the reviewable ceiling ledger"
+    limits = json.loads(LIMITS.read_text(encoding="utf-8"))
+    assert limits.get("_seededAtHead"), "the ledger must record the ref it was seeded at"
+    assert limits.get("_keys") or limits.get("_floorKeys"), "an empty ledger guards nothing"
+
+
+def test_every_guarded_key_is_actually_measured(facts: dict[str, Any]) -> None:
+    """A key the ledger names that nothing measures is a silent no-op."""
+    collector = _collector()
+    leaves = collector.numeric_leaves(facts)
+    limits = json.loads(LIMITS.read_text(encoding="utf-8"))
+    declared = set(limits.get("ceiling", {})) | set(limits.get("floor", {}))
+    unmeasured = sorted(key for key in declared if key not in leaves)
+    assert not unmeasured, f"ledger guards keys nothing measures: {unmeasured}"
+
+
+def test_every_ceiling_key_states_the_debt_it_guards() -> None:
+    limits = json.loads(LIMITS.read_text(encoding="utf-8"))
+    reasons = limits.get("_keys", {})
+    for key in limits.get("ceiling", {}):
+        assert reasons.get(key), f"{key} has no reason string: a reviewer cannot vote on it"
+    assert limits.get("_excluded"), "the excluded-key register must travel with its reasons"
+
+
+def test_the_ratchet_is_currently_satisfied(facts: dict[str, Any]) -> None:
+    collector = _collector()
+    limits = json.loads(LIMITS.read_text(encoding="utf-8"))
+    report = collector.evaluate_ratchet(facts, limits)
+    assert not report["violations"], f"debt grew past its ceiling: {report['violations']}"
+
+
+def test_ratchet_fails_when_debt_grows(facts: dict[str, Any]) -> None:
+    collector = _collector()
+    leaves = collector.numeric_leaves(facts)
+    key = "debt.suppressionDirectives"
+    tampered = {"ceiling": {key: max(leaves[key] - 1, -1)}, "floor": {}}
+    report = collector.evaluate_ratchet(facts, tampered)
+    problems = {v["problem"] for v in report["violations"]}
+    assert "debt_grew" in problems, "the ratchet did not notice a ceiling being crossed"
+
+
+def test_ratchet_fails_when_a_floor_guard_shrinks(facts: dict[str, Any]) -> None:
+    collector = _collector()
+    leaves = collector.numeric_leaves(facts)
+    tampered = {"ceiling": {}, "floor": {"debt.testFunctions": leaves["debt.testFunctions"] + 1}}
+    report = collector.evaluate_ratchet(facts, tampered)
+    assert any(v["problem"] == "guard_shrank" for v in report["violations"])
+
+
+def test_ratchet_fails_when_a_key_stops_being_measured(facts: dict[str, Any]) -> None:
+    collector = _collector()
+    tampered = {"ceiling": {"debt.nothing_ever_measures_this": 1}, "floor": {}}
+    report = collector.evaluate_ratchet(facts, tampered)
+    assert any(v["problem"] == "key_no_longer_measured" for v in report["violations"])
+
+
+def test_capability_probes_report_contradictions_not_opinions(facts: dict[str, Any]) -> None:
+    """Each warning id must be a measured pair the reader can re-derive, never a verdict."""
+    for entry in facts["warnings"]["contradictions"]:
+        assert isinstance(entry, str) and entry, f"malformed warning id: {entry!r}"
+        assert not any(word in entry.lower() for word in ("bad", "should", "must", "broken")), (
+            f"probe emitted a judgement instead of a contradiction: {entry}"
+        )
+
+
+def test_excluded_keys_are_not_secretly_ceilings(facts: dict[str, Any]) -> None:
+    collector = _collector()
+    limits = json.loads(LIMITS.read_text(encoding="utf-8"))
+    leaked = sorted(set(limits.get("ceiling", {})) & set(collector.EXCLUDED_KEYS))
+    assert not leaked, f"these keys were documented as ungateable yet carry a ceiling: {leaked}"
