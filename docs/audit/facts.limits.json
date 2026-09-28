@@ -2,6 +2,7 @@
   "_excluded": {
     "capabilities.largestSourceFiles": "array length is constant by construction",
     "capabilities.sourceFiles": "grows whenever anyone writes code",
+    "capabilities.untestedCallbacks": "L8's candidate key: 'shapes a test names' needs a semantic judgement the collector cannot make from syntax alone, so a count here would be a proxy that can be satisfied without guarding anything -- adjudicated per dependency instead",
     "debt.coveragePercent": "already machine-checked by pytest's fail_under -- no second source",
     "debt.ledgerLines": "the ledger is append-only session record that \u00a7N10 mandates; gating it makes honest bookkeeping illegal -- measured for the ratio check, reviewed, never auto-failed",
     "debt.lintFindings": "already machine-checked by ruff -- no second source",

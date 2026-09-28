@@ -120,6 +120,11 @@ EXCLUDED_KEYS: dict[str, str] = {
         "a composite counter: adding any new probe would trip it with no debt change, so the "
         "individual contradiction keys are gated and this total is only reviewed"
     ),
+    "capabilities.untestedCallbacks": (
+        "L8's candidate key: 'shapes a test names' needs a semantic judgement the collector "
+        "cannot make from syntax alone, so a count here would be a proxy that can be satisfied "
+        "without guarding anything -- adjudicated per dependency instead"
+    ),
     "debt.markdownPercentClaims": (
         "counts ordinary prose percentages too, so it is too coarse to guard; L5 adjudicates"
     ),
