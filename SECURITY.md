@@ -14,11 +14,11 @@ Report privately via GitHub Security Advisories (preferred) or open a private Gi
 
 ## Sandbox Model
 
-- **File**: MIME sniff + extension allowlist, 100 MB cap, archive-bomb guard, path traversal block (`packages/execution/file_validator.py`).
-- **SQL**: Read-only allowlist (`SELECT/WITH/SHOW/DESCRIBE/EXPLAIN`), row limit `10k`, no `INSERT/UPDATE/DELETE` (`sql_validator.py` + `run_sql`).
+- **File**: MIME sniff (`packages/execution/src/dsa_execution/mime_sniff.py`) + extension allowlist, 100 MB cap, archive-bomb guard, path traversal block (`packages/datasets/src/dsa_datasets/validate.py`).
+- **SQL**: Read-only allowlist (`SELECT/WITH/SHOW/DESCRIBE/EXPLAIN`), row limit `10k`, no `INSERT/UPDATE/DELETE` (`packages/execution/src/dsa_execution/sql_guard.py` + `run_sql`).
 - **Python**: AST allowlist, `_safe_import` deny `os/subprocess/socket/requests/eval/exec/open/__import__`, allowed `{polars, numpy, math, statistics, json, re, datetime, collections, itertools}`, 5s wall-clock (`python_sandbox.py`).
-- **Prompt injection**: Dataset is `UNTRUSTED DATA`, pattern detection `PROMPT_INJECTION_PATTERNS`, output causal-claim rewrite (`guardrails.py` + `dsa_agent/critic.py`).
-- **Resource limits**: Tool budgets `max_steps 20 / max_tool_calls 40 / max_retries 3` (`packages/agent/graph.py`) + evidence coverage gating.
+- **Prompt injection**: Dataset is `UNTRUSTED DATA`, pattern detection `contains_prompt_injection` / `_INJECTION_PATTERNS`, output causal-claim rewrite (`guardrails.py` + `packages/agent/src/dsa_agent/critic.py`).
+- **Resource limits**: Tool budgets `max_steps 20 / max_tool_calls 40 / max_retries 3` (declared in `packages/agent/src/dsa_agent/state.py`) + evidence coverage gating.
 
 ## Supply Chain & Security Hardening
 
