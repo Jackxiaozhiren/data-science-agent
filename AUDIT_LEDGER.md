@@ -1982,3 +1982,58 @@ docs-only commit.
    pin, D-L3-03's `passed: True`-on-error handlers, the `plugins`/`execution` dead exclusions,
    and §46(5)'s "should the local suite police the mirror?" question are all still open, and
    §47(5) still holds the decision on that last one.
+
+## §49 The fact mechanism landed, and it immediately caught its own author twice
+
+This is not a lane. It records the infrastructure the v2 prompt's §3/§4/§20.0
+mandated, because the alternative was a mechanism with no written provenance.
+
+**What shipped** (`git log --oneline -9`, one path per commit): `scripts/audit_facts.py`
+(runtime collector, stdlib-only, ~0.8s, no subprocess), `docs/audit/facts.limits.json`
+(14 ceilings + 1 floor + 11 excluded-with-reason), `tests/unit/test_debt_ratchet.py`
+(11 tests, the second consumer), the `.gitignore` line for the derived snapshot, and the
+rewritten `REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md` at 1128 lines against v1's 1129.
+
+**Baseline for the next session, all from the collector, not typed from memory:**
+run `uv run python scripts/audit_facts.py --check` and `--write`, and read
+`docs/audit/facts.snapshot.json`. Every number this entry would otherwise have
+frozen is in that snapshot with its `generatedAt` and ref — which is precisely the
+mistake §49 would have repeated.
+
+**Two findings about the instrument, both self-inflicted and both fixed:**
+
+1. `D-INFRA-01` — the collector indicted its own source. Its regex literals scored as
+   the repository's entire debt-marker count (reported 8, real 0) and it listed itself
+   among the unwired checkers. Tier T0: `--seed` refused, then `command -v`-free reading
+   of the shipped tree confirmed 0. Fixed by `SELF` exclusion, and the rule is now written
+   into the prompt's §3 ("the instrument never measures itself").
+2. `D-INFRA-02` — a ceiling whose only exits were "stop recording" or "delete other prose"
+   (`debt.auditApparatusLines` = 3112 = ledger + prompt, seeded at the exact sum, so a
+   mandated §6.2 ledger entry breached it on arrival). Approved as option A: the key now
+   covers prompt/spec documents only; ledger volume is `debt.ledgerLines`, measured and
+   reviewed but not gated. Ceiling moved 3112 → 1128, a tightening.
+
+**Contamination caught before it could bite CI.** Re-seeding floors off this working tree
+reported `debt.testFunctions` 423; a pristine `git archive` export of HEAD reads 420. The
+gap is another session's uncommitted tests. A floor above what CI can check out is a
+guaranteed false red, so it is pinned to 420 and the divergence is recorded in `_seedNote`
+alongside `capabilities.packagesWithoutManifest` (1 here, 0 clean — untracked dir).
+Method: `git archive HEAD | tar -x -C /tmp/x && cp scripts/audit_facts.py /tmp/x/scripts/`.
+
+**Every guard here was shown capable of failing, per §11.3** — the prompt's own rule,
+applied to the prompt's own author: mutating `evaluate_ratchet` to always return clean
+turns 3 tests red; disabling `numeric_leaves` turns 4; emptying the seed-preservation
+block turns exactly 1; redefining one ceiling reason in code only turns exactly the
+register-drift test. Unmutated: 11 green.
+
+**Deliberate non-actions.** `sync_vendor.py --check` is red (1 file under `dsa_evaluation`)
+and I did **not** resync it — that is §7 class-(c) derived drift caused by another session's
+uncommitted `packages/evaluation/.../external_validation.py`; resyncing would ship their
+semantics under my message. No push (L10). No workflow edit (L7): the one-line CI wiring is
+prepared and verified green against a clean export, and awaits its own approval.
+
+**Open decisions.** (1) Wire `audit_facts.py --check` as the first step after `uv sync` in
+`ci.yml` — until then the ratchet is local-plus-pytest only, and `debt.unwiredCheckers`
+correctly still counts `scripts/check_public_claims.py` as the ledger's pre-existing finding.
+(2) §46(5)'s "should the local suite police the mirror?" question, which this mechanism
+reopens from the other side: it now can, if the mirror parity keys are wired in.
