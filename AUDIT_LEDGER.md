@@ -2624,3 +2624,71 @@ Deletion stays `BLOCKED` under lock L5 regardless.
 ### 60.4 Lane census after this session
 L1 16 · L2 7 · L3 5 · **L4 5** · L5–L8 zero. `debt.unwiredCheckers` still names
 `scripts/check_public_claims.py`; L5–L8 remain unexamined, not clean.
+
+## §61 Lane L5 — documentation and public-claim consistency (first run)
+
+### D-L5-01 — FIXED (`docs/agent.md`, guard in `tests/unit/test_imports.py`)
+Claimed entry point `analyze_graph` does not exist anywhere in the code; claimed optional import of
+`langgraph.graph.StateGraph` is in fact an unconditional top-level import. Both corrected, with the
+reachability fact from §59 stated in the doc. This also settles **D-L4-03** the rule-compliant way:
+the false part is gone from the docs; the module is left in place, no coverage exclusion is added
+(§N6 / R11), and wiring-or-retiring remains a release decision rather than an audit-time edit.
+
+Guard design note: the first version of the test was wrong and the failure was informative — it
+rejected the token `langgraph`, which is a legitimate third-party module name in prose. Rule is now
+"resolves to a `dsa_agent` attribute **or** an importable module", plus an in-test assertion that
+the phantom name still does not resolve, so the guard cannot decay into vacuity. Red `rc=1` naming
+`analyze_graph`, then green.
+
+### D-L5-02 — BLOCKED, `SECURITY.md` names two files that do not exist
+| line | names | tracked reality |
+|---|---|---|
+| 17 | `packages/execution/file_validator.py` | no such file. The described behaviour lives in `packages/execution/src/dsa_execution/mime_sniff.py` (`sniff_mime`, `is_allowed_mime`, `looks_like_zip_bomb`) plus `packages/datasets/src/dsa_datasets/validate.py` |
+| 21 | `packages/agent/graph.py` | real path `packages/agent/src/dsa_agent/graph.py` |
+
+Line 17 also names `sql_validator.py`, which does not exist either: the read-only SQL allowlist is
+`packages/execution/src/dsa_execution/sql_guard.py`. A security policy pointing at nonexistent
+modules is the specific case where "just fix the path" is still an approval item (§28): accuracy
+fixes are welcome, but a security document is a public trust surface, so exact before/after is
+required, not a drive-by edit. Proposed diff is ready; **needs your approval to apply.**
+
+### D-L5-03 — BLOCKED, supported-versions table behind the release line
+`SECURITY.md:43-44` lists `4.2.10` and `4.3.2`; `pyproject.toml` declares 4.4.0. Whether that is a
+stale table or a deliberate support window is a policy question, not an accuracy fix — the table
+*defines* what is supported, so widening or moving it changes a commitment. Reported, not changed.
+
+### D-L5-04 — BLOCKED by file ownership
+`README.md:16` still presents `v4.3.0` while the packaged version differs (v1's own lead, still
+live). `README.md` is **another session's uncommitted file** in this shared tree, so it is
+class-(b): I neither edit it nor commit it. Noted so it is not mistaken for my omission.
+
+### D-L5-05 — measured, not gated
+`docs/reproducibility.md` §Immutability and `benchmarks/baseline/README.md` were both re-read this
+lane; §60's β annotation stands. The claims checker reports its own surface
+(`scanned 14, skipped 51 as historical`), which is what §35's fix was for — it is now readable as
+"these 14, not 'all docs'", so a clean exit can be interpreted correctly.
+
+### 61.1 Non-findings and refutations
+- Doc-stated tool budgets, critic/prompt-injection and sandbox file references (`guardrails.py`,
+  `python_sandbox.py`, `dsa_agent/critic.py`) all resolve to tracked files: reviewed, correct.
+- "MVP sequential engine" in the same section is **correct and current** — measured by the fact
+  that `run_analysis` is what every shipped surface reaches. Left alone.
+- The generic version of my phantom-symbol probe (all docs, all backticked names) returned 13
+  hits of which 10 were builtins or third-party (`len`, `hasattr`, `astype`, `accuracy_score`) and
+  it **missed the actual defect**, which is written without parentheses. Recorded as a rejected
+  instrument: a gate that is 77% noise and blind to the real case is worse than the targeted check
+  that fired. §4's CI-testability rule applied to my own probe design.
+
+### 61.2 Law liveness
+| law | state | decider |
+|---|---|---|
+| §16 STALE vs UNVERIFIABLE split | ACTIVE | D-L5-01/02 are stale-wrong and fixed-or-proposed; D-L5-03 is a policy definition, so not "stale" |
+| §16 never reword to make a claim unfalsifiable | ACTIVE, honoured | the agent.md rewrite makes the claim narrower and truer, it does not delete it |
+| §7.2 attribute every red before reporting | ACTIVE | the L5 guard's first failure was my rule being wrong, not the doc |
+| §7 concurrency: foreign file is not a finding | ACTIVE | README.md untouched, D-L5-04 attributed |
+| §11.3 guards must be shown to bite | ACTIVE | in-test self-check that `analyze_graph` stays unresolved |
+
+### 61.3 State
+Gates after the commit: ruff 0 · format 0 · mypy 0 · pytest 0 · ratchet OK · mkdocs --strict 0 ·
+claims checker 0. Census: L1 16 · L2 7 · L3 5 · L4 5 · **L5 5** · L6–L8 zero. No push performed in
+this lane yet; three local commits are queued.
