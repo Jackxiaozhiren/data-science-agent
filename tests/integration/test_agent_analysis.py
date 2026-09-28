@@ -213,4 +213,6 @@ async def test_recorded_hard_check_flips_terminal_status(
     failing = [r.check for r in state.validation_results if not r.passed]
     assert failing == ["unsupported_claim"]
     assert state.report_markdown, "the report must still be produced"
-    assert state.status is AnalysisStatus.FAILED
+    # value comparison, not identity: AnalysisStatus has two possible objects, and
+    # the installed path resolves to the vendored one (audit §59.2)
+    assert state.status == AnalysisStatus.FAILED
