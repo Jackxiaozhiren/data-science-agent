@@ -133,3 +133,19 @@ def test_seed_preserves_human_authored_notes(tmp_path: Path, facts: dict[str, An
 def monkeypatch_module_paths(collector: Any, limits: Path, snapshot: Path) -> None:
     collector.LIMITS = limits
     collector.SNAPSHOT = snapshot
+
+
+def test_committed_registers_match_the_collector_that_wrote_them(facts: dict[str, Any]) -> None:
+    """The ledger's reason registers are written by the collector, so they must agree.
+
+    A key can be redefined in code and left stale in the committed policy; the gate
+    then enforces one thing while the reviewable contract describes another. This
+    test is what makes a partial re-seed or a hand edit visible instead of silent.
+    """
+    collector = _collector()
+    limits = json.loads(LIMITS.read_text(encoding="utf-8"))
+    assert limits["_keys"] == collector.CEILING_KEYS, "ceiling reasons drifted from the code"
+    assert limits["_floorKeys"] == collector.FLOOR_KEYS, "floor reasons drifted from the code"
+    assert limits["_excluded"] == collector.EXCLUDED_KEYS, "the exclusion register drifted"
+    assert not (set(limits["ceiling"]) & set(collector.EXCLUDED_KEYS)), "an excluded key is gated"
+    assert set(limits["ceiling"]) == set(collector.CEILING_KEYS), "a keyed ceiling is missing"
