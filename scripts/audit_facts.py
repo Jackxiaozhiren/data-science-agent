@@ -509,18 +509,25 @@ def _seed(facts: dict[str, Any]) -> int:
         return 1
     ceiling = {key: leaves[key] for key in CEILING_KEYS}
     floor = {key: leaves[key] for key in FLOOR_KEYS if key in leaves}
+    SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+    preserved: dict[str, Any] = {}
+    if LIMITS.is_file():
+        previous = json.loads(_read(LIMITS) or "{}")
+        preserved = {k: v for k, v in previous.items() if k.endswith("Note")}
     payload = {
         "_seededAt": facts["generatedAt"],
         "_seededAtHead": facts["git"]["head"],
         "_keys": CEILING_KEYS,
         "_floorKeys": FLOOR_KEYS,
         "_excluded": EXCLUDED_KEYS,
+        **preserved,
         "ceiling": ceiling,
         "floor": floor,
     }
-    SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
     LIMITS.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"seeded {len(ceiling)} ceiling and {len(floor)} floor keys")
+    if preserved:
+        print(f"preserved human-authored fields: {', '.join(sorted(preserved))}")
     return 0
 
 

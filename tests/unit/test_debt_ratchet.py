@@ -108,3 +108,28 @@ def test_excluded_keys_are_not_secretly_ceilings(facts: dict[str, Any]) -> None:
     limits = json.loads(LIMITS.read_text(encoding="utf-8"))
     leaked = sorted(set(limits.get("ceiling", {})) & set(collector.EXCLUDED_KEYS))
     assert not leaked, f"these keys were documented as ungateable yet carry a ceiling: {leaked}"
+
+
+def test_seed_preserves_human_authored_notes(tmp_path: Path, facts: dict[str, Any]) -> None:
+    """The limits ledger is a reviewable policy asset, so a re-seed must not eat prose.
+
+    A generator silently overwriting a human's provenance note is the same failure
+    class as hand-editing a generated mirror: the edit looks shipped and is gone at
+    the next run. Isolated in tmp_path so the committed ledger is never touched.
+    """
+    collector = _collector()
+    limits = tmp_path / "facts.limits.json"
+    monkeypatch_module_paths(collector, limits, tmp_path / "facts.snapshot.json")
+    assert collector._seed(facts) == 0
+    written = json.loads(limits.read_text(encoding="utf-8"))
+    written["_reviewNote"] = "a human's reasoning, not a measurement"
+    limits.write_text(json.dumps(written), encoding="utf-8")
+    assert collector._seed(facts) == 0
+    assert json.loads(limits.read_text(encoding="utf-8"))["_reviewNote"], (
+        "re-seed clobbered policy prose"
+    )
+
+
+def monkeypatch_module_paths(collector: Any, limits: Path, snapshot: Path) -> None:
+    collector.LIMITS = limits
+    collector.SNAPSHOT = snapshot
