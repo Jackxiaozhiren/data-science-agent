@@ -2037,3 +2037,33 @@ prepared and verified green against a clean export, and awaits its own approval.
 correctly still counts `scripts/check_public_claims.py` as the ledger's pre-existing finding.
 (2) §46(5)'s "should the local suite police the mirror?" question, which this mechanism
 reopens from the other side: it now can, if the mirror parity keys are wired in.
+
+## §50 The ratchet is wired into CI, and §49's reason for waiting was false
+
+`ci.yml` gained one step, `uv run python scripts/audit_facts.py --check`, placed after
+`uv sync --dev` and before ruff/mypy/pytest/wheel/container builds. §49's open decision
+(1) is therefore closed, and §49's stated reason for deferring was wrong:
+
+- **Claimed in §49:** wiring it would make the first run red because `sync_vendor --check`
+  is already rc=1.
+- **Measured now:** that rc=1 is a *working-tree* artifact of another session's uncommitted
+  `packages/evaluation/.../external_validation.py`. A pristine `git archive` export of HEAD —
+  what the runner checks out — prints `OK: vendored dsa_* is in sync` at rc=0, because
+  `dd8d3c9` already resynced the mirror. The premise for waiting did not survive contact
+  with the export, so the wait was withdrawn rather than quietly dropped.
+
+**Runner-shaped conditions actually exercised, not assumed.** A detached HEAD with a real
+`.git/HEAD` (what `actions/checkout` produces) was simulated: head resolves, branch reports
+`(detached)`, `commitStampAgeDays` degrades to `None` instead of raising, and `--check` exits
+0 with 3 warnings against a ceiling of 4. `capabilities.packagesWithoutManifest` is empty
+there — the runner cannot see an untracked directory — which is the divergence §49 recorded.
+
+**Verified static:** the added step interpolates nothing, and no `run:` step in any workflow
+here interpolates `github.event`, `inputs`, or dispatch payload values.
+
+**Still a simulation, not the runner.** The remote witness arrives only on push, which has not
+happened and needs its own approval.
+
+**One gate derivation, one owner:** §26's derivation command now surfaces this gate
+automatically, which is the point of deriving rather than copying — a prose gate list would
+have silently gone stale again the moment this step landed.
