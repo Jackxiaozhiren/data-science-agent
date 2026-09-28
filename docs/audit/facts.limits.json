@@ -32,6 +32,7 @@
   },
   "_seededAt": "2026-09-28T05:06:46Z",
   "_seededAtHead": "2debeb6586ab8b1571813dbc4ec6f49ef994bc60",
+  "_seedNote": "Seeded from a working tree holding another session's uncommitted files. Measured against a pristine `git archive` export of HEAD: every key agrees except capabilities.packagesWithoutManifest (1 here, 0 clean -- the memberless dir under packages/ is untracked) and debt.testFunctions (421 here, 419 clean). Ceilings keep the dirty reading so the local gate stays honest rather than false-red, at the cost of one tolerated unit on that key; CI sees the clean value and still trips on any further regression.",
   "ceiling": {
     "capabilities.artifactCopyWithoutMember": 0,
     "capabilities.entrypointsWithoutTarget": 0,
