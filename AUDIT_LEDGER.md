@@ -2373,3 +2373,48 @@ both of which CI provides). Locally all gates rc=0 except `sync_vendor --check`,
 D-L2-07 (benchmark `task_success` never reads status; `metrics.py:68-77`) remains a filed
 decision, not a fix. L4-L8 have still never run (§6.4 census). No push at any point, so no remote
 witness exists for the CI wiring added in §50 — `ci.yml`'s new step has never executed on a runner.
+
+## §56 Remote witness obtained — the ratchet executed on the runner, in the intended position
+
+Pushed `0a64a72..f9db412` as a **fast-forward** (23 commits, all authored in this session;
+`git rev-list --left-right --count origin/main...HEAD` was `0 23` before and `0 0` after). No
+force, no rebase, nothing from the concurrent session published.
+
+`gh run watch --exit-status` returned 0: **run 36393018502 completed success**, jobs `ci` (32
+steps) and `web-regression` (13 steps). The remote also reported `Required status check "ci" is
+expected` — the new step is behind branch protection, so it can now block a merge rather than
+merely report.
+
+Evidence from the job's own log, in step order, with runner timestamps:
+
+| log line | step | runner output |
+|---|---|---|
+| 404 | `uv lock --check` | `Resolved 192 packages in 1ms` |
+| 405–416 | **`uv run python scripts/audit_facts.py --check`** | **`facts ratchet: OK`** @ `07:41:41.885Z` |
+| 417–428 | `sync_vendor.py --check` | `OK: vendored dsa_* is in sync` @ `07:41:41.967Z` |
+| 429–440 | `check_npm_workspace_lock.py` | `Root npm wor…` (matches all manifests) |
+| 501–512 | `ruff format --check … scripts` | `197 files already formatted` |
+| 513–524 | `mypy packages apps/api src apps/jupyter` | `Success: no issues found in 112 source files` |
+| 525–664 | `pytest -q --cov` | `Required test coverage of 79.0% reached. Total coverage: 80.62%` |
+
+Three claims this closes, each of which was previously only an inference of mine:
+
+1. **The wiring is real.** §50's step is not merely present in the YAML — it ran, printed, and
+   sat exactly where intended: after dependency install, before lint, types, tests, the wheel
+   build and the container builds. A debt regrowth now fails in ~0.2 s of runner time.
+2. **The ceilings are CI-valid, not local artefacts.** The floor-margin fix (§55) held on Linux:
+   a tree that reads `debt.testFunctions` 424 there passed against a floor of 400. Had I shipped
+   the seeded 426, this run would have been red and I would have been reporting a failure of my
+   own making.
+3. **`sync_vendor` rc=1 was never a repository condition.** Confirmed on the runner: in sync. The
+   red I reported in §48/§49 existed only because of another session's uncommitted file.
+
+New datum worth keeping: **coverage is 80.62% on Linux against 80.52% locally at the same
+commit**. Not drift — platform-gated branches, which is precisely why §25.3 forbids citing
+coverage as a single number without ref, platform and command. The `fail_under = 79` gate has
+~1.6 pt of headroom on the runner and ~1.5 pt locally; both figures are readings, and §3 says to
+re-measure rather than quote either.
+
+Not done by this: D-L2-07 is unchanged and now sits on `origin/main`, so the published branch
+carries a filed-but-open defect where the benchmark headline metric cannot fall. L4-L8 have still
+never run.
