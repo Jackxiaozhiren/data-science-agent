@@ -2418,3 +2418,57 @@ re-measure rather than quote either.
 Not done by this: D-L2-07 is unchanged and now sits on `origin/main`, so the published branch
 carries a filed-but-open defect where the benchmark headline metric cannot fall. L4-L8 have still
 never run.
+
+## §57 D-L2-07 fixed — and the mirror told me my unit tests were measuring the wrong copy
+
+`c1c7680`: `task_success` now requires the run's own verdict not to be a failure. Measured effect:
+`dsa --limit 5` `task_success_rate` **1.0 → 0.8**, with eda-01 dropped on its merits — its
+`unsupported_claim` check fails, and since `4ba4c2f` the run reports `FAILED` for it.
+
+Semantics, stated rather than implied: a **present** status must not signal failure; an **absent**
+status is not treated as failure (callers legitimately pass partial summaries, and inventing a
+failure from missing data is the error direction this project exists to avoid).
+`code_execution_success` still measures execution alone, so "a tool ran" and "the run succeeded"
+remain separate claims instead of collapsing into one number.
+
+### 57.1 The finding that matters more than the fix
+Unit tests were green against live source while the `dsa` console script kept printing `1.0`. Cause,
+demonstrated by order-sensitive import rather than by reading:
+
+```
+import data_science_agent, dsa_evaluation.metrics  ->  src/data_science_agent/_vendor/dsa_evaluation/metrics.py
+import dsa_evaluation.metrics, data_science_agent  ->  packages/evaluation/src/dsa_evaluation/metrics.py
+```
+
+The façade inserts `_vendor` at `sys.path[0]`, so **the same import resolves to two different files
+depending on who got there first**. Any fix to a workspace package is therefore inert for the
+console-script and installed-wheel path until the mirror is regenerated — which is §13's and
+§26's "reproduce the CI job, not your local habit" made concrete, and the reason
+`sync_vendor --check` is the first CI step rather than a courtesy.
+
+Mirroring had to be per-file: `sync_vendor` offers no `--package`/`--file` mode, and a bare run
+would have copied another session's uncommitted `external_validation.py` into the shipped mirror.
+Drift went 1 file → 2 → 1 as expected, and the rate moved the instant the mirror matched.
+**D-INFRA-05 stands**: the tool needs a scoped repair mode; hand-copying is not a substitute.
+
+### 57.2 Consequence I did not silently resolve
+`benchmarks/baseline/summary.json` is frozen at `task_success_rate: 1.0` under the **old**
+evaluator, and `tests/regression/test_regression_matrix.py::test_baseline_contract` asserts that
+stored figure — it reads the snapshot, it does not recompute. So the test passes while the metric
+it pins is now produced differently: the tolerance rule in `benchmarks/baseline/README.md` has gone
+from "cannot fall" to "would fall if re-measured", and nothing re-measures it.
+
+`docs/reproducibility.md:44` says these baselines are pinned and **changes require a version bump**,
+which §27 lock **L7** puts out of my authority. So this is a decision, not a task:
+(α) re-run the 50-task benchmark and re-freeze under a version bump — honest, and the published
+number will drop; (β) leave the snapshot and annotate it as pre-§57-evaluator — cheap, and the
+staleness is then at least declared; (γ) make the regression test recompute instead of reading the
+file — that removes the freeze's purpose, so it needs its own argument.
+Recommendation **(β) now, (α) with the next release**, because pinning a pre-change measurement and
+saying so is honest, whereas silently re-freezing to a lower number under a fix commit is not.
+
+### 57.3 State
+Gates on the committed tree: ruff 0 · format 0 · mypy 0 · pytest 0 · ratchet 0 · vendor 1
+(`dsa_evaluation`, the foreign file only). Lanes still unrun: L4–L8. Nothing pushed since §56's
+witness, so `c1c7680` has no remote verdict yet — and it should, because it is the first change in
+this series whose correctness depends on the mirror rather than on the source.
