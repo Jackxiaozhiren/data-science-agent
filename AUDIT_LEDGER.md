@@ -2280,3 +2280,57 @@ My recommendation is **II**, because a declared-but-impossible capability is the
 document's L7 lane exists to catch, and deleting a step that cannot succeed restores the truth.
 If you want the *feature* rather than the truth-correction, that is option I and should be
 approved as ADR-002 implementation, not as a bug fix.
+
+## §54 D-L2-06 and (a) both landed; the benchmark headline metric is the next honest gap
+
+### 54.1 D-L2-06 — `a0dc728`
+Derived rather than hand-curated: measured every registered tool's output model against
+`_TABULAR_TOOLS`. Only `run_sql` emits `columns`+`rows`; `export_artifact` itself does but is
+self-referential, and `feature_importance` was declared tabular while emitting `base64_png`.
+Shrunk the list and removed the two hints that became unreachable, so no plan can carry a step
+that only fails. `test_planner_export_steps_conventional_names` was updated because it pinned the
+phantom pairing; the replacement asserts the invariant, exercises the tabular branch directly
+through `_terminal_export_steps` (heuristics never emits `run_sql`, so routing it through the
+planner would have left the assertion silently unrun — a vacuous guard), and adds the structural
+test `test_declared_tabular_sources_really_are_tabular` that fails on any future non-conforming
+entry. Red first: rc=1 naming `train_model`'s field list.
+
+### 54.2 (a) — `4ba4c2f`
+`HARD_FAIL_CHECKS = {budget, evidence_bundle, tool_errors, unsupported_claim}` at the terminal
+predicate only. Line 474's retry gate deliberately unchanged: widening it aborts runs before any
+report exists, which trades a wrong verdict for a missing artifact and was not what was approved.
+
+### 54.3 The blast radius reversed, and what that means
+| measurement | before the two tool fixes | after |
+|---|---|---|
+| benchmark runs flipping COMPLETED → FAILED at `--limit 5` | 2 / 5 | **0 / 5** |
+| `task_success_rate` | 1.0 | 1.0 |
+| eda-01 (genuine `unsupported_claim` failure) | reported COMPLETED | **reports FAILED** |
+
+The 2/5 I reported in §51 was never "the predicate is too strict" — it was two real defects the
+predicate had been ignoring. Fixing causes first, then tightening the verdict, produced honesty
+without regression. That ordering is the reusable lesson: a blast-radius number measured over
+unfixed defects argues for the wrong conclusion.
+
+### 54.4 New finding, recorded not fixed
+### D-L2-07
+| field | value |
+|---|---|
+| claim | The benchmark's headline success metric never consults the run's status, so it reports 1.0 over a run the agent itself marks FAILED. |
+| lane | L2 / L7 crossover |
+| evidence_tier | T0 |
+| severity | S1 |
+| location | `packages/evaluation/src/dsa_evaluation/metrics.py:68-77` |
+| mechanism | `status` is read at line 68 and assigned at 70, then never referenced again (the only other `status` reads are `c.get("status")` on individual tool calls, lines 72/161/172). `task_success = bool(has_ok and (has_report or tcalls))` therefore means "some tool worked and something came out", which is true of a failed run. `catalog.py:34` additionally defaults `task_success: bool = True`. |
+| probe | run `dsa --limit 5`, compare `run_result.status` per task against `summary.json.task_success_rate` |
+| output_excerpt | `eda-01 status=FAILED …` alongside `Task success rate: 1.0`, `BENCH_RC=0` |
+| reproducible | deterministic |
+| blast radius | `benchmarks/leaderboard/leaderboard.json` `task_success_rate`, `benchmarks/baseline/results.json`, the `benchmarks/baseline/README.md:26` CI tolerance ("any PR that drops task_success_rate … fails CI") — i.e. the tolerance rule guards a metric that cannot fall |
+| fix_sketch | derive `task_success` from status (or add a separate `agent_status_ok` metric and keep both, stating which one the tolerance rule polices). Not taken: it changes published baseline/leaderboard numbers and touches `packages/evaluation`, which currently holds another session's uncommitted file. |
+| status | open — needs a decision, and a re-baseline of `benchmarks/baseline/` if taken |
+| ceiling_key | `floor.testTotal` style not applicable; needs the leaderboard's honest-by-design labelling (§32.3) preserved |
+
+### 54.5 Deliberate non-actions
+`packages/evaluation` untouched (foreign WIP). No push. Mirror regenerated per package only
+(`dsa_tools`, `dsa_agent`), never wholesale. Commit `a0dc728` verified standalone on a
+`git archive` export (49 tests rc=0, zero `HARD_FAIL_CHECKS`) before `4ba4c2f` was built on it.
