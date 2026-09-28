@@ -131,7 +131,7 @@ uv run python scripts/audit_facts.py --check    # exit 1 and name every exceeded
 
 **Snapshot coverage.** The collector must emit at least these groups, each as numeric leaves so the ratchet can flatten them uniformly:
 
-- `git` — head, branch, commits since the most recent tag, and **per-dirty-file** status with last-touch ref and age in days. Per-file, never a bare count: a count hides that some entries were untouched for months, and age is what indicts a starvation problem.
+- `git` — head, branch, tag count, and **per-file** worktree staleness. Per-file, never a bare count: a count hides that some entries were untouched for months, and age is what indicts a starvation problem. Position comes from git's plumbing files, **not** a `git` subprocess: `scripts/` sits inside ruff's bandit (`S`) ruleset with no per-file-ignore, so a subprocess call there is a fresh S603/S607 finding. Staleness is therefore mtime-derived, which is exactly why §4 refuses to let it be a ceiling.
 - `runtime` — interpreter and tool versions **as installed**, read from installed metadata (`importlib.metadata`, `node_modules/<pkg>/package.json`), never from a declared range. A range is intent; the intent/fact gap is its own bug class.
 - `debt` — debt-marker counts, `skip`/`xfail` counts, largest source files, generated-mirror file count, unwired-checker inventory, audit-apparatus line volume.
 - `capabilities` — reconciliation groups: declared workspace members vs what the built artifact ships, docs on disk vs what the site nav references, declared scripts vs what CI invokes.
@@ -139,10 +139,13 @@ uv run python scripts/audit_facts.py --check    # exit 1 and name every exceeded
 
 **Capability probes emit a contradiction between two measured facts and nothing else.** Never a judgement about whether the contradiction is bad — that is the reader's job, and generic probes find defects nobody thought to encode.
 
+**The instrument must never measure itself.** On first authoring, the collector's own regex literals scored as the repository's entire debt-marker count, and it listed itself among the unwired checkers. Exclude the collector from its own scans, and keep the token patterns readable rather than obfuscated so the exclusion is the single thing that decides self-reference.
+
 Two implementation traps, both hit during authoring:
 
 - Mirror/module names differ from directory names (distribution names use `-`, import packages use `_`). Normalise before diffing, and exclude files sitting directly above the package root. An unnormalised comparison reports *every* member as missing — a confidently-worded phantom finding manufactured by the instrument.
 - Path depth filters silently over-capture when you split on a fixed index. Filter on parsed path parts.
+- Prune directories **during** traversal, not after: filtering `rglob` results still descends into the vendored mirror and `node_modules`, and that is what breaks the sub-second promise.
 
 **Every statement about a number in this document reads "run X, compare to ceiling".** Its sentences never read "the current count is N".
 
@@ -175,8 +178,9 @@ A cleanup that is not guarded returns. The ceiling ledger is what converts "we f
 | `debt.auditApparatusLines` | audit and compliance prose outgrowing the product | ceiling |
 | `capabilities.memberWithoutArtifactCopy` | declared workspace member shipped by no build artifact | ceiling |
 | `capabilities.navOrphanPages` | docs pages on disk referenced by no nav entry | ceiling |
-| `capabilities.lockedTreeHighSeverityFindings` | findings recurring against locked files across versions | ceiling |
-| `floor.testTotal`, `floor.coveragePercent` | coverage bought by deleting tests | floor |
+| `debt.testFunctions` | coverage bought by deleting tests | floor |
+
+Two things that look like ceiling candidates but cannot be collector keys: **coverage** (a `fail_under` gate already machine-checks it, so a second source of truth creates disagreement rather than safety) and **recurrence of findings against locked files** (that needs the ledger's history, not the working tree, so §27's lock review owns it). Record both as excluded, with the reason, inside the limits file — or the next contributor re-adds them.
 
 **The CI-testability gate — apply to every surviving candidate: would this key ever be able to fire in the pipeline it is supposed to protect?** If not, it is not a ceiling.
 
@@ -212,8 +216,6 @@ A law you cannot test is a law you cannot enforce. Each row carries `check:` —
 **Law liveness table — required Phase 1 output.** A markdown table over all rows above plus every lane rule you activate: `law id · ACTIVE / VOID / UNTESTABLE · the command or observation that decided it · if VOID, what changed`. This is what lets version 3 prune itself instead of version 3 growing. If you find a law VOID, **delete it in the same commit** and say so in §25.
 
 A predicate is evaluated over the rows **your** version creates, not over history it did not govern. If applying a predicate to earlier ledger rows fails, that non-compliance is itself a reportable finding (state how many rows and which field is absent) — it is never grounds for blocking the current session, and never a reason to edit someone else's historical rows to make a count look clean.
-
-**Unwired-checker predicate, concretely:** a checker exists under `scripts/` but no workflow invokes it → the law "the gate protects you" is VOID. Prove it with §34's wiring-derivation command, report the delta, and treat "written but never run" as an S1 finding in its own right.
 
 ## 6. Execution Model: One Lane Per Session
 
@@ -739,9 +741,7 @@ Targets, in value order for this repository:
 | 6 | **Developer experience** | A documented, discoverable command surface. If no task runner exists and helper scripts lack an executable bit, say so with evidence — a future agent inventing an unscoped lint command costs minutes and produces phantom findings. |
 | 7 | **Docs information architecture** | Nav coverage for orphan pages, policy-document path corrections, support tables aligned to the release line. |
 
-**Uplift discipline:** each item is its own finding, its own change, its own verification — the §23 loop still applies. "Refactor for maintainability" with no observable delta is not uplift; it is unpriced risk.
-
-**Apparatus budget.** Audit prose is itself debt at some volume (§4 `debt.auditApparatusLines`). Prefer a probe that replaces a paragraph. When uplift can either add a document or add a check, add the check.
+**Uplift discipline:** each item is its own finding, its own change, its own verification — the §23 loop still applies. "Refactor for maintainability" with no observable delta is not uplift; it is unpriced risk. Audit prose is itself guarded by `debt.auditApparatusLines`: when uplift can either add a document or add a check, add the check.
 
 ## 25. Phase 5 — Reporting
 
