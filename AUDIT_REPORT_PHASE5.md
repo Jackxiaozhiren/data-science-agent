@@ -42,6 +42,10 @@ rather than caveated (§25.6).
 | L7-AR-04 | S2 | shipped `dsa --help` advertised `dsa mcp tools`, which exits 2 | `bccd60a` | `dsa mcp tools` → rc **2** | help-surface guard passes; 10 advertised forms all declared | none |
 | §63 docs counts | S3 | 17 / 18 / ~13 tools in three live docs; "Next.js 15 / 13 routes" | `c1b2b5b` | measured 18 modules, 19 entries, `next 16.3.4`, 16 pages | counts removed, not corrected (§3 rule) | none |
 | §17.2 of the prompt | S3 | instructed deriving a pollution table from a collector that has no footprint key | `293f11c` | collector leaves contain no size/file-count key | line replaced one-for-one; `debt.auditApparatusLines` still 1128 | `debt.auditApparatusLines` |
+| §70 item 3 (`tools.length \|\| 19`) | S2 | an empty or unreachable tool list rendered the literal 19 as fact | `32ee4b2` | `grep -n 19 app/mcp/page.tsx` → `:39` fallback | count rendered only when known; `npm --prefix apps/web run typecheck` rc 0 | none |
+| §70 item 5 (Checkpoint #12) | S2 | two UI sites asserted a checkpoint referent that no API can produce | `32ee4b2` | `grep -rn checkpoint apps/api/src/dsa_api/routers/` → no matches | absence stated instead; typecheck rc 0 | none |
+| L7-AR-05 (wording only) | S3 | `ReproductionScore` reads as a class name; the class is `ReproducibilityScore` and is unrelated | `32ee4b2` | doc keys matched `cli.py:112-118` exactly, so the shape claim was mine, not the doc's | disambiguated in `docs/reproducibility.md:23` | none |
+| L7-AR-07 | S3 | `sync_vendor.SOURCES` was cross-checked against nothing | `51908e0` | `grep -rln uv.workspace tests/ scripts/ .github/` → empty; parity test reads the same list | 15 ↔ 15 both directions, with a removal control that names the dropped package | none |
 | L2-07 / L2-05 / L2-06 (earlier sessions) | S1/S2 | verdict ignored by `task_success`; non-numeric feature cols; phantom export steps | `d15c253`, `9d40e2a`, `2a4abb3` lineage | benchmark 1.0 / `train_model` error / planner emitted 5 refs | 0.8 honest verdict / numeric-only / `run_sql` only | `debt.testFunctions` floor 400 |
 
 ## 25.3 Numeric attestation
@@ -108,7 +112,8 @@ output suppressed) — the true value at `0a94a5a` is 460.
 - `benchmarks/baseline/` — not re-frozen; staleness declared under option β.
 
 **The fifteen T2 hypotheses are now adjudicated** — `AUDIT_LEDGER.md` §70 carries the deciding
-command for each row. Net: **13 CONFIRMED, 1 SPLIT (item 11), 1 direction-only (item 15)**. Three
+command for each row, with §71 superseding one verdict. Net: **13 CONFIRMED, 1 direction-only
+(item 15), and item 11 refuted except for a naming ambiguity**. Three
 confirmations changed kind or place under my own probes — the "Checkpoint #12" referent appears at
 **two** UI sites rather than one; the `/progress` page does not exist and the claim belongs to
 `RunInspector.tsx:101` with its silent `catch` at `:96-98`; and the VS Code row is narrower than
