@@ -3389,3 +3389,31 @@ Both are host-locality failures, but they need different remedies: the first can
 serving data at request time unless the prerender/frozen flag is also addressed, while the second is
 fixed by the same API-serving change on its own. Recorded so §25.5 row 1 is not decided on a merged
 description of two different behaviours.
+
+## 73. Runner verdict for `42ee536`, and the verification gap narrowed by evidence rather than assertion
+
+**CI verdict: `completed / success`** per the API — both jobs green (`ci`, `web-regression`), plus
+`CodeQL 42ee536 success` and `Secret Scan 42ee536 success`. All 26 steps of the `ci` job report
+`success`, including `audit_facts --check`, `sync_vendor --check`, ruff, format, mypy,
+`pytest --cov`, the SBOM step, `dsa --limit 5`, wheel+sdist, the clean-install smoke, and the
+docker/compose/mkdocs steps.
+
+**The watcher lied again, in the same way, third recurrence.** The background watcher wrote
+`W10_REAL=1`, and its log's final line is
+`failed to get run: Get "https://api.github.com/…/runs/36545318008…": unexpected EOF`
+— a transport death against a run that had actually finished successfully. Had the rc been treated
+as a verdict, a green pipeline would have been reported as red. The rule that keeps paying: the
+watcher's exit code is only ever an observation about the watcher, and the conclusion comes from
+`gh run view --json status,conclusion`.
+
+**What the runner proved about the §71 web copy edits.** The `web-regression` job's tour printed
+`regression: 24/24 checks passed`, and its route list includes `/mcp` and `/failures`. Since each
+navigation requires HTTP 200, zero console errors and zero horizontal overflow at both viewports,
+that is browser-level evidence the edited pages still render cleanly. §71's VERIFICATION GAP
+therefore narrows rather than closes: **rendering is now machine-verified, textual correctness is
+not** — the tour asserts no content, which is exactly §70's item-4 finding, so no runner step can
+confirm the new sentences read as intended. Reporting the gap as partly closed on evidence is the
+honest form; claiming it closed because the pipeline is green would be the failure mode this audit
+exists to catch.
+
+Unpushed at the time of writing: this section's predecessor §72 (`860208a`), docs-only.
