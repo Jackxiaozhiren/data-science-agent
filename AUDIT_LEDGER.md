@@ -3093,3 +3093,50 @@ class of defect this whole audit has been clearing.
 Gates: ruff 0 · format 0 · mypy 0 (112 files) · full pytest 0 · ratchet OK (180 swallow sites,
 unchanged) · `tests/security/` + deadline tests 39 passed. Nothing pushed; D-L8-02
 (injectable checkpointer) is the next authorised item.
+
+## 66. D-L8-02 half-closed — the checkpointer is now retainable, and the docs' remaining overstatement is a retraction decision
+
+### 66.1 What landed
+`build_graph(checkpoint=True, checkpointer=None)` and `run_analysis_langgraph(..., checkpointer=None)`:
+an injected saver is compiled in, and without injection the previous behaviour is untouched. The
+defect was that `MemorySaver()` was constructed inside `build_graph` and never returned or stored,
+so `get_state` returned 12 keys on the graph that ran and 0 on a second graph with the identical
+`thread_id` (measured in §62.6). Three tests, all red first with `TypeError: build_graph() got an
+unexpected keyword argument 'checkpointer'`.
+
+### 66.2 The mutation that made the pass-through real
+The entry point could have accepted `checkpointer` and ignored it. Reverting only that one line
+(`build_graph(checkpoint=True, checkpointer=checkpointer)` -> `build_graph(checkpoint=True)`) made
+`test_entry_point_persists_into_the_callers_saver` fail with `assert {}` -- an empty restored state,
+not an error. Restored and confirmed byte-identical before committing.
+
+### 66.3 One test I deleted rather than keep
+A fourth test asserted `build_graph(checkpointer=saver) is not build_graph(checkpoint=True)`. Two
+compiles are always distinct objects, so it could never fail; it was removed after writing it, and
+the file was then re-listed by parsing (`ast`) to confirm the remaining inventory -- including the
+two `AsyncFunctionDef`s that my first printout had filtered out and briefly made me think the file
+had lost a test.
+
+### 66.4 Where the claim still overstates, and why I did not edit it
+`docs/agent.md` -- the live product doc corrected in §61 -- turns out to carry **no** checkpoint,
+MemorySaver or resume claim at all (grep over those terms: no matches). The overstatement lives in
+six other documents: `docs/architecture.md`, `docs/agent-system.md`,
+`docs/portfolio/PROJECT_SUMMARY.md`, `research/paper/paper.md`, `research/paper/V2_paper_draft.md`,
+`research/V3_RESEARCH_REPORT.md` (plus `CHANGELOG.md`). After this change a caller *can* retain a
+saver and read state back, so the primitive exists; what still does not exist is a shipped surface
+that performs pause/resume/replay/fork, because the only entry point remains unreleased (§60).
+Rewriting a research paper's capability claim is a retraction, not a typo fix, so it is presented
+as a decision rather than performed here.
+
+### 66.5 A number I could not reconcile, and how I resolved it
+`--collect-only` reported 474 against my expectation of 469, and the snapshot I would have diffed
+against was gone from `/tmp`. Rather than publish an unexplained number, the reconciliation came
+from the maintained instrument: `debt.testFunctions = 438`, which is exactly §62's reading of 424
+plus the 14 test functions added across §64-§66; the extra 36 in the collected count is
+parametrisation. Lesson recorded where it belongs: quote the collector, and keep the snapshot you
+intend to compare against.
+
+### 66.6 State
+Gates: ruff 0 · format 0 · mypy 0 (112 files) · full pytest 0 · mkdocs --strict 0 · ratchet OK
+(`swallowedExceptionSites` still 180, `testFunctions` 438). Mirror re-copied for
+`langgraph_graph.py` after formatting and verified with `cmp`. Nothing pushed.

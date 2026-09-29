@@ -406,7 +406,7 @@ async def _node_report(state: LGState) -> dict[str, Any]:
         }
 
 
-def build_graph(checkpoint: bool = True) -> Any:
+def build_graph(checkpoint: bool = True, checkpointer: Any | None = None) -> Any:
     g = StateGraph(LGState)
     g.add_node("understand", _node_understand)
     g.add_node("plan", _node_plan)
@@ -421,6 +421,8 @@ def build_graph(checkpoint: bool = True) -> Any:
     )
     g.add_conditional_edges("critic", _route_after_critic, {"report": "report"})
     g.add_edge("report", END)
+    if checkpointer is not None:
+        return g.compile(checkpointer=checkpointer)
     if checkpoint:
         return g.compile(checkpointer=MemorySaver())
     return g.compile()
@@ -431,10 +433,11 @@ async def run_analysis_langgraph(
     dataset_id: str,
     user_query: str,
     run_id: str | None = None,
+    checkpointer: Any | None = None,
 ) -> AnalysisState:
     fallback_reasons: list[str] = []
     try:
-        graph = build_graph(checkpoint=True)
+        graph = build_graph(checkpoint=True, checkpointer=checkpointer)
         cfg = {"configurable": {"thread_id": run_id or f"run-{uuid.uuid4().hex[:10]}"}}
         out = await graph.ainvoke(
             {
