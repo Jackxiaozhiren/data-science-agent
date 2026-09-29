@@ -3417,3 +3417,62 @@ honest form; claiming it closed because the pipeline is green would be the failu
 exists to catch.
 
 Unpushed at the time of writing: this section's predecessor §72 (`860208a`), docs-only.
+
+## 74. The version detector now compares against the release line instead of a hand-kept blacklist
+
+**Measured before designing.** Replacing `stale_version`'s literal triple with "any released
+version that is not current" was implemented as a probe and rejected on its numbers: over the 14
+scanned files it fires **160 times**, 150 of them `CHANGELOG.md` release records, plus
+`CITATION.cff:1 cff-version: 1.2.0` (a metadata *format* version that happens to collide with a
+project tag), `CITATION.cff:27 version: 4.2.0` (a `references:` entry, i.e. a citation *of* an old
+release), and each sub-app's own `"version": "0.1.0"`. A rule that drowns in that is worse than the
+blacklist it replaces, because its output stops being actionable.
+
+**What went in instead: a declared-assertion table.** `CURRENCY_ASSERTIONS` names the places where a
+document asserts *which release is current or upcoming* -- `README.md`'s `[**vX.Y.Z**]` release badge
+and `ROADMAP.md`'s "next minor release through [vX.Y.Z" pointer -- and checks each against
+`released_versions()` / `current_version()`. The cost is stated in the code: a new currency surface is
+unchecked until someone adds a row. The benefit is that it cannot fire on version-shaped text that is
+not a currency claim.
+
+- `released_versions()` reads `.git/packed-refs` and `refs/tags` directly -- `scripts/` is under
+  bandit S603/S607, so no `git` subprocess -- normalises `v`-prefixed and bare tags onto one key, and
+  drops peeled `^{}` lines. The peeled-line and duplicate-name traps are both already recorded from
+  the tag census, so they were designed out rather than rediscovered.
+- If the tag set or the current version comes back empty, the check **returns an issue**
+  ("currency check disabled") instead of returning no findings. A checker whose denominator can
+  silently become zero reports clean while testing nothing, which is the most damaging failure mode
+  available to it.
+- `check_currency_claims()` is wired into `main()` as **high severity**, and the retired
+  `stale_version` key is gone from `PATTERNS`. Its absence is asserted through the AST: my first
+  version of that test grepped file text and failed on *my own explanatory comment* quoting the old
+  literal, which was the test being wrong, not the code.
+
+**Red first:** four tests failed with `AttributeError: module ... has no attribute
+'check_currency_claims'` before any implementation existed; six pass after.
+
+### 74.1 What it found on the real tree, and the one thing I did not fix
+
+Two genuine defects, both pre-existing at HEAD:
+
+- `ROADMAP.md:21` pointed "the next minor release" at v4.3.0, which shipped long ago. Fixed by
+  removing the false currency claim and stating the actual position -- 4.4.0 is current, no
+  readiness checklist exists for the next minor yet, and `docs/release-readiness-v4.3.md` remains
+  the gate model. Reworded rather than retargeted because inventing a `v4.5.0 Release Readiness`
+  link would have created a dangling reference; `mkdocs build --strict` still exits 0 after the edit.
+- `README.md:16` advertises `[**v4.3.0**]` as the release badge. **This corrects my own earlier
+  attribution**: §62 and §65 recorded D-L5-04 as "foreign-locked", but
+  `git show HEAD:README.md | grep v4.3.0` returns the identical line, so it is repository history,
+  not another session's in-flight work. I still do not edit it, for a narrower and sharper reason:
+  the file is dirty in the working tree, so my one-line change would sit inside their unstaged
+  edits and their next `git add README.md` would restage the old line and silently revert me. The
+  fix is one token (`4.3.0` -> `4.4.0`, plus the tag URL) and belongs to whoever next owns that
+  file's staged content.
+
+Consequence stated rather than smoothed over: `check_public_claims.py` now exits **1** on a clean
+checkout, by design. It is still the single unwired checker (`debt.unwiredCheckers: 1`), so nothing
+in the pipeline changes today; §25.5 row 6's precondition is now concrete instead of hypothetical.
+
+### 74.2 State
+Gates: ruff 0 · format 0 (2 files reformatted before the run) · ratchet OK · full pytest 0 ·
+mkdocs --strict 0 · `check_public_claims` 1 high-severity issue, the README line above.
