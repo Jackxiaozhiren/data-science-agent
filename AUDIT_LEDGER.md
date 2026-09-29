@@ -2953,3 +2953,78 @@ clean at HEAD). Collected tests 452 → **459** locally (CI's 450 on `0b4c50a` s
 exactly by the two uncommitted foreign tests). Census: L1 16 · L2 7 · L3 5 · L4 5 · L5 5 ·
 **L6 21+17 (agent-reported, 5 verified by me)** · **L7 11** · **L8 3 + 1 declined ceiling**.
 Nothing pushed.
+
+## 64. D-L7-01 closed — `Budget.max_steps` is now read, by both engines
+
+Authorised turn: "开始接线 Budget.max_steps". TDD followed (skill loaded before implementation):
+every assertion existed and failed before any production line changed.
+
+### 64.1 What the wiring found, in the order it found it
+- **The bound had to land in two places, not one.** Execution runs either through the sequential
+  `for step in state.plan` loop or through the leading-independent-batch `gather` at
+  `graph.py:405`, which fires whenever `len(indep_batch) > 1` and the whole batch fits the
+  *tool-call* budget. That branch had no per-step check whatsoever: it handed the entire batch to
+  `_asyncio.gather`. Proven by the red run — 21 steps executed under a limit of 20 on **both**
+  paths (`profile_dataset` taking the sequential arm because it is not in `_PARALLEL_TOOLS`,
+  `correlation_analysis` taking the batch arm). A single-site fix would have been another
+  half-true control.
+- **Truncating is not the same as reporting.** Cutting the plan short left the verdict
+  `COMPLETED`, because the final status at `graph.py:623` is derived from hard-fail validation
+  checks, not from `state.error`. Demonstrated by mutation: with `graph.py` enforcement present
+  and only `critic.py` reverted, both engine tests failed with
+  `assert COMPLETED == FAILED`. So the change extends the existing `check="budget"`
+  hard-fail result (`critic.py:105`) to cover step exhaustion, reusing the check name the retry
+  gate and `HARD_FAIL_CHECKS` already honour instead of minting a fourth signal.
+- **`LGState` had no budget at all.** The LangGraph variant routes on `idx < len(plan)`
+  (`langgraph_graph.py:145-150`) and its TypedDict carried no `budget` key, so wiring only the
+  shipped engine would leave "tool budgets enforced" true in one engine and false in the other.
+  Added `budget: Budget` to the state and bounded the router; 2 of 4 router tests were red first
+  (stop-at-budget, honour-an-explicit-smaller-budget), and the other 2 are labelled
+  green-on-arrival because they pin pre-existing behaviour (continue below budget, finish when
+  the plan is exhausted) rather than new behaviour.
+- **`max_tokens` is not a second dead knob** — read at `critic.py:146` into
+  `guardrails.check_resource_limits`. All four `Budget` fields are now read somewhere.
+
+### 64.2 Blast radius, measured structurally
+My first comparison was invalid and I discarded it: a `--limit 5` run against the frozen
+50-task baseline showed `task_success_rate 0.8 vs 1.0` and `unsupported_claim_rate 0.2 vs 0.06`,
+which is a different task subset (and the §59/§60 verdict change), not this change. The real
+question is whether the new bound can fire on that catalog at all, so it was measured directly:
+running `heuristics_plan` over all 50 tasks gives plan lengths in {4,5,6,7,8}, **max 8, zero
+plans over 20**. The guard cannot trigger there, so benchmark outcomes are untouched by
+construction rather than by luck.
+
+### 64.3 Doc claim restored, and now guarded by a parser
+`SECURITY.md` went back to describing the budgets as enforced, with the enforcing file named and
+the failure mode stated. `test_budget_enforcement_claim_is_backed_by_code` parses the engine with
+`ast` and rejects any `max_*` the section cites that `graph.py` never reads — falsified by
+adding `max_tokens` to the sentence, which produced exactly
+`graph.py never reads ['max_tokens']`, then reverted from a `/tmp` copy and confirmed identical.
+Substring counting would have passed on a comment mentioning the name; the AST cannot be fooled
+that way.
+
+### 64.4 Two mistakes of my own, both caught by running rather than reading
+- An `Edit` whose anchor was a `def` line replaced that signature, silently grafting one
+  function's body onto another. Detected by parsing the file for top-level `FunctionDef`s and
+  seeing four with implausible sizes, not by eyeballing the diff — the same lesson as §62's
+  nested-`_safe_import` failure, in the opposite direction.
+- The new doc test called `_sandbox_section`, a helper from an earlier draft that the committed
+  file no longer defines. `NameError` on the first run; the repair was to inline the split the
+  way the sibling test already does it.
+
+### 64.5 Law liveness
+| law | state | decider |
+|---|---|---|
+| §11.3 watch the test fail first | ACTIVE | red run showed 21 executed on both paths; router tests 2-of-4 red |
+| §12 no half-true controls | ACTIVE, drove scope | both execution branches + the unreleased engine wired, because one site would have re-created the same class of lie |
+| §10 report the verdict, don't infer from error strings | ACTIVE | mutation B proved `COMPLETED` would have been reported |
+| §7.2 attribute every red before reporting | ACTIVE | the invalid 5-vs-50 metric diff was discarded, replaced by a structural measurement |
+| §55 mirror ordering hazard | ACTIVE | 3 modules re-copied to `_vendor` after each source/format change, verified with `cmp` |
+
+### 64.6 State
+Gates: ruff 0 · format 0 · mypy 0 (112 files) · full pytest 0 · ratchet OK · mkdocs --strict 0.
+Collected tests 456 → **463** locally (+4 step-budget, +4 router, +1 doc-enforcement; note
+`--collect-only` counts 463 vs the earlier 456 baseline including the foreign session's 2).
+`sync_vendor --check` remains red solely from the concurrent session's `external_validation.py`.
+D-L7-02 (sandbox preemption) and D-L8-02 (injectable checkpointer) stay BLOCKED awaiting
+decisions; nothing pushed.
