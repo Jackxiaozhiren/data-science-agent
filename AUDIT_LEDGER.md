@@ -3352,7 +3352,13 @@ wrong verdict as written rather than quietly editing it: §70 said SPLIT, this s
   `.github/workflows/` (only a comment mentions `tsc` for the VS Code compile), but
   `apps/web/next.config.mjs` sets no `ignoreBuildErrors`, so `next build` — which CI does run,
   twice — already type-checks. There is no unwired gate here.
-- Gates after all edits: reported in the commit immediately following this section.
+- **VERIFICATION GAP, stated per §30.** The three `.tsx` edits are type-valid (`tsc --noEmit` rc 0)
+  and the conditional logic is what the finding targeted, but no browser click-through was done:
+  the repo's `next dev` was not started in this shared tree, and the claim "this sentence now renders
+  as intended" is therefore argument, not observation. The edits replace a fabricated referent with a
+  statement of absence in an existing `description=` string, so the rendering risk is the text itself,
+  not layout or behaviour. Anyone with a running dev server should confirm the two replay/mcp cards
+  read sensibly before this is called visually verified.
 
 ### 71.4 Effect on the Phase 4 entry condition
 Two of the fifteen are now fixed as copy (#3, #5), one is resolved as naming-only (#11), one gained a
