@@ -3140,3 +3140,60 @@ intend to compare against.
 Gates: ruff 0 · format 0 · mypy 0 (112 files) · full pytest 0 · mkdocs --strict 0 · ratchet OK
 (`swallowedExceptionSites` still 180, `testFunctions` 438). Mirror re-copied for
 `langgraph_graph.py` after formatting and verified with `cmp`. Nothing pushed.
+
+## 67. One frontend claim promoted to T1, and the clone's unique work copied out before it could be lost
+
+### 67.1 RUNNING does not exist (T1, verified by me)
+`AnalysisStatus` has exactly 11 members (`state.py:10-21`): UNDERSTANDING, PLANNING,
+DATA_PROFILING, ANALYSIS, MODELING, VALIDATION, SYNTHESIS, REPORTING, COMPLETED, FAILED,
+HUMAN_REVIEW. There is no `RUNNING`, `PENDING`, `QUEUED` or `STARTED`. Yet the web layer treats
+them as reachable:
+- `apps/web/app/reports/ReportsTable.tsx:45` and `apps/web/app/runs/RunsTable.tsx:59` both offer
+  `<option value="RUNNING">Running</option>` -- selecting it can only ever return an empty list.
+- `apps/web/app/components/data/StatusBadge.tsx:16` classifies `RUNNING|PENDING|QUEUED|STARTED|HUMAN_REVIEW`
+  as in-flight; four of the five names cannot arrive from the API.
+- `apps/web/app/analysis/[runId]/RunInspector.tsx:534` computes the timeline step state with
+  `i === 0 && run.status === "RUNNING" ? "active"` -- an unreachable branch, so the inspector can
+  never show an active step.
+The claim came from an agent at T2; it is T1 now because I opened all five sites and the enum.
+
+### 67.2 Why I did not fix it in this turn
+The correct repair is a UI-side mapping of the real in-flight members (ANALYSIS/SYNTHESIS/
+VALIDATION/REPORTING) onto the "running" presentation, which changes no API contract -- adding
+`RUNNING` to the enum would be a public status change on top of the L2 semantics already settled
+in §56. Two things stopped me from doing even the UI mapping now: (a) it needs a browser to verify
+and I will not claim a visual result I could not observe, and (b) `apps/web` is the other session's
+active area -- §67.3 shows it is mid-restructure with a *different directory layout* -- so editing
+those files now risks colliding with in-flight work that has no upstream copy.
+
+### 67.3 The unique work is real, and my earlier remedy was wrong
+Verified: `FRONTEND_REDESIGN_PROMPT.md`, `apps/web/components/` (12 files), `apps/web/lib/format.ts`
+and `apps/web/lib/theme.tsx` exist **only** under `data-science-agent/`; the main tree has no
+counterpart for any of them (its components live at `apps/web/app/components/`, which is why the two
+trees can both contain a `StatusBadge.tsx` while being different files).
+My §63 recommendation was `git bundle`. That is wrong for this case: all four paths are `??`
+**untracked**, so a bundle would have captured none of them -- the exact loss scenario it was meant
+to prevent. Corrected action taken instead, read-only against the clone and written outside it:
+
+- `/tmp/clone-rescue-20260929-125612/untracked.tar` (105,984 bytes; contents listed and
+  round-trip-extracted to prove readable content, e.g. `apps/web/components/ui/Button.tsx` = 101 lines)
+- `/tmp/clone-rescue-20260929-125612/tracked-modified.patch` (409 lines; the 4 modified tracked files)
+- `CHECKSUMS.sha256` for both
+
+This is a mitigation for the §63 finding that `git clean -ffdxy` differs from `-fdxy` by exactly one
+line -- `data-science-agent/` -- and would delete 1.1 GB that is unrecoverable and unpushed. It is
+not a substitute for the owner committing the work; nothing in the clone was touched, staged or
+moved.
+
+### 67.4 Re-measured, because the agent's numbers had already decayed
+The L6.2 report described 19 dirty paths of which 15 were `??`. `git -C data-science-agent status
+--porcelain` now returns **8 entries (4 modified, 4 untracked)** -- the other session has been
+committing while I worked. Any count quoted from a sub-agent's report needs re-measuring before it
+is actionable; the direction of their finding held, the magnitude did not.
+
+### 67.5 State
+No source change in this entry (ledger only). Gates unchanged from §66: ruff 0 · format 0 · mypy 0 ·
+full pytest 0 · ratchet OK · mkdocs --strict 0. Fourteen commits sit unpushed awaiting per-action
+authorisation; the frontend batch (FE-03/04/05) is next in line but is blocked on either a
+browser-verification step or your acceptance that I ship it unverified, and on the other session
+finishing its `apps/web` restructure.
