@@ -3310,3 +3310,52 @@ Each row states the single command that decided it. Nothing in this section chan
 **The near-miss I should own.** Row 11's `compare_runs` first came back empty because I read the batch output wrong and nearly wrote "REFUTED — the doc's API does not exist". Re-running the narrow grep showed the definition plus two call sites. An empty result from a composite command is not a measurement — the same trap as the suppressed `--write` in §69, in the opposite direction: there, silence hid a failure to refresh; here, a misread silence would have invented a phantom.
 
 **Effect on §25.4 / §34.** The fifteen are no longer hypotheses; the inventory above is the per-lane probe marking §34 asks for (`CONFIRMED`/`REFUTED`/`INCOMPLETE`), so the `NOT MET` line in the Phase 5 report's law table is now satisfied for L6/L7. Row 9's second half stays unverified and is marked as such rather than folded into the confirmation. None of these fifteen is yet a fix: they change the decision queue in §25.5 (rows 1-4 gain evidence, row 3 gains two more documents' worth of wording), not the code.
+
+## 71. Four copy fixes, one new guard, and a correction to my own §70 verdict
+
+### 71.1 §70 row 11 was wrong, and a second probe caught it
+I wrote that L7-AR-05's surviving part was "name **and shape** mismatch". The shape part is false:
+`packages/evaluation/src/dsa_evaluation/cli.py:112-118` assigns `reproduction_score = {"execution",
+"numerical", "statistical", "evidence", "semantic", "overall", ...}` and `:120-123` emits
+`by_level` over `L0..L5` — the document's six keys and its `by_level` clause match the code
+verbatim, and `compare_runs` exists and is called. What is actually true is only that
+`ReproductionScore` is not a Python class name, while a same-suffix class `ReproducibilityScore`
+(with unrelated fields) does exist. So the item is **refuted as a factual defect** and demoted to a
+naming ambiguity; `docs/reproducibility.md:23` now says "the CLI's `reproduction_score` object …
+(the pydantic model in `dsa_evidence` is a different type, `ReproducibilityScore`)". Recording the
+wrong verdict as written rather than quietly editing it: §70 said SPLIT, this says refuted-except-naming.
+
+### 71.2 Landed (five one-line changes plus a guard)
+- `apps/web/app/mcp/page.tsx:39` — `${tools.length || 19}` invented a tool count when the list is
+  empty or unreachable; now renders the real count or "tool list unavailable".
+- `apps/web/app/runs/[id]/replay/page.tsx:29` and `apps/web/app/runs/[id]/page.tsx:79` — both
+  asserted a specific "`Checkpoint #12`" referent (and a `Run #124-Fork-A` identifier) that cannot
+  exist: `grep -rn checkpoint apps/api/src/dsa_api/routers/` returns nothing. Now they state the
+  absence instead of inventing an artefact.
+- `docs/reproducibility.md:23` — as above.
+- `tests/unit/test_vendor_sources_cover_workspace_members.py` — closes L7-AR-07: every workspace
+  member's own `[tool.hatch.build.targets.wheel] packages` name must appear in
+  `sync_vendor.SOURCES` and vice versa (15 ↔ 15, empty in both directions). It is **green on
+  arrival** because the list is currently correct, so the file carries a functional control that
+  removes one entry and asserts the diff reports exactly that package; without it the equality
+  could not be shown to bite. The docstring also states why this is not the existing
+  `capabilities.memberWithoutArtifactCopy` key: that one compares against `_vendor` **on disk**, so
+  a hand-copied package satisfies it while remaining invisible to the repair tool.
+- Not done deliberately: L7-AR-03's README row. `README.md` is one of the three files the
+  concurrent session has uncommitted, and line 222 sits in its likely edit region; the accurate
+  wording is recorded in §70 row 10 for whoever owns that file.
+
+### 71.3 Verification actually performed
+- `npm --prefix apps/web run typecheck` → `tsc --noEmit`, **rc 0**. This is the first time this
+  session the web type-checker was run, and it is the evidence for the three `.tsx` edits.
+- A candidate finding was refuted before being written up: `typecheck` is absent from
+  `.github/workflows/` (only a comment mentions `tsc` for the VS Code compile), but
+  `apps/web/next.config.mjs` sets no `ignoreBuildErrors`, so `next build` — which CI does run,
+  twice — already type-checks. There is no unwired gate here.
+- Gates after all edits: reported in the commit immediately following this section.
+
+### 71.4 Effect on the Phase 4 entry condition
+Two of the fifteen are now fixed as copy (#3, #5), one is resolved as naming-only (#11), one gained a
+guard (#13), and one is parked on file ownership (#10). The items that genuinely block Phase 4 are
+unchanged in kind: FE-01/02 data path, FE-03/04 auth and error presentation, FE-05 status
+vocabulary, FE-06/07/08 fetch discipline, plus the §25.5 decision rows that need the maintainer.
