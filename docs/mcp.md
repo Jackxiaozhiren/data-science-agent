@@ -9,7 +9,7 @@
 
 ## Tool Discovery / Schemas / Calls / Errors
 
-- 18 tools, per-tool `outputSchema/permissions/idempotency/timeout/cost_class/cache_hint/tool_class` (`SAFE_READ/ANALYSIS/COMPUTE/WRITE_ARTIFACT`), see `MCP_DESIGN.md`.
+- the typed tool surface, per-tool `outputSchema/permissions/idempotency/timeout/cost_class/cache_hint/tool_class` (`SAFE_READ/ANALYSIS/COMPUTE/WRITE_ARTIFACT`), see `MCP_DESIGN.md`.
 - Error handling + Authorization + Cache Hints + Tasks: see `MCP_DESIGN.md` and conformance tests `tests/mcp/conformance/` (7) + `tests/unit/test_mcp.py`.
 
 ## Conformance

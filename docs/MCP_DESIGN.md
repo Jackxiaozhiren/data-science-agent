@@ -15,7 +15,7 @@ Core Domain (dsa_tools, dsa_agent, dsa_datasets)
 - No server-side session. Each `tools/call` is self-contained.
 - Tool discovery via `tools/list`; calls via `tools/call` with JSON args.
 - Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only.
-- MCP surface is ~13 tools mirroring Tool Layer with friendly names.
+- MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed (13)
 | MCP name | Backend | Input subset |

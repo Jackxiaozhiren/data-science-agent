@@ -8,7 +8,7 @@
 
 ```mermaid
 flowchart TB
-    U[User / External Evaluator] --> WEB[Frontend<br/>Next.js 15 + TypeScript<br/>13 routes]
+    U[User / External Evaluator] --> WEB[Frontend<br/>Next.js + TypeScript<br/>App Router pages]
     U --> API[API Layer<br/>FastAPI + Pydantic v2 + SQLAlchemy<br/>/api/v1/datasets /analysis /artifacts /reports]
     WEB -->|HTTPS + SSE /events| API
     API --> G[Agent Runtime<br/>LangGraph Stateful Graph<br/>Planner → DataScientist → Critic → Report]
@@ -25,7 +25,7 @@ flowchart TB
     DL --> STORE[(Storage<br/>data/ + artifacts/ + reproduction/<br/>Local-first, Cloud-free)]
 ```
 
-**Roles**: Frontend (upload, profile, trace) → API (validation, rate limit, logging) → Agent Runtime (stateful graph, checkpoints, retry 3, `max_steps 20 / max_tool_calls 40`) → Tool Layer (17 tools) → Data/Stats/ML/Viz → Evidence → Validation → Reports/Repro. MCP is an adapter over the same Tool Layer, stateless.
+**Roles**: Frontend (upload, profile, trace) → API (validation, rate limit, logging) → Agent Runtime (stateful graph, checkpoints, retry 3, `max_steps 20 / max_tool_calls 40`) → Tool Layer (typed tools) → Data/Stats/ML/Viz → Evidence → Validation → Reports/Repro. MCP is an adapter over the same Tool Layer, stateless.
 
 ---
 
