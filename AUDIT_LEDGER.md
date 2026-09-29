@@ -3197,3 +3197,54 @@ full pytest 0 · ratchet OK · mkdocs --strict 0. Fourteen commits sit unpushed 
 authorisation; the frontend batch (FE-03/04/05) is next in line but is blocked on either a
 browser-verification step or your acceptance that I ship it unverified, and on the other session
 finishing its `apps/web` restructure.
+
+## 68. D-INFRA-05 closed — the only repair that existed was a bulk one, and bulk means "adopt someone else's work"
+
+### 68.1 The hazard, stated correctly
+My earlier framing ("`sync_vendor` has no scoped repair") understated it. There was no scoped
+repair because there was no scope concept at all: `sync()` walked every package whose `_diff` was
+non-None and did `shutil.rmtree(dst)` followed by `shutil.copytree(src, dst)`. In a shared
+worktree, one bare run therefore rewrote **every** drifted package directory from whatever the
+source tree happened to hold at that second -- including a concurrent session's uncommitted
+edits -- into the mirror that ships inside the published wheel. The `--check` message made it
+worse by recommending exactly that command as the remedy.
+
+### 68.2 New contract
+- `--check` -- audit, writes nothing (unchanged), but its hint now names the scoped command and
+  says what `--all` would swallow.
+- `--package NAME` (repeatable) and `--file SRC_PATH` (repeatable) -- per-**file** repair:
+  byte-compare each source file to its mirror, write only the differing ones, unlink mirror files
+  whose source is gone, and print every action. No directory is ever removed wholesale.
+- `--all` -- the old bulk behaviour, now an explicit opt-in.
+- bare run -- **refused**, exit 2, with the reason. A tool whose default is "rewrite everything"
+  is a tool that will eventually be run on a shared tree by someone in a hurry.
+- `--file` resolves the path and checks containment against each package root, so a `../../`
+  argument cannot name a file inside a package. Implemented without shelling out, because
+  `scripts/` forbids subprocess under the project's bandit rules (S603/S607) -- so the guard is
+  path shape, not git inspection.
+
+### 68.3 Red first, then live proof
+7 of 12 assertions were red before the change (`--package`, `--file`, `--all` unknown; bare run
+repairing two packages unasked; the check hint recommending the unscoped command). One is
+**green-on-arrival and labelled as such**: `--file .../nope.py` is rejected today only because
+argparse rejects the unknown flag, so it proves less than it appears to.
+
+Then exercised against the real tree, never with `--all`:
+- bare → `REFUSED: ...`, rc 2, and `git status` unchanged afterwards.
+- `--check` → rc 1 with `Repair only what you changed: ... --package dsa_evaluation`, correctly
+  attributing the drift to the concurrent session's uncommitted `external_validation.py` without
+  copying it.
+- `--package dsa_agent` and `--package dsa_execution` → `Already in sync`, which retro-verifies
+  the manual mirror copies of §64/§65/§66 through the maintained instrument rather than my own
+  `cmp` -- the tool agrees they are byte-exact.
+
+### 68.4 Residual, not hidden
+The tool still cannot tell whose source is whose; it can only force the operator to say which
+packages they meant. `_diff` continues to report per-package counts rather than file names, so
+`--check` output remains coarse -- the scoped commands are the precise surface now, and the
+`tests/unit/test_vendor_parity.py` per-file skip-on-dirty design (§63.6) is unchanged.
+
+### 68.5 State
+Gates: ruff 0 · format 0 · full pytest 0 (12 in the sync_vendor suite) · ratchet OK. Tree holds
+only my `scripts/sync_vendor.py` + `tests/test_sync_vendor_check.py` and the concurrent session's
+three files. One commit queued locally; no push without a fresh per-action authorisation.
