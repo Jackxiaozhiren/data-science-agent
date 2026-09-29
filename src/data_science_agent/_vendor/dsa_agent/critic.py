@@ -102,9 +102,17 @@ def critic_validate(state: AnalysisState) -> list[ValidationResult]:
     else:
         results.append(ValidationResult(check="tool_errors", passed=True, message="No tool errors"))
 
-    if state.tool_call_count > state.budget.max_tool_calls:
+    if state.tool_call_count > state.budget.max_tool_calls or (
+        len(state.plan) > state.budget.max_steps and state.current_step >= state.budget.max_steps
+    ):
         results.append(
-            ValidationResult(check="budget", passed=False, message="Tool call budget exceeded")
+            ValidationResult(
+                check="budget",
+                passed=False,
+                message="Tool call budget exceeded"
+                if state.tool_call_count > state.budget.max_tool_calls
+                else "Step budget exceeded",
+            )
         )
     else:
         results.append(ValidationResult(check="budget", passed=True, message="Budget ok"))

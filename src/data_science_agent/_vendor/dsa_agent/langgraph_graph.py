@@ -16,7 +16,13 @@ from dsa_agent.graph import (
     _run_tool,
     _tool_inputs_for_step,
 )
-from dsa_agent.state import AnalysisState, AnalysisStatus, Insight, ValidationResult
+from dsa_agent.state import (
+    AnalysisState,
+    AnalysisStatus,
+    Budget,
+    Insight,
+    ValidationResult,
+)
 
 
 class LGState(TypedDict, total=False):
@@ -28,6 +34,7 @@ class LGState(TypedDict, total=False):
     objective: str
     columns: list[str]
     step_index: int
+    budget: Budget
     analysis_state: dict[str, Any]
     messages: Annotated[list[dict[str, Any]], add_messages]
     status: str
@@ -145,7 +152,8 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
 def _route_after_step(state: LGState) -> str:
     plan = state.get("plan") or []
     idx = int(state.get("step_index") or 0)
-    if idx < len(plan):
+    max_steps = (state.get("budget") or Budget()).max_steps
+    if idx < len(plan) and idx < max_steps:
         return "exec_step"
     return "critic"
 

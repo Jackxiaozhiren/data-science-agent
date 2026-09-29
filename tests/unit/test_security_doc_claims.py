@@ -50,6 +50,35 @@ def test_security_md_cites_real_files() -> None:
     assert not _resolves("sql_validator.py"), "the phantom SQL validator is back"
 
 
+def test_budget_enforcement_claim_is_backed_by_code() -> None:
+    """SECURITY.md now says the budgets are enforced in graph.py; the file must read them.
+
+    `max_steps` shipped for several releases as a declared-only field while seven documents,
+    this file included, described it as enforced -- a control that cannot fire reads worse than
+    no control, because reviewers stop looking.
+    """
+    import ast
+
+    engine = ast.parse(
+        pathlib.Path("packages/agent/src/dsa_agent/graph.py").read_text(encoding="utf-8")
+    )
+    read_in_engine = {
+        n.attr
+        for n in ast.walk(engine)
+        if isinstance(n, ast.Attribute) and n.attr.startswith("max_")
+    }
+    section = (
+        _SECURITY_DOC.read_text(encoding="utf-8")
+        .split("## Sandbox Model", 1)[1]
+        .split("\n## ", 1)[0]
+    )
+    claimed = set(re.findall(r"\b(max_\w+)(?=\s|\))", section))
+    unread = sorted(k for k in claimed if k not in read_in_engine)
+    assert not unread, (
+        f"SECURITY.md cites {sorted(claimed)} as enforced; graph.py never reads {unread}"
+    )
+
+
 def test_sandbox_section_symbol_claims_resolve() -> None:
     """Each identifier the section names must exist in the module that owns it."""
     from dsa_agent.state import Budget

@@ -18,7 +18,7 @@ Report privately via GitHub Security Advisories (preferred) or open a private Gi
 - **SQL**: Read-only allowlist (`SELECT/WITH/SHOW/DESCRIBE/EXPLAIN`), row limit `10k`, no `INSERT/UPDATE/DELETE` (`packages/execution/src/dsa_execution/sql_guard.py` + `run_sql`).
 - **Python**: AST allowlist, `_safe_import` deny `os/subprocess/socket/requests/eval/exec/open/__import__`, allowed `{polars, numpy, math, statistics, json, re, datetime, collections, itertools}`, 5s wall-clock (`python_sandbox.py`).
 - **Prompt injection**: Dataset is `UNTRUSTED DATA`, pattern detection `contains_prompt_injection` / `_INJECTION_PATTERNS`, output causal-claim rewrite (`guardrails.py` + `packages/agent/src/dsa_agent/critic.py`).
-- **Resource limits**: Tool budgets `max_steps 20 / max_tool_calls 40 / max_retries 3` (declared in `packages/agent/src/dsa_agent/state.py`) + evidence coverage gating.
+- **Resource limits**: Tool budgets `max_steps 20 / max_tool_calls 40 / max_retries 3` (declared in `packages/agent/src/dsa_agent/state.py`, enforced in `packages/agent/src/dsa_agent/graph.py`; exhaustion fails the run's `budget` validation) + evidence coverage gating.
 
 ## Supply Chain & Security Hardening
 

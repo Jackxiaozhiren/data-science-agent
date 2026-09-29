@@ -405,12 +405,16 @@ async def run_analysis(
     if (
         indep_batch
         and len(indep_batch) > 1
+        and state.current_step < state.budget.max_steps
         and state.tool_call_count + len(indep_batch) <= state.budget.max_tool_calls
     ):
-        results = await _asyncio.gather(*[_exec_one(s) for s in indep_batch])
+        allowance = state.budget.max_steps - state.current_step
+        results = await _asyncio.gather(*[_exec_one(s) for s in indep_batch[:allowance]])
         for step, inputs, output, ok, err, dur in results:
             await _record(step, inputs, output, ok, err, dur)
         for step in rest:
+            if state.current_step >= state.budget.max_steps:
+                break
             if state.tool_call_count >= state.budget.max_tool_calls:
                 state.status = AnalysisStatus.FAILED
                 state.error = "Tool call budget exceeded"
@@ -419,12 +423,18 @@ async def run_analysis(
             await _record(step2, inputs2, output2, ok2, err2, dur2)
     else:
         for step in state.plan:
+            if state.current_step >= state.budget.max_steps:
+                break
             if state.tool_call_count >= state.budget.max_tool_calls:
                 state.status = AnalysisStatus.FAILED
                 state.error = "Tool call budget exceeded"
                 break
             step2, inputs2, output2, ok2, err2, dur2 = await _exec_one(step)
             await _record(step2, inputs2, output2, ok2, err2, dur2)
+
+    if len(state.plan) > state.current_step and state.current_step >= state.budget.max_steps:
+        state.status = AnalysisStatus.FAILED
+        state.error = "Step budget exceeded"
 
     # VALIDATION (Critic)
     if evidence_critic_enabled():
