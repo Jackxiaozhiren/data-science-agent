@@ -34,7 +34,8 @@ Conventions:
 | GET | `/api/v1/experiments/` | list + `total` (paginated, optional `?run_id=`) |
 | GET | `/api/v1/experiments/{id}` | one record |
 | POST | `/api/v1/experiments/compare` | rank records by shared metric (`{ids}`) |
-| GET | `/health` | `{status, details:{db,duckdb,polars,llm}, version}` |
-| GET | `/ready` | readiness (mirrors health) |
+| GET | `/health` | `{status, details:{process}, version}` — liveness only: no database I/O and no optional scientific/LLM imports, so a small instance can answer probes immediately |
+| GET | `/ready` | `{status, details:{process,db}, version}` — database readiness; `status` degrades to `degraded` when the DB check fails |
+| GET | `/health/dependencies` | `{status, details:{duckdb,polars,llm}, version}` — deeper optional-dependency diagnostic |
 | GET | `/version` | version |
 | GET | `/mcp/tools` POST `/mcp/call` POST `/mcp` | MCP (stateless 2026-07-28, see MCP Design) |
