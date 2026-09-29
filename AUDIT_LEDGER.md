@@ -3365,3 +3365,27 @@ Two of the fifteen are now fixed as copy (#3, #5), one is resolved as naming-onl
 guard (#13), and one is parked on file ownership (#10). The items that genuinely block Phase 4 are
 unchanged in kind: FE-01/02 data path, FE-03/04 auth and error presentation, FE-05 status
 vocabulary, FE-06/07/08 fetch discipline, plus the §25.5 decision rows that need the maintainer.
+
+## 72. The mechanism behind FE-01/FE-02, measured rather than inferred
+
+While confirming what the runner would verify for the pushed web edits, the prerender set was read:
+`apps/web/.next/prerender-manifest.json` contains 9 routes — `/_global-error`, `/_not-found`,
+`/analysis`, `/benchmarks`, `/datasets`, `/datasets/compare`, `/evaluations`, `/icon.svg`,
+`/runs/compare` — and **not** `/research`, `/failures` or `/mcp`. Cross-checked against the pages
+themselves: those three call `fetch(..., { cache: "no-store" })` (`research/page.tsx:18`,
+`failures/page.tsx:27,35`, `mcp/page.tsx:20`), which forces request-time rendering.
+
+So the two filesystem-reading defects are **not the same defect**:
+- **`/benchmarks` reads at build time and is then frozen forever.** It is prerendered with
+  `initialRevalidateSeconds: false` (§67), so `readFileSync` runs during `next build`. In the web
+  image the files do not exist (`Dockerfile.web` copies only `apps/web`), so an EmptyState is baked
+  into static HTML; where the files *do* exist, the numbers are stale by construction and no
+  revalidation ever refreshes them.
+- **`/research` reads at request time.** Its `readdirSync` (`page.tsx:32`) runs per request inside
+  the web container, where `research/results` was never produced, so it yields an empty list on
+  every load — not frozen, simply always empty.
+
+Both are host-locality failures, but they need different remedies: the first cannot be fixed by
+serving data at request time unless the prerender/frozen flag is also addressed, while the second is
+fixed by the same API-serving change on its own. Recorded so §25.5 row 1 is not decided on a merged
+description of two different behaviours.
