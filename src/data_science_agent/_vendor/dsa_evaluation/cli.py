@@ -256,7 +256,7 @@ def main() -> None:
         help="manifest path, plugin name, or tool name for execute",
     )
     p_plugin.add_argument("--json", action="store_true", help="JSON output")
-    p_mcp = sub.add_parser("mcp", help="MCP (§32): dsa mcp tools")
+    p_mcp = sub.add_parser("mcp", help="MCP (§32): list the tool surface (dsa mcp [--json])")
     p_mcp.add_argument("--json", action="store_true", help="JSON output")
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
