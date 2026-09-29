@@ -541,7 +541,7 @@ DSA's posture is unusually claim-heavy: verified runs, case-study counts, reprod
 
 ### 17.2 Repo integrity and search safety
 
-Derive the pollution table from the collector rather than recalling it. The decisions to resolve as findings:
+Derive the pollution table by measurement, never recall: the collector reports no footprint key (checked -- no size or file-count leaf exists), so time scoped vs unscoped scans with `/usr/bin/time -p` and take sizes with `du`, stamping each number with its command. The decisions to resolve as findings:
 
 - **Nested duplicate trees.** Any untracked, un-ignored nested copy of this project is the highest-severity *hygiene* item available: it makes every `git add -A` catastrophic and makes every unscoped search double-count the codebase. Check whether the ignore exists **and whether it is actually working** (`git status --porcelain -uall` must not list it). If a nested copy carries unique work, the remedy is **a decision you present, not take** — options: ignore (reversible) / relocate / delete. Recommend one, mark `BLOCKED`, do not act without approval.
 - **No search-exclude configuration.** If no agent-facing search-ignore file exists, adding one is small, reversible and high-leverage: it protects every future retrieval from generated and third-party bulk. Note it as an uplift candidate with the caveat that it is tool-specific.
