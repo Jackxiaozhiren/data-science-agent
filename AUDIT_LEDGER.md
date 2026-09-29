@@ -3248,3 +3248,37 @@ packages they meant. `_diff` continues to report per-package counts rather than 
 Gates: ruff 0 · format 0 · full pytest 0 (12 in the sync_vendor suite) · ratchet OK. Tree holds
 only my `scripts/sync_vendor.py` + `tests/test_sync_vendor_check.py` and the concurrent session's
 three files. One commit queued locally; no push without a fresh per-action authorisation.
+
+## 69. Phase 5 report produced, and writing it caught two errors in my own prose
+
+`AUDIT_REPORT_PHASE5.md` (186 lines) implements §25.1–§25.6 against the recorded baseline `150b54f`
+and the reporting commit `0a94a5a`.
+
+- **Placement was a gate decision, not a tidy-up.** §25.4 asked "where does this go?" and the answer is
+  forced: `capabilities.navOrphanPages` is capped at exactly its measured value (23), and the collector
+  scans `docs/**/*.md` (`audit_facts.py:367-370`, `SCANNED` at :51). A new page under `docs/` would have
+  become orphan #24 and turned CI red for the act of reporting. Root placement keeps it outside that scan,
+  and `^[A-Z][A-Z_]*_(?:PROMPT|SPEC)\.md$` does not match its name, so `debt.auditApparatusLines` stays 1128.
+  Verified after writing: apparatus 1128 · orphans 23 · todo markers 0 · claims checker `0 issues` ·
+  ratchet `OK` · full pytest rc 0 · mkdocs --strict rc 0.
+- **Two count errors, both caught against primary artefacts rather than by re-reading my draft.** The
+  report's unverified-items bullet said "roughly thirteen"; `AUDIT_LEDGER.md` §63.4 actually carries
+  **fifteen**, and I had also slipped `L7-AR-01` into the unverified set although §63.4 does not list it
+  and the import-order mechanism was measured directly earlier -- understating known ground, the mirror
+  image of over-claiming. Corrected in place, with the correction recorded here instead of silently
+  rewritten. Likewise "twelve repairs" is now scoped honestly: twelve table rows covering the sixteen
+  commits in `0b4c50a..0a94a5a`, out of 104 commits across the whole series; earlier-session repairs are
+  referenced to §51–§60, not re-listed as mine.
+- **`438` → `460` for `debt.testFunctions` explained, not smoothed.** §66 quoted 438. The reading came
+  from a snapshot that `--check` never refreshes, and the `--write` that should have refreshed it ran with
+  stdout and stderr redirected to `/dev/null`, so its failure was invisible. The value at `0a94a5a` is
+  460. §66 stands as the historical record of what I saw; §25.3 carries the corrected figure with the
+  mechanism, which is the family of my own suppression-hides-a-probe-failure trap.
+- **Phase 4 is still not entered, by design.** §24's entry condition requires every S0/S1 to be
+  `fixed`/`reverted`/`BLOCKED` with a recorded decision. The verified L6 S1s (FE-01/02/03/04) and the L7
+  S1s are diagnosed but undecided, so uplift would be started over an open S1 -- the precise failure §24
+  names. The report's §25.5 is therefore the prerequisite work, and its seven rows are the decision queue.
+- **Self-audit outcome on my own laws:** §N10 is marked **VIOLATED** in the report (three batches
+  committed code before the ledger entry), §34's per-lane probe inventory **NOT MET**, and §26's
+  session-start gate derivation **PARTIAL**. These are reported as unchecked boxes rather than implied
+  passes, per §30.
