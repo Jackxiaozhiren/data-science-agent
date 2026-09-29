@@ -2801,3 +2801,155 @@ Gates after this turn's edits: ruff 0 · format 0 · pytest 0 · ratchet OK · m
 Collected tests 452 → **454** locally; CI's 450 denominator on `0b4c50a` still explains exactly.
 Lanes L6 and L7 measured by three concurrent read-only agents; their reports land in
 `/tmp/lane_reports/` and are integrated in §63 rather than merged into this entry.
+
+## 63. L6 and L7 measured by three concurrent agents; two of their claims did not survive me
+
+### 63.1 Method and safety
+Three read-only agents ran L6.1 (frontend), L6.2 (repo integrity/search safety) and L7
+(artifact reconciliation) concurrently against this tree. Reports: `/tmp/lane_reports/`
+(`L6_frontend.md` 162 lines, `L6_repo_integrity.md` 465, `L7_artifacts.md` 507). Each was told
+to write nothing in the repo; final `git status` from all three showed only the concurrent
+session's three files, and `uv.lock`/`pyproject.toml` were byte-stable across their builds.
+Two disclosed incidental side effects: two gitignored `.pyc` files from running the collector,
+and six `artifacts/charts/*_forecast.png` plus `site/` and `apps/vscode/out/` that all predate
+their first command by mtime. Both agents also recorded that **HEAD moved under them**
+(`0b4c50a` → `f67dcdd`), and L7 verified that the intervening diff touches no file under
+`packages/*/src`, `apps/*/src` or `_vendor` — so their measurements still hold.
+
+Every headline claim below was re-opened by me. Nothing enters this ledger on an agent's word.
+
+### 63.2 Verified in the source (T0-T1, my own eyes on the cited lines)
+- **L6-FE-01 (S1).** `/benchmarks` reads `benchmarks/baseline/summary.json` and
+  `benchmarks/v2/catalog.json` through `readFileSync` (`app/benchmarks/page.tsx:25,35`), and
+  `docker/Dockerfile.web:5` copies only `apps/web`, so the files cannot exist in the web image.
+  One detail the report missed and I added: the route is prerendered with
+  `initialRevalidateSeconds: false` (measured in `.next/prerender-manifest.json`, 9 prerendered
+  routes), so even in a layout where the read *succeeds* the figures are frozen at build time
+  forever. `firstExisting`'s own comment at `:12-13` shows the author knew `process.cwd()`
+  differs between layouts — this is a hedge, not an accident, and it cannot satisfy the split
+  topology `docs/hosted-demo.md:14` asserts.
+- **L6-FE-03 (S1).** HTTP failure is indistinguishable from absence:
+  `app/failures/page.tsx:28` `if (!listRes.ok) return empty`, `:36 if (!r.ok) return`,
+  `app/research/page.tsx:19` → `[]`, `app/analysis/[runId]/page.tsx:11` → `null`.
+- **L6-FE-04 (S1, reachable via the docs).** Zero `Authorization`/`Bearer` tokens anywhere in
+  `apps/web` source; `apps/api/.../security.py:122` gates `/api/*` on `DSA_AUTH_TOKEN`; and
+  `docs/api.md:13` tells operators to set it. Setting it therefore yields a UI that reports
+  "nothing exists" through FE-03 rather than "unauthorized". FE-03+FE-04 is the pair; neither
+  is severe alone.
+- **L7-AR-02 → fixed.** See §63.5.
+- **L7-AR-04 → fixed.** See §63.5.
+
+### 63.3 Where I corrected a sub-agent
+- **L6-FE-17, numbers right, framing wrong.** `regression.mjs` was reported as "50 assertion
+  points, 0 content assertions, 24 screenshots". My first check — counting `assert(`/`expect(`
+  — returned 0 and 3, so I wrote the finding off as inflated. My instrument was the wrong one:
+  the script hand-rolls `throw new Error` at `:118` (HTTP 200) and `:124` (overflow), 12 routes
+  × 2 viewports = 48, plus 2 console checks = 50, and 24 screenshots at runtime. The counts
+  stand. What changes the finding is the file's own header at `:8-10`: *"Intentionally
+  backend-independent: with no API running, pages render their EmptyState/ErrorState (all HTTP
+  200) — the tour guards layout, console hygiene, and 'old bundle' regressions, not live data"*,
+  reinforced by `:119` waiting *so that* empty states render. So "a 200 with an empty body
+  passes" is declared scope, not a bug. Restated: the repo's only browser-level net excludes
+  content by design, therefore FE-01/02/03 have **no detector at all**, and the tour passes
+  green on the broken production page. That is the finding.
+- **L6-RI, "the real tree is never scanned" is false.** `tests/test_automation_scripts.py:215`
+  does monkeypatch `ROOT` to `tmp_path`, but only inside one synthetic version-consistency test;
+  `:223-224` reads `public_claims.ROOT` and asserts against the real tree. Narrowed to what is
+  true: the *pattern* checks (identical text, stale version) run only on fixtures, so their
+  numeric claims are never exercised against the repository they guard.
+- **L6-RI, the README blind spot is misattributed.** `README.md` is **in** `SCAN_GLOBS`
+  (`scripts/check_public_claims.py:42`); it is the *version-consistency* loop at `:194` that
+  deliberately omits README, which is a defensible choice. The reason README's stale `v4.3.0`
+  goes unseen is `:75` — `stale_version` matches only the literals `4.0.0|3.0.0|2.0.0`, so
+  4.3.0 and 4.4.0 cannot be caught by construction. Verified directly.
+
+### 63.4 Accepted at T2 (agent-measured, not re-opened by me) — do not treat as verified
+L6-FE-02 (`/research` `readdirSync("research/results")`), the invented `RUNNING` status and
+`tools.length || 19` fabrication, the orphan routes `/evaluations` `/failures` `/mcp`, the
+"Checkpoint #12" replay claim, `/progress` polling without give-up, the absent fetch timeout,
+`/failures` fanning out to 100 per-page requests, the hand-mirrored types dropping
+`evidence.validation_status`; L7-AR-03 (VS Code claimed at `README.md:222` with no distributable
+ever produced), L7-AR-05 (`ReproductionScore` not a symbol in the artifact), L7-AR-06
+(`dsa-ml`/`dsa-reports`/`dsa-visualization` shipping a single `__version__` file each),
+L7-AR-07 (`sync_vendor.SOURCES` never cross-checked against workspace members); the L6-RI
+`git clean -ffdxy` analysis (94 entries vs 95, the one-line difference being the clone) and the
+claim that 15 of the clone's dirty paths exist nowhere else in the tree. Each needs its own
+red-first pass before it becomes a fix.
+
+### 63.5 Landed this entry (3 commits, all red-first)
+- **`docs/api.md` health table** promised `details:{db,duckdb,polars,llm}` on `GET /health`.
+  The handler returns `details:{process}` (`health.py:39-43`, whose docstring names the split);
+  `db` is on `/ready` (`:51-55`); `{duckdb,polars,llm}` is `/health/dependencies` (`:58-73`),
+  which the table did not list at all. `ci.yml:156-159` asserts the code, so the documented and
+  enforced contracts disagreed. New `tests/unit/test_health_contract_doc.py` compares the table
+  to the handlers via `ast` — calling them is not an option, a TestClient request runs
+  `init_db()` and writes SQLite into the tree. It arrived **red**, naming all three defects;
+  and its first version filed `/ready` as undocumented, which was my regex matching only
+  `/health*`, not a real finding.
+- **`dsa --help`** advertised `MCP (§32): dsa mcp tools` (`dsa_evaluation/cli.py:259`) while that
+  form exits 2 (`dsa: error: unrecognized arguments: tools`, rc taken from the command).
+  Corrected in source and mirror. The guard's first design was wrong and its own negative
+  control caught it: I appended `--help` to keep write-producing subcommands from executing,
+  not realising argparse exits before it reports an unrecognised positional — the control came
+  back `0 == 2`. Argument-form validation therefore needs a `build_parser()` seam; recorded as
+  an uplift item instead of faked. Option-form assertions were deleted after measurement showed
+  **zero** `dsa <sub> --flag` strings exist in the help today, i.e. an empty denominator that
+  would pass forever.
+- **Three live docs each carried a different wrong count.** Tool Layer "17" / mcp "18" /
+  MCP_DESIGN "~13" against 18 tool modules on disk and 19 advertised entries; architecture.md
+  "Next.js 15 / 13 routes" against a declared `16.3.4` and 16 `page.tsx` files (all four
+  measured by me). Removed rather than corrected, per §3.
+- **§17.2's own instruction was unsatisfiable** — it said to derive the pollution table "from
+  the collector", and the collector emits no size or file-count leaf. Rewritten in place, one
+  line for one line, because `debt.auditApparatusLines` is capped at exactly the current
+  reading (1128 = 1128, measured), so any added line is a breach by construction.
+
+### 63.6 Instrument limitations this lane exposed about my own mechanism
+- `capabilities.navOrphanPages` ceiling is **23 and the measured value is 23** — zero headroom.
+  The measured list mixes 11 `v4_3/` archive pages with 12 live ones, while §63's L7 adjudication
+  rule says archive orphans are intended frozen history. Two owners now disagree about what the
+  one number means, and the next genuinely new doc page trips CI regardless of nav care.
+- `sync_vendor.py --check` is red in this working tree, and **not** because of my mirror edit:
+  the only differing file is `external_validation.py`, the concurrent session's uncommitted work
+  (`cmp` on the two HEAD blobs: identical, so CI is unaffected). Two consumers of the same fact
+  diverged — `tests/unit/test_vendor_parity.py` stayed green because it deliberately skips
+  git-dirty paths, which is also why it could not see my own `cli.py` mirror change; that parity
+  was proved by `cmp` instead. The skip-on-dirty design tolerates other sessions at the cost of
+  not covering the tree's in-flight files: worth naming as a trade-off, not a bug.
+- L7's methodology correction to my own pitfall note: `-`/`_` normalisation is necessary but
+  **not sufficient** — `dsa-visualization` ships import package `dsa_viz`, so joining member and
+  artifact on the distribution name yields exactly one false "missing package". The only sound
+  join key is each member's `[tool.hatch.build.targets.wheel] packages` entry.
+
+### 63.7 Decisions still yours, ranked by what they cost to defer
+1. **D-L7-01 wire `Budget.max_steps`** — smallest change, retracts nothing, makes seven
+   documents and the frozen run payloads true again. Deferring keeps a false control in
+   SECURITY.md.
+2. **D-L7-02 preemptive sandbox timeout** — real containment (`RLIMIT_CPU` in a forked child or
+   subprocess), needs mirror regeneration. Deferring keeps a 5 s figure that cannot interrupt.
+3. **D-L8-02 injectable checkpointer** — makes pause/resume/fork exist and become testable;
+   alternatively retract it in seven documents.
+4. **FE-03 → FE-04 display state** — distinguish `unauthorized`/`serverError` from `empty`. The
+   honest blocker: I cannot browser-verify here (no dev server without writing into a shared
+   tree), so this needs either your local click-through or an explicit accept-unverified.
+5. **FE-01/FE-02 data path** — serve the two frozen files through the API (matches
+   `docs/hosted-demo.md:14`) or bind them into the web image and accept build-time freezing.
+6. **D-L5-03 supported-versions table** and **α re-freeze of `benchmarks/baseline/`** unchanged.
+
+### 63.8 Law liveness
+| law | state | decider |
+|---|---|---|
+| §3 no derivable facts in prose | ACTIVE, now enforced on 3 live docs | counts I measured and deleted rather than corrected |
+| §7.2 attribute every red before reporting | ACTIVE | three reds were my instruments, not the repo: `hasattr` on a nested def, the `/ready` regex, the `--help` blindener |
+| §11.3 guards must be shown to bite | ACTIVE, and it fired on me | deleted the empty-denominator option test; kept `navOrphanPages` disagreement as a finding |
+| §16 re-measure before quoting | ACTIVE | I re-ran the probe that reported 3 and returned 4 |
+| §7 concurrency: foreign file is not a finding | ACTIVE | `external_validation.py` drift attributed, not touched; README v4.3.0 left to its owner |
+| §17.2 "derive from the collector" | **VOID** | collector has no footprint leaf; the line was rewritten rather than left to mislead the next run |
+
+### 63.9 State
+Gates: ruff 0 · format 0 · full pytest 0 · ratchet OK · mkdocs --strict 0 with zero
+ERROR/WARNING lines · `sync_vendor --check` 1 **from the concurrent session only** (proved
+clean at HEAD). Collected tests 452 → **459** locally (CI's 450 on `0b4c50a` still explained
+exactly by the two uncommitted foreign tests). Census: L1 16 · L2 7 · L3 5 · L4 5 · L5 5 ·
+**L6 21+17 (agent-reported, 5 verified by me)** · **L7 11** · **L8 3 + 1 declined ceiling**.
+Nothing pushed.
