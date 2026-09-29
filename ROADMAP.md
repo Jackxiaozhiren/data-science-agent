@@ -19,7 +19,7 @@ This roadmap communicates project direction so contributors can see **what matte
 - Keep CI, CodeQL, dependency review, secret scanning, type checking, tests, docs, and release verification green.
 - Preserve PyPI Trusted Publishing and release attestations.
 - Treat reproducibility regressions as release-quality issues.
-- Track the next minor release through [v4.3.0 Release Readiness](docs/release-readiness-v4.3.md) and [issue #13](https://github.com/Jackxiaozhiren/data-science-agent/issues/13); no tag until the final candidate satisfies every release-critical gate.
+- Release 4.4.0 is current; the next minor has no readiness checklist yet. The [v4.3 Release Readiness](docs/release-readiness-v4.3.md) checklist and [issue #13](https://github.com/Jackxiaozhiren/data-science-agent/issues/13) remain the gate model: no tag until the final candidate satisfies every release-critical gate.
 
 ### Contributor onboarding
 

@@ -70,9 +70,92 @@ def scan_scope(root: Path = ROOT) -> tuple[list[Path], list[Path]]:
     return scanned, skipped
 
 
+# --- currency claims (§16 drift class) -------------------------------------------
+#
+# `stale_version` used to be `\b(4\.0\.0|3\.0\.0|2\.0\.0)\b`: a hand-maintained blacklist of
+# three retired releases, blind to every later one -- including the `v4.3.0` still advertised as
+# the current release. Broadening it to "any released version that is not current" was measured
+# and rejected: over the scanned surface that rule fires 160 times, 150 of them CHANGELOG release
+# records, plus `cff-version: 1.2.0` (a metadata format number colliding with a tag), a
+# `references:` entry citing 4.2.0, and the sub-apps' own `0.1.0`.
+#
+# So the rule is structural instead: a table of places where a document *asserts* which release
+# is current or upcoming. A new currency surface has to be added here to be checked at all,
+# which is the honest cost of having no false positives.
+
+
+def released_versions(root: Path = ROOT) -> set[str]:
+    """Release-line versions from git refs, normalised and without peeled duplicates.
+
+    Read from the ref files directly: `scripts/` is under bandit's S rules, so shelling out to
+    git is not available here.
+    """
+    git = root / ".git"
+    packed = git / "packed-refs"
+    refs: set[str] = set()
+    if packed.is_file():
+        refs.update(re.findall(r"refs/tags/([^\s^]+)", packed.read_text(encoding="utf-8")))
+    loose = git / "refs" / "tags"
+    if loose.is_dir():
+        refs.update(p.name for p in loose.iterdir() if p.is_file())
+    return {r[1:] if r.startswith("v") else r for r in refs}
+
+
+def current_version(root: Path = ROOT) -> str:
+    match = re.search(
+        r'__version__ = "([^"]+)"',
+        (root / "src/data_science_agent/__init__.py").read_text(encoding="utf-8"),
+    )
+    return match.group(1) if match else ""
+
+
+CURRENCY_ASSERTIONS = [
+    # file, pattern with a `version` group, what the document is claiming
+    (
+        "README.md",
+        re.compile(r"\[\*\*v(?P<version>\d+\.\d+\.\d+)\*\*\]"),
+        "advertised as the current release",
+    ),
+    (
+        "ROADMAP.md",
+        re.compile(r"next (?:minor |major )?release through \[v(?P<version>\d+\.\d+\.\d+)"),
+        "named as the next release",
+    ),
+]
+
+
+def check_currency_claims(root: Path = ROOT) -> list[str]:
+    """Flag documents that assert a superseded release as current, or a shipped one as upcoming."""
+    issues: list[str] = []
+    current = current_version(root)
+    released = released_versions(root)
+    if not current or not released:
+        # An empty tag set would make every assertion vacuously pass, which is the most
+        # damaging possible failure of a checker: it reports clean while checking nothing.
+        return [f"currency check disabled: current={current!r} tags={len(released)}"]
+    for rel_path, pattern, claim in CURRENCY_ASSERTIONS:
+        path = root / rel_path
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            for match in pattern.finditer(line):
+                version = match.group("version")
+                if version == current:
+                    continue
+                why = (
+                    "not the current release"
+                    if claim.startswith("advertised")
+                    else "already released, so it is not the next one"
+                )
+                if version in released or claim.startswith("advertised"):
+                    issues.append(
+                        f"{rel_path}:{lineno} cites {version!r} which is {why} (current {current})"
+                    )
+    return issues
+
+
 # Patterns per §25
 PATTERNS = {
-    "stale_version": re.compile(r"\b(4\.0\.0|3\.0\.0|2\.0\.0)\b(?!.*V(4\.0|3\.0|2\.0) Historical)"),
     "stale_test_counts": re.compile(r"(155 tests|86\+ tests|86 tests)"),
     "stale_mypy": re.compile(r"81 source files|92 source files"),
     "stale_coverage": re.compile(r"81% cov \(4597"),  # only bare old without versioned annotation
@@ -231,6 +314,9 @@ def main() -> int:
     for iss in check_maturity():
         all_findings.append(("maturity", iss, ""))
 
+    for iss in check_currency_claims():
+        all_findings.append(("currency_claims", iss, ""))
+
     # Scan files, minus the historical prefixes scan_scope() documents.
     scanned, skipped = scan_scope()
     for path in scanned:
@@ -251,7 +337,9 @@ def main() -> int:
     high = [
         f
         for f in all_findings
-        if f[0].startswith(("version_consistency", "old_package_pip", "old_repo"))
+        if f[0].startswith(
+            ("version_consistency", "currency_claims", "old_package_pip", "old_repo")
+        )
     ]
     # stale_test_counts now versioned, so not high if annotated
     if high:
