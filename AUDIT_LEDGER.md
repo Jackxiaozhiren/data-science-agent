@@ -3476,3 +3476,24 @@ in the pipeline changes today; §25.5 row 6's precondition is now concrete inste
 ### 74.2 State
 Gates: ruff 0 · format 0 (2 files reformatted before the run) · ratchet OK · full pytest 0 ·
 mkdocs --strict 0 · `check_public_claims` 1 high-severity issue, the README line above.
+
+## 74.3 A consequence of my own fail-closed guard: wiring the checker into `ci.yml` would break on its first run
+
+Measured, not hypothesised: `ci.yml`'s two checkout steps (`:22`, `:54`) set only
+`persist-credentials: false` -- **no `fetch-depth: 0`** -- while `publish.yml:27` does set it. A
+default-depth checkout does not fetch tags, so inside the `ci` job `released_versions()` would read
+an empty ref set, and the guard added in §74 returns "currency check disabled" as an **issue**
+rather than reporting clean. Since `currency_claims` is classified high severity, the commit that
+wires `check_public_claims.py` into `ci.yml` would go red **on its own wiring**, independent of any
+stale claim in the tree.
+
+This is the intended behaviour of a fail-closed check -- a detector with a silently zero denominator
+reporting green is the worse outcome, and §74 chose that trade deliberately -- but it turns §25.5
+row 6's precondition from one item into two, and both are now concrete:
+
+1. fix `README.md:16` (`4.3.0` -> `4.4.0` plus the release URL), and
+2. give the job tags (`fetch-depth: 0`, matching `publish.yml`) *or* pass the expected version in so
+   the currency check can distinguish "no tags available" from "no stale claims".
+
+Recording it here rather than at wiring time, because the person doing that work is likely not the
+person who added the guard, and the failure mode otherwise reads as an unrelated CI breakage.
