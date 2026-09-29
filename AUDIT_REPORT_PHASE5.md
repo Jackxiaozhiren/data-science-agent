@@ -107,18 +107,28 @@ output suppressed) — the true value at `0a94a5a` is 460.
 - `graph.py:474` retry gate, intentionally `budget`-scoped.
 - `benchmarks/baseline/` — not re-frozen; staleness declared under option β.
 
-**Open hypotheses (T2, agent-measured, not re-opened by me)** — **15 items**, enumerated by reading
-`AUDIT_LEDGER.md` §63.4 rather than recalling them: FE-02 `/research` `readdirSync`; the invented
-`RUNNING` status; the `tools.length || 19` fabrication; the orphan-route set (`/evaluations`,
-`/failures`, `/mcp` — one item, three pages); the "Checkpoint #12" replay claim; `/progress` polling
-without give-up; the absent fetch timeout; `/failures` fanning out to 100 per-page requests;
-hand-mirrored types dropping `evidence.validation_status`; L7-AR-03 VS Code with no distributable;
-L7-AR-05 `ReproductionScore`; L7-AR-06 the three stub packages; L7-AR-07 `sync_vendor.SOURCES`
-un-cross-checked; the L6-RI `git clean -ffdxy` 94-vs-95 analysis; and the clone's unique-paths claim.
-Each needs its own red-first pass before it becomes a fix.
+**The fifteen T2 hypotheses are now adjudicated** — `AUDIT_LEDGER.md` §70 carries the deciding
+command for each row. Net: **13 CONFIRMED, 1 SPLIT (item 11), 1 direction-only (item 15)**. Three
+confirmations changed kind or place under my own probes — the "Checkpoint #12" referent appears at
+**two** UI sites rather than one; the `/progress` page does not exist and the claim belongs to
+`RunInspector.tsx:101` with its silent `catch` at `:96-98`; and the VS Code row is narrower than
+reported, since CI does run `npm --prefix apps/vscode ci` — the source is installed and simply never
+packaged or checked. Two needed fresh magnitudes: `git clean -fdxn` 93 vs `-ffdxn` 94 (not 94/95), and
+the clone holding 8 dirty entries (not "15 of 19").
+
+**REFUTED while adjudicating:** the `compare_runs` half of the reproducibility claim — the function
+exists (`dsa_evidence/reproducibility.py:19`) and is called (`dsa_evaluation/cli.py:38,79`). I nearly
+recorded it as a phantom after misreading an empty result from a composite command; a second, narrower
+grep killed the error. What survives of that item is the name-and-shape mismatch only: the doc's
+`ReproductionScore {execution, numerical, statistical, evidence, semantic, overall}` against the real
+`ReproducibilityScore {level, score, details, dataset_sha256_match, tool_trajectory_match,
+conclusion_match}`.
+
+**Still unverified:** the second half of item 9 — I confirmed `validation_status` is absent from every
+mirrored type in `apps/web`, and did not re-open the docs' acceptance-criterion language.
 
 Note on a correction made while writing this: `L7-AR-01` (import-order-dependent entry points) is
-**not** in that list — §63.4 does not carry it and the mechanism was measured directly in an earlier
+**not** among those fifteen — §63.4 does not carry it and the mechanism was measured directly in an earlier
 session, so listing it as unverified would have understated what is actually known.
 
 **Lanes not run**: none — L1–L8 all ran. L6 and L7 ran through concurrent read-only agents, and their
@@ -169,7 +179,7 @@ but the raw reports will be lost with `/tmp`.
 | §N6 never move a gate to pass | ACTIVE, enforced on me | the 181 swallow-site excursion was fixed in code, not in the ceiling |
 | §N10 ledger before code | **VIOLATED, disclosed** | §62/§63/§64 batches committed code first, ledger second, same batch; §65–§68 used one commit |
 | §26 derive the gate list at session start | PARTIAL | ci.yml read directly; the §34 derivation command not re-run this session |
-| §34 probe inventory per lane | NOT MET | L6/L7 probes were run by agents and by spot checks, never marked `CONFIRMED/REFUTED/INCOMPLETE` as a table |
+| §34 probe inventory per lane | MET for L6/L7 | `AUDIT_LEDGER.md` §70 marks all fifteen with the command that decided each; L1–L5 inventories live in their own sections |
 | §9 tier caps severity | ACTIVE | T2 items were left unfixed rather than escalated |
 | §12 no half-true control | ACTIVE | batch gather + LangGraph router + entry point all wired, not just one site |
 | §17.2 "derive from the collector" | **VOID → deleted** | collector has no footprint leaf; line replaced in `293f11c` |

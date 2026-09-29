@@ -3282,3 +3282,31 @@ and the reporting commit `0a94a5a`.
   committed code before the ledger entry), §34's per-lane probe inventory **NOT MET**, and §26's
   session-start gate derivation **PARTIAL**. These are reported as unchecked boxes rather than implied
   passes, per §30.
+
+## 70. The fifteen T2 hypotheses adjudicated, and one of my own empty greps nearly fabricated a finding
+
+Each row states the single command that decided it. Nothing in this section changed code.
+
+| # | item | verdict | decider (command → observation) |
+|---|---|---|---|
+| 1 | FE-02 `/research` reads the filesystem | **CONFIRMED** | `grep -n readdirSync app/research/page.tsx` → `:1` imports `fs`, `:32` `readdirSync(dir).filter(startsWith("ablation_"))` |
+| 2 | invented `RUNNING` status | **CONFIRMED** (promoted earlier, §67.1) | enum read `state.py:10-21` → 11 members, no RUNNING/PENDING/QUEUED/STARTED; UI uses it at 4 sites |
+| 3 | fabricated `tools.length \|\| 19` | **CONFIRMED** | `grep -n "19" app/mcp/page.tsx` → `:39` renders `${tools.length \|\| 19} tools` |
+| 4 | orphan routes `/evaluations` `/failures` `/mcp` | **CONFIRMED** | inbound-link grep per route excluding each page's own dir → **0, 0, 0** |
+| 5 | "Checkpoint #12" invented referent | **CONFIRMED, and wider than reported** | `grep -rn Checkpoint apps/web/app` → `runs/[id]/replay/page.tsx:29` **and** `runs/[id]/page.tsx:79`; `grep -rn checkpoint apps/api/src/dsa_api/routers/` → no hits, so the referent cannot exist |
+| 6 | `/progress` polls with no give-up | **CONFIRMED after relocating it** | the route does not exist (`find apps/web/app -name page.tsx` → 16 pages, none is `progress`); polling is `RunInspector.tsx:101 setInterval(tick, 3000)` with `:96-98 catch { }` labelled "Transient network blip — next tick retries" → a persistent failure retries forever and is silently swallowed |
+| 7 | no fetch timeout anywhere | **CONFIRMED** | `grep -rn "AbortSignal\|signal:" apps/web` → no matches |
+| 8 | `/failures` fans out up to 100 requests | **CONFIRMED with the number sourced** | `analysis.py:59 limit: int = Query(default=100 …)` × `failures/page.tsx:33 ids.map(async id => fetch(.../artifacts))` |
+| 9 | mirrored types drop `validation_status` | **CONFIRMED for the drop only** | `grep -rn validation_status apps/web` → empty, while `state.py:66` defines `Literal["pending","verified","failed"]`. The agent's "verified evidence is a documented acceptance criterion" half was **not** re-verified and is not claimed here |
+| 10 | L7-AR-03 VS Code surface with no artifact | **CONFIRMED, narrowed** | `README.md:214-222` table header is literally `Surface / Entry point`, and the VS Code row supplies a description where every other row supplies an entry point; `find -name "*.vsix"` → none; `grep -rln vsce .github/workflows scripts tests` → none. CI does run `npm --prefix apps/vscode ci`, so the source is installed and never packaged or checked |
+| 11 | L7-AR-05 `ReproductionScore` | **SPLIT — half CONFIRMED, half REFUTED by me** | CONFIRMED: `docs/reproducibility.md:23` names `ReproductionScore {execution, numerical, statistical, evidence, semantic, overall}`; the real class is `ReproducibilityScore` with fields `level, score, details, dataset_sha256_match, tool_trajectory_match, conclusion_match` — different name, different shape, and `ReproductionScore` occurs in code only as a comment (`dsa_evaluation/cli.py:111`). REFUTED: the same sentence's `compare_runs` **exists** (`reproducibility.py:19`, imported and called at `cli.py:38,79`) |
+| 12 | L7-AR-06 stub packages | **CONFIRMED** | `find packages/{ml,reports,visualization}/src -name '*.py'` → 1 each, `bytes=22`, contents `__version__ = "0.1.0"`; static-importer grep → no files outside their own package |
+| 13 | L7-AR-07 `SOURCES` never cross-checked | **CONFIRMED** | `grep -rln "uv.workspace" tests/ scripts/ .github/` → empty |
+| 14 | L6-RI `git clean -ffdxy` single-line risk | **CONFIRMED as an invariant; magnitude re-measured** | `git clean -fdxn \| wc -l` → **93**, `-ffdxn` → **94**, and `grep -c data-science-agent` in the latter → **1**. The earlier 94/95 pair decayed by one entry, exactly as §"audit premises decay fast" predicts; the asymmetry did not |
+| 15 | clone's unique-paths claim | **DIRECTION CONFIRMED, magnitude REFUTED** | existence probes in both trees → the 4 untracked paths exist only under `data-science-agent/` (`FRONTEND_REDESIGN_PROMPT.md`, `apps/web/components/`, `apps/web/lib/{format.ts,theme.tsx}`); but `git -C data-science-agent status --porcelain` now returns **8** entries (4 M + 4 `??`), not "15 of 19" |
+
+**Net:** 13 confirmed, 1 split (11), 1 direction-only (15); of the confirmations, three needed correcting in kind or location (#5 wider, #6 relocated, #10 narrowed) and two needed a magnitude refresh (#14, #15).
+
+**The near-miss I should own.** Row 11's `compare_runs` first came back empty because I read the batch output wrong and nearly wrote "REFUTED — the doc's API does not exist". Re-running the narrow grep showed the definition plus two call sites. An empty result from a composite command is not a measurement — the same trap as the suppressed `--write` in §69, in the opposite direction: there, silence hid a failure to refresh; here, a misread silence would have invented a phantom.
+
+**Effect on §25.4 / §34.** The fifteen are no longer hypotheses; the inventory above is the per-lane probe marking §34 asks for (`CONFIRMED`/`REFUTED`/`INCOMPLETE`), so the `NOT MET` line in the Phase 5 report's law table is now satisfied for L6/L7. Row 9's second half stays unverified and is marked as such rather than folded into the confirmation. None of these fifteen is yet a fix: they change the decision queue in §25.5 (rows 1-4 gain evidence, row 3 gains two more documents' worth of wording), not the code.
