@@ -3028,3 +3028,68 @@ Collected tests 456 → **463** locally (+4 step-budget, +4 router, +1 doc-enfor
 `sync_vendor --check` remains red solely from the concurrent session's `external_validation.py`.
 D-L7-02 (sandbox preemption) and D-L8-02 (injectable checkpointer) stay BLOCKED awaiting
 decisions; nothing pushed.
+
+## 65. D-L7-02 closed — the sandbox timeout can interrupt now, and the ratchet policed my fix
+
+### 65.1 Design chosen, and why the obvious one was rejected
+Preemption was implemented as an `ast.NodeTransformer` that inserts a deadline call at the head of
+every `For`/`AsyncFor`/`While` body, with the guard closing over a `time.perf_counter()` deadline.
+`multiprocessing`/`RLIMIT_CPU` was rejected on a measured reason rather than taste: process spawn
+costs hundreds of milliseconds per call and `mean_latency_ms` is a *gated* baseline number
+(47.92 ms in `benchmarks/baseline/summary.json`), so the robust option would have moved a metric CI
+compares. The transform's own cost was then measured instead of asserted — counterbalanced
+A/B/A/B/A/B, 60 reps per arm, `execute_python` from HEAD (via `git show`, read-only) against the
+new one on the same statement: **0.033 ms -> 0.083 ms per call, ratio 2.53, new slower in 6/6
+paired observations**. Real 2.5x on the mechanism, 0.05 ms in absolute terms, and it cannot explain
+the benchmark delta below.
+
+`SandboxTimeout` inherits **BaseException**, not Exception: sandboxed code is allowed `try/except`,
+so a deadline that is an `Exception` subclass can be swallowed by the very loop the guard is meant
+to stop (`while True: try: ... except Exception: pass`). The conversion back into the normal result
+dict happens at one boundary, so `run_python`'s contract is unchanged.
+
+### 65.2 A false signal I did not act on
+The paired benchmark run showed `mean_latency_ms 240.4 -> 404.8` with every quality metric identical.
+One sample per arm on a host that earlier this session returned 15.4/18.3/26.5 s for identical
+builds is not a regression, and the direct 6/6 A/B above bounds the true cost at +0.05 ms per call.
+Reported as noise, not as a finding; the in-process measurement is the primary evidence.
+
+### 65.3 The ratchet caught me adding "debt", and the ceiling did not move
+`debt.swallowedExceptionSites` went 180 -> **181** and
+`test_the_ratchet_is_currently_satisfied` failed, because `SWALLOW_RE` matches any line shaped like
+`except X:` -- including my new `except SandboxTimeout:` clause, which *reports* rather than hides.
+Two options: raise the ceiling, or change the code. Raising a debt ceiling is a policy loosening and
+is explicitly a human decision, so I did not do it. Instead the handler was folded into the single
+existing `except Exception as e:` line (now `except BaseException as e:` with an explicit
+`if isinstance(e, (KeyboardInterrupt, SystemExit)): raise` first), which keeps interrupt semantics,
+keeps the count at 180, and adds no suppression directive anywhere. The instrument is crude; the
+response was to satisfy it honestly rather than edit it mid-audit.
+
+### 65.4 Two of my own stale-path mistakes this unit
+- I wrote `tests/test_sandbox.py` into a command from memory; it does not exist -- the existing
+  coverage is `tests/security/test_adversarial_suite.py` and `tests/security/test_security_phase8.py`,
+  found by `grep -rln execute_python tests/`.
+- I re-ran a probe at `/tmp/probe_sandbox_preempt.py`, which was gone, and the resulting
+  `Errno 2` looked at first like the sandbox failing. Rule honoured: a missing file is my error,
+  not the subject's; recreated at `/tmp/probe_sb2.py` and it printed
+  `returned_after=203ms error=TimeoutError stderr_tail=Timeout after 200ms > 200ms (interrupted)`.
+
+### 65.5 Doc claim narrowed to what is measured
+`SECURITY.md` now says the 5s budget is "interrupted at loop boundaries", quotes the measured
+behaviour, and states the residual gap: a single long non-Python call can overrun and is reported
+after the fact. The alternative was leaving "5s wall-clock" as an unqualified promise, which is the
+class of defect this whole audit has been clearing.
+
+### 65.6 Law liveness
+| law | state | decider |
+|---|---|---|
+| §11.3 watch it fail first | ACTIVE | 2 of 3 tests red pre-implementation; the third (bounded loop unaffected) is green-on-arrival and labelled as pinning existing behaviour |
+| §4 ceilings may only fall; loosening is human | ACTIVE, enforced on me | declined to move `swallowedExceptionSites`; restructured the code instead |
+| §10 report paired signs, not seconds | ACTIVE | ratio 2.53 with 6/6 sign agreement reported; benchmark seconds rejected as noise |
+| §12 no half-true controls | ACTIVE | coverage limit (non-Python overruns) written into the security doc, not left implied |
+| §55 mirror ordering | ACTIVE | `python_sandbox.py` re-copied to `_vendor` after both the fold and the import-order autofix, verified with `cmp` |
+
+### 65.7 State
+Gates: ruff 0 · format 0 · mypy 0 (112 files) · full pytest 0 · ratchet OK (180 swallow sites,
+unchanged) · `tests/security/` + deadline tests 39 passed. Nothing pushed; D-L8-02
+(injectable checkpointer) is the next authorised item.

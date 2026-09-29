@@ -16,7 +16,7 @@ Report privately via GitHub Security Advisories (preferred) or open a private Gi
 
 - **File**: MIME sniff (`packages/execution/src/dsa_execution/mime_sniff.py`) + extension allowlist, 100 MB cap, archive-bomb guard, path traversal block (`packages/datasets/src/dsa_datasets/validate.py`).
 - **SQL**: Read-only allowlist (`SELECT/WITH/SHOW/DESCRIBE/EXPLAIN`), row limit `10k`, no `INSERT/UPDATE/DELETE` (`packages/execution/src/dsa_execution/sql_guard.py` + `run_sql`).
-- **Python**: AST allowlist, `_safe_import` deny `os/subprocess/socket/requests/eval/exec/open/__import__`, allowed `{polars, numpy, math, statistics, json, re, datetime, collections, itertools}`, 5s wall-clock (`python_sandbox.py`).
+- **Python**: AST allowlist, `_safe_import` deny `os/subprocess/socket/requests/eval/exec/open/__import__`, allowed `{polars, numpy, math, statistics, json, re, datetime, collections, itertools}`, 5s wall-clock interrupted at loop boundaries (measured: a `while True` under `timeout_ms=200` returns at 200ms; a single long non-Python call can still overrun and is reported after the fact) (`python_sandbox.py`).
 - **Prompt injection**: Dataset is `UNTRUSTED DATA`, pattern detection `contains_prompt_injection` / `_INJECTION_PATTERNS`, output causal-claim rewrite (`guardrails.py` + `packages/agent/src/dsa_agent/critic.py`).
 - **Resource limits**: Tool budgets `max_steps 20 / max_tool_calls 40 / max_retries 3` (declared in `packages/agent/src/dsa_agent/state.py`, enforced in `packages/agent/src/dsa_agent/graph.py`; exhaustion fails the run's `budget` validation) + evidence coverage gating.
 
