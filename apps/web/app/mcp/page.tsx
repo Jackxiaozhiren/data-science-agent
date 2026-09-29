@@ -36,7 +36,7 @@ export default async function MCPPage() {
       <PageHeader
         eyebrow="Reference · Step 3"
         title="MCP 2026-07-28"
-        description={`Stateless core · ${tools.length || 19} tools · No Mcp-Session-Id · cacheHints via cache_hint · Explicit handles: run_id / dataset_id.`}
+        description={`Stateless core · ${tools.length ? `${tools.length} tools` : "tool list unavailable"} · No Mcp-Session-Id · cacheHints via cache_hint · Explicit handles: run_id / dataset_id.`}
         actions={
           <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
         }

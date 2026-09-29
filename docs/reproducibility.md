@@ -20,7 +20,7 @@ Output: `reproduction/{manifest.json, environment.json, results.json, comparison
 
 ## Comparison & Classes & Score
 
-Compare: `Task Success / Statistical Results / Numerical Metrics / Tool Trajectory / Evidence Graph / Artifacts / Report Structure`. Classes: `Exact / Numerical / Semantic / Analytical`. Score: `ReproductionScore {execution, numerical, statistical, evidence, semantic, overall}` + `by_level L0..L5` via `compare_runs`:
+Compare: `Task Success / Statistical Results / Numerical Metrics / Tool Trajectory / Evidence Graph / Artifacts / Report Structure`. Classes: `Exact / Numerical / Semantic / Analytical`. Score: the CLI's `reproduction_score` object `{execution, numerical, statistical, evidence, semantic, overall}` + `method` + `by_level L0..L5`, produced by `compare_runs` (the pydantic model in `dsa_evidence` is a different type, `ReproducibilityScore`):
 
 | Level | Meaning |
 |-------|---------|

@@ -26,7 +26,7 @@ export default async function ReplayPage({ params }: { params: Promise<{ id: str
           <EmptyState
             icon={<History className="size-5 text-zinc-400" aria-hidden />}
             title="Replay controls are under construction"
-            description={`Checkpoint #12 for run ${id.slice(0, 12)} will support Replay or Fork here. Meanwhile, inspect the full evidence chain.`}
+            description="Replay and fork controls are not wired in this build: no checkpoint API exists yet. Meanwhile, inspect the full evidence chain."
             action={
               <Link href={`/analysis/${id}`}>
                 <Button size="sm">Back to Analysis →</Button>
