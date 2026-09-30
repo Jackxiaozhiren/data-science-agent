@@ -202,3 +202,40 @@ def test_no_version_information_at_all_still_reports_disabled(tmp_path: Path) ->
 
 def _degradations(root: Path) -> list[str]:
     return _load(root).currency_degradations(root)
+
+
+def test_an_empty_tag_set_is_refused_when_tags_are_required(tmp_path: Path) -> None:
+    """CI may not run this rule degraded: no refs means no verdict on "already shipped"."""
+    root = _scratch(
+        tmp_path,
+        tags=[],
+        current="4.4.0",
+        files={"README.md": "Docs at [**v4.4.0**](https://x.example/releases/tag/v4.4.0)\n"},
+    )
+    gate = getattr(_load(root), "require_released_tags", None)
+    assert gate is not None, (
+        "the checker has no tag requirement, so a shallow checkout silently drops half its rules"
+    )
+    message = gate(root)
+    assert message and "tag" in message.lower(), f"empty tag set accepted: {message!r}"
+
+
+def test_a_populated_tag_set_satisfies_the_requirement(tmp_path: Path) -> None:
+    root = _scratch(
+        tmp_path,
+        tags=["v4.3.0", "v4.4.0"],
+        current="4.4.0",
+        files={"README.md": "Docs at [**v4.4.0**](https://x.example/releases/tag/v4.4.0)\n"},
+    )
+    gate = getattr(_load(root), "require_released_tags", None)
+    assert gate is not None, "the requirement helper is missing"
+    assert gate(root) is None, "a real release line must satisfy the requirement"
+
+
+def test_the_real_repository_carries_a_release_line() -> None:
+    """The flag can only be enforced in CI if the checkout it runs against has refs."""
+    module = _load(Path.cwd())
+    assert module.released_versions(), "no tags readable from this checkout"
+    gate = getattr(module, "require_released_tags", None)
+    assert gate is not None, "the requirement helper is missing"
+    assert gate() is None, "this checkout would fail its own CI flag"

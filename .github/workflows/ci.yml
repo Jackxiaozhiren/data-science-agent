@@ -54,6 +54,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+          # check_public_claims.py reads the release line from refs, and its version rule runs
+          # `git describe --tags`; with no refs fetched both go blind, so fetch the history here.
+          fetch-depth: 0
+          fetch-tags: true
       - name: Lint GitHub Actions workflows
         env:
           ACTIONLINT_VERSION: "1.7.12"
@@ -75,6 +79,10 @@ jobs:
       - run: uv run python scripts/audit_facts.py --check  # debt may only shrink (audit §20.0)
       - run: uv run python scripts/sync_vendor.py --check  # vendored dsa_* must match source
       - run: uv run python scripts/check_npm_workspace_lock.py  # root npm lock must match workspace manifests
+      # §25 stale-public-claims detector. --require-released-tags is what makes this a gate and
+      # not a printout: without refs the release-line rules have no verdict, and on a
+      # release/vX-rc ref the version rule is skipped too, so a degraded run would exit 0.
+      - run: uv run python scripts/check_public_claims.py --require-released-tags
       # Node deps: tests/vscode runs `npm run compile` (tsc) and the web build
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps

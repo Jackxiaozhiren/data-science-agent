@@ -49,7 +49,7 @@
     "debt.suppressionDirectives": 42,
     "debt.swallowedExceptionSites": 180,
     "debt.todoMarkers": 0,
-    "debt.unwiredCheckers": 1
+    "debt.unwiredCheckers": 0
   },
   "floor": {
     "debt.testFunctions": 400

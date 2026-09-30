@@ -18,6 +18,7 @@ If you want to learn the extension surface, [Build a Hello-World Plugin](plugin-
 ```bash
 uv sync --dev
 uv run python scripts/audit_facts.py --check
+uv run python scripts/check_public_claims.py --require-released-tags
 uv run ruff check packages apps/api tests src apps/jupyter scripts
 uv run ruff format --check packages apps/api tests src apps/jupyter scripts
 uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports

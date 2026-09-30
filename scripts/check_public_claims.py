@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import os
 import re
@@ -133,9 +134,27 @@ def currency_degradations(root: Path = ROOT) -> list[str]:
     if not current_version(root):
         return []
     if not released_versions(root):
-        skipped = [rel for rel, _p, _c, needs_tags in CURRENCY_ASSERTIONS if needs_tags]
+        skipped = [
+            f"{rel} ({claim})" for rel, _p, claim, needs_tags in CURRENCY_ASSERTIONS if needs_tags
+        ]
         return [f"no tags in this checkout: cannot test {', '.join(skipped)}"]
     return []
+
+
+def require_released_tags(root: Path = ROOT) -> str | None:
+    """Refuse a degraded run: with no refs, half the currency rules have no verdict at all.
+
+    `currency_degradations()` exists so a shallow local checkout still yields the badge verdict
+    plus an honest caveat. In CI a caveat nobody reads is the D-L1-05 failure mode again -- a gate
+    that prints a pass while its strongest assertion never ran -- so the flag turns the caveat
+    into a non-zero exit.
+    """
+    if not current_version(root):
+        return "no declared version readable in this checkout: the version rules cannot run"
+    released = released_versions(root)
+    if not released:
+        return " ".join(currency_degradations(root)) or "no release tags readable"
+    return None
 
 
 def check_currency_claims(root: Path = ROOT) -> list[str]:
@@ -404,7 +423,25 @@ def check_version_consistency() -> list[str]:
     return issues
 
 
-def main() -> int:
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="W3 §25 stale documentation detector")
+    parser.add_argument(
+        "--require-released-tags",
+        action="store_true",
+        help="exit non-zero when the checkout exposes no release tags, so CI cannot report a pass "
+        "for a currency rule that never had a verdict",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    opts = _parse_args(argv)
+    if opts.require_released_tags:
+        refusal = require_released_tags()
+        if refusal:
+            print(f"✗ {refusal} (high severity: the rule would report a pass it never tested)")
+            return 1
+
     all_findings = []
     # Version consistency
     ver_issues = check_version_consistency()

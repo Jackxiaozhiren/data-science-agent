@@ -135,6 +135,8 @@ def _classify(tokens: set[str]) -> str | None:
         return "mypy"
     if "pytest" in tokens:
         return "pytest"
+    if any(tok.endswith("check_public_claims.py") for tok in tokens):
+        return "claims"
     if any(tok.endswith("audit_facts.py") for tok in tokens):
         return "ratchet"
     return None
@@ -180,7 +182,7 @@ def _guide_gates(path: Path) -> dict[str, set[str]]:
 
 def test_contributing_guides_mirror_the_ci_gates() -> None:
     expected = _ci_gates()
-    assert len(expected) == 5, f"expected 5 guarded gates in ci.yml, parsed {sorted(expected)}"
+    assert len(expected) == 6, f"expected 6 guarded gates in ci.yml, parsed {sorted(expected)}"
     offenders: list[str] = []
     for rel in GUIDES:
         guide = _guide_gates(ROOT / rel)
@@ -205,3 +207,101 @@ def test_gate_comparison_detects_a_shortened_list() -> None:
     assert _classify(narrow) == "mypy", "the shortened line must still classify as the same gate"
     assert ci != narrow, "a path dropped from the list has to be visible to the comparison"
     assert ci - narrow == {"src", "apps/jupyter"} and narrow - ci == set()
+
+
+# `check_public_claims.py` is the one checker the collector reports as written-but-never-run:
+# `debt.unwiredCheckers` counts it, because no workflow invokes it. Its currency rules read the
+# release line straight out of `.git`, so a default-depth checkout (fetch-depth 1, fetch-tags
+# false) leaves the tag set empty and the "already shipped?" half degrades to a printed notice
+# instead of a verdict -- a gate that looks wired and reports nothing. Wiring must therefore
+# come with the ref fetch it depends on.
+def test_claims_checker_is_wired_with_the_refs_it_reads() -> None:
+    body = _job_body((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"), "ci")
+    runs = [cmd for _, cmd in _single_line_run_steps(body)]
+    assert len(runs) >= 5, f"job slicing broke -- only {len(runs)} run steps seen in job 'ci'"
+    wired = [cmd for cmd in runs if "check_public_claims.py" in cmd]
+    assert wired, "ci.yml never runs scripts/check_public_claims.py (debt.unwiredCheckers == 1)"
+    assert any("--require-released-tags" in cmd for cmd in wired), (
+        f"the wired step must fail on an empty tag set, not run degraded: {wired}"
+    )
+    checkout = _checkout_with(body)
+    assert checkout.get("fetch-depth") == "0", f"tags need full history, got {checkout}"
+    assert checkout.get("fetch-tags") == "true", (
+        f"checkout@v5 defaults fetch-tags to false: {checkout}"
+    )
+
+
+def test_checkout_reader_sees_inputs_past_a_comment() -> None:
+    """Negative control for the reader above, which first failed by skipping them.
+
+    The real ci.yml now puts a two-line comment inside the `with:` block; the first version of
+    `_checkout_with` treated a line without a colon as the end of the block and reported
+    `{persist-credentials: false}` -- a green-looking dict that had silently dropped both fetch
+    inputs. Fed that shape, the reader must return them.
+    """
+    sample = "\n".join(
+        [
+            "      - uses: actions/checkout@deadbeef # v5",
+            "        with:",
+            "          persist-credentials: false",
+            "          # explains why the next two lines exist,",
+            "          # and mentions `git describe --tags` too",
+            "          fetch-depth: 0",
+            "          fetch-tags: true",
+            "      - run: uv run pytest -q",
+        ]
+    )
+    got = _checkout_with(sample)
+    assert got == {"persist-credentials": "false", "fetch-depth": "0", "fetch-tags": "true"}, got
+
+
+def _job_body(text: str, job: str) -> str:
+    """The YAML text of one job, sliced on its two-space indentation."""
+    lines = text.splitlines()
+    start: int | None = None
+    for i, line in enumerate(lines):
+        if line.rstrip() == f"  {job}:":
+            start = i + 1
+            break
+    assert start is not None, f"job {job!r} not found"
+    for j in range(start, len(lines)):
+        if (
+            lines[j].startswith("  ")
+            and not lines[j].startswith("   ")
+            and lines[j].strip().endswith(":")
+        ):
+            return "\n".join(lines[start:j])
+    return "\n".join(lines[start:])
+
+
+def _checkout_with(body: str) -> dict[str, str]:
+    """Inputs of the first `uses: actions/checkout@` step, as key -> raw value.
+
+    Hand-rolled on purpose: PyYAML is only a transitive dependency here (mkdocs pulls it, the
+    project never declares it), and the other readers in this file stay parser-free for the same
+    reason -- a test that keys on an undeclared package can go ImportError on an unrelated bump.
+    Comments and blank lines are skipped, and the block ends where its indentation ends.
+    """
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        if "uses: actions/checkout@" not in line:
+            continue
+        out: dict[str, str] = {}
+        indent = len(line) - len(line.lstrip())
+        in_with = False
+        for follow in lines[i + 1 :]:
+            stripped = follow.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            follow_indent = len(follow) - len(follow.lstrip())
+            if stripped.startswith("- ") or follow_indent <= indent:
+                return out
+            if stripped == "with:":
+                in_with = True
+                continue
+            if not in_with or ":" not in stripped:
+                return out
+            key, _, value = stripped.partition(":")
+            out[key.strip()] = value.strip().strip("'\"")
+        return out
+    raise AssertionError("no actions/checkout step found in this job body")
