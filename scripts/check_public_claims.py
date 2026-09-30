@@ -109,19 +109,32 @@ def current_version(root: Path = ROOT) -> str:
     return match.group(1) if match else ""
 
 
+# file, pattern with a `version` group, the claim it makes, and whether answering it needs the
+# tag set (an "already released?" question does; "is this the current one?" does not).
 CURRENCY_ASSERTIONS = [
-    # file, pattern with a `version` group, what the document is claiming
     (
         "README.md",
         re.compile(r"\[\*\*v(?P<version>\d+\.\d+\.\d+)\*\*\]"),
         "advertised as the current release",
+        False,
     ),
     (
         "ROADMAP.md",
         re.compile(r"next (?:minor |major )?release through \[v(?P<version>\d+\.\d+\.\d+)"),
         "named as the next release",
+        True,
     ),
 ]
+
+
+def currency_degradations(root: Path = ROOT) -> list[str]:
+    """Name any currency assertion the checker could not evaluate, so silence is never a pass."""
+    if not current_version(root):
+        return []
+    if not released_versions(root):
+        skipped = [rel for rel, _p, _c, needs_tags in CURRENCY_ASSERTIONS if needs_tags]
+        return [f"no tags in this checkout: cannot test {', '.join(skipped)}"]
+    return []
 
 
 def check_currency_claims(root: Path = ROOT) -> list[str]:
@@ -129,11 +142,13 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
     issues: list[str] = []
     current = current_version(root)
     released = released_versions(root)
-    if not current or not released:
-        # An empty tag set would make every assertion vacuously pass, which is the most
-        # damaging possible failure of a checker: it reports clean while checking nothing.
-        return [f"currency check disabled: current={current!r} tags={len(released)}"]
-    for rel_path, pattern, claim in CURRENCY_ASSERTIONS:
+    if not current:
+        # With no current version there is nothing to compare against at all: report that rather
+        # than returning an empty list, which a caller cannot tell apart from "found nothing".
+        return [f"currency check disabled: no current version resolved under {root}"]
+    for rel_path, pattern, claim, needs_tags in CURRENCY_ASSERTIONS:
+        if needs_tags and not released:
+            continue
         path = root / rel_path
         if not path.is_file():
             continue
@@ -142,15 +157,15 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
                 version = match.group("version")
                 if version == current:
                     continue
-                why = (
-                    "not the current release"
-                    if claim.startswith("advertised")
-                    else "already released, so it is not the next one"
+                if needs_tags:
+                    if version not in released:
+                        continue  # an unreleased version is exactly what "the next release" means
+                    problem = "that release already exists"
+                else:
+                    problem = "which it is not"
+                issues.append(
+                    f"{rel_path}:{lineno} cites {version!r}, {claim}, {problem} (current {current})"
                 )
-                if version in released or claim.startswith("advertised"):
-                    issues.append(
-                        f"{rel_path}:{lineno} cites {version!r} which is {why} (current {current})"
-                    )
     return issues
 
 
@@ -323,7 +338,10 @@ def main() -> int:
         for kind, match, line in scan_file(path):
             all_findings.append((f"{kind}:{path.relative_to(ROOT)}", match, line))
 
+    degraded = currency_degradations()
     scope = f"scanned {len(scanned)} file(s); {len(skipped)} skipped as historical"
+    if degraded:
+        scope += "; " + "; ".join(degraded)
     # Report
     if not all_findings:
         print(f"✓ No stale claims detected — 0 issues ({scope})")

@@ -160,3 +160,45 @@ def test_the_retired_blacklist_key_is_gone_from_patterns() -> None:
             }
     assert patterns, "no PATTERNS dict found, so this test checks nothing"
     assert "stale_version" not in patterns, sorted(patterns)
+
+
+def test_a_tagless_checkout_still_catches_a_stale_current_release(tmp_path: Path) -> None:
+    """A default-depth CI checkout fetches no tags; the badge check must not go dark.
+
+    Whether some *other* version is already released needs the tag set, but "is this the current
+    release" is answerable from the declared version alone, and that is the higher-value half.
+    """
+    root = _scratch(
+        tmp_path,
+        tags=[],
+        current="4.4.0",
+        files={
+            "README.md": "Docs at [**v4.3.0**](https://x.example/releases/tag/v4.3.0)\n",
+            "ROADMAP.md": "- Track the next minor release through [v4.3.0 Release Readiness](x)\n",
+        },
+    )
+    found = _issues(root)
+    assert any("README.md" in issue and "4.3.0" in issue for issue in found), (
+        f"the badge check disabled itself for want of tags: {found}"
+    )
+    assert not any("ROADMAP.md" in issue for issue in found), (
+        "without a tag set there is no way to prove a version already shipped; guessing is worse "
+        f"than silence: {found}"
+    )
+    assert _degradations(root), "the reduced coverage was invisible rather than reported"
+
+
+def test_no_version_information_at_all_still_reports_disabled(tmp_path: Path) -> None:
+    root = _scratch(
+        tmp_path,
+        tags=[],
+        current="4.4.0",
+        files={"README.md": "Docs at [**v4.4.0**](https://x.example/releases/tag/v4.4.0)\n"},
+    )
+    (root / "src/data_science_agent/__init__.py").write_text('name = "x"\n', encoding="utf-8")
+    found = _issues(root)
+    assert any("disabled" in issue for issue in found), found
+
+
+def _degradations(root: Path) -> list[str]:
+    return _load(root).currency_degradations(root)
