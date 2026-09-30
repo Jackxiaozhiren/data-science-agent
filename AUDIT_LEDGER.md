@@ -3739,3 +3739,87 @@ with coverage 80.82% against the 79 floor · `RATCHET_RC=0` (`facts ratchet: OK`
 Collector: `testFunctions` 475 → **477**, proving the two new tests are defined;
 `suppressionDirectives` unchanged at 42, so the new mypy exclude is not counted as a suppression --
 and `--write` after the run dirtied no tracked file under `docs/audit/`. Nothing pushed.
+
+## 79. The claims detector is wired into CI -- and wiring only counts if the gate cannot run blind
+
+**Authorised scope.** §78's follow-up decision: give `check_public_claims.py` a CI step. §74.3 had
+predicted it would break on its first run, and §77 softened that to "now needs only `fetch-depth: 0`
+for the ROADMAP half". **Both halves were wrong**, and simulation -- not reading -- is what said so.
+
+**Why a default checkout is red for the wrong reason.** `check_version_consistency()` shells out to
+`git describe --tags --always` (the one `# noqa: S603` in `scripts/`). On a checkout with no tags that
+returns the short SHA, so the rule emits `git tag mismatch: 188a09c base 188a09c != v4.4.0`, which is
+high severity → exit 1. A step wired at default depth therefore fails every run on a plumbing
+artefact rather than on a stale claim.
+
+**Why `fetch-depth: 0` alone is not the answer.** Verified against the SHA the repo actually pins
+(`actions/checkout@fbc6f399… # v5`): its `action.yml` declares `fetch-tags` with default **false**,
+and `src/input-helper.ts` at that same commit applies "false" when the input is absent. (v5 no longer
+has `src/git-manager.ts` -- that fetch 404s -- so the depth/tags command construction was not read.)
+Relying on "fetch-depth 0 implies tags" would have been a guess about a runner I cannot execute
+locally, so the design removes the guess instead: fetch both, and make the step self-attesting.
+
+**The measured hazard, in a table.** Two clones made with `file://` -- `--depth 1` (0 tags readable)
+and full (36 tags in `packed-refs`) -- running the same script:
+
+| checkout | ref | `--require-released-tags` | rc | what it printed |
+| --- | --- | --- | --- | --- |
+| shallow, 0 tags | branch HEAD | no | 1 | `git tag mismatch: 188a09c …` -- red, but for plumbing |
+| shallow, 0 tags | `release/v4.4.0-rc` | no | **0** | "✓ No stale claims … no tags in this checkout: cannot test ROADMAP.md" |
+| shallow, 0 tags | `release/v4.4.0-rc` | yes | 1 | names the rule that never had a verdict |
+| full, 36 tags | branch HEAD | yes | 0 | the gate actually ran |
+
+Row two is the finding. `_is_release_candidate_ref()` legitimately skips the describe rule on a
+`release/v<current>-rcN` ref, so on that ref a tagless checkout prints a *pass* while its strongest
+assertion is inert -- D-L1-05's shape exactly (`--strict` with `links.not_found: ignore`). The flag
+converts that caveat into a non-zero exit; without row two the flag would be dead weight.
+
+**Landed.** `require_released_tags()` plus an argparse `--require-released-tags`; `ci.yml`'s `ci` job
+checkout now carries `fetch-depth: 0` and `fetch-tags: true` with the reason in a comment, and the
+step runs after the three integrity checks. `debt.unwiredCheckers` ceiling 1 → **0** (a fall, so
+allowed): re-measured `[]`, and fed `1` back through `evaluate_ratchet()` in memory the ratchet
+answers `{kind: ceiling, problem: debt_grew, actual: 1, limit: 0}` -- the tightened number bites, it
+is not decoration. Both guides picked the new gate up too, because widening the guard to six gates
+turned them red first, exactly as §78's design intends.
+
+**A bonus the argparse switch bought by accident.** `main()` never parsed `argv`, so the script
+silently accepted *any* flag: `check_public_claims.py --require-released-tagz` used to run the normal
+check and exit 0. Measured after the change: rc 2, `error: unrecognized arguments`. A typo in a gate
+flag was previously indistinguishable from omitting it.
+
+**Cost, stated rather than assumed.** The `ci` job's clone goes from depth 1 to full history: 458
+commits, 19 MB of objects measured locally. Job has 29 steps; the added step is stdlib-only Python.
+
+**Two instrument faults of mine this round.**
+- My first clone experiment concluded "the flag does nothing" (rc 0 with and without). The clones were
+  made with `git clone`, which copies **commits**: my implementation was still uncommitted, so the
+  tested script had no flag at all -- and, worse, an unparsed `argv` meant the flag was accepted and
+  ignored. Re-copied the two scripts into the clones and the proof reversed. A working-tree edit is
+  not in a clone until it is in a commit.
+- The test's hand-rolled `_checkout_with` reported `{persist-credentials: false}` for a file that
+  `yaml.safe_load` reads as three inputs: it treated the colon-less comment line I had just added
+  inside `with:` as the end of the block. `yaml.safe_load` was used as the adjudicator, the reader now
+  skips comments and keys off indentation, and `test_checkout_reader_sees_inputs_past_a_comment`
+  pins that shape. The reader stays parser-free deliberately: PyYAML is transitive here (mkdocs pulls
+  it, `pyproject.toml` never declares it), so a test importing it can ImportError on an unrelated bump.
+
+**Not proven: the runner.** Everything above is a local simulation of the checkout contract. No CI
+lane has executed this step, `actionlint` is not installed here (CI downloads it), and the `with:`
+edit is unlinted by the workflow's own first step. Per the standing rule the lane gets shown on a
+throwaway branch before `main`, which needs a push. Forward note while here: `publish.yml:27` and
+`secret-scan.yml:26` already pass `fetch-depth: 0` without `fetch-tags`; nothing in them enumerates
+local refs (`publish.yml` uses `gh api repos/.../releases/tags/$GITHUB_REF_NAME`), so they are not
+broken today -- but any future step that reads `git tag --list` under `fetch-depth: 0` alone inherits
+this same ambiguity.
+
+**State.** New: 5 tests -- 3 for `require_released_tags` (empty set refused, populated set accepted,
+the real checkout satisfies it) in `tests/test_currency_claims.py`, and the CI-wiring assertion plus
+the `_checkout_with` comment control in `tests/test_ci_gate_integrity.py`; the guard's gate count went
+5 → 6, which is what turned both guides red before they were updated. Collector:
+`testFunctions` 477 → **482**, `unwiredCheckers` **0**, `suppressionDirectives` steady at 42 (the new
+code adds no suppression), and the `facts.limits.json` diff is one line -- the ceiling itself. Gates,
+each rc from its own child: `CHECK_RC=0` · `FORMAT_RC=0` · `MYPY_RC=0` (112 files) · `PYTEST_RC=0`,
+coverage 80.82% over the 79 floor · `MKDOCS_RC=0` with zero WARNING/ERROR lines · `CLAIMS_RC=0` run
+with `--require-released-tags` on the real checkout · `RATCHET_RC=0` after the tightening. The 458
+commits / 19 MB figure and the four-row clone table are local measurements, not CI's. Nothing pushed,
+and the workflow's own `actionlint` step has not seen this edit yet.
