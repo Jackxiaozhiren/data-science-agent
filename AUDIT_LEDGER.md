@@ -3497,3 +3497,42 @@ row 6's precondition from one item into two, and both are now concrete:
 
 Recording it here rather than at wiring time, because the person doing that work is likely not the
 person who added the guard, and the failure mode otherwise reads as an unrelated CI breakage.
+
+## 75. The trap §74.3 described is removed: the currency check degrades per-assertion instead of going dark
+
+§74.3 ended with a check that reports "disabled" when a checkout has no tags, and named two
+preconditions for ever wiring it into `ci.yml`. Only one was actually necessary, and the second was
+an artefact of an all-or-nothing guard I had written an hour earlier.
+
+**Change.** Each entry in `CURRENCY_ASSERTIONS` now carries a `needs_tags` flag. With no tag set: the
+README badge is still checked (answering "is this the current release?" needs only the declared
+version, which the old code had in hand and ignored -- its own disabled message printed
+`current='4.4.0' tags=0`), while the ROADMAP "next release" check is skipped, because proving a
+version already shipped genuinely requires the tag set. The skip is **reported**:
+`currency_degradations()` contributes "no tags in this checkout: cannot test ROADMAP.md" to the
+summary line, so narrowed coverage cannot be read as a clean run.
+
+**Red first.** The new tagless test failed with exactly the predicted message,
+`currency check disabled: current='4.4.0' tags=0`, before any implementation existed. The second new
+test -- no current version at all still reports disabled -- is **green on arrival**: it pins the
+fail-closed behaviour §74 chose, not new behaviour.
+
+**A regression my own paired case caught.** The first rewrite dropped the `version in released`
+predicate and flagged any non-current version as "already released", which turned the *positive*
+case in `test_roadmap_must_point_at_an_unreleased_version` red (4.5.0, unreleased, was reported as
+shipped). Restoring the predicate fixed it; had that test carried only the failure case, the bug
+would have shipped as an over-broad detector -- the same lesson as §62's empty-denominator guards.
+
+**One lint finding, fixed at the right level.** Folding the claim text into the branchy message left
+`claim` unused (B007, which suggests renaming to `_claim`). Renaming would have silenced a real
+signal that the rewrite had discarded a field worth keeping, so the field is now used to build the
+message: `README.md:16 cites '4.3.0', advertised as the current release, which it is not (current
+4.4.0)`.
+
+**Effect on §74.3.** The wiring precondition list shrinks from two items to one: the `README.md:16`
+token change. `fetch-depth: 0` is no longer needed to make the checker usable in the `ci` job -- it
+is needed only to widen it to the ROADMAP half, and the tool now says which half it evaluated.
+
+**State.** Gates: ruff 0 · format 0 (208 files) · ratchet OK · full pytest 0 · mkdocs --strict 0.
+`check_public_claims.py` still exits 1 on a clean checkout for the one unowned README line, by
+design. 8 currency tests pass. Nothing pushed in this section.
