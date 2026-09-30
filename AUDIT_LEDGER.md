@@ -3823,3 +3823,76 @@ coverage 80.82% over the 79 floor · `MKDOCS_RC=0` with zero WARNING/ERROR lines
 with `--require-released-tags` on the real checkout · `RATCHET_RC=0` after the tightening. The 458
 commits / 19 MB figure and the four-row clone table are local measurements, not CI's. Nothing pushed,
 and the workflow's own `actionlint` step has not seen this edit yet.
+
+## 80. The branch run paid for itself immediately: my gate is green on the runner, my §76 tests were machine-bound
+
+**What ran.** Pushed `ci-proof-79`, opened PR #78, and the `ci` job (run 36674978496, job
+109757876596) came back `conclusion: failure`. Step-level, from the API rather than from a watcher's
+exit code:
+
+| step | conclusion |
+| --- | --- |
+| `Run actions/checkout@fbc6f399… # v5` | success |
+| `Lint GitHub Actions workflows` (actionlint) | success |
+| `Run uv run python scripts/audit_facts.py --check` | success -- with `unwiredCheckers` at 0 |
+| `Run uv run python scripts/check_public_claims.py --require-released-tags` | **success** |
+| `Run uv run pytest -q --cov --cov-report=term-missing` | **failure** |
+
+So all three things §79 said only a runner could prove are proven: `fetch-tags: true` leaves
+`git describe --tags` resolvable (the wired step exits 0 instead of dying on `git tag mismatch:
+<sha>`), actionlint accepts the `with:` edit, and the tightened ceiling holds on the runner. The
+merge state also read `BLOCKED` while that check was red, which is the required-check wiring working
+as intended, not a bug.
+
+**The failure was mine, from §76, and it is not about the new gate.** Five cases died on:
+
+```
+FAILED tests/test_measure_claims.py::test_a_stale_test_count_against_the_real_directory_is_flagged
+  - FileNotFoundError: [Errno 2] No such file or directory: '/Users/jackson/Data agent/scripts/check_public_claims.py'
+```
+
+`REAL = Path("/Users/jackson/Data agent/scripts/check_public_claims.py")` plus two inline copies: a
+test that hard-codes the authoring machine's absolute path. It passed ruff, mypy, the full local
+suite and the ratchet because on *this* machine the path resolves.
+
+**A limit of a method I lean on, recorded because it nearly hid this.** §78's discipline -- re-run a
+suspect gate against a `git archive HEAD` export before blaming the repo -- did **not** catch it, and
+could not have: the path is absolute, so an export anywhere on this disk still reads the original
+repo and still passes. An export only falsifies *relative-path* assumptions. What finally exposes an
+absolute-path bug is either another machine (here, the runner) or a *static* check, which is why the
+guard below is static.
+
+**Fix and guard.** The three literals became `REPO = Path(__file__).resolve().parents[1]`. New
+`test_no_executed_code_hardcodes_a_developer_home_path` scans `tests/**` and `scripts/**` for a
+quote immediately followed by `/Users/` or `/home/`, and carries `assert scanned >= 50` so a broken
+walk cannot pass by finding nothing. Its red environment is genuine rather than synthetic: run in a
+HEAD export that still contains the old file, it fires and names
+`tests/test_measure_claims.py:23: REAL = Path("/Users/jackson/Data agent/…` ; run in the fixed repo,
+8/8 pass. It also matches its own docstring text nowhere, because the guard looks for a quote *before*
+the slash and the prose form has none.
+
+**Blast radius, measured instead of assumed.** `git grep -c /Users/jackson` over tracked files,
+excluding the nested clone: **40 files**. Split by whether anything executes them:
+
+- executed (`tests/`, `scripts/`, `packages/`, `apps/`, `src/`): **1 file**, `tests/test_measure_claims.py` -- fixed here.
+- not executed: `case-studies/0*/outputs/*.{json,md}` (28 files), `benchmarks/external/datascibench/results/raw_runs.json`,
+  `research/external/datascibench_results.json`, three `research/results/ablation_*.json`,
+  `research/v4_3/results/manifests/phase_f_manifest.json`, and two `AUDIT_LEDGER.md` quotes.
+
+The second group cannot break CI, but it does bake the author's filesystem path into committed
+evidence artifacts -- a portability wart and a small disclosure of a personal path in anything
+published from `case-studies/` or the benchmark results. Not rewritten here: those files are
+generated records, and silently editing committed evidence to scrub a path is a different decision
+from fixing a test. Filed, with the count attached, so whoever regenerates them can decide.
+
+**Instrument note.** `gh run list --branch ci-proof-79` returned `[]` while the same head SHA had five
+runs queued. For `pull_request` events the branch filter does not match; `gh api
+repos/.../actions/runs?head_sha=$(git rev-parse <ref>)` is the query that sees them. A first check
+that returns nothing is not evidence that nothing was triggered.
+
+**State.** Local re-verification of the fix: `CHECK_RC=0` · `FORMAT_RC=0` (209 files) · `MYPY_RC=0`
+(112 files) · `PYTEST_RC=0`, coverage 80.82% over the 79 floor · `MKDOCS_RC=0` with zero WARNING/ERROR
+lines · `RATCHET_RC=0` · `CLAIMS_RC=0` with `--require-released-tags` · guard file 8/8 ·
+`testFunctions` 482 → **483**. Re-pushed to the same throwaway branch for runner confirmation -- same
+ref, same PR, nothing touching `main`, inside the verification already authorised. Merge remains a
+separate decision and is not taken here.

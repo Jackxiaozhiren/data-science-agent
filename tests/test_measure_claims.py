@@ -20,7 +20,8 @@ from pathlib import Path
 
 import pytest
 
-REAL = Path("/Users/jackson/Data agent/scripts/check_public_claims.py")
+REPO = Path(__file__).resolve().parents[1]
+REAL = REPO / "scripts/check_public_claims.py"
 
 
 def _load(root: Path):
@@ -104,6 +105,6 @@ def test_the_real_repository_has_a_claim_to_check() -> None:
     The scanned surface must contain at least the vscode line, or the rule is untested here
     rather than working here.
     """
-    module = _load(Path("/Users/jackson/Data agent"))
-    root = Path("/Users/jackson/Data agent")
+    module = _load(REPO)
+    root = REPO
     assert module.measurement_claims_evaluated(root) >= 1, "no measurement claim found on disk"

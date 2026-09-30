@@ -255,6 +255,31 @@ def test_checkout_reader_sees_inputs_past_a_comment() -> None:
     assert got == {"persist-credentials": "false", "fetch-depth": "0", "fetch-tags": "true"}, got
 
 
+_ABS_HOME = re.compile(r"""(["'])/(?:Users|home)/""")
+
+
+def test_no_executed_code_hardcodes_a_developer_home_path() -> None:
+    """A path literal that exists on one machine makes its test machine-bound.
+
+    Five tests in tests/test_measure_claims.py pointed at a `/Users/jackson/Data agent/...` literal
+    and were green under every local gate -- ruff, mypy, the full suite, the ratchet -- while
+    `FileNotFoundError` was the first thing CI said about them. Being static, this guard has a real
+    red environment: export HEAD to any other directory and it fires there.
+    """
+    offenders: list[str] = []
+    scanned = 0
+    for sub in ("tests", "scripts"):
+        for path in sorted((ROOT / sub).rglob("*.py")):
+            scanned += 1
+            for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if _ABS_HOME.search(line):
+                    offenders.append(f"{path.relative_to(ROOT)}:{lineno}: {line.strip()[:70]}")
+    assert scanned >= 50, f"only {scanned} files scanned -- the walk broke"
+    assert not offenders, (
+        "home-absolute path literal, invisible on its author's machine:\n" + "\n".join(offenders)
+    )
+
+
 def _job_body(text: str, job: str) -> str:
     """The YAML text of one job, sliced on its two-space indentation."""
     lines = text.splitlines()
