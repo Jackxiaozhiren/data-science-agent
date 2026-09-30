@@ -3658,3 +3658,84 @@ should not file it twice.
 **State.** Gates on the committed tree: ruff check 0 · CI-exact format 0 (209 files) · mypy 0
 (108 files) · mkdocs --strict 0 · ratchet OK · full pytest `PYTEST_RC=0`, coverage 80.82% against a
 79 floor · `check_public_claims.py` 0. No new tests (documentation-only change). Push: still owed.
+
+## 78. The gate lists the guides restate are pinned to `ci.yml` -- and one documented command could not run
+
+**Authorised and scoped.** §77 left one open decision -- both contributor guides told readers to run
+a *subset* of the remote's checks. The user delegated ("审阅无误，授权，我都听你的"), so this is that fix,
+done test-first.
+
+**RED, in the guard's own words** (`tests/test_ci_gate_integrity.py`, written before any doc edit):
+
+```
+CONTRIBUTING.md: mypy differs from ci.yml -- missing ['apps/jupyter', 'src'], extra []
+CONTRIBUTING.md: pytest differs from ci.yml -- missing ['--cov', '--cov-report=term-missing'], extra []
+CONTRIBUTING.md: never runs the ratchet gate CI runs (['--check', 'scripts/audit_facts.py'])
+CONTRIBUTING.md: ruff-check differs ... / ruff-format differs ... -- missing ['apps/jupyter', 'scripts', 'src']
+docs/contributing.md: mypy differs ... missing ['apps/jupyter'] / pytest ... missing the cov flags
+docs/contributing.md: never runs the ratchet gate / ruff-check and ruff-format missing ['scripts']
+```
+
+**How the guard works, and what makes it non-vacuous.** `ci.yml`'s single-line run steps are parsed
+with the file's existing `_single_line_run_steps`, each command classified into one of five gates
+(`ruff-check`, `ruff-format`, `mypy`, `pytest`, `ratchet`), and the guide's fenced-block command is
+compared as a *token set* after removing invocation scaffolding (`uv run python -m`), inline comments
+and CI's `| tail` logging. Three things stop it going quietly green: `assert len(expected) == 5`
+proves the parser still finds every gate; the guides are checked for gates they never run at all, not
+only for wrong paths; and `test_gate_comparison_detects_a_shortened_list` is an in-test control that
+feeds the comparator a list with `src apps/jupyter` removed and asserts it reports exactly those two
+tokens. That control is green-on-arrival by design -- it tests the instrument, not the docs -- and is
+labelled as such.
+
+**Scope pin.** Only the two documents that present themselves as the pre-PR gate are compared. The
+shorter "Development" (`README.md`, `## Development`) and "Quick Quality" (`docs/README.md:22-29`)
+blocks are tasters: they may run a subset, and the reason is written into the guard's comment rather
+than left for the next reader to guess.
+
+**Searching for a second copy found two claims of a different class.** While checking that no other
+doc restates the lists (a first-match comparator can hide a stale duplicate), `docs/README.md:25`
+carried `# 257 passed (V4.1 live 2026-08-22; V1: 86+; V3.0: 155)` -- a typed measurement literal of
+exactly the §76 class, the collector's real count being 475 test functions. It is *not* caught by
+§76's `MEASURE_CLAIM`, and deliberately not taught to it: that rule requires the shape
+`pytest <target> ... # N tests` and re-measures against `TEST_DEF_RE`, whereas "N passed" counts
+collected instances, a different denominator. Making the guard accept that shape would have
+installed a wrong equation, so the literal was removed and the line points at the binding list
+instead. Same treatment for `docs/README.md:17`, which described `CHANGELOG.md` as `0.1.0 → 1.2.0`:
+replaced with a non-numeric pointer, since re-typing `4.4.0` only re-arms the rot.
+
+**A documented command that could not run on this tree.** `README.md:353` tells contributors
+`uv run mypy .`. Measured: `MYPY_DOT_RC=2`, aborting with `Duplicate module named "dsa_api"` from
+`data-science-agent/` -- the gitignored second clone (`.gitignore:55`). Because that directory is
+gitignored, a fresh clone would pass, so the doc was not lying to contributors; the hazard is local
+and real. The config was fixed rather than the doc: `data-science-agent/` joined `[tool.mypy] exclude`.
+This is not a gate weakening -- the excluded tree is a duplicate copy of the same module names mypy
+refuses to disambiguate, and nothing shipped leaves the checked set: after the change `mypy .`
+reports `Success: no issues found in 114 source files` against the **112** CI's own list checks, i.e.
+the documented command is now strictly *wider* than CI's, and it exits 0.
+
+**Correction to §77, found by writing this.** §77's state line recorded "mypy 0 (108 files)" because
+I ran `mypy packages apps/api src` -- the list `docs/contributing.md` was telling people to run, not
+the one `ci.yml:87` runs. CI's list adds `apps/jupyter` and reports 112. The verdict (rc=0) was
+right; the *surface* was under-stated by four files, which is the same under-scoping §78 exists to
+stop. Re-measured on CI's exact command: `MYPY_RC=0`, 112 files.
+
+**Instrument note (fourth this session).** In zsh `${PIPESTATUS[0]}` is empty -- arrays are
+1-indexed and the variable is lowercase `$pipestatus` -- so my `echo "RC=${PIPESTATUS[0]}"` printed
+`RC=` and read as a pass to anyone skimming. A blank exit code is not zero; the verdict came from the
+test file's own assertion text.
+
+**Decisions taken here, for the record.** `docs/contributing.md` was *not* given CI's
+`sync_vendor.py --check` and `check_npm_workspace_lock.py` steps, and `CONTRIBUTING.md` keeps its
+`dsa --limit 5` shorthand instead of CI's catalog-qualified form: the guard pins the five gates that
+gate a PR's correctness, and widening it to every CI step would turn a style/coverage guide into a
+transcript of the workflow file.
+
+**State.** New: 2 tests in `tests/test_ci_gate_integrity.py` (guard + comparator control); the guard
+was RED with the 10 offenders quoted above before any doc was touched, and is now green with them
+aligned. Gates, each rc captured unpiped from its own child: `GATE_RC=0` (5 tests in the file) ·
+ruff check 0 · CI-exact format 0 (209 files) · `MYPY_RC=0` (112 files, CI's list) · `PYTEST_RC=0`
+with coverage 80.82% against the 79 floor · `RATCHET_RC=0` (`facts ratchet: OK`) · `CLAIMS_RC=0` ·
+`MKDOCS_RC=0` with zero WARNING/ERROR lines · `MYPY_DOT_RC=0` (114 files) for the documented taster.
+Collector: `testFunctions` 475 → **477**, proving the two new tests are defined;
+`suppressionDirectives` unchanged at 42, so the new mypy exclude is not counted as a suppression --
+and `--write` after the run dirtied no tracked file under `docs/audit/`. Nothing pushed.
