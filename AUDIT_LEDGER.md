@@ -3589,3 +3589,72 @@ unchanged -- both the scanned and the skipped copy must still produce findings.
 
 **State.** Gates: ruff 0 · format 0 (209 files) · ratchet OK · full pytest 0 · checker exits 1 on
 the one unowned token. New: 5 tests in `tests/test_measure_claims.py`.
+
+## 77. The version claim's standing red closes -- and the two shipped gate lists are narrower than CI
+
+**Landed.** `README.md:16` advertised `[**v4.3.0**](.../releases/tag/v4.3.0)` while `pyproject.toml`
+(`version = "4.4.0"`), `CITATION.cff` (`version: 4.4.0`) and the local tag set (`v4.4.0` present) all
+say otherwise. §74.1 and §76 both declined to touch it because the file carries another session's
+in-flight edits; the user then authorised this specific line ("帮我把 README 版本改成 4.4.0"), which is
+the only bar that was in the way. The currency rule is green for the first time since it was wired,
+in the checker's own words:
+
+```
+✓ No stale claims detected -- 0 issues (scanned 14 file(s); 51 skipped as historical)
+```
+
+That closes §74.3/§75's precondition argument from the other side: wiring `check_public_claims.py`
+into CI now needs only `fetch-depth: 0` for the ROADMAP half, and no longer breaks on a clean
+checkout. Still not wired -- that is a decision, not a discovery.
+
+**Staged without taking the other session's work.** The version line sits five lines below that
+session's anchor edit, so both changes land inside *one* hunk (`@@ -8,12 +8,12 @@`), while its
+Quickstart rename and install-time note form a second hunk (`@@ -58,9 +58,10 @@`) with no change of
+mine in it. `git add -p` needs interactive input this shell cannot provide, so the index was patched
+directly: a one-line hunk built against `git show HEAD:README.md` and applied with
+`git apply --cached`. Verified three ways before committing -- `git diff --cached -- README.md`
+showed exactly the version line, the worktree file kept all three edits, and after the commit
+`git status` still lists `M README.md` for the hunks that are not mine.
+
+**A gate-scope defect that is live, and one that is retracted again.** Measured while checking this
+commit, both by running the two commands and reading their own counts:
+
+| surface | ruff check / format / mypy paths | `scripts`? | `--cov`? | `audit_facts --check`? |
+| --- | --- | --- | --- | --- |
+| `ci.yml:75,85-87` | `… tests src apps/jupyter scripts` / mypy `packages apps/api src apps/jupyter` | yes | yes (`:88`) | yes |
+| `docs/contributing.md:19-22` | `packages apps/api tests src apps/jupyter`, mypy `packages apps/api src` | **no** | **no** | **no** |
+| `CONTRIBUTING.md:10-12` | `packages apps/api tests`, mypy `packages apps/api` | **no** | **no** | **no** |
+
+Both shipped contributor guides therefore tell a reader to run a *subset* of the remote's checks:
+a contributor who edits `scripts/`, follows either list to the letter and pushes gets a CI red on a
+check they were instructed to run; and `pytest -q` without `--cov` never evaluates the `fail_under
+= 79` floor that `ci.yml:88` enforces. This is the same species as §48(2)'s dispatch-list gap, but
+these are public documents rather than agent briefs, and there is no `AGENTS.md`/`CLAUDE.md` in the
+repo root to carry a correct list (`ls` for both: no matches). Not fixed here: the user asked for one
+version token, and rewriting two contributor guides is a separate decision. Cheapest correct fix is
+to have both lists name `ci.yml:75,85-88` instead of restating paths -- a restated list is exactly
+how it drifted.
+
+**Re-retracted.** A root-scope `uv run ruff format --check .` reports `1 file would be reformatted`,
+and the offender is `AUDIT_LEDGER.md:862` -- a fenced Python block inside this ledger
+(`--> AUDIT_LEDGER.md:862:1`). So ruff 0.16.3 does format Python embedded in Markdown, and every
+code block in the repo's `.md` files sits outside both style gates. §36 already recorded this and
+declined to act ("There is no repo-root format gate, so there was nothing to fix"), and the
+retraction holds: the ledger is quoted evidence, and reshaping it to satisfy a gate that does not
+exist would edit the record to please the instrument. Noted here only because I re-triggered it and
+should not file it twice.
+
+**Two instrument faults, both mine, both caught by the child rather than the wrapper.**
+- `… | tail -n ; echo rc=$?` measures `tail`. My first pass on this commit reported `fmt_rc=0` and
+  `mkdocs_rc=0` that way. Re-ran with output redirected to a file and the code captured unpiped:
+  `FORMAT_RC=0` (`209 files already formatted`), `MKDOCS_RC=0` with `grep -cE "WARNING|ERROR"` = 0,
+  `RATCHET_RC=0` (`facts ratchet: OK`). Third time through the same trap in one session.
+- The background-task layer sent `completed (exit code 0)` twice while pytest was still at 72%, and
+  a third time after it had genuinely finished. `pgrep -fl bin/pytest` (empty) plus the log's own
+  `PYTEST_RC=0` line are the verdict; the notification's is not. Note also that this run's `-q` log
+  never prints an "N passed" summary line -- the count is the collector's (`testFunctions: 475`),
+  not something to read off the terminal.
+
+**State.** Gates on the committed tree: ruff check 0 · CI-exact format 0 (209 files) · mypy 0
+(108 files) · mkdocs --strict 0 · ratchet OK · full pytest `PYTEST_RC=0`, coverage 80.82% against a
+79 floor · `check_public_claims.py` 0. No new tests (documentation-only change). Push: still owed.
