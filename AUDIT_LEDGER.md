@@ -4010,3 +4010,28 @@ exempt for the same dating reason.
 matters) · `RATCHET_RC=0` · `CLAIMS_RC=0` with `--require-released-tags` · `PYTEST_RC=0`, coverage
 80.82%. No runner has seen this change yet: §81's tightening was verified as run 36678529947
 (`completed success`), and this entry will only claim a runner result after one exists for it.
+
+### 82.1 The runner result §82 declined to predict, and a watcher that polled nothing for 37 minutes
+
+The run exists now: 36696729612 on head `74355bf`, `completed success`, `ci` and `web-regression` both
+green, and step-level in its own words -- `audit_facts.py --check => success`,
+`check_public_claims.py --require-released-tags => success`, `pytest -q --cov => success`,
+`mkdocs build --strict => success`. So the portfolio edits are confirmed by the docs gate on
+`ubuntu-latest`, which is the only gate that matters for them. Three green runs on this lane now
+(36675826804, 36678529947, 36696729612), all of them following the one red run 36674978496 that caught
+§80's machine-bound path -- the sequence the branch protocol exists to produce.
+
+Two instrument faults were needed to get there, both worth keeping:
+- The first watcher resolved its run id with `--jq '... .databaseId'` against the **REST** listing,
+  where the field is `id` (`databaseId` belongs to the GraphQL node). The id was therefore an empty
+  string, `gh run view ""` became a request to `/actions/runs/`, and every one of 50 polls returned
+  `HTTP 404` -- while the wrapper reported `completed (exit code 0)` at the end. A poller that never
+  observed anything is not a poller that observed nothing: the fix is to echo the resolved id before
+  trusting any loop, and to log a line when a read returns neither in-progress nor completed instead
+  of letting an empty string through. §79's premature notification and this are the same lesson twice
+  more: the wrapper's exit code is never the child's verdict.
+- `NO_PROXY="*"`, which this session needed for `gh api` and log fetches, **broke `git push`**:
+  `LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443`, in the same shell where
+  gh calls had just succeeded. Unsetting `NO_PROXY`/`no_proxy` made the identical push work. The
+  bypass is per-client, not per-shell -- saved to memory so the next session does not re-derive it by
+  failing a push first.
