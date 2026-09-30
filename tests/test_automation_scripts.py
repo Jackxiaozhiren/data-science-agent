@@ -232,7 +232,7 @@ def test_scan_scope_separates_declared_scope_from_surface_actually_read() -> Non
 
 
 def test_identical_text_is_flagged_only_outside_a_historical_prefix(tmp_path: Path) -> None:
-    body = "The suite is 155 tests today.\n"
+    body = "Install it with pip install data-science-agent today.\n"
     (tmp_path / "README.md").write_text(body, encoding="utf-8")
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "guide.md").write_text(body, encoding="utf-8")
@@ -241,6 +241,8 @@ def test_identical_text_is_flagged_only_outside_a_historical_prefix(tmp_path: Pa
 
     assert [p.name for p in scanned] == ["README.md"]
     assert [p.name for p in skipped] == ["guide.md"]
+    # Payload is a naming claim, not a number: the typed "155 tests" rule was retired in
+    # §76 precisely because it could only catch numbers somebody had typed once.
     # Byte-identical text, opposite verdicts: the exclusion keys off the path, so
     # a clean run says nothing about anything under a historical prefix.
     assert public_claims.scan_file(scanned[0])

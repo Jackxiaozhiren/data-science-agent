@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import re
 import sys
@@ -169,12 +170,97 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
     return issues
 
 
+# --- measurement claims ----------------------------------------------------------
+#
+# Four rules used to sit in PATTERNS as hand-typed numbers -- `155 tests|86+ tests|86 tests`,
+# `81 source files|92 source files`, `81% cov (4597`, `7 routes`. Measured over the scanned
+# surface they carry no live coverage: their only remaining hits are inside `CHANGELOG.md`, where
+# quoting a superseded figure is the file's purpose, so every one of them is a false positive.
+# Meanwhile the repository's single real claim of this shape -- `apps/vscode/README.md:83`,
+# "uv run pytest tests/vscode -v  # 6 tests" against seven `def test_` in that directory -- was
+# invisible to them. A measurement in prose is now checked by re-measuring.
+
+MEASURE_CLAIM = re.compile(r"pytest\s+(?P<target>[\w./-]+)[^#\n]*#\s*(?P<count>\d+)\s+tests\b")
+_COLLECTOR = Path(__file__).with_name("audit_facts.py")
+_TEST_DEF_RE: re.Pattern[str] | None = None
+
+
+def _test_def_re() -> re.Pattern[str]:
+    """The collector's own definition of a test function, so one rule owns the number."""
+    global _TEST_DEF_RE
+    if _TEST_DEF_RE is None:
+        spec = importlib.util.spec_from_file_location("audit_facts_for_measure", _COLLECTOR)
+        if spec is None or spec.loader is None:  # pragma: no cover - packaging guard
+            raise RuntimeError(f"cannot load the shared rule from {_COLLECTOR}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _TEST_DEF_RE = module.TEST_DEF_RE
+    return _TEST_DEF_RE
+
+
+def _count_test_defs(root: Path, target: str) -> int | None:
+    base = (root / target).resolve()
+    root_resolved = root.resolve()
+    if root_resolved != base and root_resolved not in base.parents:
+        return None  # the named target escapes the tree; nothing to compare
+    if base.is_file():
+        files = [base]
+    elif base.is_dir():
+        files = sorted(base.rglob("*.py"))
+    else:
+        return None
+    rule = _test_def_re()
+    total = 0
+    for path in files:
+        if "__pycache__" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        total += sum(1 for line in text.splitlines() if rule.match(line))
+    return total
+
+
+def measurement_claims(root: Path = ROOT) -> list[tuple[str, int, str, int]]:
+    """Locate every scanned line that names a pytest target and asserts a test count."""
+    found: list[tuple[str, int, str, int]] = []
+    for path in scan_scope(root)[0]:
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8", errors="ignore").splitlines(), 1
+        ):
+            match = MEASURE_CLAIM.search(line)
+            if match:
+                found.append(
+                    (
+                        str(path.relative_to(root)),
+                        lineno,
+                        match.group("target"),
+                        int(match.group("count")),
+                    )
+                )
+    return found
+
+
+def measurement_claims_evaluated(root: Path = ROOT) -> int:
+    return len(measurement_claims(root))
+
+
+def check_measurement_claims(root: Path = ROOT) -> list[str]:
+    issues: list[str] = []
+    for rel, lineno, target, claimed in measurement_claims(root):
+        actual = _count_test_defs(root, target)
+        if actual is None:
+            issues.append(
+                f"{rel}:{lineno} counts tests in {target!r}, but that path is absent -- "
+                "the claim cannot be verified"
+            )
+        elif actual != claimed:
+            issues.append(
+                f"{rel}:{lineno} claims {claimed} tests for {target!r}; the tree defines {actual}"
+            )
+    return issues
+
+
 # Patterns per §25
 PATTERNS = {
-    "stale_test_counts": re.compile(r"(155 tests|86\+ tests|86 tests)"),
-    "stale_mypy": re.compile(r"81 source files|92 source files"),
-    "stale_coverage": re.compile(r"81% cov \(4597"),  # only bare old without versioned annotation
-    "stale_routes": re.compile(r"7 routes"),
     "old_package_pip": re.compile(r"pip install [\"\']?data-science-agent"),
     "old_package_import": re.compile(r"importlib\.metadata\.version\(\"data-science-agent\"\)"),
     "old_repo": re.compile(r"your-org/data-science-agent"),
@@ -332,6 +418,9 @@ def main() -> int:
     for iss in check_currency_claims():
         all_findings.append(("currency_claims", iss, ""))
 
+    for iss in check_measurement_claims():
+        all_findings.append(("measurement_claims", iss, ""))
+
     # Scan files, minus the historical prefixes scan_scope() documents.
     scanned, skipped = scan_scope()
     for path in scanned:
@@ -356,7 +445,13 @@ def main() -> int:
         f
         for f in all_findings
         if f[0].startswith(
-            ("version_consistency", "currency_claims", "old_package_pip", "old_repo")
+            (
+                "version_consistency",
+                "currency_claims",
+                "measurement_claims",
+                "old_package_pip",
+                "old_repo",
+            )
         )
     ]
     # stale_test_counts now versioned, so not high if annotated
