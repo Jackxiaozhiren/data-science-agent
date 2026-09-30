@@ -141,6 +141,10 @@ ignore_missing_imports = true
 explicit_package_bases = true
 exclude = [
     "src/data_science_agent/_vendor/",  # vendored copy of dsa_* — checked at its source
+    # A local second checkout of this repo (gitignored). Its identical module
+    # names make `mypy .` abort with "Duplicate module named dsa_api" before it
+    # reaches any shipped source; CI's own list never walks it.
+    "data-science-agent/",
     # Non-shipped tooling/docs — style-covered by ruff, not strict-typed:
     "tests/",
     "scripts/",

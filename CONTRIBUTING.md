@@ -2,14 +2,16 @@
 
 > Phased, gate-controlled delivery — each release lands only when its gates (tests, mypy, ruff, docs build, `dsa verify-release`) pass. See [`CHANGELOG.md`](./CHANGELOG.md) for the release history and [`docs/contributing.md`](docs/contributing.md) for conventions.
 
-Before PR:
+Before PR — these mirror `.github/workflows/ci.yml` verbatim, and
+`tests/test_ci_gate_integrity.py` fails if the two ever drift apart:
 
 ```bash
 uv sync --dev
-uv run ruff check packages apps/api tests
-uv run ruff format --check packages apps/api tests
-uv run mypy packages apps/api --ignore-missing-imports
-uv run pytest -q
+uv run python scripts/audit_facts.py --check
+uv run ruff check packages apps/api tests src apps/jupyter scripts
+uv run ruff format --check packages apps/api tests src apps/jupyter scripts
+uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
+uv run pytest -q --cov --cov-report=term-missing
 uv run dsa --limit 5
 npm --prefix apps/web run build
 docker compose config

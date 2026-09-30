@@ -71,7 +71,7 @@ def test_mypy_steps_type_check_every_shipped_tree() -> None:
 
 # `--strict` escalates warnings to errors, but `validation.links.not_found:
 # ignore` stops mkdocs emitting the warning in the first place, so the docs gate
-# CI runs (and CONTRIBUTING.md:28 mandates) cannot fail on a broken link.
+# CI runs (and CONTRIBUTING.md's Security line mandates) cannot fail on a broken link.
 def test_mkdocs_strict_has_a_link_signal() -> None:
     cfg = Path(__file__).resolve().parents[1] / "mkdocs.yml"
     ignore_only = all(
@@ -104,3 +104,104 @@ def _link_validation_modes(text: str) -> dict[str, str]:
             else:
                 break
     return modes
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+# The contributor guides restate CI's gate commands by hand, and a hand-copied
+# list drifts silently. Measured before this guard existed: `CONTRIBUTING.md` and
+# `docs/contributing.md` both omit `scripts` from the ruff lists, `CONTRIBUTING.md`
+# omits `src apps/jupyter` from mypy, and neither runs the `--cov` floor or the
+# debt ratchet CI enforces -- so a reader who follows a guide to the letter sees
+# green locally and red remotely on a check they were told to run.
+#
+# Scope pin: this guards only the two documents that present themselves as the
+# pre-PR gate. The shorter "Development" / "Quick Quality" blocks in README.md and
+# docs/README.md are tasters, not gates -- they may run a subset, and are
+# deliberately not compared here.
+GUIDES = ("CONTRIBUTING.md", "docs/contributing.md")
+
+# `uv run python -m` is invocation scaffolding, not part of the gate.
+_SCAFFOLD = frozenset({"uv", "run", "python", "-m"})
+
+
+def _classify(tokens: set[str]) -> str | None:
+    """Name the gate a token stream implements, or None if it is not one we guard."""
+    if "ruff" in tokens and "format" in tokens and "--check" in tokens:
+        return "ruff-format"
+    if "ruff" in tokens and "check" in tokens:
+        return "ruff-check"
+    if "mypy" in tokens:
+        return "mypy"
+    if "pytest" in tokens:
+        return "pytest"
+    if any(tok.endswith("audit_facts.py") for tok in tokens):
+        return "ratchet"
+    return None
+
+
+def _tokens(cmd: str) -> set[str]:
+    """Command tokens, with inline comments and CI's log-piping removed."""
+    body = cmd.split("#", 1)[0].split("|", 1)[0]
+    return set(body.split()) - _SCAFFOLD
+
+
+def _bash_lines(text: str) -> list[str]:
+    """Lines inside fenced code blocks -- the copy-paste surface a reader uses."""
+    out: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.strip().startswith("```"):
+            inside = not inside
+            continue
+        if inside and line.strip():
+            out.append(line.strip())
+    return out
+
+
+def _ci_gates() -> dict[str, set[str]]:
+    """Each guarded gate as the CI workflow actually spells it."""
+    gates: dict[str, set[str]] = {}
+    for _, cmd in _single_line_run_steps((WORKFLOWS / "ci.yml").read_text(encoding="utf-8")):
+        key = _classify(_tokens(cmd))
+        if key and key not in gates:
+            gates[key] = _tokens(cmd)
+    return gates
+
+
+def _guide_gates(path: Path) -> dict[str, set[str]]:
+    gates: dict[str, set[str]] = {}
+    for line in _bash_lines(path.read_text(encoding="utf-8")):
+        key = _classify(_tokens(line))
+        if key and key not in gates:
+            gates[key] = _tokens(line)
+    return gates
+
+
+def test_contributing_guides_mirror_the_ci_gates() -> None:
+    expected = _ci_gates()
+    assert len(expected) == 5, f"expected 5 guarded gates in ci.yml, parsed {sorted(expected)}"
+    offenders: list[str] = []
+    for rel in GUIDES:
+        guide = _guide_gates(ROOT / rel)
+        for key, ci_tokens in sorted(expected.items()):
+            if key not in guide:
+                offenders.append(f"{rel}: never runs the {key} gate CI runs ({sorted(ci_tokens)})")
+            elif guide[key] != ci_tokens:
+                missing = sorted(ci_tokens - guide[key])
+                extra = sorted(guide[key] - ci_tokens)
+                offenders.append(
+                    f"{rel}: {key} differs from ci.yml -- missing {missing}, extra {extra}"
+                )
+    assert not offenders, (
+        "guide commands must match the CI gate they tell you to run:\n" + "\n".join(offenders)
+    )
+
+
+def test_gate_comparison_detects_a_shortened_list() -> None:
+    """Negative control: a guide that drops a path must be reported, not skipped."""
+    ci = _tokens("uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports")
+    narrow = _tokens("uv run mypy packages apps/api --ignore-missing-imports")
+    assert _classify(narrow) == "mypy", "the shortened line must still classify as the same gate"
+    assert ci != narrow, "a path dropped from the list has to be visible to the comparison"
+    assert ci - narrow == {"src", "apps/jupyter"} and narrow - ci == set()

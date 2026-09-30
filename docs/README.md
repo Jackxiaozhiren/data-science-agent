@@ -14,7 +14,7 @@
 - [Research](./research.md) — benchmark + report stub
 - [Examples](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/examples/README.md) — `sales.csv / titanic.csv` + curl examples
 - [README](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/README.md) — Project overview & quick start
-- [Changelog](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md) — `0.1.0 → 1.2.0`
+- [Changelog](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/CHANGELOG.md) — full release history
 - [Third-Party Licenses](https://github.com/Jackxiaozhiren/data-science-agent/blob/main/THIRD_PARTY_LICENSES.md) — runtime / frontend / datasets
 
 To serve: `uv sync --dev && uv run mkdocs serve` (or `uv run mkdocs build --strict` for CI gate).
@@ -22,7 +22,7 @@ To serve: `uv sync --dev && uv run mkdocs serve` (or `uv run mkdocs build --stri
 ## Quick Quality
 
 ```
-uv run pytest -q         # 257 passed (V4.1 live 2026-08-22; V1: 86+; V3.0: 155)
+uv run pytest -q         # whole suite; the binding pre-PR list is docs/contributing.md
 uv run mypy packages apps/api --ignore-missing-imports
 uv run ruff check .
 uv run dsa --limit 50
