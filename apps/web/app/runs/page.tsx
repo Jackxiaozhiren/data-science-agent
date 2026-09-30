@@ -27,7 +27,7 @@ export default async function RunsPage() {
       <PageHeader
         eyebrow="Step 3 · Trace runs"
         title="Runs"
-        description="Analysis inspector: Overview, Timeline, Agent Graph, Tool Calls, Evidence, Artifacts, Checkpoints, Failures, Validation, Reproduction."
+        description="Analysis inspector: Overview, Timeline, Agent Graph, Tool Calls, Evidence, Artifacts, Failures, Validation, Reproduction."
         actions={
           <Link href="/analysis"><Button size="sm">New run →</Button></Link>
         }

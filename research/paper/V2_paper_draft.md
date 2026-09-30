@@ -12,7 +12,7 @@ See `ARCHITECTURE_FREEZE_V0.1.md` §1–12, `docs/v2/Baseline Report.md`, `docs/
 
 ## 3 System Architecture
 
-Frontend (Next.js 15, 13 routes) → API (FastAPI) → LangGraph (Planner/Scientist/Critic, MemorySaver) → Tool Layer (17 tools: profile_dataset, run_sql, run_python, correlation, hypothesis, regression, train/evaluate, feature_importance, forecast, create_chart, evidence, report) → DuckDB+Polars / Python sandbox / Stats-ML / Viz → Evidence Graph → Validation → Reproducibility bundle (`experiment.json` + `reproduce.sh` + `analysis.ipynb`) — see `docs/v2/baseline/ARCHITECTURE.md`.
+Frontend (Next.js 15, 13 routes) → API (FastAPI) → agent loop (Planner/Scientist/Critic) → Tool Layer (17 tools: profile_dataset, run_sql, run_python, correlation, hypothesis, regression, train/evaluate, feature_importance, forecast, create_chart, evidence, report) → DuckDB+Polars / Python sandbox / Stats-ML / Viz → Evidence Graph → Validation → Reproducibility bundle (`experiment.json` + `reproduce.sh` + `analysis.ipynb`) — see `docs/v2/baseline/ARCHITECTURE.md`.
 
 ## 4 Benchmark
 
@@ -36,4 +36,4 @@ Taxonomy F01–F15, `packages/evidence/src/dsa_evidence/failure_taxonomy.py`, fr
 
 ## 9 Conclusion
 
-Reviewer can clone, `uv sync --dev && uv run pytest` (116 passed), `mypy` clean (87), `npm run build` (13 routes), `docker compose config` valid, `uv run dsa --limit 50` and `--catalog benchmarks/v2/... --limit 100` reproducible, inspect a run via `/runs/[id]` → trace to `evidence_graph.json`, replay via LangGraph checkpoints.
+Reviewer can clone, `uv sync --dev && uv run pytest` (116 passed), `mypy` clean (87), `npm run build` (13 routes), `docker compose config` valid, `uv run dsa --limit 50` and `--catalog benchmarks/v2/... --limit 100` reproducible, inspect a run via `/runs/[id]` → trace to `evidence_graph.json`, re-run it with `dsa reproduce` and score the fresh run against the record (L0–L5).

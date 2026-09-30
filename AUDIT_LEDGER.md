@@ -3896,3 +3896,61 @@ lines · `RATCHET_RC=0` · `CLAIMS_RC=0` with `--require-released-tags` · guard
 `testFunctions` 482 → **483**. Re-pushed to the same throwaway branch for runner confirmation -- same
 ref, same PR, nothing touching `main`, inside the verification already authorised. Merge remains a
 separate decision and is not taken here.
+
+## 81. Thirteen resume claims tightened, and the guard that first tried to gag the honest sentences
+
+**The premise, measured before anything was rewritten.** A sub-agent supplied the claim inventory;
+the load-bearing fact -- that no shipped path uses the LangGraph engine -- was re-verified here rather
+than borrowed. `MemorySaver()` is constructed in exactly one place, `packages/agent/src/dsa_agent/`
+`langgraph_graph.py:427`, and grepping `build_graph(`/`run_analysis_langgraph` across `packages`,
+`apps`, `src`, `scripts`, `examples` returns one hit: `:440`, inside the same module. The four
+entry points that actually run analyses -- `apps/api/.../analysis_service.py:34`,
+`src/data_science_agent/sdk.py:321`, `dsa_evaluation/runner.py:145`, `external_validation.py:146` --
+all import `dsa_agent.graph.run_analysis`, the sequential engine. `apps/web/app/runs/[id]/page.tsx`
+contains zero occurrences of `Checkpoints`. So the docs describe a seam that exists and is tested,
+presented as a capability a user can invoke.
+
+**What changed (13 sites, all wording).** `docs/architecture.md:48` said `StateGraph` with
+`MemorySaver`, `checkpoint` for pause/resume/replay/fork; it now names the sequential engine as what
+ships and the checkpointer parameter as a seam with no shipped caller. Same treatment for
+`docs/architecture.md:28` (roles line), `docs/agent-system.md:7`, `docs/portfolio/PROJECT_SUMMARY.md:18`
+(`MemorySaver` checkpoints for replay), `docs/portfolio/ONE_MINUTE_PITCH.md:9`,
+`research/V3_RESEARCH_REPORT.md:44`, `research/paper/paper.md:34` and `:59`,
+`research/paper/V2_paper_draft.md:15` and `:39`,
+`apps/web/app/runs/[id]/replay/page.tsx:15` (the header promised "Select checkpoint, Replay or Fork"
+two lines above its own empty state saying no checkpoint API exists -- the page contradicted itself),
+`apps/web/app/runs/page.tsx:30` (listed a Checkpoints section the route does not render), and
+`README.md:222` (the VS Code row advertised "analysis replay" while `extension.ts` registers seven
+commands, none of them replay).
+
+**Two statements deliberately kept, and a guard that had to learn the difference.** The first red run
+of `tests/test_checkpoint_claims.py` named three *honest* disclaimers -- "Replay and fork need a
+checkpoint API that does not exist in this build", "under construction", "not wired in this build" --
+because the pattern matched on shape, not on intent. A gate that punishes truthful hedges trains the
+next editor to write vaguer prose, so `_DISCLAIMER` now clears any line that denies the capability,
+and `test_the_guard_fires_on_the_shape_it_exists_to_stop` asserts both directions fire *and* the three
+real UI sentences stay green. `test_the_working_benchmark_checkpoint_stays_described` protects the one
+resume that genuinely works -- `run_eval.py` appends each finished task to `raw_runs.partial.jsonl`
+and skips those ids on restart -- so a future sweep cannot delete a true statement, which is why
+`CHANGELOG.md:115` and `DATASCIBENCH_REPORT.md:143` were left alone, and `CHANGELOG.md:541` is
+exempted by prefix as a historical release record rather than edited into a lie about the past.
+
+**Exemptions declared in the test, with reasons, not as silence**: `site/` (generated mirror),
+`docs/v3`//`docs/v4_3` (historical), `CHANGELOG.md`, the audit documents themselves, `benchmarks/`
+(its checkpoint is real), `data-science-agent/` (a second clone). `assert len(files) >= 20` fails the
+test if the globs ever stop finding anything.
+
+**Not fixed here, named for the record.** `docs/portfolio/PROJECT_SUMMARY.md:18` and
+`research/paper/V2_paper_draft.md:15` still carry `Next.js 13 routes`, `17 tools` and `Next.js 15` --
+the same retired-literal family as §76, reachable now that `stale_routes` no longer exists. They were
+left because the fix is a re-count of the current surface (apps/web is Next.js 16.3.4) and folding an
+unverified new number into a wording change replaces one stale claim with another.
+
+**State.** 4 new tests in `tests/test_checkpoint_claims.py`; `testFunctions` 483 → **487**. Gates,
+rc from each child: `TSC_RC=0` (`npm --prefix apps/web run typecheck`, needed because two `.tsx`
+strings changed) · `CHECK_RC=0` · `FORMAT_RC=0` · `MYPY_RC=0` (112 files) · `PYTEST_RC=0`, coverage
+80.82% · `MKDOCS_RC=0` with zero WARNING/ERROR lines (these files are nav-served) · `RATCHET_RC=0` ·
+`CLAIMS_RC=0` with `--require-released-tags`. The second run of the verification lane,
+36675826804, is `completed success` with both jobs green and `check_public_claims.py
+--require-released-tags` and `pytest --cov` each recorded `success` step-by-step -- §79's gate and
+§80's fix are now proven on `ubuntu-latest`, not just here. Nothing merged; `main` untouched.

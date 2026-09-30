@@ -15,7 +15,7 @@ A wrong but confident analysis (spurious correlation, p-hacked subgroup, un-evid
 
 ## Architecture (distinctive)
 
-`Next.js 13 routes` → `FastAPI /api/v1/datasets /analysis /artifacts` (+ SSE `/events`) → **LangGraph** (`understand → plan → exec → critic → report`, `max_steps 20`, `max_tool_calls 40`, `retry 3`, `MemorySaver` checkpoints for replay) → **Typed Tool Layer** (17 tools over DuckDB read-only + Polars/SQLite + Python AST sandbox 5 s, Stats/ML/Viz) → **Evidence Graph** (`Insight → Evidence → ToolCall → Dataset hash`, evidence_coverage gating) → Validation (unsupported_claim / causal bar rewrite via `guardrails.py`) → Reports & Artifacts → MCP adapter (stateless, ADR-001) over the same tool layer. Frozen surfaces (LangGraph, FastAPI, DuckDB, Polars, SQLite, Evidence Graph, Python Sandbox, SDK/CLI/Plugin/MCP/Reproduction Engine) require ADR for major changes.
+`Next.js 13 routes` → `FastAPI /api/v1/datasets /analysis /artifacts` (+ SSE `/events`) → **LangGraph** (`understand → plan → exec → critic → report`, `max_steps 20`, `max_tool_calls 40`, `retry 3`) → **Typed Tool Layer** (17 tools over DuckDB read-only + Polars/SQLite + Python AST sandbox 5 s, Stats/ML/Viz) → **Evidence Graph** (`Insight → Evidence → ToolCall → Dataset hash`, evidence_coverage gating) → Validation (unsupported_claim / causal bar rewrite via `guardrails.py`) → Reports & Artifacts → MCP adapter (stateless, ADR-001) over the same tool layer. Frozen surfaces (LangGraph, FastAPI, DuckDB, Polars, SQLite, Evidence Graph, Python Sandbox, SDK/CLI/Plugin/MCP/Reproduction Engine) require ADR for major changes.
 
 ## Statistical contribution
 

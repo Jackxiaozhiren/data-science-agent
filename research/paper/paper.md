@@ -31,7 +31,7 @@ Automating data science is easy to demo and hard to trust. A system can emit flu
 - **C1** Evidence-grounded autonomous data science architecture (`Insight → Evidence → ToolCall → Dataset`).
 - **C2** Statistical validation and critic verification (`run_statistical_test`, `assumption_check`, `causal_check` with bar, evidence coverage gating).
 - **C3** Claim → Evidence → Computation traceability (Evidence Graph, `dataset_hash` per insight).
-- **C4** Reproduction / replay infrastructure (`artifacts/reports/<runId>/` bundle, L0–L5 Reproducibility, LangGraph checkpoints).
+- **C4** Reproduction infrastructure (`artifacts/reports/<runId>/` bundle; `dsa reproduce` re-runs the analysis and scores the fresh run against the record on the L0–L5 ladder -- code, data hash, environment, trajectory, conclusion within tolerance).
 - **C5** Internal + external benchmark evaluation (internal 1.00 + DataSciBench execution lane; cross-benchmark matrix with Generalization Gap deferred).
 - **C6** Real-world failure analysis (case studies + DataSciBench `empty-input` external class; 12 candidates for `benchmarks/v2 0.4.0`).
 
@@ -56,7 +56,7 @@ Existing systems defer evidence grounding or independent benchmarking; DSA's dis
 ```
 User / External Evaluator
   → Frontend (Next.js 15, 13 routes) → API (FastAPI, /api/v1/datasets /analysis /artifacts)
-  → Agent Runtime (LangGraph: understand → plan → exec → critic → report, budgets 20/40, retry 3, MemorySaver checkpoints)
+  → Agent Runtime (understand → plan → exec → critic → report, budgets 20/40, retry 3)
   → Tool Layer (17 typed tools: profile_dataset, run_sql, run_python, correlation_analysis, hypothesis_test, regression, assumption_check, causal_check, train_model, evaluate_model, feature_importance, forecast, create_visualization, get_evidence, …)
   → Data Layer (DuckDB read-only + Polars + SQLite) + Python sandbox (AST allowlist, 5 s wall-clock) + Evidence Graph (Insight→Evidence→ToolCall→Dataset hash) + Reports & Artifacts (report.md + evidence_graph.json + reproduce.sh + analysis.ipynb + experiment.json)
   → Validation (insight_evidence, traceability, unsupported_claim, dataset_hash) → Reproducibility (artifacts/reports/<runId>/, fresh-clone `reproduction/` shim, L0–L5)

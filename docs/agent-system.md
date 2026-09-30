@@ -4,7 +4,7 @@
 
 ## Graph
 
-`Planner → DataScientist → Critic → Report` (LangGraph `StateGraph`, `MemorySaver` checkpoints). Budgets `max_steps 20 / max_tool_calls 40 / max_retries 3`.
+`Planner → DataScientist → Critic → Report`, shipped as the sequential loop in `dsa_agent.graph.run_analysis` -- the engine the API, SDK and evaluation runner all call. `dsa_agent.langgraph_graph` models the same pipeline as a LangGraph `StateGraph` and `build_graph(checkpointer=...)` takes an injected saver, but nothing in `apps/` or `packages/` compiles it, so treat pause/resume/replay/fork as unimplemented rather than available. Budgets `max_steps 20 / max_tool_calls 40 / max_retries 3`.
 
 ## Reliability (W5)
 

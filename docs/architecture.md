@@ -25,7 +25,7 @@ flowchart TB
     DL --> STORE[(Storage<br/>data/ + artifacts/ + reproduction/<br/>Local-first, Cloud-free)]
 ```
 
-**Roles**: Frontend (upload, profile, trace) → API (validation, rate limit, logging) → Agent Runtime (stateful graph, checkpoints, retry 3, `max_steps 20 / max_tool_calls 40`) → Tool Layer (typed tools) → Data/Stats/ML/Viz → Evidence → Validation → Reports/Repro. MCP is an adapter over the same Tool Layer, stateless.
+**Roles**: Frontend (upload, profile, trace) → API (validation, rate limit, logging) → Agent Runtime (sequential plan → exec → critic loop, retry 3, `max_steps 20 / max_tool_calls 40`) → Tool Layer (typed tools) → Data/Stats/ML/Viz → Evidence → Validation → Reports/Repro. MCP is an adapter over the same Tool Layer, stateless.
 
 ---
 
@@ -45,7 +45,7 @@ stateDiagram-v2
     critic --> exec_step: Critic requests re-analysis (bounded)
 ```
 
-Implementation: `packages/agent/src/dsa_agent/graph.py` (`run_analysis` MVP sequential) + `langgraph_graph.py` (`StateGraph` with `MemorySaver`, `checkpoint` for pause/resume/replay/fork). Budgets enforced in graph. See `docs/agent.md`.
+Implementation: `packages/agent/src/dsa_agent/graph.py` (`run_analysis`) is the engine every shipped entry point calls -- API, SDK, evaluation runner, external validation. `langgraph_graph.py` holds the same pipeline as a LangGraph `StateGraph` and `build_graph(checkpointer=...)` accepts an injected saver, but no shipped path compiles it and there is no resume endpoint today. Budgets enforced in graph. See `docs/agent.md`.
 
 ---
 

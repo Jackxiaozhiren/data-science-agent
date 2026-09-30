@@ -12,7 +12,7 @@ export default async function ReplayPage({ params }: { params: Promise<{ id: str
       <PageHeader
         eyebrow="Step 3 · Replay"
         title={`Replay — ${id.slice(0, 12)}`}
-        description="Select checkpoint, Replay or Fork. Persists via LangGraph MemorySaver (pause/resume/replay/fork/inspect)."
+        description="Inspect the recorded trace of this run. Replay and fork are not wired in this build: the engine has no checkpoint API exposed yet."
         actions={
           <Link href={`/analysis/${id}`}><Button variant="secondary" size="sm">Inspect trace →</Button></Link>
         }

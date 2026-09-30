@@ -218,7 +218,7 @@ Core workflows can coordinate:
 | Streaming | Server-Sent Events |
 | MCP | MCP server |
 | Jupyter | `%load_ext dsa_jupyter` |
-| VS Code | Dataset explorer + analysis replay |
+| VS Code | Dataset explorer + result, evidence and report views |
 | Plugins | Custom data-science tools |
 
 ---

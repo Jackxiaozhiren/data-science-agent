@@ -41,7 +41,7 @@ Limitations logged (§62): LLM stochasticity, model dependence, leakage, dataset
 See `docs/architecture.md` — **7 Mermaid diagrams (version-controlled, §49)**:
 
 1. **System**: Frontend API Agent Tool Data Evidence Reports Repro MCP Observability.
-2. **Agent Graph**: `understand → plan → exec_step* → critic → report` with `MemorySaver` checkpoints (pause/resume/replay/fork), budgets `max_steps 20 / max_tool_calls 40 / max_retries 3`.
+2. **Agent Graph**: `understand → plan → exec_step* → critic → report`, budgets `max_steps 20 / max_tool_calls 40 / max_retries 3`. The `langgraph_graph.py` variant exposes a checkpointer seam (`build_graph(checkpointer=...)`), but no shipped entry point compiles it and no resume surface exists, so pause/resume/replay/fork is a design seam rather than a delivered capability.
 3. **Tool Architecture**: Typed `async execute` contract; 17 tools (`profile_dataset/run_sql/run_python/describe/correlation/hypothesis/regression/train/evaluate/feature_importance/forecast/visualization/evidence/report/save_artifact`) dispatching to `tools|statistics|ml|visualization|evidence`.
 4. **Evidence Graph**: `Insight → Evidence → ToolCall → Dataset(hash)` with 4 validators (`insight_evidence/traceability/unsupported_claim/dataset_hash`).
 5. **Data Lineage**: `Dataset(hash+schema) → Profiler/DuckDB/Sandbox → Evidence/Insights → Report → Validation → Bundle → Fresh reproduction L0–L5`.
