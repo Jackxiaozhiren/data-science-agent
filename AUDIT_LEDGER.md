@@ -3536,3 +3536,56 @@ is needed only to widen it to the ROADMAP half, and the tool now says which half
 **State.** Gates: ruff 0 · format 0 (208 files) · ratchet OK · full pytest 0 · mkdocs --strict 0.
 `check_public_claims.py` still exits 1 on a clean checkout for the one unowned README line, by
 design. 8 currency tests pass. Nothing pushed in this section.
+
+## 76. Measurement claims are now re-measured; the four typed number rules were already dead
+
+The delegated choice was which count is canonical. **Chosen: `def test_` occurrences, as defined by
+the collector's own `TEST_DEF_RE`, imported rather than restated.** Rationale, stated so it can be
+argued with: it is derivable from the committed tree with no test run, is unaffected by
+parametrisation and by platform-gated branches, and already has an owner (`debt.testFunctions`,
+whose floor gates deletions). `collected` (481 locally) and `passed` in a CI log were rejected --
+the first moves with plugin/platform, the second only exists after a run, and **both are currently
+inflated by another session's uncommitted tests**: the collector now reads 475, up from 465 before
+this section, of which my additions are 5 and the rest is theirs.
+
+Consequence of choosing a structural rule over a prose sweep: a sentence is checkable only when it
+names the path it counts (`pytest <target> ... # N tests`). That is deliberate. A blanket
+"any number followed by 'tests'" rule was measured first, per §74's lesson: across the scanned
+surface there are 6 such claims, 5 of them in `CHANGELOG.md` where quoting a superseded figure is
+the file's job. So the derived check runs on the shape that carries a target, and CHANGELOG prose is
+untouched by construction rather than by an exemption list.
+
+**The four retired literals had no live coverage.** Measured per rule over the 14 scanned files:
+`stale_mypy` 0 hits, `stale_coverage` 0, `stale_test_counts` 1 (CHANGELOG:503, a 4.3-era "86 tests"
+record), `stale_routes` 1 (CHANGELOG:508). They could only ever catch numbers somebody had typed
+once, and every current match was a false positive on a release record. Removed with those counts
+attached; the naming rules (`old_package_pip`, `old_repo`, `old_package_import`) stay -- different
+class, still live.
+
+**What the new rule found immediately:** `apps/vscode/README.md:83` advertised
+`uv run pytest tests/vscode -v  # 6 tests: manifest, commands, views, dsa wrapper, failure handling,
+arch guard` while the directory defines **7** test functions. The enumeration was wrong in kind as
+well as in count: it listed six concerns where one function covers three of them, omitted four
+functions (6-step flow, tsc compile, contributes, no-stub), and named a "dsa wrapper" test that does
+not exist. Corrected to the real seven. The file was clean in `git status`, so it was mine to fix;
+`README.md:16` still is not, and remains the checker's one standing exit-1.
+
+**An existing test broke, correctly.** `test_identical_text_is_flagged_only_outside_a_historical_prefix`
+used `"The suite is 155 tests today."` as its payload and so depended on the retired
+`stale_test_counts`. Its actual subject is path-keyed exclusion, not that literal, so the payload was
+retargeted to a naming claim that survives, with the reason commented in place. The assertions are
+unchanged -- both the scanned and the skipped copy must still produce findings.
+
+**Two instrument faults worth recording, both mine.**
+- My first blast-radius probe printed `f.name` instead of a relative path, so it labelled
+  `apps/vscode/README.md` as `README.md` and I nearly wrote a fix against the wrong file. Re-ran
+  with `relative_to(root)`.
+- `README.md` is being edited live: between two of my commands, line 83 changed from the vscode test
+  claim to "Python **3.12+** is required." and back to no match at all. A line number quoted from a
+  shared tree is a snapshot, not a fact; and `git show HEAD:README.md | grep "[0-9] tests"` returning
+  nothing was what finally located the claim in the other file.
+- Added `measurement_claims_evaluated()` and assert it is >= 1 against the real repository, so the
+  rule cannot go vacuous the way the four literals quietly had.
+
+**State.** Gates: ruff 0 · format 0 (209 files) · ratchet OK · full pytest 0 · checker exits 1 on
+the one unowned token. New: 5 tests in `tests/test_measure_claims.py`.
