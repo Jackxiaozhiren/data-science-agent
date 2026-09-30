@@ -6,7 +6,7 @@
 
 ## 1) What did I build?
 
-An **evidence-grounded autonomous data science platform** — a question about your data becomes a reproducible analysis with every claim bound `Insight → Evidence → ToolCall → Dataset(sha256)` and a bundle `report.md + evidence_graph.json + reproduce.sh + analysis.ipynb + experiment.json`. The stack is Frontend (Next.js) → API (FastAPI) → **LangGraph** (`plan → exec → critic → report`, budgets 20/40) → Typed Tool Layer (DuckDB/Polars/SQLite + Python AST sandbox + stats/ML/viz) → Evidence Graph → MCP adapter, shipped as a **self-contained wheel** (`jack-data-science-agent`, vendored `_vendor/`, 0 `dsa-*` deps) with one SDK and many surfaces: `dsa` CLI (11 subcommands), Python SDK, MCP (18 tools), Jupyter magic, VS Code extension (7 commands), plugin `dsa-time-series`.
+An **evidence-grounded autonomous data science platform** — a question about your data becomes a reproducible analysis with every claim bound `Insight → Evidence → ToolCall → Dataset(sha256)` and a bundle `report.md + evidence_graph.json + reproduce.sh + analysis.ipynb + experiment.json`. The stack is Frontend (Next.js) → API (FastAPI) → **LangGraph** (`plan → exec → critic → report`, budgets 20/40) → Typed Tool Layer (DuckDB/Polars/SQLite + Python AST sandbox + stats/ML/viz) → Evidence Graph → MCP adapter, shipped as a **self-contained wheel** (`jack-data-science-agent`, vendored `_vendor/`, 0 `dsa-*` deps) with one SDK and many surfaces: `dsa` CLI, Python SDK, MCP server, Jupyter magic, VS Code extension, plugin `dsa-time-series`.
 
 ## 2) Why is it difficult?
 
