@@ -71,7 +71,7 @@ Protected frozen surfaces (§7 Architecture Freeze): LangGraph Runtime, FastAPI,
 
 **Core invariant:** `Insight → Evidence → ToolCall → Dataset(sha256)`. Every insight carries `evidence_ids`; each evidence record carries `source_type` (`visualization`/`python`/`model`/`statistical_test`), `source_id` (`TC-*`), `result` JSON, `confidence`, and `validation_status`. The dataset `sha256` is bound at `profile_dataset` time and propagated into each evidence edge.
 
-**Critic.** After the execution phase, `dsa_agent.critic` checks `evidence_coverage` (every insight has ≥1 evidence), `unsupported_claim` (causal language without `causal_check` bar), `tool_errors` (retry budget), and rewrites unsupported causal claims to association (`guardrails.py: rewrite_unsupported_claim`).
+**Critic.** After the execution phase, `dsa_agent.critic` checks `evidence_coverage` (every insight has ≥1 evidence), `unsupported_claim` (causal language without `causal_check` bar), and `tool_errors` (retry budget). `unsupported_claim` is one of the four hard-fail checks (`graph.py:51`, applied at `:631`), so a run containing an unsupported causal claim is reported `FAILED` rather than reworded; a textual rewrite helper exists (`guardrails.py: rewrite_unsupported_claim`) but is not on the runtime path.
 
 **Tool contracts.** Each tool declares an input schema and produces an `Evidence` record — the same evidence is consumed by the report renderer, the Jupyter display formatter, and the external adapter's `build_logs_txt` (DataSciBench's `## Current Plan` marker). No tool bypasses the Evidence Graph.
 
