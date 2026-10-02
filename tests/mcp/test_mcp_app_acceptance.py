@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from dsa_api.main import app as main_app
-from dsa_mcp.adapter import call_mcp_tool, list_resources, read_resource
+from dsa_mcp.adapter import call_mcp_tool, list_resources, read_resource, store_analysis
 from dsa_mcp.app import app as mcp_app
 from dsa_mcp.server import app as mcp_server
 
@@ -59,6 +59,37 @@ async def test_explicit_handles_stateless() -> None:
     # No session: repeated call same run_id returns same
     ev1b = await read_resource("evidence://run-explicit-1")
     assert ev1["text"] == ev1b["text"]
+
+
+def test_stored_run_yields_real_handles_not_templates() -> None:
+    """§38 per-run handles: a stored analysis must produce real URIs, and the §37 templates
+    are only a discoverability fallback.
+
+    Green on arrival, and it exists because the isolation landed in §87 exposed the gap: this branch
+    used to be executed only as a side effect of some earlier test leaving a run in `_ANALYSIS_STORE`,
+    which no test asserted on. Deleting the store loop in `adapter.list_resources` fails this test.
+    """
+    store_analysis(
+        "run-seeded-1",
+        {
+            "status": "COMPLETED",
+            "insights": [],
+            "artifacts": [{"id": "tbl-1", "type": "table", "path": "/tmp/tbl-1.csv"}],
+        },
+    )
+    uris = [r["uri"] for r in list_resources()]
+    for expected in (
+        "evidence://run-seeded-1",
+        "report://run-seeded-1",
+        "analysis://run-seeded-1",
+        "artifact://run-seeded-1/tbl-1",
+    ):
+        assert expected in uris, (
+            f"{expected} missing from {sorted(u.split('://')[0] for u in uris)}"
+        )
+    # The placeholder templates must give way once real handles exist for every scheme.
+    assert "evidence://{run_id}" not in uris, uris
+    assert not any(u.startswith("artifact://{") for u in uris), uris
 
 
 def test_mcp_app_acceptance_via_server() -> None:

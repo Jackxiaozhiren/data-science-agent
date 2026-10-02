@@ -4258,3 +4258,82 @@ counts, and stamping `evaluator_version`/verdict fields into any future snapshot
 non-result:** two comparison scripts keyed on assumed row keys (`checks`, `task_success` at row level)
 produced empty output and then "all 50 failed" -- both were the script being wrong, not the data. A
 0-row or 50-row answer to "which tasks flipped" is a schema mismatch signal; print one row first.
+
+## 87. Phase 4 target 4 opened: process-global state is now isolated, completely, and by derivation
+
+**Chosen by verifiability, not size.** §24 target 4 has three parts; I started with "per-test isolated
+state for anything process-global" because it is the one that can be *made* checkable today, and
+because target 4's other two parts (seams for L2/L3/L8, real browser specs) either depend on this
+being trustworthy first or need a dev server another session may be using.
+
+**The hazard, enumerated rather than recalled.** 48 module-level containers exist in the shipped
+trees; the criterion that matters is which are **written after import** -- a mutating call
+(`append/update/add/clear/pop/...`) or a subscript assignment against a name bound at module scope.
+That is exactly four: `dsa_agent.graph._TOOL_CACHE`, `dsa_llm.providers._CALL_LOG`,
+`dsa_mcp.adapter._ANALYSIS_STORE`, `dsa_tools.registry._REGISTRY`. The other 44 are read-only tables.
+
+Three measurements said the gap was live, not theoretical: `tests/unit/test_tool_cache_failure_not_stored.py`
+hand-rolls `_TOOL_CACHE.pop(key)` at its own boundaries (2 files touch the cache at all);
+`reset_call_log()` is called by **zero** tests while every LLM call appends to it; and 22 files make
+38 `bootstrap()` calls, which reads like a defence against somebody else clearing the registry.
+No ordering plugin is installed, so the coupling is latent rather than absent -- and a tool served from
+another test's cache is precisely the executed-nothing green §76 already caught once.
+
+**Landed.** `_ISOLATED_GLOBALS` plus an autouse fixture in `conftest.py` that snapshots each container
+and restores it **in place** (`clear()+update()`, `obj[:] = ...`) rather than rebinding the module
+attribute -- a test doing `from dsa_agent.graph import _TOOL_CACHE` holds the object itself, so
+rebinding would leave that alias pointing at the pre-restore dict and the isolation would be a lie.
+No `try/except` anywhere in it: a new swallow site would push
+`debt.swallowedExceptionSites` past its 180 ceiling, which §76 refused to raise.
+
+**Completeness is the actual uplift, and it is derived.** `tests/test_process_global_isolation.py`
+(5 tests) reads `_ISOLATED_GLOBALS` **out of conftest.py's AST** instead of restating it -- a second
+copy would be two owners of one fact, the §82 failure mode -- asserts each entry still resolves to a
+real dict/list/set, and re-runs the writable-container scan over the shipped trees to assert the
+registry is a superset. Add a fifth module-level cache anywhere in `packages/`, `apps/api`,
+`apps/jupyter` or `src/` and CI goes red naming it. It also carries the falsification pair:
+`test_a_pollute_every_isolated_global` writes a sentinel into each registry member and
+`test_b_...` asserts none survived, with a non-empty-registry assertion in both so an empty registry
+cannot pass either one. Before the fixture, the registry tests failed with the reason written for
+them ("conftest.py declares no _ISOLATED_GLOBALS -- per-test isolation ... is not installed").
+
+**What it caught on the first run, which is the point of doing it.** Coverage moved 80.82% → 80.68%
+the moment the fixture went in. Diffing the two coverage reports located one file:
+`dsa_mcp/adapter.py` 73% → 69%, newly-missing 256-282 -- the per-stored-run handle loop in
+`list_resources()`. The reason `tests/mcp/test_mcp_app_acceptance.py::test_mcp_resource_model_five_schemes`
+had been covering it is that it was iterating **another test's leftover store**, and it can never
+assert on that branch either way, because `list_resources` deliberately appends placeholder
+`evidence://{run_id}`-style templates when the store is empty (its own §37 comment). So isolation
+did not lose coverage; it removed a test's invisible dependency on ambient state and exposed a branch
+nobody tested.
+
+**Therefore:** added `test_stored_run_yields_real_handles_not_templates`, seeding through the public
+`store_analysis()` and asserting the four real URIs appear *and* the templates give way. It is
+green-on-arrival, so it was falsified rather than trusted: with the loop mutated to
+`for run_id, payload in {}.items()` in a scratch patch, exactly that one test failed
+(`evidence://run-seeded-1 missing from …`) while `five_schemes` kept passing -- independent proof both
+that the new test bites and that the old one cannot see this branch. The patched file was then
+restored from the pre-experiment `/tmp` copy and verified byte-identical (sha256 `f762aaa3…`,
+`git status` clean for it); nothing in this shared tree was ever `git checkout`-ed.
+
+**Numbers now equal to before, with different standing:** 80.82% total, `adapter.py` 73% with the same
+missing-line set as the pre-change run -- the branch is reached because a test asks for it, not because
+something else leaked.
+
+**Note for whoever picks the next item up:** `conftest.py` sits at the repository root and the CI lint
+steps name `packages apps/api tests src apps/jupyter scripts`, so root-level Python is outside both
+`ruff check` and `ruff format --check` on the runner. This change was linted under
+`--isolated --select F,E,W,I,B,UP,SIM` by hand to compensate. Widening the CI path list is a
+`ci.yml`-and-guides change (the §78 parity guard requires the three to move together), which is why it
+is proposed here and not folded into a test-isolation commit.
+
+**State.** 6 new tests (`testFunctions` 490 → **496**: 5 in `test_process_global_isolation.py`, 1 in
+`test_mcp_app_acceptance.py`) -- and the arithmetic matching the two files is the check that no test was
+silently lost or duplicated. Gates, rc from each child: `PYTEST_RC=0` with coverage **80.82%** (the
+figure the run had before this change, reached again on purpose) · `CHECK_RC=0` · `FORMAT_RC=0`
+(212 files) · `MYPY_RC=0` (112 files) · `RATCHET_RC=0` · `CLAIMS_RC=0` with
+`--require-released-tags` · `MKDOCS_RC=0` with zero WARNING/ERROR lines · `conftest.py` linted under
+`--isolated --select F,E,W,I,B,UP,SIM` (rc 0) because CI's path list does not reach it. Files touched:
+`conftest.py`, `tests/test_process_global_isolation.py` (new), `tests/mcp/test_mcp_app_acceptance.py`,
+this ledger. `packages/mcp/src/dsa_mcp/adapter.py` is byte-identical to HEAD after the mutation probe.
+Nothing pushed from this change; the concurrent session's three dirty files were not staged.
