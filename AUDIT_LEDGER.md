@@ -4035,3 +4035,60 @@ Two instrument faults were needed to get there, both worth keeping:
   gh calls had just succeeded. Unsetting `NO_PROXY`/`no_proxy` made the identical push work. The
   bypass is per-client, not per-shell -- saved to memory so the next session does not re-derive it by
   failing a push first.
+
+## 84. A critical Next.js RCE arrived from outside the diff, and the branch caught it
+
+**How it surfaced.** Advancing `ci-proof-79` to main's tip (`9f2f190`, which carries the sibling
+session's §83) triggered run 36960171297: `completed failure`, `web-regression => success`,
+`ci => failure`. The watcher's read and a direct `gh run view` agreed, so this was a verdict and not
+instrument loss. The failing step was nobody's gate but one: `Run npm --prefix apps/web audit
+--audit-level=high`. Nothing in the pushed commits touched `apps/web`.
+
+**What it was.** The step's own log: `next 16.2.0 - 16.3.5`, `Severity: critical`, "Next.js: Remote
+Code Execution in next/og ImageResponse", `fix available via npm audit fix --force` ... `Will install
+next@16.3.8, which is outside the stated dependency range`. `apps/web/package.json` pins
+`"next": "16.3.4"` exactly (as it does react, react-dom and sharp), so 16.3.4 sits inside the range.
+Taken from the advisory API rather than paraphrased from npm: GHSA-vcvr-r3jv-pc5j, severity critical,
+`vulnerable_version_range = >= 16.2.0, < 16.3.6`, `first_patched_version = 16.3.6` -- so npm's
+"16.3.5" upper label and the advisory's "< 16.3.6" are the same boundary rendered differently.
+
+**Exposure measured before acting, not assumed.** `next/og` and `ImageResponse` appear nowhere in
+`apps/web` sources (searched excluding `node_modules`). So this application does not call the
+vulnerable path today. That is an argument about *impact*, not about the pin: `ci.yml` declares
+`--audit-level=high` as a gate, a critical advisory is inside the dependency graph either way, and the
+first `next/og` route anyone adds turns a latent entry into a live one. The gate was not weakened.
+
+**Fix.** `next` 16.3.4 → 16.3.8 (npm's resolution, one patch beyond the advisory's first patched
+16.3.6), and **both** lockfiles regenerated -- the root workspace lock, which
+`scripts/check_npm_workspace_lock.py` compares against every workspace manifest, and
+`apps/web/package-lock.json`, which `npm --prefix apps/web ci` actually installs from. Updating one
+and not the other is a trap specific to this repo's layout: the gate would fail on the root, and CI
+would install the old binary from the other.
+
+**Proving the regen stayed inside its lane.** `npm install --package-lock-only` is exactly the command
+that silently drifts unrelated packages, so the two locks were diffed by package set against HEAD, not
+read by eye: root -- 10 keys changed, 0 added, 0 removed, every one `next` or `@next/*`
+(env, swc-darwin-arm64/x64, swc-linux-arm64-gnu/musl, swc-linux-x64-gnu/musl, swc-win32-arm64-msvc,
+swc-win32-x64-msvc) moving 16.3.4 → 16.3.8, `lockfileVersion` unchanged; `apps/web` -- same 10,
+`non-next changes: NONE`.
+
+**Red to green, same reading.** Before: `npm --prefix apps/web audit --audit-level=high` → rc 1, "1
+critical severity vulnerability", `next 16.2.0 - 16.3.5`. After `npm ci` (rc 0): rc 0, "found 0
+vulnerabilities". CI's other web gates on the new version: `typecheck` rc 0 (`tsc --noEmit`) and
+`next build` rc 0. Python side unchanged and green: ruff 0, format 0 (209 files), mypy 0 (112 files),
+`PYTEST_RC=0` at 80.82%, mkdocs --strict 0, `audit_facts --check` 0, claims checker 0 with
+`--require-released-tags`, and `check_npm_workspace_lock.py` 0.
+
+**Consequences I checked rather than guessed.** `release/sbom.json` holds 192 components and zero
+`next` entries -- the SBOM is Python-only, so no regeneration was owed; `THIRD_PARTY_LICENSES.md` names
+"Next.js | MIT" without a version; and no shipped document carries a Next.js version at all, which is
+a dividend of §82 deleting `Next.js 15` / `13 routes`. Had those survived, this one-line bump would
+have silently made three more documents false -- the concrete value of removing an unowned number
+instead of correcting it.
+
+**Projection, labelled as one.** main's most recent CI push run is 36548527374 on `2053e11`
+(2026-09-29, `success`), and main still holds the 16.3.4 lock. So the *next* push to `main` will fail
+the same audit step -- that is inferred from reproducing rc 1 locally against HEAD's lock, not
+observed in CI, and is stated as an expectation until a run exists. The fix therefore waits on this
+lane: I did not push `main`, because `cancel-in-progress: true` would interrupt the concurrent
+session's in-flight main run, and that call is not mine to make silently.
