@@ -4152,3 +4152,26 @@ Gates, each rc from its own child: `CHECK_RC=0` · `FORMAT_RC=0` · `MYPY_RC=0` 
 plus `ruff check --isolated --select F401,F841,F821` clean over my five test files and 20 passed in the
 three edited ones. Whether CodeQL's "new alert" count drops to zero is a runner fact and is claimed only
 after the next run reports it.
+
+### 85.1 CodeQL closed on the runner, SonarCloud did not, and one of my own queries errored rather than reported
+
+Run 36962582889 on head `45c9f7c`: `completed success` (`ci` and `web-regression` both green), and the
+check runs now read, in their own words -- `CodeQL | completed/success | No new alerts in code changed
+by this pull request`, with `Analyze (python)` and `Analyze (javascript)` both success. `SonarCloud Code
+Analysis | completed/failure | Quality Gate failed`, unchanged, because it was deliberately not chased
+(§85). So the PR's only remaining non-required red is Sonar, and the CodeQL claim §85 deferred is now
+made on evidence instead of expectation.
+
+One instrument slip in the verification itself: the query that was supposed to read these states
+finished with exit 1 on a jq precedence error -- `select(.name=="CI" or .name | test("Analyze"))` pipes
+the accumulated *boolean* into `test()`, which fails with `cannot be applied to: boolean (true)`. That
+is a tool error, not a remote answer: had I read the empty output as "no failing checks", the Sonar
+failure would have vanished from the report by syntax. The fix is to parenthesize each disjunct, and the
+rule is that a query which errors gets re-run before anything is concluded from it.
+
+**State.** The verified *code* head is `45c9f7c`, equal on `main`, `ci-proof-79` and
+`origin/ci-proof-79` (the run's own `head_sha` confirms the remote had it). PR #78: required `ci` green,
+CodeQL green, Sonar red (non-required). Ledger entries land as docs-only commits on top of that head and
+are deliberately not pushed on their own -- pushing one spends a full CI run to verify prose that no
+gate reads -- so they ride along with the next substantive change. `main` is still not pushed, and
+nothing is merged.
