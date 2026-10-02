@@ -4175,3 +4175,86 @@ CodeQL green, Sonar red (non-required). Ledger entries land as docs-only commits
 are deliberately not pushed on their own -- pushing one spends a full CI run to verify prose that no
 gate reads -- so they ride along with the next substantive change. `main` is still not pushed, and
 nothing is merged.
+
+## 86. The α re-freeze, measured at last -- and a correction to §85.1's own state line
+
+**Correction first, because mine is now false.** §85.1 closed with "`main` is still not pushed". After
+that sentence was written, the user authorised proceeding, I checked the two conditions I had flagged
+(`origin/main` still at `2053e11` so the push was a clean fast-forward; zero in-flight or queued `main`
+runs so `cancel-in-progress` could not interrupt the concurrent session) and pushed. So `origin/main` =
+`abc9572`, and run 36964260794 (`event: push`) is `completed success` with, step-for-step,
+`sync_vendor.py --check => success`, `check_public_claims.py --require-released-tags => success`,
+`npm --prefix apps/web audit --audit-level=high => success`, `mkdocs build --strict => success`. That
+also retires §84's labelled projection by observation: the projection was "a main push still carrying
+the 16.3.4 lock fails the audit step"; the push that landed carried the fix, so the step passed on
+`main` for the first time. Nothing is merged; PR #78 remains open and now redundant, still not my call
+to close.
+
+**What α actually is today.** Phase-5 report row 5 had already decided the *policy*: β (declare the
+staleness) done, α scheduled "before the next release, not now", because re-freezing requires a version
+bump (`docs/reproducibility.md` §Immutability) and 4.4.0 is already tagged. What was missing was the
+number. I ran the harness the README's own "How to reproduce" prescribes
+(`dsa --limit 50 --out /tmp/alpha50run --catalog … --datasets …`, rc 0):
+
+| field | frozen (v1.8.0 / `587c4bf`) | re-measured today | |
+| --- | --- | --- | --- |
+| `task_success_rate` | 1.0 | **0.92** (46/50) | would break `CONTRACT["task_success_rate"] == 1.0` |
+| `statistical_accuracy` / `sql_accuracy` / `code_execution_success` / `evidence_coverage` | 1.0 | 1.0 | unchanged |
+| `unsupported_claim_rate` | 0.06 | 0.08 | still inside the `<= 0.10` ceiling |
+| `mean_latency_ms` | 47.92 | 98.26 | inside `<= 500`, **not comparable** |
+
+**The decomposition §57.2 did not have, and it changes the advice.** The four failures are
+`eda-01`, `stats-06`, `clf-03`, `viz-01`, and they are not one phenomenon:
+
+- `eda-01` is the honesty artifact §57.2 described. Its *frozen* row already carries
+  "Causal language detected without causal…" yet scored `task_success: true`, because the pre-`c1c7680`
+  formula was `bool(has_ok and (has_report or tcalls))` and ignored the agent's verdict. Nothing about
+  the run changed; the metric stopped lying.
+- `stats-06`, `clf-03`, `viz-01` are different: their frozen rows read "No unsupported causal claims
+  detected" and today they fail. `guardrails.py` has **no commits since the freeze** and
+  `catalog.json`/`datasets` are **unchanged** (`git log --since=2026-08-16` returns nothing for them),
+  and the causal message itself dates to `b9425d5` (Phase 4, pre-freeze). So the difference is in the
+  *produced analysis*, not in the check -- most plausibly the critic/validation path, which did change
+  after the freeze (`14dfd7f` finalize validation status, `7433018` the ablation harness, `227d3d4` my
+  §64 step-budget hard-fail). I have **not** pinned which change moved them, and saying "the metric
+  became honest" about these three would launder a real behavioural delta into a bookkeeping story.
+
+**Provenance gaps the re-measurement exposed** (all measured, none previously recorded):
+- 0 of 50 frozen rows stamp `details.evaluator_version`; today's rows all stamp `evaluator_v2`. So the
+  snapshot records no evaluator identity at all -- the only provenance is README prose.
+- 0 of 50 frozen rows carry `failed_agent_verdict` (`None` throughout), which is the field `c1c7680`
+  made decisive. A reader cannot tell from the data that the scoring rule changed; only the README says.
+- `benchmarks/baseline/README.md`'s tree lists `raw_runs.json` ("full run_result dump … for trajectory
+  debugging"). It is neither tracked (`git ls-files` shows only README/results/summary) nor on disk, and
+  it is **not** gitignored -- a documented artifact that simply does not exist.
+- That same README asserts "Tolerance: any W2+ PR that drops `task_success_rate` or raises
+  `unsupported_claim_rate` without ADR fails CI." No CI step recomputes the baseline -- the only
+  references are the Playwright `web-regression` job -- and `test_baseline_contract` compares the
+  *stored file* against `1.0`. So that sentence describes an enforcement that does not exist. The
+  README's own scope notes admit exactly this, which is why the headline claim reads as a leftover.
+- Its "Gates anchored here" line still carries §82-class unowned counts (86 tests / 74% coverage /
+  mypy 81 files / ruff 184 / next 7/7) against today's measured 490 test functions / 80.82% / 112 files /
+  209 files / 16 pages. And it sits outside the §82 census guard, whose globs are
+  `README.md`, `docs/**/*.md`, `apps/**/*.md` -- an exemption by omission rather than a declared one,
+  which is the weakest kind.
+- Blast radius of an α re-freeze on shipped prose is one line: `docs/evaluation.md:60` cites "`50/50`
+  and `100/100`" as what the repository currently records. 46/50 makes that stale.
+
+**Latency, stated as non-attributable.** 47.92 → 98.26 ms is a 2.05× move, but the frozen figure is a
+2026-08-16 measurement on a different tree and machine, and this probe ran on macOS while other jobs
+were active; §78's counterbalancing rule means I do not get to call that a regression or an improvement
+without a paired same-machine A/B on the two commits. It stays a number with a caveat.
+
+**Advice, tightened by the data.** Do not re-freeze to 0.92 as a single release-decision sweep. First
+resolve the `stats-06` / `clf-03` / `viz-01` question -- whether the critic now correctly detects causal
+language it previously missed (then the honest fix is the freeze plus a note that detection improved) or
+it fires on text where the pre-freeze pipeline was right (then it is a defect to fix before any number
+is pinned). α is a release decision and stays with you; the sub-question is ordinary diagnosis and I can
+take it next if you want it. Meanwhile the four README/provenance defects above are cheap, in-repo and
+not release-gated -- the `raw_runs.json` line, the false CI-enforcement sentence, the unowned gate
+counts, and stamping `evaluator_version`/verdict fields into any future snapshot.
+
+**Two of my own tool slips in this pass, recorded because they were the reason I nearly reported a
+non-result:** two comparison scripts keyed on assumed row keys (`checks`, `task_success` at row level)
+produced empty output and then "all 50 failed" -- both were the script being wrong, not the data. A
+0-row or 50-row answer to "which tasks flipped" is a schema mismatch signal; print one row first.
