@@ -19,7 +19,7 @@ import polars as pl
 import pytest
 
 from dsa_agent import graph
-from dsa_agent.state import AnalysisPlan, AnalysisState, AnalysisStatus, AnalysisStep
+from dsa_agent.state import AnalysisPlan, AnalysisStatus, AnalysisStep
 
 
 def _csv(tmp_path: Path) -> Path:

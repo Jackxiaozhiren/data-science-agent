@@ -18,8 +18,6 @@ import ast
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[1]
 REAL = REPO / "scripts/check_public_claims.py"
 
@@ -85,14 +83,14 @@ def test_a_claim_about_an_absent_target_is_reported_not_dropped(tmp_path: Path) 
 
 def test_the_four_typed_number_patterns_are_gone() -> None:
     tree = ast.parse(REAL.read_text(encoding="utf-8"))
+    keys: set[str] = set()
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(
             isinstance(t, ast.Name) and t.id == "PATTERNS" for t in node.targets
         ):
             keys = {k.value for k in node.value.keys if isinstance(k, ast.Constant)}
             break
-    else:
-        pytest.fail("no PATTERNS dict to inspect")
+    assert keys, "no PATTERNS dict to inspect -- this guard would have checked nothing"
     dead = {"stale_test_counts", "stale_mypy", "stale_coverage", "stale_routes"}
     assert not (dead & keys), f"typed literals are back in PATTERNS: {sorted(dead & keys)}"
     # naming guards stay: they are a different class and still earn their place

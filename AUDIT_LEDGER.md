@@ -4092,3 +4092,63 @@ the same audit step -- that is inferred from reproducing rc 1 locally against HE
 observed in CI, and is stated as an expectation until a run exists. The fix therefore waits on this
 lane: I did not push `main`, because `cancel-in-progress: true` would interrupt the concurrent
 session's in-flight main run, and that call is not mine to make silently.
+
+## 85. A scanner caught what my own lint structurally could not
+
+**How it surfaced.** After the security fix, `ci` was green on the runner (run 36961462209, step-level
+`npm --prefix apps/web audit --audit-level=high => success`), yet `gh pr view 78` returned
+`mergeable=MERGEABLE` with `mergeStateStatus=UNSTABLE` -- which is GitHub's way of saying *required
+checks pass, non-required ones do not*. The two failing checks are CodeQL and SonarCloud Code Analysis,
+and both already read `completed/failure` at `ddf4dba` and `9f2f190`, so the dependency bump did not
+cause them. But the CodeQL check run's own summary says "New alerts in code changed by this pull
+request: 1 error", and that code is this lane's.
+
+**The alert, verbatim.** `tests/test_measure_claims.py:97` -- "Local variable 'keys' may be used before
+it is initialized." The file is mine from §76: `keys` was bound only inside the loop body, and the
+`for … else: pytest.fail(...)` made it safe at runtime while leaving a statically unbound path. Fixed by
+initialising `keys: set[str] = set()` and replacing the `else` clause with
+`assert keys, "no PATTERNS dict to inspect -- this guard would have checked nothing"` -- same guarantee,
+no loop-carried binding, denominator guard intact.
+
+**The part worth keeping.** `pyproject.toml`'s `[tool.ruff.lint.per-file-ignores]` entry for `tests/**`
+lists **`F401` and `F841`** -- precisely the two rules that finding belongs to. So the project's own
+lint could never have shown it: `ruff check tests/test_measure_claims.py` returns "All checks passed!"
+on the exact line CodeQL flagged. A gate that ignores a rule is not a weak signal about that rule; it is
+*no signal*, and the silence reads as clean.
+
+**Counted, not estimated.** Bypassing the config with
+`ruff check --isolated --select F401,F841,F821 tests/ scripts/` returns **22 findings**. Three are in
+files this session created, and all three are now fixed: the `keys` case above, `import pytest` in
+`tests/test_currency_claims.py` (unused since §75 -- and an open `py/unused-import` alert dated
+2026-09-29 already sits on that file, consistent with the same import), and
+`AnalysisState` in `tests/unit/test_step_budget_enforcement.py`. My five new/edited test files now
+re-scan clean under `--isolated`, and 20 tests pass in the affected files.
+
+**The other 19 were left alone deliberately**: `tests/jupyter/test_jupyter_integration.py` (4),
+`tests/plugins/test_plugin_lifecycle.py` (3), `tests/sdk/test_cli_contract.py` (2),
+`tests/sdk/test_sdk_contract.py` (2), `tests/mcp/test_mcp_app_acceptance.py` (2),
+`tests/evals/test_human_eval.py`, `tests/evals/test_reliability.py`,
+`tests/plugins/test_plugin_isolation.py`, `tests/security/test_security_phase8.py`,
+`tests/security/test_w7_supply_chain.py`, `tests/perf/test_w9_performance.py`,
+`tests/unit/test_cov_mcp_server_and_llm.py` -- none created here, several in the concurrent session's
+territory. Sweeping nine unrelated test files into a security/claims commit is the scope blur that makes
+a change unauditable, so it is recorded as a standing item instead: the ignore list means these are
+invisible to `ci.yml`'s lint step and visible only to CodeQL, which is exactly the asymmetry §82's
+gate-parity work exists to close.
+
+**SonarCloud: not chased, and why.** `Quality Gate failed` on *Security Rating on New Code*, six
+annotations whose `raw_annotations` are all `null` -- the API gives coordinates but no rule text. The
+coordinates are the `importlib.util.spec_from_file_location` + `exec_module` pattern
+(`tests/test_measure_claims.py:29`, `scripts/check_public_claims.py:202`), a couple of test asserts, and
+`.github/workflows/ci.yml:85`. That construct is a dynamic-execution *hotspot*, and here every loaded
+path is either derived from `__file__` or a pytest `tmp_path` -- no untrusted value reaches it. I did not
+restructure working code to satisfy a scanner that would not name its rule; the honest next step is
+reading the issue list with a Sonar token, not guessing at shapes. It remains a non-required red, now
+described rather than hand-waved.
+
+**State.** 3 files changed, no test functions added or removed (`testFunctions` steady at **490**).
+Gates, each rc from its own child: `CHECK_RC=0` · `FORMAT_RC=0` · `MYPY_RC=0` (112 files) ·
+`PYTEST_RC=0` at 80.82% coverage · `RATCHET_RC=0` · `CLAIMS_RC=0` with `--require-released-tags`;
+plus `ruff check --isolated --select F401,F841,F821` clean over my five test files and 20 passed in the
+three edited ones. Whether CodeQL's "new alert" count drops to zero is a runner fact and is claimed only
+after the next run reports it.

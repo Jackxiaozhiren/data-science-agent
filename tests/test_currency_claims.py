@@ -18,8 +18,6 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 
 def _load(root: Path):
     script = root / "scripts" / "check_public_claims.py"
