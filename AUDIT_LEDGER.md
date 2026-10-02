@@ -4337,3 +4337,74 @@ figure the run had before this change, reached again on purpose) · `CHECK_RC=0`
 `conftest.py`, `tests/test_process_global_isolation.py` (new), `tests/mcp/test_mcp_app_acceptance.py`,
 this ledger. `packages/mcp/src/dsa_mcp/adapter.py` is byte-identical to HEAD after the mutation probe.
 Nothing pushed from this change; the concurrent session's three dirty files were not staged.
+
+## 88. The run-status vocabulary got one owner, and the badge it repairs was visibly wrong in a browser
+
+**Why this item moved to the front.** §67.2 had parked it for two reasons, and both had expired.
+(a) "needs a browser" -- the Playwright MCP is available here; (b) "`apps/web` is the other session's
+active area" -- `git status` shows it clean, and this lane has already committed there three times
+(`32ee4b2` §71, `ddf4dba` §81, `1199a42` §84). Re-checking blockers before resuming a deferred item is
+the same discipline as §80's re-measure rule; the premise was stale in the favourable direction.
+
+**Premise re-verified, not inherited.** `AnalysisStatus` (`state.py:10-21`) has exactly 11 members and
+none of `RUNNING/PENDING/QUEUED/STARTED`; no Python file emits them either -- the only `"ok"` strings
+are the health probes and tool-call records, which are different fields on different endpoints. So
+§67.1's T1 stands, and the new test re-asserts the member count so a twelfth status forces a re-audit
+rather than sliding through.
+
+**The defect was rendering, not tidiness.** `StatusBadge` classified in-flight as
+`RUNNING|PENDING|QUEUED|STARTED|HUMAN_REVIEW`, so a *genuinely* running run (`UNDERSTANDING`,
+`PLANNING`, `ANALYSIS`, …) matched none of them and fell through to the neutral `secondary` badge; and
+`RunInspector`'s timeline computed `i === 0 && run.status === "RUNNING"` -- unreachable, so the plan
+never showed an active step. Both filter dropdowns additionally offered `value="RUNNING"`, which can
+only ever return an empty list, and with FE-03 (failure indistinguishable from absence) that is a
+user-visible dead end rather than a cosmetic wart.
+
+**Landed.** `apps/web/app/lib/analysisStatus.ts` now owns the vocabulary, the terminal/in-flight
+categories and the predicates; `StatusBadge`, `RunInspector` and both tables consume it, the filter
+options are generated from `IN_FLIGHT_STATUSES` instead of typing a made-up value, the timeline derives
+`active` from `stepsDone` (the same counter the header's "Running… step N of M" already used), and
+`machineIndex` keys on real members. `tests/contract/test_web_analysis_status_vocabulary.py` (6 defs)
+is what keeps it honest across the language boundary: enum shape, TS↔enum equality in both directions,
+category partition (every status must be classified, so a new one cannot render grey), filter
+reachability, and a structural check that the consumers import the module rather than re-typing names.
+
+**Falsified twice rather than trusted once.** Mutating only the TS module: adding `"RUNNING"` to the
+vocabulary fails two tests; dropping `"SYNTHESIS"` from `IN_FLIGHT_STATUSES` -- i.e. an unclassified
+status -- fails the partition test and nothing else, which is the specificity you want from a guard.
+Both restored from a pre-experiment copy, sha256 equal.
+
+**Observed in a real browser, before and after, on the same page and the same data.** Seeded an
+isolated SQLite DB under `/tmp` with one `UNDERSTANDING` run holding a 3-step plan (repository DB
+untouched), API on 8099 with `DSA_CORS_ORIGINS` matching the dev origin, `next dev` on 3100 with
+`NEXT_PUBLIC_API_URL`:
+
+| rendered | HEAD code | this change |
+| --- | --- | --- |
+| pulsing in-flight badge (`span.animate-pulse`) | **0** | **1** |
+| active step in the plan timeline (`text-amber-600`) | **0** | **1** |
+| "Running… step N of M" text | present | present |
+
+The third row is identical on both sides, so it is not claimed as a fix. Teardown verified by an empty
+`lsof` on 8099/3100 rather than by having asked the processes to stop.
+
+**Three environment traps met on the way, each of which could have produced a false result.**
+- `Settings` declares `model_config = {"env_prefix": "DSA_"}`, so a plain `DATABASE_URL` is
+  **silently ignored**: the first API instance read the repository's own gitignored `data/dsa.db` and
+  answered 404. After switching to `DSA_DATABASE_URL` the seeded row was served, and the repo DB's
+  892928-byte size and Sep-11 mtime are unchanged, so nothing was written there.
+- Browsing via `127.0.0.1:3100` while the dev server expects `localhost` produced 6 console errors
+  from Next blocking cross-origin dev HMR. Read as app output, that is a fabricated regression; the
+  errors vanished on the `localhost` origin with the page otherwise identical.
+- `next dev` rewrote the tracked `apps/web/next-env.d.ts` to import from `.next/dev/types/…` where the
+  committed file references `.next/types/…` -- a tracked generated file recording which command was run
+  last. Reverted to HEAD content. CI builds but never runs the web typecheck, so this is latent rather
+  than active; noted because the next person to commit after a `dev` run can break a future `tsc` gate
+  with no intent to.
+
+**State.** `testFunctions` 496 → **502** (the 6 contract defs; 490→496→502 across §87-§88 adds up
+against the two files). Gates, rc from each child: `CHECK_RC=0` · `FORMAT_RC=0` · `MYPY_RC=0` ·
+`PYTEST_RC=0` at 80.82% coverage · `CLAIMS_RC=0` with `--require-released-tags` · `RATCHET_RC=0`
+(verified twice, including a fresh invocation) · `MKDOCS_RC=0` · web `TSC_RC=0` and `next build`
+`BUILD_RC=0` (15/15 static pages). `next-env.d.ts` restored to HEAD; ports released; nothing pushed,
+and the concurrent session's three files remain unstaged.

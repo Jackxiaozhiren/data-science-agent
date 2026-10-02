@@ -18,6 +18,7 @@ import { EmptyState } from "@/app/components/data/States";
 import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
 import { Markdown } from "@/app/components/data/Markdown";
+import { isInFlightStatus, isReviewStatus, TERMINAL_STATUSES } from "@/app/lib/analysisStatus";
 
 export type RunDetail = {
   id: string;
@@ -45,7 +46,7 @@ type Progress = {
   insights: number;
 };
 
-const TERMINAL = new Set(["COMPLETED", "FAILED"]);
+const TERMINAL = new Set<string>(TERMINAL_STATUSES);
 const DEFAULT_TITLE = "Data Science Agent — Verifiable AI Data Science";
 
 function stripHtml(raw: string): string {
@@ -121,8 +122,8 @@ const MACHINE = ["Queued", "Planning", "Executing", "Validating", "Done"];
 function machineIndex(status: string, stepsDone: number, hasValidation: boolean): number {
   const s = status.trim().toUpperCase();
   if (s === "COMPLETED") return 4;
-  if (s === "PENDING" || s === "QUEUED") return 0;
-  if (s === "HUMAN_REVIEW") return 3;
+  if (isInFlightStatus(status) && (s === "UNDERSTANDING" || s === "PLANNING" || s === "DATA_PROFILING")) return 0;
+  if (isReviewStatus(status) || s === "VALIDATION" || s === "SYNTHESIS") return 3;
   if (s === "FAILED") return -1;
   if (hasValidation) return 3;
   return stepsDone > 0 ? 2 : 1;
@@ -339,7 +340,7 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
   const statusNow = prog?.status ?? run.status;
   const stepsDone = prog?.steps_done ?? st?.tool_calls.length ?? 0;
   const stepsTotal = prog?.steps_total ?? st?.plan.length ?? 0;
-  const isReview = statusNow.trim().toUpperCase() === "HUMAN_REVIEW";
+  const isReview = isReviewStatus(statusNow);
 
   const toolCalls = React.useMemo(() => {
     const all = st?.tool_calls ?? [];
@@ -531,7 +532,11 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
                 <TraceTimeline
                   steps={(st?.plan ?? []).map((s, i) => ({
                     id: s.id, name: s.name, tool: s.tool, description: s.description,
-                    status: run.status === "COMPLETED" ? "done" : i === 0 && run.status === "RUNNING" ? "active" : run.status === "COMPLETED" ? "done" : "todo",
+                    status: run.status === "COMPLETED" || i < stepsDone
+                      ? "done"
+                      : isInFlightStatus(run.status) && i === stepsDone
+                        ? "active"
+                        : "todo",
                   }))}
                 />
               </CardContent>

@@ -7,6 +7,7 @@ import { DataTable } from "@/app/components/data/DataTable";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { Input, Select } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
+import { IN_FLIGHT_STATUSES } from "@/app/lib/analysisStatus";
 
 export type RunRow = { id: string; status: string; user_query: string; created_at: string | null };
 
@@ -56,7 +57,11 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
           <option value="all">All statuses</option>
           <option value="COMPLETED">Completed</option>
           <option value="FAILED">Failed</option>
-          <option value="RUNNING">Running</option>
+          {IN_FLIGHT_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s.toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+            </option>
+          ))}
         </Select>
         <span className="text-xs text-zinc-400" aria-live="polite">{filtered.length} of {runs.length} runs</span>
         <span className="flex-1" />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DataTable } from "@/app/components/data/DataTable";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { Input, Select } from "@/app/components/ui/input";
+import { IN_FLIGHT_STATUSES } from "@/app/lib/analysisStatus";
 
 export type ReportRow = { id: string; status: string; user_query: string; created_at: string | null };
 
@@ -42,7 +43,11 @@ export function ReportsTable({ runs }: { runs: ReportRow[] }) {
           <option value="all">All statuses</option>
           <option value="COMPLETED">Completed</option>
           <option value="FAILED">Failed</option>
-          <option value="RUNNING">Running</option>
+          {IN_FLIGHT_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s.toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+            </option>
+          ))}
         </Select>
         <span className="text-xs text-zinc-400" aria-live="polite">{filtered.length} of {runs.length} reports</span>
       </div>
