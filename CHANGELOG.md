@@ -31,6 +31,12 @@ shadowing + missing greenlet concurrency).
   boot-tested healthy (also fixed web image missing `node_modules`).
 - Docs: `docs/api.md` contract table; ROADMAP #8/#9/#10 marked closed;
   `.gitignore` covers `/output/`, `.playwright-cli/`, `*.tsbuildinfo`.
+- Web: `next` 16.3.4 → 16.3.8 for GHSA-vcvr-r3jv-pc5j (critical RCE in
+  `next/og` `ImageResponse`; vulnerable range `>= 16.2.0, < 16.3.6`). The app
+  imports no `next/og` surface, but the pin sat inside the range and CI's
+  `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
+  workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
+  packages and nothing else.
 
 ### Added (unreleased, non-breaking)
 
