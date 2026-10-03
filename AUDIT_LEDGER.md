@@ -4812,9 +4812,13 @@ remain below the frozen `1.0`.
 mypy `0` (112 files) · `audit_facts --check` `OK` (swallow ceiling 11 = reading 11, handlers 185 = 185) ·
 claims `0` · mkdocs `--strict` `0` · full `pytest -q --cov` `0` at **81.14%** (up from 80.96% -- the four
 new supply-chain tests exercise branches the suite had never entered) · `testFunctions` 528 → **532**.
-Open ids recorded: **D-L3-04** (the plugin hash has no comparator), and the six swallows still standing
-from §90's list -- `research_manifest.py:43/:65`, `statistical_eval.py:196`,
-`plugins/registry.py:45/:64/:72` -- plus the 38 single-`return` sentinels no key measures.
+Open ids recorded: **D-L3-04** (the plugin hash has no comparator). The rest of the queue was
+re-enumerated from the AST rather than remembered: **11 swallow sites**, four of them benign-as-documented
+(`graph.py:328`, `external_validation.py:27`, `external_validation.py:236`, `feature_importance.py:90`) and
+seven still standing as §90 defects -- `research_manifest.py:43/:65`, `statistical_eval.py:196`,
+`plugins/registry.py:45/:64/:72` (six, mine to fix) plus `external_validation.py:258`, which sits in the
+concurrent session's dirty file and stays report-only. Above all of that, the **38 single-`return`
+sentinels** are measured by no key at all.
 
 
 
