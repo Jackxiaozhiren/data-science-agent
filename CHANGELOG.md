@@ -37,6 +37,12 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- `discover_plugins(..., strict=True)` now raises `PluginDiscoveryError` naming the manifest
+  that could not be parsed, instead of dropping a broken plugin from the registry with no
+  reason (its sibling `validate_plugin` already reported `manifest parse failed: …`; the
+  default behaviour is unchanged, so `dsa plugin list` still shows what parses). No shipped
+  caller passes `strict=True` yet — surfacing this in the CLI changes its JSON output shape
+  and is left as a decision (`AUDIT_LEDGER.md` §94, D-L3-06).
 - `PluginManifest.compute_hash()` no longer collapses three different worlds onto one
   digest. It used to hash name + entrypoint whenever the plugin root was absent, empty,
   or never supplied, and skipped any file it could not read — so a missing install hashed

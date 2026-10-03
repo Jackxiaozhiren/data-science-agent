@@ -4820,5 +4820,77 @@ seven still standing as §90 defects -- `research_manifest.py:43/:65`, `statisti
 concurrent session's dirty file and stays report-only. Above all of that, the **38 single-`return`
 sentinels** are measured by no key at all.
 
+## 94. Discovery made a broken plugin vanish; the fix had to be handler-neutral, and that constraint is measured
+
+**The runner verdict first, since it is the one that was owed.** Push `ab24d2f..4298344` (§93 plus its
+count correction) produced run **37097457028**: `completed success 2026-10-03T04:47:58Z`, both jobs
+success, every step success except the rc-only `Verify v4.3.0 release candidate`. So §93's
+`compute_hash` rewrite and the ceiling move from 12 to 11 are green on the runner, not just locally.
+
+**The site.** `discover_plugins` scanned `manifest.yaml` and `plugin.yaml` with
+`except Exception: # noqa: S112` / `continue` around each parse. A manifest with a YAML error therefore
+produced **no entry and no reason**, and `dsa plugin list` -- which is `discover_plugins` -- answered with
+an empty array that is indistinguishable from "nothing installed". §90 had classified this as a defect;
+reading the sibling code showed the repo already owns the right convention: `validate_plugin` returns
+`[f"manifest parse failed: {e}"]` for the identical failure. The gap was not a missing design, just a
+function that never used it.
+
+**The constraint I had to design inside, demonstrated rather than asserted.** `debt.exceptHandlers` is
+ceilinged at its measured value (185), because §92's vote was "police that the total does not grow". To
+check what that actually costs I added one scratch file under `scripts/` containing a single *correct*
+handler -- `except OSError as exc: raise ValueError(...) from exc`, a re-raise, the archetype of a
+non-swallow. The collector moved to **186** and `--check` failed with
+`ceiling debt.exceptHandlers: actual=186 (debt_grew)`. The probe file was then deleted and the ratchet
+returned `OK`. I did **not** widen the ceiling: the voted semantics were left intact, and the consequence
+is recorded instead of quietly engineered around. It is a real consequence -- adding an error path to
+shipped code now needs a per-case ceiling vote -- and the honest response to a constraint someone voted
+for is to design inside it, then say what it costs.
+
+**So the fix is handler-neutral by construction.** `discover_plugins(root, include_disabled, *,
+strict=False)` keeps its two handlers and its default behaviour byte-for-byte, and each handler now has a
+`if strict: raise PluginDiscoveryError(f"manifest parse failed: {p}") from exc` in front of its
+`continue`. Handlers added: **0**. Bodies that are a bare skip: two fewer, because a body of
+`[If, Continue]` is no longer "only `continue`". `PluginDiscoveryError` keeps the path in its message and
+the parser's own reason as `__cause__`, which is the entire difference between "skipped" and "skipped
+because" -- the same property §90 bought for the benchmark manifest.
+
+**Five tests, one of them deliberately green on arrival.**
+`tests/plugins/test_plugin_discovery_failures.py`: `test_the_default_call_stays_lenient` pins today's
+behaviour *before* changing anything, so a future edit that makes `dsa plugin list` raise instead of skip
+is caught as a contract change -- it is labelled green-on-arrival in its own docstring. The other four
+were **red first** (`ImportError: cannot import name 'PluginDiscoveryError'`): strict names the file,
+strict stays quiet on a clean registry, strict covers the second scheme (`plugin.yaml`, which had its own
+separate swallow), and the raised error carries the underlying cause. `BROKEN` is a genuinely
+uncloseable flow sequence, so the failure is a parser error rather than a validation complaint.
+
+**Filed as D-L3-06, with the irony stated.** Nothing in shipped code passes `strict=True`:
+`list_plugins()` still calls the lenient default, so `dsa plugin list` behaviour is unchanged and the
+reason is still not shown to a user. That is the same shape I filed for the plugin hash in §93 -- a
+mechanism without a caller -- and the difference is only that this seam documents itself as unused rather
+than its docstring claiming a supply-chain role. Wiring it is a contract decision, because
+`dsa plugin list` prints a bare JSON array today and an `errors` field changes its shape; the two natural
+customers are `plugin list` (add `errors`) and `plugin validate` with no target (discover strictly, so a
+manifest that will not parse cannot be skipped by the validator meant to catch it). Both need the user's
+call, so neither was taken here.
+
+**Numbers.** `debt.swallowedExceptionSites` 11 → **9**, ceiling lowered to 9 with it (falling, no vote
+needed). `debt.exceptHandlers` stayed **185** -- the point of the design. `debt.suppressionDirectives`
+unchanged at 42: both `# noqa: S112` stayed, because `continue` is still reachable in the lenient path, so
+removing them would be a false statement about the code. `testFunctions` 532 → **537**. Gates on this
+tree: ruff `0` · `ruff format --check` `0` (217 files) · mypy `0` (112) · `audit_facts --check` `OK` ·
+claims `0` · mkdocs `--strict` `0` · full `pytest -q --cov` `0` at **81.20%** · plugin suites 29 passed ·
+vendor mirror repaired with `--file packages/plugins/src/dsa_plugins/registry.py`, leaving the concurrent
+session's one drifted file untouched.
+
+**Remaining from the 9.** `research_manifest.py:43/:65` and `statistical_eval.py:196` are mine to fix;
+`external_validation.py:258` is in the other session's file. Four of the nine are benign as documented
+(`graph.py:328`, `external_validation.py:27`, `external_validation.py:236`, `feature_importance.py:90`),
+and `registry.py:56` (was `:45` before this section's class shifted the file) was
+judged benign-on-recheck: its `except: continue` is inside a lookup that already has an honest return
+value -- `None`, meaning "no source path found" -- which callers treat as absence rather than success,
+unlike discovery where absence is indistinguishable from emptiness. That leaves the 38 single-`return`
+sentinels as the tranche with no key at all.
+
+
 
 

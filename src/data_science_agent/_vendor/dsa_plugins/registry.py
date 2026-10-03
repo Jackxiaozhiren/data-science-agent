@@ -15,6 +15,17 @@ REGISTRY_STATE = REGISTRY_DIR / ".registry_state.json"
 # §23 default DENY, §25 isolation, §21 lifecycle
 
 
+class PluginDiscoveryError(RuntimeError):
+    """A plugin manifest could not be parsed, and the caller asked to hear about it (§94).
+
+    Discovery stays lenient by default because `dsa plugin list` should still show the
+    plugins that do parse. Strict mode exists for the callers that would otherwise read an
+    absent plugin as no plugin installed -- the message keeps the path, and `from exc`
+    keeps the parser's own reason, which is the whole difference between "skipped" and
+    "skipped because".
+    """
+
+
 def _load_state() -> dict[str, Any]:
     if REGISTRY_STATE.exists():
         try:
@@ -48,9 +59,16 @@ def _manifest_source_path(manifest: PluginManifest, root: Path | str = REGISTRY_
 
 
 def discover_plugins(
-    root: Path | str = REGISTRY_DIR, include_disabled: bool = False
+    root: Path | str = REGISTRY_DIR,
+    include_disabled: bool = False,
+    *,
+    strict: bool = False,
 ) -> list[PluginManifest]:
-    """§21 Discover — scan for manifest.yaml/plugin.yaml (§22)."""
+    """§21 Discover — scan for manifest.yaml/plugin.yaml (§22).
+
+    `strict=True` raises `PluginDiscoveryError` on the first manifest that will not parse;
+    the default keeps skipping so a partially broken registry still lists what works (§94).
+    """
     root_p = Path(root)
     if not root_p.exists():
         return []
@@ -61,7 +79,9 @@ def discover_plugins(
             if not include_disabled and _is_disabled(m.name):
                 continue
             manifests.append(m)
-        except Exception:  # noqa: S112
+        except Exception as exc:  # noqa: S112
+            if strict:
+                raise PluginDiscoveryError(f"manifest parse failed: {p}") from exc
             continue
     for p in root_p.rglob("plugin.yaml"):
         try:
@@ -69,7 +89,9 @@ def discover_plugins(
             if not include_disabled and _is_disabled(m.name):
                 continue
             manifests.append(m)
-        except Exception:  # noqa: S112
+        except Exception as exc:  # noqa: S112
+            if strict:
+                raise PluginDiscoveryError(f"manifest parse failed: {p}") from exc
             continue
     return manifests
 
