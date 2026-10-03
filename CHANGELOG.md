@@ -37,6 +37,12 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- Benchmark provenance no longer fails silently: the reproduction manifest's
+  `datasets_sha256` now comes from `_datasets_sha256()` with an accompanying
+  `datasets_sha256_note` naming why a hash is absent (and no longer reports a
+  hash of nothing for a missing datasets dir), and `run_benchmark` records
+  `details["statistical_eval_error"]` when the evaluator_v2 dimensions cannot be
+  attached, instead of dropping them without a trace.
 
 ### Added (unreleased, non-breaking)
 

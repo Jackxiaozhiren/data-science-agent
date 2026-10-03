@@ -34,6 +34,28 @@ def _resolve_datasets_dir(catalog: Path | None, datasets: Path | None) -> Path:
     return _DEFAULT_DATASETS
 
 
+def _datasets_sha256(datasets: Path) -> tuple[str | None, str]:
+    """Hash the dataset set for a provenance manifest, or name why there is no hash.
+
+    The first version of this returned a bare `None` from `except Exception: pass`, so a
+    released manifest could not be told apart whether the datasets were unreadable, the
+    directory was absent, or it was a file. `datasets_sha256: null` with no reason is the
+    same class of hole as an unrecorded failed check.
+    """
+    if not datasets.exists():
+        return None, "datasets dir absent"
+    if not datasets.is_dir():
+        return None, "datasets path is not a directory"
+    try:
+        h = hashlib.sha256()
+        for p in sorted(datasets.glob("*.csv")):
+            h.update(p.name.encode())
+            h.update(str(p.stat().st_size).encode())
+        return h.hexdigest()[:12], "ok"
+    except OSError as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+
+
 def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
     from dsa_evidence.reproducibility import compare_runs
 
@@ -123,28 +145,20 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
         },
     }
 
+    ds_sha256, ds_note = _datasets_sha256(src_datasets)
     manifest = {
         "catalog": str(src_catalog),
         "datasets_dir": str(src_datasets),
         "catalog_sha256": hashlib.sha256(src_catalog.read_bytes()).hexdigest()[:12]
         if src_catalog.exists()
         else None,
-        "datasets_sha256": None,
+        "datasets_sha256": ds_sha256,
+        "datasets_sha256_note": ds_note,
         "n_tasks": N,
         "seed": 42,
         "python_version": sys.version.split()[0],
         "platform": platform.platform(),
     }
-    # datasets hash: sha of sorted file names + sizes (stable, cheap)
-    try:
-        ds_files = sorted(src_datasets.glob("*.csv")) if src_datasets.exists() else []
-        h = hashlib.sha256()
-        for p in ds_files:
-            h.update(p.name.encode())
-            h.update(str(p.stat().st_size).encode())
-        manifest["datasets_sha256"] = h.hexdigest()[:12]
-    except Exception:
-        pass
 
     out.mkdir(parents=True, exist_ok=True)
     (out / "manifest.json").write_text(

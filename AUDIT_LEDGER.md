@@ -4408,3 +4408,166 @@ against the two files). Gates, rc from each child: `CHECK_RC=0` · `FORMAT_RC=0`
 (verified twice, including a fresh invocation) · `MKDOCS_RC=0` · web `TSC_RC=0` and `next build`
 `BUILD_RC=0` (15/15 static pages). `next-env.d.ts` restored to HEAD; ports released; nothing pushed,
 and the concurrent session's three files remain unstaged.
+
+## 89. main went red on a step I did not touch, from an advisory with no patched version
+
+**The runner verdict, in its own words.** Push `abc9572..1a251d3` landed as run **37092003744**, and the
+poller's last line is the whole result: `completed failure 2026-10-03T03:07:07Z`. Step level: steps 1–13
+`success` -- including `audit_facts.py --check` (step 8) and `check_public_claims.py
+--require-released-tags` (step 11), the two gates §77-§79 wired -- then step 14
+`npm --prefix apps/web audit --audit-level=high` -> **failure** with
+`##[error]Process completed with exit code 1.`, and steps 15–30 **skipped** by fast-fail.
+`web-regression` was `success`. The consequence has to be stated plainly: **the runner re-verified the
+ratchet and the claims gate for §86-§88, and nothing else.** ruff, mypy, pytest, mkdocs, the wheel smoke
+and the benchmark line never ran there, so §88's local `PYTEST_RC=0` is still the only evidence for it.
+
+**The push itself reported something §83 had gotten wrong.** The remote said:
+
+> `Bypassed rule violations for refs/heads/main: - Required status check "ci" is expected.`
+
+So `ci` being a required check does gate direct pushes to `main` -- the push would have been refused for
+a non-admin. §83's line ("branch protection with `ci` as a required status check", written while arguing
+that a PR was the only way to prove a lane) understated it: the protection also blocks an admin push, and
+what let this one through is admin bypass, not a gap in the configuration.
+
+**What actually broke, and what did not.** The failing findings are 5 high severities, all one chain:
+`braces`, reached through `chokidar`, `micromatch` and `fast-glob`, all under `tailwindcss@3.4.19`. Local
+reproduction returned a byte-equivalent report (`rc=1`, same 5), so this is not a runner-only artifact.
+Three measurements establish that **no change of ours caused it**:
+- `git diff --name-only abc9572..HEAD` lists 10 files and **no manifest or lockfile** -- the dependency
+  graph is identical to the one that was green.
+- The last green `main` CI run was **36964260794** on `abc9572` at `2026-10-02T04:22:20Z`. The advisory
+  `GHSA-vfj7-8cjw-p6xm` reports `published_at 2026-09-18T18:31:41Z` and **`updated_at
+  2026-10-02T22:36:34Z`** -- it was revised about eighteen hours after that green run and six before this
+  red one. `severity high`, CVSS 7.5.
+- The revision is the whole story: the advisory's own `vulnerabilities[]` gives
+  `vulnerable_version_range "<= 3.0.3"` with **`first_patched: null`**, and the registry's `dist-tags`
+  for `braces` is `3.0.3`. Every published `braces` is in the affected set.
+
+**Why there is no in-tree fix, measured rather than argued.** `micromatch`'s `dist-tags.latest` is
+`4.0.8` and it still depends on `braces ^3.0.3`, and `npm ls` shows `micromatch` is a **direct**
+dependency of `tailwindcss@3.4.19` -- so no `overrides` entry can cut the edge, because the package that
+pulls `braces` in is the one the app pins. `chokidar@5.0.0` does drop it (its only dependency is
+`readdirp ^5.0.0`), but overriding `chokidar` alone leaves both `tailwindcss -> micromatch -> braces` and
+`tailwindcss -> fast-glob -> micromatch -> braces` standing. The one path that clears the report is
+removing tailwind 3. Measured in `/tmp/tw4test` (a scratch copy, nothing in the repo touched): with
+`tailwindcss ^4.3.3` + `@tailwindcss/postcss`, `npm ls braces micromatch chokidar fast-glob` returns
+`(empty)` and `npm audit --audit-level=high` exits **0** with `found 0 vulnerabilities`. That experiment
+proves the chain disappears; it does **not** prove a v4 migration is cheap -- v4 is CSS-first, so
+`tailwind.config.js`, `postcss.config.js` and `@tailwind` directives all move, and it means adding a
+devDependency, which the standing "no new dependencies" rule forbids without a decision.
+
+**The other half of the picture: the exposure is build-time only.** `npm --prefix apps/web audit
+--omit=dev --audit-level=high` exits **0** -- `found 0 vulnerabilities`. The chain lives entirely in
+`devDependencies`, and the DoS vector is a deeply nested glob *pattern*, which here are repository paths.
+
+**So this is a decision, not a fix, and it has three shapes.** Each costs something different, and all
+three change either a dependency tree or a security gate, so none is mine to take:
+1. **Upgrade tailwind 3 → 4** (`npm audit fix --force` installs `tailwindcss@4.3.3`). Clears all 5 for
+   real. Costs a UI-wide config migration, a new devDependency, and a visual regression pass over the 15
+   pages §88 built on. Measured as effective above.
+2. **Scope the gate to production dependencies** (`--omit=dev`). Costs nothing to build and is defensible
+   on the facts just measured, but it stops policing the dev tree forever -- which is exactly where the
+   next `braces`-shaped finding will arrive.
+3. **Keep the blunt gate and carry an exception list** for advisories whose `first_patched` is null, each
+   recorded with id, CVSS and a re-review date, policed by a test the way §78 pins the guide lists. This
+   is the only shape that keeps the gate *and* goes green, but it is a gate change and needs `npm audit
+   --json` parsing in `scripts/` (no new dependency; `audit-ci` would be one).
+Until one is chosen, `main` stays red at step 14 and every future PR into it inherits that red.
+
+## 90. L3's premise was wrong: there were never 180 swallowed exceptions
+
+**What the target said.** Phase 4 target 4's L3 half was "judge the 180 swallowed-exception sites, one by
+one". The key is `debt.swallowedExceptionSites`, whose declared debt in `scripts/audit_facts.py` is
+*"except blocks that can hide a failure from status"* and whose ceiling is 180 -- a reading the ratchet
+has sat at exactly since §76 refused to raise it.
+
+**What the regex actually counts.** `SWALLOW_RE` is
+`except[^\n:]*:\s*(?:#.*)?$|except.*:\s*pass$`. The first alternative matches any `except … :` line whose
+body starts on the next line, which is how nearly every handler in Python is written. Measured over the
+same file set the collector walks (127 files; `_vendor`, generated dirs and `audit_facts.py` itself
+excluded, since `_walk` skips `SELF`):
+
+| instrument | count | what it counts |
+| --- | --- | --- |
+| `SWALLOW_RE` over shipped lines | **180** | every `except` header, plus prose |
+| `ast.walk` for `ast.ExceptHandler` | **179** | every real handler |
+| handlers whose body is only `pass`/`continue`/`…` | **14** | the class the key names |
+
+The single line `180 − 179` is `scripts/check_public_claims.py:363`, and it is not code: it is a docstring
+sentence, *"The exception is deliberately narrow:"*. The word inside "exception" plus the sentence's
+colon satisfies the pattern. The script I wired into CI in §79 contributes one "swallowed exception"
+because of a comment.
+
+**Handler shapes, so the size of the real job is visible.** Same 127 files, by body shape: 55
+multi-statement, 43 re-raise, 37 single-return-of-sentinel, 30 single-assign, 14 pass/continue/ellipsis.
+So the honest L3 backlog is 14 + the 37 sentinels (a `return None` from a handler is the same hiding, one
+layer up), not 180 -- and the re-raise 43 are the *good* citizens that this ceiling currently charges
+the same price for.
+
+**A second instrument, and the arithmetic that reconciles them.** `ruff check --isolated --select
+S110,S112 packages apps/api src apps/jupyter scripts` -> **18 findings**, of which 10 are `_vendor`
+duplicates and **8** are source. With the project's own configuration, the same `--select` prints
+`All checks passed!` at rc 0, because `per-file-ignores` disable `S110` for `packages/evaluation/**`,
+`packages/plugins/**`, `packages/execution/**` and `tests/**` -- which is D-L1-02, still live four
+sections after §1 named it. Reconciling the two counts exactly: `14 = 8 reported + 4 silenced by an
+inline "# noqa: S112" + 2 that I fixed in this section`. All three numbers are checkable and no bucket is
+guessed.
+
+**The 14, adjudicated.** Four are benign as written and keep their behaviour: `dsa_agent/graph.py:328`
+(a best-effort reference scope -- losing one prior tool call degrades the prompt, not the verdict),
+`external_validation.py:27` (workspace-root discovery falling through to the next candidate),
+`external_validation.py:236` (a `--version` probe for an environment report), and
+`feature_importance.py:90` (incomparable dtypes mean "not a copy", and the exclusion is *named* in the
+output). Eight are defects I am **not** batching into this commit -- `external_validation.py:258`,
+`research_manifest.py:43` and `:65`, `statistical_eval.py:196`, `plugins/manifest.py:283`,
+`plugins/registry.py:45`/`:64`/`:72` -- each needs its own red first, and two of them (`manifest.py:283`
+especially: a plugin digest silently computed over a *subset* of files) deserve a change that can be
+argued site by site. `external_validation.py` is also the concurrent session's dirty file, so its three
+sites are recorded here and not touched.
+
+**The two I did fix, both of which feed the artifacts §86 is still owed.**
+- `dsa_evaluation/cli.py:146` built the reproduction manifest's `datasets_sha256` inside
+  `try: … except Exception: pass`. A manifest could therefore read `datasets_sha256: null` for three
+  different reasons (dir absent, path is a file, disk error) and a fourth case was worse: a **missing**
+  directory produced a hash of the empty set, i.e. a well-formed-looking digest of nothing at all. The
+  computation moved to `_datasets_sha256(datasets) -> tuple[str | None, str]`, which returns the reason,
+  and the manifest now carries `datasets_sha256_note` beside the value. The handler narrowed from
+  `Exception` to `OSError`.
+- `dsa_evaluation/runner.py:199` attached the evaluator_v2 statistical dimensions inside
+  `except Exception: pass`, so a summary could not distinguish "evaluator_v2 ran" from "evaluator_v2
+  raised on every task" -- and those dimensions are what the reproduction score reads. It is now
+  `_attach_statistical(ev, task, run_result, elapsed_ms)`, which records
+  `details["statistical_eval_error"] = "<Type>: <msg>"` and returns the result unchanged.
+
+**Red first, then falsified both ways.** `tests/evals/test_benchmark_provenance_failures.py` (6 defs) was
+written before either change and its first run is in `/tmp/red90.txt`: `RED_rc=2`,
+`ImportError: cannot import name '_datasets_sha256'`. After the change, 6 passed. Then two mutations, each
+applied to the live file and reverted against a recorded sha256:
+- restore the old silent behaviour for a missing datasets dir (`return hashlib.sha256().hexdigest()[:12],
+  "ok"`) -> `FAILED … test_a_missing_datasets_dir_is_named_not_blanked`, exactly one.
+- delete the recording line (`_ = exc; return ev`) -> `FAILED …
+  test_a_failing_statistical_eval_leaves_no_doubt_about_why_it_is_absent`, exactly one.
+`shasum -a 256 -c` then reported `OK` for both files, and the suite went green again at `GREEN_rc=0`.
+
+**The counter did not move, which is the point.** `debt.swallowedExceptionSites` reads **180 before and
+180 after**: each fix deleted one handler header and added one back. The gate registered nothing while an
+artifact went from silently-incomplete to self-explaining -- the clearest available demonstration that
+this ceiling is priced on syntax. It stays at 180; §76's refusal to raise it stands, and no re-seed was
+needed or done.
+
+**Vendor drift, repaired by file and not by package.** Because the two edited files are shipped in the
+wheel, `sync_vendor.py --check` went red with 3 drifted `dsa_evaluation` files. `--package dsa_evaluation`
+would have copied the concurrent session's uncommitted `external_validation.py` into tracked `_vendor/`,
+which is precisely what §D-INFRA-05 made `--file` for: `--file …/cli.py --file …/runner.py` wrote two
+files and left the third alone. The remaining local red is theirs, proven rather than assumed: at HEAD the
+source and the vendored copy of `external_validation.py` are both
+`ac5324730b9064d66d88e97e9b9640bac5abd07d1442f0d4f29a4c78d462fe5d`, while the worktree holds
+`a1d5b453fb4550…`. CI checks out HEAD, so CI sees a matching pair.
+
+**State.** `testFunctions` 502 → **508**. Gates, rc from each child: `CHECK_RC=0` · ruff `0` · format
+`0` (214 files) · mypy `0` (112 files) · `PYTEST_RC=0` at **80.96%** · claims `0` · ratchet `0` ·
+`sync_vendor --check` `1` from the other session's file only. New files: the test module. Changed:
+`packages/evaluation/src/dsa_evaluation/{cli,runner}.py`, their two `_vendor` copies, `README.md` untouched
+(still the other session's), nothing pushed.
+

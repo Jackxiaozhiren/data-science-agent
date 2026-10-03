@@ -159,6 +159,29 @@ async def _run_one(
         return None, elapsed, f"{type(e).__name__}: {e}"
 
 
+def _attach_statistical(
+    ev: EvaluationResult,
+    task: Any,
+    run_result: dict[str, Any] | None,
+    elapsed_ms: int,
+) -> EvaluationResult:
+    """Attach evaluator_v2 statistical dimensions, or record why they are absent.
+
+    This used to end in `except Exception: pass`. A summary then could not tell
+    "evaluator_v2 ran" apart from "evaluator_v2 raised on every task", which is the
+    same hole as an unrecorded failed check -- and the statistical dimensions are
+    exactly the ones the frozen baseline and the reproduction score read.
+    """
+    try:
+        from dsa_evaluation.statistical_eval import evaluate_statistical
+
+        stat = evaluate_statistical(task, run_result, elapsed_ms=elapsed_ms)
+        return attach_statistical_eval(ev, stat)
+    except Exception as exc:
+        ev.details["statistical_eval_error"] = f"{type(exc).__name__}: {exc}"
+        return ev
+
+
 def run_benchmark(
     catalog_path: Path,
     datasets_dir: Path,
@@ -191,13 +214,7 @@ def run_benchmark(
                 if err:
                     ev.error = err
             # evaluator_v2 statistical dimensions (§22–25) — non-breaking, stored under details
-            try:
-                from dsa_evaluation.statistical_eval import evaluate_statistical
-
-                stat = evaluate_statistical(task, run_result, elapsed_ms=elapsed)
-                ev = attach_statistical_eval(ev, stat)
-            except Exception:
-                pass
+            ev = _attach_statistical(ev, task, run_result, elapsed_ms=elapsed)
             results.append(ev)
             raw_runs.append(
                 {"task_id": task.id, "elapsed_ms": elapsed, "run_result": run_result, "error": err}
