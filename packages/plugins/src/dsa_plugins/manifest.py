@@ -272,14 +272,40 @@ class PluginManifest(BaseModel):
         return len(self.validate_manifest()) == 0
 
     def compute_hash(self, root: Path | None = None) -> str:
-        """Compute hash of plugin manifest + entrypoint files for supply-chain (§45)."""
+        """Hash the plugin manifest + entrypoint files for supply-chain (§45).
+
+        Rewritten in audit §93. The first version returned one digest for three different
+        worlds -- no directory supplied, a directory that does not exist, a directory with
+        no Python files in it -- and skipped any file it could not read, so an install into
+        a missing path hashed exactly like a caller that checked nothing, and an I/O error
+        hashed exactly like a smaller plugin. Both states are now mixed into the digest.
+        Nothing calls this method yet; that is recorded as D-L3-04 rather than pretended
+        away, and a digest with no comparator is a checksum waiting for its verification.
+        """
         h = hashlib.sha256()
         h.update(f"{self.name}@{self.version}".encode())
         h.update(self.entrypoint.get("python", "").encode())
-        if root and root.exists():
-            for p in sorted(root.rglob("*.py")):
-                try:
-                    h.update(p.read_bytes())
-                except Exception:
-                    continue
+        if root is None:
+            h.update(b"root:not-supplied")
+            return h.hexdigest()[:16]
+        if not root.exists():
+            h.update(b"root:absent")
+            return h.hexdigest()[:16]
+        if not root.is_dir():
+            # Without this the walk raises NotADirectoryError on a *file* root while an
+            # absent root returns a digest -- one caller bug crashes, the other passes.
+            # Both are now "a state the digest names", not an accident of the code path.
+            h.update(b"root:not-a-directory")
+            return h.hexdigest()[:16]
+        h.update(b"root:present")
+        unreadable: list[str] = []
+        for p in sorted(root.rglob("*.py")):
+            try:
+                h.update(p.read_bytes())
+            except OSError:
+                # OSError only. A wider catch here also takes ValueError, which is how a
+                # caller's deliberate refusal would be re-labelled as a missing file.
+                unreadable.append(p.relative_to(root).as_posix())
+        if unreadable:
+            h.update(("unreadable:" + ",".join(sorted(unreadable))).encode())
         return h.hexdigest()[:16]

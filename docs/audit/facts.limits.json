@@ -35,7 +35,7 @@
     "debt.todoMarkers": "debt comments left in shipped code",
     "debt.unwiredCheckers": "checker scripts that no workflow invokes"
   },
-  "_redefinitionNote": "2026-10-03, audit \u00a790-\u00a792: debt.swallowedExceptionSites was measured by a regex over source lines that matched any line shaped like an `except` header, so it read 180 for a tree with 12 handlers whose body is only pass/continue/an ellipsis, charged a re-raising handler the same as a swallow, and moved on a docstring. The key now means what its name says (AST), its ceiling moved 180 -> 12 with it, and the count it used to be is a separate key, debt.exceptHandlers, ceilinged at the measured 185. This is a change of quantity, not a fall in debt, so \u00a74 required the human decision that was given on 2026-10-03.",
+  "_redefinitionNote": "2026-10-03, audit \u00a790-\u00a792: debt.swallowedExceptionSites was measured by a regex over source lines that matched any line shaped like an `except` header, so it read 180 for a tree with 12 handlers whose body is only pass/continue/an ellipsis, charged a re-raising handler the same as a swallow, and moved on a docstring. The key now means what its name says (AST), its ceiling moved 180 -> 12 with it, and the count it used to be is a separate key, debt.exceptHandlers, ceilinged at the measured 185. This is a change of quantity, not a fall in debt, so \u00a74 required the human decision that was given on 2026-10-03. 2026-10-03 later, \u00a793: the reading fell 12 -> 11 when plugins/manifest.py's compute_hash stopped skipping unreadable files, and the ceiling was lowered with it. That is the redefined key behaving as a ratchet should: repairing a swallow moves the number, which the retired line-regex version never did.",
   "_seedNote": "Seeded from a clean reading: ceilings were re-seeded after the collector stopped counting gitignored test output. packagesWithoutManifest was 1 while packages/artifacts/ (a gitignored directory the suite itself writes, with hundreds of generated notebooks) looked like a package without a manifest -- so any local pytest run turned the ratchet red for a reason unrelated to debt. It now requires Python source, and is seeded at 0. warnings.contradictions was dropped as a ceiling: it is a composite counter, so adding a probe would trip CI with no debt change; the individual contradiction keys are gated instead. Floors are pinned to a pristine `git archive` export of HEAD (testFunctions 420), never to the working tree, because a floor above what CI can check out is a guaranteed false red. Option A earlier decoupled AUDIT_LEDGER.md volume from debt.auditApparatusLines.",
   "_seededAt": "2026-09-28T07:23:09Z",
   "_seededAtHead": "d6cbff26f7dbf35b27f5f124e715f20dd9854772",
@@ -51,7 +51,7 @@
     "debt.governanceFilesMissing": 0,
     "debt.pytestSkipXfail": 0,
     "debt.suppressionDirectives": 42,
-    "debt.swallowedExceptionSites": 12,
+    "debt.swallowedExceptionSites": 11,
     "debt.todoMarkers": 0,
     "debt.unwiredCheckers": 0
   },

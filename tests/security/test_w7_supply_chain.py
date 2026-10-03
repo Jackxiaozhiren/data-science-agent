@@ -130,6 +130,117 @@ def test_dependency_pinning_uv_lock_exists_and_auditable() -> None:
     assert "polars>=" in txt or "duckdb>=" in txt
 
 
+def _plugin_manifest(**over: object):
+    """A PluginManifest for the hash tests, so each one states only what it varies."""
+    from dsa_plugins.manifest import PluginManifest
+
+    fields: dict = {
+        "name": "demo-plugin",
+        "version": "1.0.0",
+        "license": "MIT",
+        "entrypoint": {"python": "main:run"},
+        "permissions": ["dataset.read"],
+    }
+    fields.update(over)
+    return PluginManifest(**fields)
+
+
+def test_plugin_hash_distinguishes_never_inspected_from_nothing_to_read(tmp_path: Path) -> None:
+    """§93: three different worlds must not share one digest.
+
+    The first version gated its walk on `if root and root.exists()`, so the digest for a
+    plugin directory that does not exist, one that is empty, and a call that supplied no
+    directory at all were all just name + entrypoint. An install into a missing directory
+    therefore hashed identically to a caller that checked nothing -- and an integrity
+    digest that cannot tell those apart is not an integrity digest.
+    """
+    m = _plugin_manifest()
+    empty_root = tmp_path / "empty"
+    empty_root.mkdir()
+    a_file = tmp_path / "not-a-dir.py"
+    a_file.write_bytes(b"x\n")
+
+    absent = m.compute_hash(tmp_path / "absent")
+    empty = m.compute_hash(empty_root)
+    uninspected = m.compute_hash(None)
+    file_root = m.compute_hash(a_file)
+
+    assert len({absent, empty, uninspected, file_root}) == 4, (
+        absent,
+        empty,
+        uninspected,
+        file_root,
+    )
+
+
+def test_a_file_that_cannot_be_read_is_not_the_same_as_a_file_that_is_gone(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """An I/O failure must not produce the digest of a legitimately smaller plugin."""
+    root = tmp_path / "plugin"
+    root.mkdir()
+    (root / "a.py").write_bytes(b"print(1)\n")
+    target = root / "b.py"
+    target.write_bytes(b"print(2)\n")
+
+    m = _plugin_manifest()
+    complete = m.compute_hash(root)
+    real_read = Path.read_bytes
+
+    def unreadable(self: Path) -> bytes:
+        if self.name == "b.py":
+            raise PermissionError("disk gone")
+        return real_read(self)
+
+    monkeypatch.setattr(Path, "read_bytes", unreadable)
+    errored = m.compute_hash(root)
+    monkeypatch.undo()
+
+    target.unlink()
+    deleted = m.compute_hash(root)
+
+    assert errored != complete, "an unreadable file did not change the digest at all"
+    assert errored != deleted, "an unreadable file hashed as if it had been removed"
+
+
+def test_a_non_io_failure_propagates_instead_of_being_absorbed(tmp_path: Path, monkeypatch) -> None:
+    """`except Exception` around a file read also catches a caller's deliberate refusal.
+
+    pydantic raises ValueError, as does any code that rejects an argument on purpose; the
+    first version turned that refusal into "skip this file and keep hashing", which is the
+    one outcome an integrity check must never produce silently (§93).
+    """
+    import pytest
+
+    root = tmp_path / "plugin"
+    root.mkdir()
+    (root / "a.py").write_bytes(b"x\n")
+
+    def refuse(self: Path) -> bytes:
+        raise ValueError("not a file I am willing to read")
+
+    monkeypatch.setattr(Path, "read_bytes", refuse)
+    with pytest.raises(ValueError, match="willing to read"):
+        _plugin_manifest().compute_hash(root)
+
+
+def test_plugin_hash_is_deterministic_and_moves_with_content(tmp_path: Path) -> None:
+    """Green-on-arrival: the old implementation already did this, and the fix must not lose it.
+
+    Pinned because the §93 change rewrites the hash's inputs; if the digest stopped
+    tracking file *contents*, the two new discriminations above would be meaningless.
+    """
+    m = _plugin_manifest()
+    root = tmp_path / "plugin"
+    root.mkdir()
+    (root / "a.py").write_bytes(b"print(1)\n")
+    before = m.compute_hash(root)
+
+    assert m.compute_hash(root) == before
+    (root / "a.py").write_bytes(b"print(2)\n")
+    assert m.compute_hash(root) != before
+
+
 def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
     # Simple grep for obvious secrets in tracked files (not .venv)
     patterns = [

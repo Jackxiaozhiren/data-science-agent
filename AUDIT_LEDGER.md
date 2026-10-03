@@ -4733,4 +4733,88 @@ identically (`ac53247…`), so the red remains the other session's uncommitted e
 `debt.ledgerLines` grew by two sections and is deliberately ungated (§4: gating the ledger would make
 honest bookkeeping illegal).
 
+## 93. The supply-chain plugin hash hashed three different worlds to one digest -- and nothing reads it
+
+**Where the §90 queue pointed.** `plugins/manifest.py`'s `compute_hash` was the first of the seven
+remaining defect swallows, chosen because a digest computed over only the files it could read is not an
+incomplete answer but a *wrong* one. Reading the function changed the finding.
+
+**The swallow was the smaller half of the defect.** The body was
+`for p in sorted(root.rglob("*.py")): try: h.update(p.read_bytes()) except Exception: continue`, and the
+guard above it was `if root and root.exists()`. So `root=None` (the caller checked nothing), a directory
+that does not exist (an install that went missing), and a directory that exists with no Python files in it
+all produced the same digest -- name + entrypoint. A supply-chain hash whose three most different states
+collide onto one value cannot detect any of them. Second, an unreadable file hashed *exactly* as if it had
+been deleted, so "disk error" and "the plugin legitimately lost a file" were the same signal, which for an
+integrity check is the worse direction: it reports a content change when there was an I/O failure, and
+stays silent when a file is genuinely gone.
+
+**`compute_hash` has no caller.** `grep -rn "compute_hash" --include='*.py'` over `packages src scripts
+tests apps` returns its own `def` line and nothing else -- no test, no `validate_plugin`, no install or
+registry path, no CLI command. The docstring claims it is "for supply-chain (§45)", and
+`docs/v4_3/V4_2_FINAL_TRUTH.md:85` separately records supply-chain Trusted Publishing as **PARTIAL**.
+So the honest classification is not "a defect to repair" but **D-L3-04: a declared integrity mechanism
+that no code path runs** -- the same shape as §61's phantom API claim, one layer deeper because here the
+mechanism exists and is merely never consulted. I fixed the hash's behaviour (it is small, it is correct,
+and leaving a lying digest in the tree invites someone to wire it up as-is) and did **not** pretend the
+verification exists: no doc claim was added, and the method's new docstring says plainly that nothing
+calls it. Wiring it into install/validate is a feature decision with a comparison store behind it
+(a hash nobody compares against still detects nothing), so it is left as an open id, not folded into this
+section.
+
+**Red first, and one test that was green on purpose.** Four defs in
+`tests/security/test_w7_supply_chain.py`, the file that already owns the plugin supply-chain cases:
+- `test_plugin_hash_distinguishes_never_inspected_from_nothing_to_read` -- asserts four states
+  (no root, absent root, empty root, a *file* passed as root) get four different digests. **RED** before
+  the fix (`rc=1`, three of them collided).
+- `test_a_file_that_cannot_be_read_is_not_the_same_as_a_file_that_is_gone` -- PermissionError on one file,
+  then delete that file, and require the two digests to differ. **RED** before: both equalled
+  "hash of the remaining files".
+- `test_a_non_io_failure_propagates_instead_of_being_absorbed` -- `except Exception` here also caught
+  `ValueError`, which is how pydantic and any deliberate refusal signal. **RED** before: the refusal came
+  back as a quiet skip.
+- `test_plugin_hash_is_deterministic_and_moves_with_content` -- **green on arrival**, labelled as such in
+  its own docstring: it pins the property the fix must not lose, not a defect.
+
+**The narrowing is the point of the third test.** `except Exception` → `except OSError`, with the reason
+in the code: a broad catch around a file read re-labels a caller's refusal as a missing file. The
+unreadable set is then mixed into the digest (`unreadable:a.py,b.py`), so a partial read can never equal
+either a complete read or a smaller plugin. A file passed as `root` used to raise `NotADirectoryError`
+while an absent root returned a digest -- one caller bug crashes and the other passes silently; both are
+now named states, which cost one `is_dir()` branch and no extra handler.
+
+**The ratchet did what §92 built it to do.** `debt.swallowedExceptionSites` moved **12 → 11** on this
+repair (this site was one of the 12) while `debt.exceptHandlers` stayed at 185, and the ceiling was
+lowered to 11 with it -- an automatic, falling edit that needed no vote, which is the exact behaviour the
+retired line-counter never produced. `test_the_redefined_swallow_key_is_a_live_ceiling_not_a_printout`
+enforces `committed == measured`, so a repaired swallow *must* be recorded in the policy diff rather than
+vanishing into slack; that friction is deliberate and is what §4's "ceilings may only fall" looks like when
+it works. Vendor mirror repaired by file, not by package
+(`--file packages/plugins/src/dsa_plugins/manifest.py`), leaving the concurrent session's
+`external_validation.py` drift untouched; `sync_vendor --check` after it reports exactly one file, the
+other session's.
+
+**§93.4 The runner verdict for §89–§92, in the runner's own words.** Push `1a251d3..ab24d2f` produced run
+**37096422071**, and the poller's last line is `completed success 2026-10-03T04:29:32Z`. Both jobs green,
+and for the first time since the advisory was revised the whole step list ran instead of fast-failing:
+step 14 (`npm … audit --json > /tmp/npm-audit-web.json || true`) and step 15
+(`check_npm_advisories.py /tmp/npm-audit-web.json`) **success**, then 16 ruff-check, 17 ruff-format,
+18 mypy, 19 pytest+cov, 20 SBOM, 21 benchmark, 22 wheel build, 23 clean-install smoke, 24–25 docker API +
+`dsa --help`, 26 Render startup smoke, 27 docker web, 28 `next build`, 29 `docker compose config`,
+30 `mkdocs --strict` -- all `success`. Only step 31 (`Verify v4.3.0 release candidate`) is `skipped`, as it
+is on every non-rc ref. So §86–§92 now has runner evidence for the lint, types and test gates that
+§89's red run had skipped. Step 21 printed its own number, which the α question has been asking for from a
+local probe: `Task success rate: 0.8`, `By category: {'EDA': {'n': 5, 'task_success': 0.8}}` at
+`2026-10-03T04:26:58Z` -- the runner agrees with the 2026-10-02 local `dsa --limit 5` reading, and both
+remain below the frozen `1.0`.
+
+**State.** Gates on this tree, rc from each child: ruff `0` · `ruff format --check` `0` (216 files) ·
+mypy `0` (112 files) · `audit_facts --check` `OK` (swallow ceiling 11 = reading 11, handlers 185 = 185) ·
+claims `0` · mkdocs `--strict` `0` · full `pytest -q --cov` `0` at **81.14%** (up from 80.96% -- the four
+new supply-chain tests exercise branches the suite had never entered) · `testFunctions` 528 → **532**.
+Open ids recorded: **D-L3-04** (the plugin hash has no comparator), and the six swallows still standing
+from §90's list -- `research_manifest.py:43/:65`, `statistical_eval.py:196`,
+`plugins/registry.py:45/:64/:72` -- plus the 38 single-`return` sentinels no key measures.
+
+
 

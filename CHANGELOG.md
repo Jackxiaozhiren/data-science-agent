@@ -37,6 +37,15 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- `PluginManifest.compute_hash()` no longer collapses three different worlds onto one
+  digest. It used to hash name + entrypoint whenever the plugin root was absent, empty,
+  or never supplied, and skipped any file it could not read — so a missing install hashed
+  identically to no check at all, and a disk error hashed identically to a deleted file.
+  Each state is now mixed into the digest, an unreadable file is recorded as unreadable
+  rather than gone, and the handler is `except OSError` instead of `except Exception`
+  (the wider catch also absorbed `ValueError`, i.e. a caller's deliberate refusal).
+  Note: nothing calls this method yet — see `AUDIT_LEDGER.md` §93 / D-L3-04; it is fixed,
+  not advertised.
 - Benchmark provenance no longer fails silently: the reproduction manifest's
   `datasets_sha256` now comes from `_datasets_sha256()` with an accompanying
   `datasets_sha256_note` naming why a hash is absent (and no longer reports a
