@@ -27,7 +27,8 @@ uv run python scripts/generate_sbom.py
 uv run dsa --limit 5
 uv run dsa demo
 npm --prefix apps/web ci --legacy-peer-deps
-npm --prefix apps/web audit --audit-level=high
+npm --prefix apps/web audit --json > /tmp/npm-audit-web.json
+uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
 docker compose config
 uv run python -m mkdocs build --strict

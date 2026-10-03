@@ -46,6 +46,22 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- CI's npm advisory step now separates the scan from the verdict: npm still runs with
+  `--json`, and `scripts/check_npm_advisories.py` decides pass/fail. High/critical
+  findings are policed exactly as before, except that an advisory with no published fix
+  can be carried as a **dated, reasoned exemption** in
+  `docs/audit/npm-advisory-exceptions.json` (one entry today: `GHSA-vfj7-8cjw-p6xm` on
+  `braces`, review-by 2026-11-07). An expired exemption fails the gate, an exemption for
+  an advisory the audit no longer reports fails it, and an empty or truncated capture
+  exits 2 rather than passing. This unblocks `main`, which had been red since the
+  advisory was revised on 2026-10-02 with `first_patched: null`.
+- Debt ratchet: `debt.swallowedExceptionSites` is now an AST count of handlers whose whole
+  body is `pass`/`continue`/an ellipsis (measured 12, ceiling 12) instead of a regex that
+  matched every `except` header (it read 180 where 12 were real, and moved on a docstring
+  sentence). The count it used to produce is a new key, `debt.exceptHandlers` (185), and
+  `debt.unparseableShippedFiles` is measured so a skipped file is never silent. Changing
+  the ceiling from 180 to 12 is a change of quantity, not a fall in debt; it was decided
+  by the maintainer on 2026-10-03 and is recorded in `AUDIT_LEDGER.md` §92.
 - Opt-in bearer-token auth: `DSA_AUTH_TOKEN` requires
   `Authorization: Bearer <token>` on `/api/*` (probes stay public);
   empty = demo unchanged.

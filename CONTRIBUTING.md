@@ -14,6 +14,8 @@ uv run ruff format --check packages apps/api tests src apps/jupyter scripts
 uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
 uv run pytest -q --cov --cov-report=term-missing
 uv run dsa --limit 5
+npm --prefix apps/web audit --json > /tmp/npm-audit-web.json
+uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
 docker compose config
 ```

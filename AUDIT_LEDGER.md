@@ -4571,3 +4571,166 @@ source and the vendored copy of `external_validation.py` are both
 `packages/evaluation/src/dsa_evaluation/{cli,runner}.py`, their two `_vendor` copies, `README.md` untouched
 (still the other session's), nothing pushed.
 
+## 91. The advisory gate now distinguishes "no fix exists" from "we stopped looking"
+
+**Decision taken, not inferred.** §89 left four shapes on the table and the user picked the fourth-column
+recommendation: keep npm's scan and its severity bar, and give the *verdict* a bounded, reviewable
+exemption path. That is a gate change, which §4 reserves to a human, so it is recorded here as a decision
+given on 2026-10-03 rather than a fix I made.
+
+**Why the scan and the verdict are split across two files.** `scripts/` sits inside the bandit `S`
+ruleset with no per-file-ignore, so a checker there that spawned `npm` would be an S603/S607 finding
+waiting to be filed -- and every other checker in that directory is a pure reader for the same reason.
+So CI runs `npm --prefix apps/web audit --json > /tmp/npm-audit-web.json || true` and then
+`uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json`. The `|| true` is only safe
+because the reader's third exit code is reserved for a unusable input: an empty, truncated, unparseable
+or wrong-`auditReportVersion` capture exits **2**, and a missing file exits 2 as well. A scan that never
+ran cannot read green -- which is the failure mode §90 spent two sections on.
+
+**What the reader does, and the two npm fields it refuses to trust.**
+- Only `high` and `critical` are adjudicated, so the severity bar is exactly the one
+  `--audit-level=high` enforced. Nothing was widened, nothing narrowed.
+- npm lists one entry per *node* in the tree and puts the GHSA url only on the leaf, so
+  `tailwindcss -> chokidar -> braces` carries the advisory id at `braces` alone. The reader walks
+  `via` transitively (with a `seen` guard, tested against a cycle) and requires **every** node's
+  contributing advisory to be accounted for. Exempting the leaf therefore satisfies all five
+  reported findings -- and a test asserts all five are individually named in the output, because a
+  reader that matched only the leaf would print one line and wave four through.
+- `fixAvailable` is deliberately ignored. For this advisory npm reports
+  `{"name": "tailwindcss", "version": "4.3.3", "isSemVerMajor": true}`: it counts a breaking
+  dependency *replacement* as a fix. That replacement is the decision §89 asked for, so a gate that
+  trusted the field would have muted itself on the very finding under review.
+- `first_patched` does not appear in the audit output at all, so "unactionable" cannot be derived by
+  the machine. It is a human statement in the list, which is why every entry is refused unless it
+  carries `id, package, severity, advisory_url, affected_range, why_unactionable, exposure, advised,
+  review_by` -- an exemption without a reason or a date is an `INPUT ERROR`, not a pass.
+
+**The list is one entry and it decays.** `docs/audit/npm-advisory-exceptions.json` carries
+`GHSA-vfj7-8cjw-p6xm` on `braces`, `advised 2026-09-18`, `review_by 2026-11-07`, with the measured
+removal path recorded in the file itself. Three separate failure modes keep it honest: an **expired**
+entry fails the gate, an entry for an advisory the audit **no longer reports** fails it, and an empty
+list against the real capture fails it naming the id. `tests/test_npm_advisory_gate.py` is 16 defs and
+15 of them assert a failure; the sixteenth -- that the real capture is clean -- is green-on-arrival by
+construction, says so in its own docstring, and is falsified by the empty-list test on the same
+document.
+
+**The pinned places, and proof that the pin bites.** ci.yml's step 14 became two steps, and because §78
+made the contributor guides a mirror of ci.yml, `CONTRIBUTING.md` and `docs/contributing.md` both gained
+the reader line and `tests/test_ci_gate_integrity.py` grew the seventh gate. That was not trusted to
+reading: `CONTRIBUTING.md`'s reader line was deleted, and the mirror test failed with
+`CONTRIBUTING.md: never runs the advisories gate CI runs (['/tmp/npm-audit-web.json',
+'scripts/check_npm_advisories.py'])`, then the file was restored and verified by
+`shasum -a 256 -c` -> `OK`. A second control, `test_the_advisory_gate_is_the_reader_and_not_the_scan`,
+pins that the *scan* line classifies as no gate at all -- otherwise a guide could keep `npm audit` and
+silently drop the thing that decides.
+
+**`ruff format` will corrupt a JSON file, and my own test is what caught it.** While formatting three
+files I passed `docs/audit/npm-advisory-exceptions.json` in the same invocation. ruff 0.16.3 accepted
+it, exited **0**, printed `1 file reformatted`, and rewrote the file with a trailing comma after the
+last member of each collection -- valid Python, invalid JSON. It was caught immediately by
+`test_the_real_capture_is_clean_only_because_the_list_is_carrying_it`, because the reader exits 2 on an
+unparseable list, which is the same property that makes `|| true` safe. Reproduced against a
+synthetic file, and the warning now travels inside the JSON itself as
+`_do_not_run_ruff_format_on_this_file`. The project's format gate lists only
+`packages apps/api tests src apps/jupyter scripts`, so it cannot reach `docs/audit/`; a contributor
+naming a JSON path explicitly can.
+
+**State.** Gates on this change, rc from each child: ruff `0` · `audit_facts --check` `0` ·
+`check_public_claims --require-released-tags` `0` · mypy `0` (112 files) · mkdocs `--strict` `0` ·
+full pytest `0` at 80.96% · `testFunctions` 508 → **528** · `debt.unwiredCheckers` still `0`, because
+the new checker is wired in ci.yml rather than left as a written-but-never-run gate (§80's class). The
+reader run against the very capture that made `main` red exits **0** with five named exemptions, so the
+next push to `main` should clear step 14 for the first time since the advisory was revised.
+
+## 92. The ratchet went red on correct code, and the key was redefined -- with a vote
+
+**How it happened, in order.** §91 added `scripts/check_npm_advisories.py`, which is inside `SHIPPED`.
+`debt.swallowedExceptionSites` jumped 180 → 186 and the ratchet failed at `--check` and in
+`test_the_ratchet_is_currently_satisfied`. The six added matches were: six `except … as exc:` handlers
+whose very next statement is `raise InputError(...) from exc`, and two lines that merely contain the
+substring `except` before a colon -- `if key not in exceptions:` and
+`for stale in sorted(set(exceptions) - seen_ids):`. **Zero added swallows.** Two of those eight were
+renamed to `exemptions` because the new name is more accurate for a mapping of tolerated advisories
+(that is a code-quality change, not a gate dodge, and it still left the key at 186 > 180). The rest
+could only be resolved by changing the key or the ceiling, so the run stopped and asked; the user
+chose redefinition.
+
+**The two instruments, re-measured on the tree as it now stands.**
+
+| quantity | value | who owns it |
+| --- | --- | --- |
+| old `SWALLOW_RE` line count | 186 (was 180 pre-§91) | retired in this section |
+| `ast.ExceptHandler` nodes in shipped code | **185** | new `debt.exceptHandlers`, ceiling 185 |
+| handlers whose whole body is `pass`/`continue`/a bare expression | **12** | `debt.swallowedExceptionSites`, ceiling **12** |
+| handlers whose body is a single `return` (sentinel) | 38 | measured by nothing; still L3's next tranche |
+| shipped files the shape pass could not read or parse | 0 | `debt.unparseableShippedFiles`, measured, not gated |
+
+The regex count and the AST count differ by one, and the one is still `check_public_claims.py:363`'s
+docstring ("The exception is deliberately narrow:"), which §90 named. That is the entire gap between
+"180 sites" and the truth, and it is prose.
+
+**Registers moved together because a test forces it.** `CEILING_KEYS` gained
+`debt.exceptHandlers` and re-wrote the swallow key's reason to
+*"handlers whose whole body is pass/continue/an ellipsis"* -- which is what
+`REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md:177` had always said the key meant ("bare/pass exception
+handlers in shipped code"). The regex, not the intent, was the bug, so the prompt document needed no
+edit and `debt.auditApparatusLines` stayed at its zero-headroom ceiling. `EXCLUDED_KEYS` gained the
+unparseable-files entry with its reason; `test_committed_registers_match_the_collector_that_wrote_them`
+then required the same three registers in `docs/audit/facts.limits.json`, and `_redefinitionNote` records
+that 180 → 12 is a **change of quantity, not a fall in debt** -- the distinction §4 exists for. Only that
+one ceiling moved; the other eleven were re-written byte-for-byte from the readings that already held.
+
+**Performance was a real constraint, not a courtesy.** Parsing 128 shipped files cost +0.195s, pushing
+the collector to 1.036s cold and over the *sub-second* promise in its own module docstring -- a promise
+that is why the ratchet can run before the test suite rather than after it. The fix is a conservative
+prefilter (a file is parsed only if its text contains `except`; no `ast.ExceptHandler` can exist without
+that token), so the count is provably unchanged. Measured counterbalanced and paired, three alternating
+runs each: without the parse pass median **0.486s**, with it median **0.563s**, delta **+0.077s**.
+`debt.unparseableShippedFiles` is therefore scoped to handler-shaped files, and its reason string says
+so -- the alternative was a slower duplicate of what ruff, mypy and pytest already parse.
+
+**Three controls, one of which caught me.** `test_the_swallow_key_counts_swallowing_and_not_the_shape_of_except`
+builds a two-file tree with three handlers, two of which can only hide a failure, and asserts the AST
+pair `(3, 2)` next to the retired regex's score on the same tree -- recomputed inline so the
+disagreement stays checkable rather than quoted. It also caught a false claim of my own: I had written
+that `class Broken(Exception):` scored as debt under the old regex, and the assertion failed at 5 not 7,
+because the pattern is case-sensitive and `Exception` starts with a capital E. The true ratio is
+**5 scored where 2 are real**, and the three extras are the comment, the membership test on a variable
+named `exceptions`, and a handler that re-raises. Both the test docstring and `_hides_failure`'s
+docstring were corrected to the measured statement. `test_the_redefined_swallow_key_is_a_live_ceiling_not_a_printout`
+fires a one-unit violation and additionally asserts the committed ceiling equals the current reading, so
+this key can never accumulate unvoted slack or silently stop firing.
+`test_an_unparseable_shipped_file_is_counted_not_skipped_silently` pins the boundary the prefilter
+creates.
+
+**Corrections to earlier sections.** §88's state paragraph says a new swallow in
+`tests/test_process_global_isolation.py` "would push `debt.swallowedExceptionSites` past its 180
+ceiling". The sentence is still true in direction but wrong in number: the ceiling is 12 and the
+instrument is now an AST. §90's "180 before and 180 after" was an accurate report of a broken gauge, and
+this section is what it was asking for. `AUDIT_REPORT_PHASE5.md:65` still lists
+"swallowed-exception sites | 180 (ceiling) | 180"; that file is dated, pinned to
+`150b54f → 0a94a5a` and self-labelled as a point-in-time report, so it is left as history rather than
+retconned -- but no one should re-derive the current key from it.
+
+**What this buys, stated as behaviour rather than relief.** Fixing a swallow now *lowers* the number, and
+adding a correct handler no longer does. The remaining 12 are the §90 list minus the two already fixed:
+`graph.py:328` and `feature_importance.py:90` are benign-as-documented (both carry an inline
+`# noqa: S112` explaining why), `external_validation.py:27/:236/:258` are in the concurrent session's
+dirty file and stay report-only, and `research_manifest.py:43/:65`, `statistical_eval.py:196`,
+`plugins/manifest.py:283`, `plugins/registry.py:45/:64/:72` are seven defects awaiting their own
+red-first loops -- `manifest.py:283` being the one to do first, since a digest computed over only the
+files it could read is a wrong answer presented as an integrity check.
+
+**State, measured on the final tree rather than on a fragment of it.** Full `pytest -q --cov` ->
+`PYTEST_RC=0`, coverage **80.96%** against the 79% floor; `audit_facts --check` `0`;
+`check_public_claims --require-released-tags` `0`; ruff `0`; `ruff format --check` `0` over 216 files;
+mypy `0` (112 files); mkdocs `--strict` `0`. Collector readings after the change:
+`testFunctions` **528**, `exceptHandlers` **185** (ceiling 185), `swallowedExceptionSites` **12**
+(ceiling 12), `unparseableShippedFiles` **0**, `suppressionDirectives` **42** unchanged -- no `# noqa`
+was added anywhere, including to make this section's own gates pass. `sync_vendor --check` still exits 1
+on `external_validation.py` alone, and at this HEAD the source and vendored copies of that file hash
+identically (`ac53247…`), so the red remains the other session's uncommitted edit, not this work.
+`debt.ledgerLines` grew by two sections and is deliberately ungated (§4: gating the ledger would make
+honest bookkeeping illegal).
+
+

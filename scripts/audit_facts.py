@@ -30,6 +30,7 @@ Constraints, each because breaking one caused a real failure here:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import platform
@@ -71,7 +72,6 @@ TEXT_SUFFIX = (".py", ".md", ".yml", ".yaml", ".json", ".ts", ".tsx")
 TODO_RE = re.compile(r"\b(?:TODO|FIXME|HACK|XXX)\b")
 SKIP_MARK_RE = re.compile(r"pytest\.mark\.(?:skip|xfail)")
 SUPPRESSION_RE = re.compile(r"#\s*(?:noqa|type:\s*ignore)")
-SWALLOW_RE = re.compile(r"except[^\n:]*:\s*(?:#.*)?$|except.*:\s*pass$")
 DOC_LINK_RE = re.compile(r":\s*([A-Za-z0-9_./-]+\.md)")
 PROMPT_DOC_RE = re.compile(r"^[A-Z][A-Z_]*_(?:PROMPT|SPEC)\.md$")
 LEDGER_DOC_RE = re.compile(r"^AUDIT_LEDGER\.md$")
@@ -84,7 +84,8 @@ CEILING_KEYS: dict[str, str] = {
     "debt.todoMarkers": "debt comments left in shipped code",
     "debt.pytestSkipXfail": "tests silenced instead of fixed",
     "debt.suppressionDirectives": "lint and type suppressions in shipped code",
-    "debt.swallowedExceptionSites": "except blocks that can hide a failure from status",
+    "debt.swallowedExceptionSites": "handlers whose whole body is pass/continue/an ellipsis",
+    "debt.exceptHandlers": "exception handlers in shipped code, any shape",
     "debt.unwiredCheckers": "checker scripts that no workflow invokes",
     "debt.auditApparatusLines": "prompt/spec documents an audit series keeps rewriting",
     "debt.governanceFilesMissing": "required policy files absent",
@@ -112,6 +113,13 @@ EXCLUDED_KEYS: dict[str, str] = {
     "debt.coveragePercent": "already machine-checked by pytest's fail_under -- no second source",
     "debt.lintFindings": "already machine-checked by ruff -- no second source",
     "debt.typeErrors": "already machine-checked by mypy -- no second source",
+    "debt.unparseableShippedFiles": (
+        "measured so a skipped file is never silent, within the pass that can skip one: a "
+        "file is parsed only if its text contains `except`, so this counts handler-shaped "
+        "files that could not be read or parsed. A shipped .py that does not parse is "
+        "already a red pytest, ruff and mypy -- all three parse every file -- and gating a "
+        "duplicate here would crash the collector where it should report"
+    ),
     "debt.ledgerLines": (
         "the ledger is append-only session record that §N10 mandates; gating it makes honest "
         "bookkeeping illegal -- measured for the ratio check, reviewed, never auto-failed"
@@ -176,6 +184,81 @@ def _lines_of(paths: list[Path]) -> list[str]:
     for path in paths:
         lines.extend(_read(path).splitlines())
     return lines
+
+
+#: Memoised on the file list, because `_collect_debt` needs three views of one parse and
+#: the sub-second promise in this file's docstring is load-bearing: it is why the ratchet
+#: can sit before the test suite instead of after it.
+_SHAPES_CACHE: dict[tuple[Path, ...], tuple[int, int, list[Path]]] = {}
+
+
+def _hides_failure(body: list[ast.stmt]) -> bool:
+    """True when a handler's whole body is something that cannot report anything.
+
+    `pass`, `continue`, and a bare expression (an ellipsis or a lone docstring) are the
+    shapes that end a failure with no trace. A re-raise is deliberately not one of them:
+    the line-shaped counter this replaced charged a handler that raises the same as one
+    that swallows, and charged a comment or a variable name containing the substring
+    "except" as well (audit §90, and `tests/unit/test_debt_ratchet.py` pins the ratio).
+    """
+    if not body:
+        return True
+    if all(isinstance(node, ast.Pass) for node in body):
+        return True
+    if all(isinstance(node, ast.Continue) for node in body):
+        return True
+    return all(isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) for node in body)
+
+
+def _except_shapes(paths: list[Path]) -> tuple[int, int, list[Path]]:
+    """Parse `paths` once and return (handlers, handlers that hide, files not parsed).
+
+    The third element exists because a counter that quietly skips a file it cannot read
+    or parse reports less debt rather than fewer files, which is the hole §90 was written
+    to close. The skip stays visible as `debt.unparseableShippedFiles`.
+    """
+    key = tuple(paths)
+    if key in _SHAPES_CACHE:
+        return _SHAPES_CACHE[key]
+    handlers = 0
+    hidden = 0
+    unparsed: list[Path] = []
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            unparsed.append(path)
+            continue
+        if "except" not in text:
+            # Conservative prefilter, and it cannot lose a handler: every ast.ExceptHandler
+            # needs the `except` token in its own source. Parsing all 128 shipped files cost
+            # +0.195s, which pushed this collector past the sub-second promise its module
+            # docstring makes -- and that promise is why the ratchet runs before the tests.
+            continue
+        try:
+            tree = ast.parse(text)
+        except (SyntaxError, ValueError):
+            unparsed.append(path)
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ExceptHandler):
+                handlers += 1
+                if _hides_failure(node.body):
+                    hidden += 1
+    result = (handlers, hidden, unparsed)
+    _SHAPES_CACHE[key] = result
+    return result
+
+
+def _handler_shapes(paths: list[Path]) -> tuple[int, int]:
+    """(every handler, the ones that can only hide a failure) over `paths`."""
+    handlers, hidden, _ = _except_shapes(paths)
+    return handlers, hidden
+
+
+def _unparseable_shipped_files(paths: list[Path]) -> list[Path]:
+    """Shipped files the shape pass could not read or parse, so the skip is on record."""
+    return _except_shapes(paths)[2]
 
 
 def _git_dir() -> Path:
@@ -299,13 +382,17 @@ def _volume(pattern: re.Pattern[str]) -> int:
 
 
 def _collect_debt() -> dict[str, Any]:
-    shipped = _lines_of(_walk(*SHIPPED, suffixes=PY_SUFFIX))
+    shipped_paths = _walk(*SHIPPED, suffixes=PY_SUFFIX)
+    shipped = _lines_of(shipped_paths)
     tests = _lines_of(_walk("tests", "apps", suffixes=PY_SUFFIX))
+    handlers, hidden, unparsed = _except_shapes(shipped_paths)
     return {
         "todoMarkers": sum(len(TODO_RE.findall(line)) for line in shipped),
         "pytestSkipXfail": sum(len(SKIP_MARK_RE.findall(line)) for line in tests),
         "suppressionDirectives": sum(len(SUPPRESSION_RE.findall(line)) for line in shipped),
-        "swallowedExceptionSites": sum(1 for line in shipped if SWALLOW_RE.search(line)),
+        "exceptHandlers": handlers,
+        "swallowedExceptionSites": hidden,
+        "unparseableShippedFiles": len(unparsed),
         "unwiredCheckers": len(_unwired_checkers()),
         "governanceFilesMissing": len(_missing_governance_files()),
         "auditApparatusLines": _volume(PROMPT_DOC_RE),

@@ -1,0 +1,22 @@
+{
+  "_purpose": "High/critical npm advisories that scripts/check_npm_advisories.py tolerates because upstream has published no version outside the affected range. This is not a mute button: an entry without a reason or a review date is refused by the gate, an expired entry fails it, and an entry for an advisory the audit no longer reports fails it too. Anything actionable belongs in a dependency bump, not here.",
+  "_how_to_add": "Only when the advisory's own first_patched is null and no reachable version of the named package sits outside affected_range. npm's fixAvailable is not evidence of a fix: it reports a semver-major dependency replacement as a fix, which is a decision, not a patch.",
+  "_do_not_run_ruff_format_on_this_file": "ruff 0.16.3 accepts a .json path and rewrites it with trailing commas after the last member, which is valid Python and invalid JSON. Verified on 2026-10-03: `ruff format docs/audit/npm-advisory-exceptions.json` exited 0, printed `1 file reformatted`, and made the file unparseable. The project's format gate lists only packages/apps/tests/src/scripts, so it cannot reach this file; a contributor passing it explicitly can.",
+  "advisories": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "advisory_url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "affected_range": "<= 3.0.3",
+      "first_patched": null,
+      "cvss_score": 7.5,
+      "why_unactionable": "braces dist-tags.latest is 3.0.3, inside the affected range, and it has not been published since 2024-09-18. micromatch dist-tags.latest 4.0.8 still requires braces ^3.0.3, and micromatch is a direct dependency of tailwindcss@3.4.19, so no overrides entry can cut the edge: the package that pulls braces in is the one apps/web pins. Overriding chokidar alone leaves both tailwindcss->micromatch->braces and tailwindcss->fast-glob->micromatch->braces standing.",
+      "exposure": "dev-dependency chain only. `npm --prefix apps/web audit --omit=dev --audit-level=high` exits 0, and the vector is a deeply nested glob pattern, which here are repository paths.",
+      "removal_path": "tailwindcss 3 -> 4 (measured in /tmp on 2026-10-03: a tailwindcss ^4.3.3 + @tailwindcss/postcss tree has no braces/micromatch/chokidar/fast-glob at all and audits clean). That adds a devDependency and a CSS-first config migration, so it is a decision with a visual-regression pass attached, not a repair.",
+      "advised": "2026-09-18",
+      "gate_advised_by_this_repo": "2026-10-03",
+      "review_by": "2026-11-07"
+    }
+  ]
+}

@@ -137,6 +137,8 @@ def _classify(tokens: set[str]) -> str | None:
         return "pytest"
     if any(tok.endswith("check_public_claims.py") for tok in tokens):
         return "claims"
+    if any(tok.endswith("check_npm_advisories.py") for tok in tokens):
+        return "advisories"
     if any(tok.endswith("audit_facts.py") for tok in tokens):
         return "ratchet"
     return None
@@ -182,7 +184,7 @@ def _guide_gates(path: Path) -> dict[str, set[str]]:
 
 def test_contributing_guides_mirror_the_ci_gates() -> None:
     expected = _ci_gates()
-    assert len(expected) == 6, f"expected 6 guarded gates in ci.yml, parsed {sorted(expected)}"
+    assert len(expected) == 7, f"expected 7 guarded gates in ci.yml, parsed {sorted(expected)}"
     offenders: list[str] = []
     for rel in GUIDES:
         guide = _guide_gates(ROOT / rel)
@@ -207,6 +209,29 @@ def test_gate_comparison_detects_a_shortened_list() -> None:
     assert _classify(narrow) == "mypy", "the shortened line must still classify as the same gate"
     assert ci != narrow, "a path dropped from the list has to be visible to the comparison"
     assert ci - narrow == {"src", "apps/jupyter"} and narrow - ci == set()
+
+
+def test_the_advisory_gate_is_the_reader_and_not_the_scan() -> None:
+    """Negative control for the 7th guarded gate.
+
+    ci.yml runs two lines for it: npm's own scan, whose exit code §89 showed cannot
+    distinguish "no fix exists" from "the gate is mute", and the reader that decides.
+    Classification must key on the reader -- a guide that keeps the `npm audit` line and
+    drops the reader has quietly removed the gate, and the mirror test would never see it
+    if the scan itself counted as the gate.
+    """
+    reader = _tokens("uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json")
+    assert _classify(reader) == "advisories"
+    scan = _tokens("npm --prefix apps/web audit --json > /tmp/npm-audit-web.json")
+    assert _classify(scan) is None, "the scan alone must not register as the gate"
+    muted_guide = {
+        _classify(_tokens(line))
+        for line in (
+            "npm --prefix apps/web ci --legacy-peer-deps",
+            "npm --prefix apps/web audit --json > /tmp/npm-audit-web.json",
+        )
+    }
+    assert "advisories" not in muted_guide
 
 
 # `check_public_claims.py` is the one checker the collector reports as written-but-never-run:
