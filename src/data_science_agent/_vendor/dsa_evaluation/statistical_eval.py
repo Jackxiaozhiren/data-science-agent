@@ -184,6 +184,7 @@ def evaluate_statistical(
     # 6. CI correctness: ci_low <= ci_high and finite if present
     ci_ok: bool | None = None
     ci_pairs: list[tuple[float, float]] = []
+    ci_malformed = 0
     for c in tcalls:
         out = c.get("output") or {}
         if (
@@ -193,10 +194,16 @@ def evaluate_statistical(
         ):
             try:
                 ci_pairs.append((float(out["ci_low"]), float(out["ci_high"])))
-            except Exception:
-                pass
-    if ci_pairs:
-        ci_ok = all(lo <= hi and abs(lo) < 1e12 and abs(hi) < 1e12 for lo, hi in ci_pairs)
+            except (TypeError, ValueError):
+                # Counted, not dropped: a CI that was emitted and will not parse is a
+                # correctness failure. Silently leaving it out made the dimension report
+                # "no CI emitted" (or, with one good pair present, "ci valid") about
+                # output that contained garbage -- audit §95.
+                ci_malformed += 1
+    if ci_pairs or ci_malformed:
+        ci_ok = not ci_malformed and all(
+            lo <= hi and abs(lo) < 1e12 and abs(hi) < 1e12 for lo, hi in ci_pairs
+        )
     else:
         ci_ok = None
     dims["ci_correctness"] = _score(

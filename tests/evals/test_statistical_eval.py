@@ -124,3 +124,60 @@ def test_attach_via_metrics() -> None:
 def test_error_labels_cover_s01_s10() -> None:
     assert set(ERROR_LABELS) == {f"S0{i}" for i in range(1, 10)} | {"S10"}
     assert ERROR_LABELS["S09"] == "Causal Overclaim"
+
+
+def _ci_call(*pairs: object) -> dict:
+    return {
+        "tool_calls": [
+            {
+                "tool": "correlation_analysis",
+                "status": "ok",
+                "output": {"ci_low": lo, "ci_high": hi},
+            }
+            for lo, hi in pairs
+        ]
+    }
+
+
+def test_a_malformed_ci_is_not_reported_as_no_ci_emitted() -> None:
+    """§95: the dimension used to say "no CI emitted" about a CI that was emitted and bad.
+
+    `except Exception: pass` around the float() pair dropped the malformed reading from
+    `ci_pairs`, and an empty list then scored as absence -- which is not a missing
+    diagnostic but a false statement about what the agent produced.
+    """
+    res = evaluate_statistical(_task(), _ci_call(("not-a-number", "also-not")))
+
+    dim = res.dimensions["ci_correctness"]
+    assert dim.passed is False, dim.reason
+    assert dim.reason == "ci invalid", dim.reason
+    assert "S05" in dim.error_codes
+
+
+def test_one_malformed_ci_cannot_hide_behind_a_valid_one() -> None:
+    """The sharper case: with a good pair present the old code reported *pass*."""
+    res = evaluate_statistical(_task(), _ci_call((0.1, 0.7), ("nan-text", 0.9)))
+
+    dim = res.dimensions["ci_correctness"]
+    assert dim.passed is False, f"a garbage CI was averaged away: {dim.reason}"
+
+
+def test_a_well_formed_ci_still_passes() -> None:
+    """Guard against over-correcting: this is the behaviour the fix must not disturb."""
+    res = evaluate_statistical(_task(), _ci_call((0.1, 0.7)))
+
+    dim = res.dimensions["ci_correctness"]
+    assert dim.passed is True, dim.reason
+    assert dim.reason == "ci valid"
+
+
+def test_absent_ci_still_reads_as_absent() -> None:
+    """The distinction the fix is built on: absence and malformed are different answers."""
+    res = evaluate_statistical(
+        _task(),
+        {"tool_calls": [{"tool": "correlation_analysis", "status": "ok", "output": {"r": 0.4}}]},
+    )
+
+    dim = res.dimensions["ci_correctness"]
+    assert dim.passed is None
+    assert dim.reason == "no CI emitted"

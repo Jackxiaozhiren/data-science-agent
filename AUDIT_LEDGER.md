@@ -4891,6 +4891,64 @@ value -- `None`, meaning "no source path found" -- which callers treat as absenc
 unlike discovery where absence is indistinguishable from emptiness. That leaves the 38 single-`return`
 sentinels as the tranche with no key at all.
 
+## 95. A malformed confidence interval was scored as "ci valid" -- and the last two sites I owned turned out not to be defects
+
+**The defect was a wrong label, not a missing note.** `statistical_eval` built `ci_pairs` and wrapped
+each `float(out["ci_low"]), float(out["ci_high"])` conversion in `except Exception: pass`. A CI that was
+emitted but would not parse simply never entered `ci_pairs`, which produced two false statements about
+the agent's output:
+
+- malformed CI alone → `ci_pairs == []` → the dimension reported **`no CI emitted`** with `passed=None`
+  and no error code, about a run that *had* emitted a CI.
+- one valid pair plus one malformed → `ci_pairs == [the good one]` → **`score=1.0`, `ci valid`**. This is
+  the case that makes the class worth fixing rather than documenting: a garbage reading did not merely go
+  unnoticed, it was averaged away behind a good one and the dimension got a *pass*.
+
+Both were reproduced as red assertions before the change (`FAILED … test_a_malformed_ci_is_not_reported_as_no_ci_emitted`
+with `where None = DimensionScore(…).passed`, and `FAILED …
+test_one_malformed_ci_cannot_hide_behind_a_valid_one` with `where True = DimensionScore(score=1.0,
+reason='ci valid').passed`).
+
+**The fix counts the malformed case, and stays handler-neutral.** `ci_malformed` is incremented in the
+existing handler, narrowed from `Exception` to `(TypeError, ValueError)` -- the two things `float()` can
+raise, and nothing wider, so a caller's refusal can no longer be absorbed here either. A single
+`if ci_pairs or ci_malformed:` now decides between "answered wrong" (`ci_ok=False`, labelled `ci
+invalid`, carrying `S05`) and "said nothing" (`ci_ok=None`, `no CI emitted`). Handlers added: **0**. Two
+of the four new tests are green-on-arrival pins of the behaviour the change must not disturb -- a
+well-formed pair still passes, and an absent CI still reads as absent, which is the distinction the whole
+fix rests on -- and both say so in their own docstrings.
+
+**The last two sites I had claimed for myself are retracted, not fixed.** `_git_commit` in
+`research_manifest.py` ends in `except Exception: pass` and returns `None`; its sibling, the catalog
+version read, does the same and leaves `benchmark_version` as `None`. On reading them against the
+consumers, `None` here is an **honest absence**, not a collision: the manifest field is Optional and every
+caller treats absent as "unknown", so nothing is asserted that did not happen. What is missing is the
+*cause* -- "no git binary", "no .git", "git failed", "timed out" all land on the same null -- which is a
+diagnostic gap, and fixing it would mean either widening `ExperimentManifest` (a schema change) or adding
+a handler for a reason channel (which §94 measured as a ceiling vote). So they move from
+`adjudicated-but-unfixed defect` to **benign-with-diagnostic-gap**, recorded as such rather than quietly
+dropped. Same treatment §94 gave `registry.py`'s source-path lookup.
+
+**Where the tranche actually stands.** Re-enumerated from the AST, not remembered: **8** sites remain --
+seven benign (the two just retracted, plus `graph.py`'s prior-call serialization, `external_validation.py`'s
+root discovery and version probe, `registry.py`'s source-path lookup, and `feature_importance.py`'s dtype
+comparison) and **one real defect left, which is not mine to touch**: the benchmark-timing swallow in
+`external_validation.py`, the concurrent session's dirty file. It is the §93 class -- a perf number that
+vanishes from an evidence artifact with no trace -- so it should be fixed, by whoever owns that file, in
+the shape of §90's `datasets_sha256_note`. The queue that genuinely remains open is the one no key
+measures: **38 single-`return`-of-sentinel handlers**, where `return None`/`return {}` on a failure is
+indistinguishable from a legitimate empty answer.
+
+**Numbers.** `debt.swallowedExceptionSites` 9 → **8**, ceiling lowered to 8 with it;
+`debt.exceptHandlers` **185** unchanged for the second section running -- every fix since §93 has been
+handler-neutral, which is now the design constraint rather than an accident. `testFunctions` 537 → **541**.
+Gates on this tree: ruff `0` · `ruff format --check` `0` (217 files) · mypy `0` (112) ·
+`audit_facts --check` `OK` · claims `0` · mkdocs `--strict` `0` · full `pytest -q --cov` `0` at
+**81.23%** · `tests/evals` 56 passed · vendor mirror repaired by `--file` for `statistical_eval.py` only,
+leaving the concurrent session's single drifted file untouched. Nothing pushed since `4298344`; §94 and
+§95 are local pending the next authorization.
+
+
 
 
 

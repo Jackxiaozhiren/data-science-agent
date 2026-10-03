@@ -37,6 +37,12 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- The evaluator_v2 `ci_correctness` dimension no longer reports a wrong answer about a
+  malformed confidence interval. `statistical_eval` dropped any CI pair that would not
+  parse, so a run that emitted a garbage CI was scored `no CI emitted` (absence), and —
+  worse — one good pair alongside a bad one scored `score=1.0, ci valid`. Malformed
+  readings are now counted: `ci invalid` with `S05`, while a genuinely absent CI still
+  reads as absent. The handler narrowed from `Exception` to `(TypeError, ValueError)`.
 - `discover_plugins(..., strict=True)` now raises `PluginDiscoveryError` naming the manifest
   that could not be parsed, instead of dropping a broken plugin from the registry with no
   reason (its sibling `validate_plugin` already reported `manifest parse failed: …`; the
