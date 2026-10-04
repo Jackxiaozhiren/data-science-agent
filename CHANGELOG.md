@@ -130,6 +130,16 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `dsa_agent.tool_evidence` holds the per-tool evidence rule
+  (`build_tool_evidence`), moved verbatim out of `dsa_agent.graph`, which had been both orchestrating
+  runs and deciding what a tool result proves (`AUDIT_LEDGER.md` §105, Phase 4 target 2 seam #2).
+  `graph.py` 635 → 515 lines; `langgraph_graph.py` now imports the shared public symbol instead of
+  graph's private helper, so the two orchestration engines consume one definition. Behaviour-preserving
+  and proven by differential, not assertion: a 29-case capture taken from the pre-split function first
+  (every handled tool populated, all 13 with an empty object, `None` output, unknown tool) compares
+  byte-identical (8359 bytes) against the new module. Handler and swallow counts are unchanged by
+  construction, and pinned structurally by `tests/unit/test_tool_evidence_seam.py` -- including the
+  rule that the seam imports nothing but the `Evidence` type, so it stays testable without an agent.
 - New internal module `dsa_agent.columns` holds the planner's dataset-inspection helpers
   (`_numeric_columns`, `normalize_text`, `mentioned_columns`, `_pick_target_column`,
   `_pick_treatment_column`, `_pick_numeric_predictor`, `_has_time_data`); `dsa_agent.planner`

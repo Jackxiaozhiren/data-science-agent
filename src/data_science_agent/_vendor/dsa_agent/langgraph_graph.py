@@ -10,7 +10,6 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from dsa_agent.graph import (
-    _evidence_for_tool_call,
     _export_workspace,
     _resolve_refs,
     _run_tool,
@@ -23,6 +22,7 @@ from dsa_agent.state import (
     Insight,
     ValidationResult,
 )
+from dsa_agent.tool_evidence import build_tool_evidence
 
 
 class LGState(TypedDict, total=False):
@@ -110,7 +110,7 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
         "error": err,
         "duration_ms": dur,
     }
-    ev = _evidence_for_tool_call(tool, call_id, output) if ok and output is not None else None
+    ev = build_tool_evidence(tool, call_id, output) if ok and output is not None else None
     evj = ev.model_dump(mode="json") if ev else None
     insight = None
     if ev and tool in (

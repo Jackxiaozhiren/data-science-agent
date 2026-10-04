@@ -5598,3 +5598,56 @@ by `diff -q`; only the concurrent session's `external_validation.py` still drift
 exit **`0`** with total coverage **82.02%** and `testFunctions` 600 → **607** (7 new). **Runner: §103's push
 `fbed11c` produced run 37178661505, `completed success`** -- main is green with §101's producer-parsed
 pin and §102's new gate executing on the runner.
+## 105. Phase 4 target 2, seam #2: what a tool result proves left the orchestrator
+
+**§15.3's rule is that a file count is not a finding, a missing seam is.** `dsa_agent/graph.py` was 635
+lines holding two jobs: driving a run (plan → exec → record → critic → report) and deciding, per tool,
+what the tool's output *proves*. The second job was one 118-line function, `_evidence_for_tool_call`, a
+pure mapping of `tool + output object -> Evidence | None` over 13 branches. That is the boundary, and it
+is now `dsa_agent/tool_evidence.build_tool_evidence`.
+
+**Why this seam and not a smaller one:** `langgraph_graph.py` -- the *other* orchestration engine -- was
+importing that private helper across module lines (`from dsa_agent.graph import _evidence_for_tool_call`),
+so the evidence rule was already shared by two engines through a private name, and any change to the
+report path pulled in the whole orchestrator to test it. After the move both engines import the same
+public symbol, and the builder needs nothing but `dsa_agent.state.Evidence`.
+
+**Verified as a move, not a rewrite (§24: no opportunistic rewrites).** The baseline was captured from
+the pre-split function *before* editing -- 29 cases: every handled tool with a populated output, the same
+13 with an empty `SimpleNamespace()`, a `None` output, and an unknown tool, each serialized with the
+random `E-…` id excluded. After the extraction the identical probe against `build_tool_evidence` produced
+a byte-for-byte matching file (8359 bytes both sides, `diff` empty). Gates: ruff `0`,
+`ruff format --check` `0` (231 files), mypy `0` (114 files, +1 module), ratchet `OK` with
+`exceptHandlers` **185** and `swallowedExceptionSites` **8** -- a function that moved between two shipped
+files cannot change either count, and did not. `graph.py` 635 → **515**, `tool_evidence.py` **143**,
+`langgraph_graph.py` unchanged at 524. `Evidence` became an unused import in `graph.py` and was removed
+(the gate found it, I did not).
+
+**New structural tests** (`tests/unit/test_tool_evidence_seam.py`, 6): both engines bind the *same object*
+(`is`, not equality); `graph.py` defines neither the old private name nor a re-declared copy; the branch
+set read off the AST equals the suite's `HANDLED_TOOLS` in both directions, so adding a tool branch
+without a case fails and removing one fails too; each handled tool yields evidence against a full output;
+an unknown tool and a `None` output yield `None`; and the module's import set is exactly
+`{__future__, uuid, typing, dsa_agent.state}` so the seam cannot quietly accrete an agent.
+Full `pytest -q --cov` exit `0`, coverage **82.34%**, `testFunctions` 607 → **613**.
+
+**A tool that caught its own subject: the first draft of the seam test failed, and it was right.** I
+asserted that a `correlation_analysis` output missing every field returns `None` and instead got
+`Evidence(claim='Correlation  vs : r=0.000', source_type='statistical_test', confidence=0.8,
+result={'r': None, 'p_value': None, 'method': ''})`. The builder answers with a *populated-looking* record
+because every branch reads through `getattr(output, "x", default)` -- an absent field becomes `''`, `0`,
+`None`, and the f-string formats `0` as `0.000`. Measured across the 29-case baseline: **13 of 13 handled
+tools fabricate evidence from an empty output** (`assumption_check` → `"Assumption check: "` with
+`passed: true`; `causal_check` → `"Causal check (): estimate=0.000, causal_bar=fail"` at confidence 0.5).
+This is the same wrong-value family as §101 and §104, it is §106's target, and it deliberately did not
+ride along in this commit: a seam move and a behaviour change in one diff cannot be reviewed as either.
+The assertion that found it was narrowed to the two cases that genuinely answer `None` today (no output,
+unknown tool) rather than softened to match the defect.
+
+**Vendor mirror:** `tool_evidence.py`, `graph.py`, `langgraph_graph.py` repaired with
+`sync_vendor --file` and verified with `diff -q`; `--check` still names only the concurrent session's
+`external_validation.py`.
+
+**Runner.** §104's push `fbed11c..43c56d3` produced run **37179256194**, `completed success` in 5m32s
+(the `ci` job, all 31 steps) -- so the provenance-carrying comparison and the §102 orphan gate are green
+on the runner, not only on this laptop.
