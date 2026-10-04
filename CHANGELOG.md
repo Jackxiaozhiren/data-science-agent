@@ -111,18 +111,30 @@ shadowing + missing greenlet concurrency).
   exits 2 rather than passing. This unblocks `main`, which had been red since the
   advisory was revised on 2026-10-02 with `first_patched: null`.
 - Debt ratchet: `debt.swallowedExceptionSites` is now an AST count of handlers whose whole
-  body is `pass`/`continue`/an ellipsis (measured 12, ceiling 12) instead of a regex that
+  body is `pass`/`continue`/an ellipsis (currently **8**, ceiling **8**) instead of a regex that
   matched every `except` header (it read 180 where 12 were real, and moved on a docstring
   sentence). The count it used to produce is a new key, `debt.exceptHandlers` (185), and
   `debt.unparseableShippedFiles` is measured so a skipped file is never silent. Changing
   the ceiling from 180 to 12 is a change of quantity, not a fall in debt; it was decided
-  by the maintainer on 2026-10-03 and is recorded in `AUDIT_LEDGER.md` §92.
+  by the maintainer on 2026-10-03 and is recorded in `AUDIT_LEDGER.md` §92. The 12 → 11 → 9 → 8
+  since then are ordinary falls from fixing swallows (§93, §94, §95), which the ratchet is
+  supposed to reward.
 - Opt-in bearer-token auth: `DSA_AUTH_TOKEN` requires
   `Authorization: Bearer <token>` on `/api/*` (probes stay public);
   empty = demo unchanged.
 - Research page shows API-tracked experiments (read-only, graceful empty).
 
 ### Corrections to published numbers (no code change)
+
+- `benchmarks/baseline/README.md` listed `raw_runs.json` in its directory tree as one of the
+  committed artifacts. It was never committed -- it is what a reproduce run writes into its own
+  `--out` directory -- so the listing is now annotated and pinned by
+  `tests/test_baseline_readme_integrity.py`. The same file's provenance paragraph said the
+  `--limit 5` probe reads 0.8 "because `eda-01`'s `unsupported_claim` check fails"; that was the
+  observation on 2026-09-28 and its attribution was wrong -- §99's keyword fix removed the cause,
+  the probe now reads 1.0, and all five accuracy metrics still equal the frozen values
+  (`unsupported_claim_rate` measures 0.0 against a frozen 0.06). No frozen number was edited:
+  re-freezing stays a version-bump release decision.
 
 - GT-lane figures in 4.4.0/4.3.3 (5/44, mean CR 0.088, gap 0.886) were measured
   with the `deterministic-local` runner (heuristic planner, no LLM —

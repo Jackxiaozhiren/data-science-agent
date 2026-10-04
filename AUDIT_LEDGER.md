@@ -5225,6 +5225,75 @@ match by substring, which is the pin against someone "fixing" the convention too
 ratchet `OK` · mkdocs `--strict` `0` · full `pytest -q --cov` `0` at **81.31%**. `sync_vendor --check`
 still reports the concurrent session's single file, untouched.
 
+## 100. The baseline README described a file that was never committed, and α now has a field-by-field answer
+
+**The defect was prose about the repository, not about the benchmark.** `benchmarks/baseline/README.md`
+has listed `raw_runs.json` in its fenced tree block since the freeze, as if it were one of the
+directory's three artifacts. It is not: `ls benchmarks/baseline/` returns `README.md`, `results.json`,
+`summary.json`. `raw_runs.json` is what *a reproduce run* writes into its own `--out` directory -- a real
+artifact of the process, a false claim about the repository. Nothing noticed, because no test read that
+block against the directory: the same blind spot §79 built the claims gate for, one file over.
+
+**Three prose fixes, one guard.** The tree line now says `NOT committed.` and names where the file does
+come from. The provenance paragraph's `1.0 → 0.8` sentence is dated and re-attributed (§99 showed the
+cause was the `ate` keyword, not the evaluator becoming stricter), and the paragraph telling the reader
+"a lower number is honesty, not regression" gained its missing converse -- a number that climbs back has
+to be explained too. `tests/test_baseline_readme_integrity.py` (5 defs) then pins the class:
+- `test_every_file_named_in_the_tree_block_is_present_or_annotated` -- **red before the fix**, verified by
+  re-running the parser over `git show HEAD:`'s copy, which reports `['raw_runs.json']`.
+- `test_the_control_a_missing_file_without_an_annotation_is_caught` -- strips the new annotation from a
+  mutated copy and asserts the phantom is named again, so the guard cannot pass by matching nothing.
+- `test_the_control_a_stale_number_in_the_prose_is_caught` -- the same one-directional insurance for the
+  number checks.
+- `test_the_aggregate_line_quotes_summary_json_exactly` and
+  `test_the_reproduce_command_names_the_artifacts_the_dir_actually_has` -- **green on arrival**, labelled
+  as such: the quoted values were already right, and these exist so they cannot drift. The aggregate
+  check reads its expectations out of `summary.json` rather than restating them, per the rule that a
+  prose guard must name the artifact it quotes.
+
+**α, measured field by field instead of argued.** §99's 50-task run left a `summary.json` on disk, so the
+re-freeze question is now per-field rather than abstract:
+
+| field | frozen | measured today | |
+| --- | --- | --- | --- |
+| `n` | 50 | 50 | same |
+| `task_success_rate` | 1.0 | 1.0 | same |
+| `sql_accuracy` | 1.0 | 1.0 | same |
+| `statistical_accuracy` | 1.0 | 1.0 | same |
+| `code_execution_success` | 1.0 | 1.0 | same |
+| `evidence_coverage` | 1.0 | 1.0 | same |
+| `by_category` | 8 cats @ 1.0 | equal | same |
+| `unsupported_claim_rate` | 0.06 | **0.0** | better, caused by §99 |
+| `mean_latency_ms` | 47.92 | 67.06 | environmental, not comparable |
+
+A re-freeze would therefore move exactly two fields. `unsupported_claim_rate` improved *because of* the
+keyword fix -- the four spurious `causal_check` steps were those unsupported claims -- and
+`mean_latency_ms` is a timing read from one laptop, which §10 already says must not be quoted as a
+change (paired signs, not seconds; the runner is the only comparable source). Every accuracy metric the
+contract pins now equals what the tree scores, so α is no longer "accept a lower honest number" but "do
+you want `unsupported_claim_rate: 0.0` recorded in a frozen file". Still the version-bump release
+decision it was, and §86's two provenance gaps stand: `summary.json` carries no
+`frozen_at`/`git_commit`/`evaluator_version`, so its dating lives only in README prose and git.
+
+**State.** Gates: ruff `0` · `ruff format --check` `0` (223 files) · mypy `0` (113) · ratchet `OK` ·
+claims `0` · mkdocs `--strict` `0` · the new integrity suite 5/5 · `testFunctions` 566 → **571**. No
+shipped code changed here, so `debt.exceptHandlers` (185) and `debt.swallowedExceptionSites` (8) are
+untouched by design. Filed as **D-L3-13** rather than fixed: `graph._get_columns` keeps the
+`[]`-for-everything shape §98 removed from `_numeric_columns`, and its consumer *is* the planner's
+`cols`, so an unreadable dataset makes `_pick_target_column` answer with the literal string `"target"`
+and `_pick_treatment_column` `"treatment"` -- names no dataset has. Doing that properly is a product
+decision about what the agent should do with an unreadable dataset (plan generically, or refuse with a
+visible error), it is not reachable by any benchmark dataset, and it is not this section's to make.
+
+**Addendum, because §99's numbers were mine until a second machine read them.** Push
+`fd8eb3b..4d0766a` produced run **37173550621**, `completed success`, no `##[error]` anywhere in its
+log, and its benchmark step printed in its own words at `2026-10-04T03:17:03Z`:
+
+> `Task success rate: 1.0`
+> `By category: {'EDA': {'n': 5, 'task_success': 1.0}}`
+
+So the 0.8 → 1.0 claim in §99 holds on the runner, not only on the laptop that made the fix.
+
 
 
 
