@@ -5,6 +5,13 @@ import os
 import re
 from typing import Any
 
+from dsa_agent.columns import (
+    _has_time_data,
+    _numeric_columns,
+    _pick_numeric_predictor,
+    _pick_target_column,
+    _pick_treatment_column,
+)
 from dsa_agent.state import AnalysisPlan, AnalysisStep
 
 _ALLOWED_LLM_TOOLS = {
@@ -69,147 +76,6 @@ def _terminal_export_steps(q: str, steps: list[Any]) -> list[tuple[str, str, str
     return specs
 
 
-def _numeric_columns(dataset_path: str | None) -> list[str]:
-    if not dataset_path:
-        return []
-    try:
-        from pathlib import Path
-
-        from dsa_datasets.loader import load_dataframe
-        from dsa_datasets.validate import detect_format
-
-        p = Path(dataset_path)
-        if not p.exists():
-            return []
-        fmt = detect_format(p.name)
-        df = load_dataframe(p, fmt)
-        import polars as pl
-
-        return [
-            c
-            for c in df.columns
-            if df[c].dtype
-            in (
-                pl.Float64,
-                pl.Float32,
-                pl.Int64,
-                pl.Int32,
-                pl.Int16,
-                pl.Int8,
-                pl.UInt64,
-                pl.UInt32,
-                pl.UInt16,
-                pl.UInt8,
-            )
-        ]
-    except Exception:
-        return []
-
-
-def _normalize_text(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
-
-
-def _mentioned_columns(query: str, columns: list[str]) -> list[str]:
-    normalized_query = f" {_normalize_text(query)} "
-    mentioned: list[str] = []
-    for col in columns:
-        normalized_col = _normalize_text(col)
-        if normalized_col and f" {normalized_col} " in normalized_query:
-            mentioned.append(col)
-    return mentioned
-
-
-def _pick_target_column(query: str, columns: list[str], numeric_columns: list[str]) -> str:
-    mentioned = _mentioned_columns(query, columns)
-    target_terms = (
-        "target",
-        "outcome",
-        "response",
-        "label",
-        "revenue",
-        "sales",
-        "profit",
-        "price",
-        "cost",
-        "churn",
-        "survived",
-        "conversion",
-    )
-
-    for col in mentioned:
-        normalized_col = _normalize_text(col)
-        if any(term in normalized_col.split() for term in target_terms):
-            return col
-
-    mentioned_numeric = [c for c in mentioned if c in numeric_columns]
-    if mentioned_numeric:
-        return mentioned_numeric[-1]
-
-    for term in target_terms:
-        for col in columns:
-            if term in _normalize_text(col).split():
-                return col
-
-    if numeric_columns:
-        return numeric_columns[-1]
-    return columns[-1] if columns else "target"
-
-
-def _pick_treatment_column(
-    query: str, columns: list[str], numeric_columns: list[str], target: str
-) -> str:
-    mentioned = [c for c in _mentioned_columns(query, columns) if c != target]
-    categorical = [c for c in columns if c not in numeric_columns and c != target]
-    treatment_terms = (
-        "treatment",
-        "exposure",
-        "group",
-        "campaign",
-        "variant",
-        "arm",
-        "policy",
-        "intervention",
-    )
-
-    for col in mentioned:
-        if col in categorical:
-            return col
-    for col in mentioned:
-        if any(term in _normalize_text(col).split() for term in treatment_terms):
-            return col
-    for col in categorical:
-        if any(term in _normalize_text(col).split() for term in treatment_terms):
-            return col
-    if categorical:
-        return categorical[0]
-    for col in columns:
-        if col != target:
-            return col
-    return "treatment"
-
-
-def _pick_numeric_predictor(query: str, numeric_columns: list[str], target: str) -> str:
-    mentioned = [c for c in _mentioned_columns(query, numeric_columns) if c != target]
-    if mentioned:
-        return mentioned[0]
-
-    normalized_target = _normalize_text(target)
-    for col in numeric_columns:
-        if col == target:
-            continue
-        # Avoid obvious target-derived proxy/prediction columns by default.
-        normalized_col = _normalize_text(col)
-        if normalized_target and normalized_target in normalized_col:
-            continue
-        return col
-
-    for col in numeric_columns:
-        if col != target:
-            return col
-    return target
-
-
 def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
     cat_cols = [c for c in cols if c not in numeric_cols]
     cat = cat_cols[0] if cat_cols else (cols[0] if cols else "category")
@@ -253,25 +119,6 @@ def _heuristic_sql(q: str, cols: list[str], numeric_cols: list[str]) -> str:
 def _ident(name: str) -> str:
     """Quote a dataset-derived identifier for DuckDB (headers are user input)."""
     return '"' + name.replace('"', '""') + '"'
-
-
-def _has_time_data(dataset_path: str | None) -> bool:
-    if not dataset_path:
-        return False
-    try:
-        from pathlib import Path
-
-        import polars as pl
-
-        from dsa_datasets.loader import load_dataframe
-        from dsa_datasets.validate import detect_format
-
-        p = Path(dataset_path)
-        fmt = detect_format(p.name)
-        df = load_dataframe(p, fmt)
-        return any(df[c].dtype in (pl.Date, pl.Datetime) for c in df.columns)
-    except Exception:
-        return False
 
 
 def heuristics_plan(

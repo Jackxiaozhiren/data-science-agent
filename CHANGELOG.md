@@ -79,6 +79,13 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `dsa_agent.columns` holds the planner's dataset-inspection helpers
+  (`_numeric_columns`, `normalize_text`, `mentioned_columns`, `_pick_target_column`,
+  `_pick_treatment_column`, `_pick_numeric_predictor`, `_has_time_data`); `dsa_agent.planner`
+  shrank 621 → 468 lines and now imports the five it actually calls. Behaviour-preserving —
+  handler, swallow and suppression counts are byte-identical across the move — and pinned
+  structurally by `tests/contract/test_planner_column_seam.py`, including the rule that the
+  planner must bind these by name so `monkeypatch.setattr(planner, ...)` still intercepts.
 - CI's npm advisory step now separates the scan from the verdict: npm still runs with
   `--json`, and `scripts/check_npm_advisories.py` decides pass/fail. High/critical
   findings are policed exactly as before, except that an advisory with no published fix

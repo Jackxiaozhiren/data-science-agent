@@ -5016,6 +5016,70 @@ claims `0` on the real tree · full `pytest -q --cov` `0` at **81.24%** · new t
 way to see through the `tests/**` ignore list (§85). Vendor mirror repaired by `--file` for
 `dsa_llm/providers.py`; the concurrent session's `external_validation.py` drift remains untouched.
 
+## 97. Phase 4 target 2, seam #1: column inspection left the planner, and the tool told me which two helpers the planner never called
+
+**Why this seam and not the biggest file.** §24 target 2 says "split the largest modules along the seams
+§15.3 identified", and §15.3's own wording is the constraint: *"Report the largest files with line counts
+and state what the split boundary would be. A file count is not a finding; a missing seam is."* Ranked by
+lines the top shipped files are `scripts/generate_benchmark_v2.py` (948), `scripts/audit_facts.py` (682),
+`src/data_science_agent/sdk.py` (680), `dsa_evaluation/cli.py` (679), `dsa_agent/graph.py` (635),
+`dsa_agent/planner.py` (621). Splitting the generator or the collector would be a cosmetic edit. The
+planner had an actual seam: seven of its fourteen top-level functions only *inspect a dataset and name
+its columns*, and eight only *build a plan*. It is also where §96 deferred the most dangerous sentinel
+(`_numeric_columns` → `[]`, `_has_time_data` → `False`), so the seam earns its keep: the fix that follows
+needs a home smaller than a 621-line module.
+
+**Two things the tooling told me that reading had not.**
+- `ruff check --fix` **deleted two names from the planner's import list** -- `_normalize_text` and
+  `_mentioned_columns`. That is F401 doing its job: the planner never calls them, they exist to serve the
+  other five. My first instinct was to re-add them to keep "all seven imported", which is exactly how a
+  module accretes an API it does not use. Instead they became public in the new module
+  (`normalize_text`, `mentioned_columns`), which states the relationship: helpers of the seam, not exports
+  of the planner.
+- The split had to preserve **name binding, not just names**. `tests/test_product_hardening.py:25-26`
+  patches `planner._numeric_columns` and `planner._has_time_data`. That intercepts only while the planner
+  holds the function in its own namespace, so `from dsa_agent.columns import ...` is correct and
+  `columns._numeric_columns(...)` would have been silently wrong: every test would stay green while the
+  patch became a no-op. That is §87's alias lesson in the opposite direction, so it is now pinned by
+  `test_planner_imports_the_seam_by_name_not_by_attribute`, which walks the AST and fails on any
+  `columns.<attr>` in the planner.
+
+**The seam is pinned structurally, because an unpinned split re-merges.**
+`tests/contract/test_planner_column_seam.py` (4 tests): the seven definitions live in `dsa_agent.columns`
+and **none** is redefined in the planner; the planner imports exactly the five it calls; it calls them by
+bare name; every one of them is actually reached (`an import nobody calls is how a seam becomes dead code
+with a green suite`); and `columns.py`'s module-scope imports are `__future__` + `re` only, with the
+dataset loaders and polars staying lazy inside the functions -- so the seam cannot reach back into the
+planner's world or drag a dataframe import into planner load time.
+
+**Behaviour-preserving, and the proof is a set of numbers that did not move.** `debt.exceptHandlers`
+**185**, `debt.swallowedExceptionSites` **8**, `debt.suppressionDirectives` **42**,
+`debt.unparseableShippedFiles` **0** -- identical before and after a 153-line move, which is the strongest
+available evidence that nothing was rewritten on the way. `planner.py` 621 → **468**, new
+`columns.py` **172**. Gates: ruff `0`, `ruff format --check` `0` (221 files), mypy `0` over **113** files
+(one more, as expected), `audit_facts --check` `OK`, claims `0`, mkdocs `--strict` `0`, full
+`pytest -q --cov` `0` at **81.25%**, `testFunctions` 551 → **555**. Vendor mirror gained
+`dsa_agent/columns.py` and updated `dsa_agent/planner.py` through two `--file` repairs; the remaining
+`--check` red is still the concurrent session's single file. My own new test file passes
+`ruff check --isolated` with the full rule set -- two E501s found there were wrapped rather than left for
+the globally-ignored rule, per §85.
+
+**Correction to §96's deferral list, found while doing this work.** §96 wrote that
+`_normalize_text` and `_mentioned_columns` were "the planner's helpers awaiting the same seam"
+and named `normalize_text` as a thing that existed. Neither was true at the time: both were
+still inside `planner.py`, under their leading underscores, and `normalize_text` had no
+referent at all. They are the two functions this section's `ruff check --fix` proved the
+planner never calls, and they are public in `dsa_agent.columns` only now, as of this commit.
+
+**What target 2 still owes.** The planner's `heuristics_plan` is a 244-line function (the real god
+artifact, and out of scope for a *module* seam); `graph.py` (635) has a candidate seam between tool
+execution and evidence assembly; `sdk.py` (680) is public API so its seam needs an API decision, not a
+refactor; `dsa_evaluation/cli.py` (679) splits into subcommand handlers. Next in line is D-L3-10 in the
+module that now exists: `_numeric_columns`/`_has_time_data` must stop handing the planner `[]`/`False`
+for "I could not read the file", because that is the planner believing a dataset has no numeric columns
+and no time series when the real statement is unknown.
+
+
 
 
 
