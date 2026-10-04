@@ -5079,6 +5079,64 @@ module that now exists: `_numeric_columns`/`_has_time_data` must stop handing th
 for "I could not read the file", because that is the planner believing a dataset has no numeric columns
 and no time series when the real statement is unknown.
 
+## 98. `[]` was both "no numeric columns" and "I could not read it", and the planner's `or` chain made the fact lose to the guess
+
+**The mechanism was two lines apart.** `columns._numeric_columns()` returned `[]` for four
+different outcomes -- no path supplied, file absent, loader raised, and the genuine fact that the
+dataset has no numeric dtype columns. One line downstream, `heuristics_plan` wrote:
+
+```python
+numeric_cols = _numeric_columns(dataset_path) or [name-based guess] or cols
+```
+
+`[]` is falsy, so the *fact* was overwritten by the *guess*: a text-only dataset got its own text
+columns back as the numeric set, and the planner scheduled numeric steps against them. Same shape as
+the `x or fallback` trap -- one class comes out exactly right and the other is silently wrong, and
+no test can see it because both look like an empty list.
+
+**Fix: a tri-state, with the guess kept exactly where the guess belongs.** `_numeric_columns`
+returns `list[str] | None` now -- `None` for "unknown", `[]` for "known, none" -- and the planner
+branch reads `if profiled_numeric is not None`. The unknown path keeps today's name-based fallback
+unchanged, pinned by its own test rather than asserted in prose: a monkeypatched loader failure
+still yields a plan with the correlation step, so a profiling hiccup cannot silently degrade plans
+that used to work. The `except Exception` stays wide on purpose -- the `try` wraps a lazy import, a
+format probe, the loader and a polars dtype scan, each with its own failure family -- and what makes
+it honest is the value, not the type: `None` says unknown, which is now the planner's only licence
+to guess. `_has_time_data` was left returning `False`: no consumer would act differently on a
+tri-state there, and an unconsumed distinction is the D-L3-06 pattern again.
+
+**Benchmark neutrality was measured, not argued.** Two checks, both cheap. First, all 50 benchmark
+datasets were profiled: **every one has ≥1 numeric column**, so nothing the benchmark can reach sits
+on the changed branch. Then the real differential: `git archive HEAD` exported to `/tmp/head98`, and
+one script dumped the heuristic plan tool-chain for **every task in both catalogs** (150 plans) in
+each tree. The JSON digests are identical -- `2d6f1f5f0b1ab425` on HEAD and on the fixed tree. The
+fix removes a wrong-answer class and moves no plan the benchmark reaches.
+
+**Chasing this, I nearly filed a second defect that is not live.** With one numeric column,
+`_pick_numeric_predictor` returns the *target itself*, which reads as "regress revenue on revenue"
+-- 24 of 100 sampled (dataset, query) pairs. Checking the consumers first killed the claim: its only
+reader is `corr_y = predictor_col if predictor_col != corr_x else numeric_cols[1]`, guarded by
+`len(numeric_cols) >= 2` (so the index is safe and the pair is distinct), and the `train_model` step
+takes `target` with no feature list at all. So it is a **latent trap** -- correct today because of one
+guard in a different branch -- recorded as such rather than filed as a finding, in the same spirit as
+§94's re-judgement of `registry.py`'s lookup.
+
+**What the probe did surface is filed separately.** Reaching that plan meant running
+`heuristics_plan("correlate label with group", …)`, which returned
+`[profile_dataset, hypothesis_test, causal_check, create_chart, export_artifact]`: a plain
+correlation request planned as a **causal** analysis, with a Welch t-test whose `value_col` is a
+text column. The cause is in the intent keyword list -- `"ate"`, meant as ATE, tested with `k in q`,
+so it matches inside *correlate, estimate, calculate, regenerate, state*. Live defect, real blast
+radius, own section next.
+
+**Numbers and state.** `debt.swallowedExceptionSites` **8** and `debt.exceptHandlers` **185**
+unchanged; `testFunctions` 555 → **562**; full `pytest -q --cov` `0` at **81.30%**; ruff `0`,
+format `0` (222 files), mypy `0` (113 files), ratchet `OK`, claims `0`, mkdocs `--strict` `0`.
+One disclosure: `ruff check --isolated` reports I001 on the new test file, because `--isolated`
+drops `known-first-party` and wants `dsa_agent` sorted as third-party. The project gate is clean; the
+difference is the profile, not a hidden finding, and it is named so nobody "fixes" the order into a
+real failure. Vendor mirrors of `columns.py` and `planner.py` refreshed through two `--file` repairs.
+
 
 
 

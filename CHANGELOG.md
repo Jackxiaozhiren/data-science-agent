@@ -37,6 +37,13 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- The planner can no longer mistake "I could not read this dataset" for "this dataset has
+  no numeric columns". `_numeric_columns()` returned `[]` for both, and
+  `heuristics_plan`'s `_numeric_columns(path) or <guess-by-column-name>` overwrote the fact
+  with the guess, so a text-only dataset had its text columns planned as numeric. It now
+  returns `None` when unknown, and the name-based guess runs only in that case — plans
+  unchanged for every dataset the benchmark can reach (150 catalog plans, identical digest
+  against a `git archive HEAD` export).
 - `DSA_MAX_COST_USD` is now enforced or refused, never quietly absent. A malformed
   value (`5 USD`, `two`) or a negative one used to parse-fail into `None`, and both
   provider guards read `if cap is not None` — so a configured spend ceiling disabled

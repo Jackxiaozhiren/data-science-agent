@@ -154,11 +154,17 @@ def heuristics_plan(
     explicit_hypothesis = any(k in q for k in ["hypothesis", "t-test", "welch", "anova", "mann"])
 
     cols = columns or []
-    numeric_cols = (
-        _numeric_columns(dataset_path)
-        or [c for c in cols if c not in ("date", "region", "category", "group")]
-        or cols
-    )
+    profiled_numeric = _numeric_columns(dataset_path)
+    # §98: an empty numeric set is now a fact, not a failure. Only when the dataset could not
+    # be read at all (None) does the planner fall back to guessing numeric columns by name;
+    # before this, `[] or <guess>` overwrote "this dataset has no numeric columns" with its
+    # own text columns and scheduled numeric steps against them.
+    if profiled_numeric is not None:
+        numeric_cols = profiled_numeric
+    else:
+        numeric_cols = [
+            c for c in cols if c not in ("date", "region", "category", "group")
+        ] or cols
     target_col = _pick_target_column(q, cols, numeric_cols)
     treatment_col = _pick_treatment_column(q, cols, numeric_cols, target_col)
     predictor_col = _pick_numeric_predictor(q, numeric_cols, target_col)

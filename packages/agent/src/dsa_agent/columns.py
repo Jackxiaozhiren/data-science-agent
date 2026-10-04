@@ -12,9 +12,17 @@ from __future__ import annotations
 import re
 
 
-def _numeric_columns(dataset_path: str | None) -> list[str]:
+def _numeric_columns(dataset_path: str | None) -> list[str] | None:
+    """Numeric columns of a dataset: a list when it is known, None when it is not.
+
+    §98 (D-L3-10). The old version returned `[]` for every failure -- no path, no file, a
+    loader that raised -- which is the same value as "this dataset has no numeric columns",
+    a fact. The planner then wrote `_numeric_columns(path) or <name-based guess>`, so the
+    fact got overwritten by a guess and a text-only dataset was handed its own text columns
+    as numeric. `None` now means "unknown", and only unknown earns the guess.
+    """
     if not dataset_path:
-        return []
+        return None
     try:
         from pathlib import Path
 
@@ -23,7 +31,7 @@ def _numeric_columns(dataset_path: str | None) -> list[str]:
 
         p = Path(dataset_path)
         if not p.exists():
-            return []
+            return None
         fmt = detect_format(p.name)
         df = load_dataframe(p, fmt)
         import polars as pl
@@ -46,7 +54,10 @@ def _numeric_columns(dataset_path: str | None) -> list[str]:
             )
         ]
     except Exception:
-        return []
+        # Deliberately wide: this try wraps a lazy import, a format probe, the loader and a
+        # polars dtype scan, each of which raises its own family. What matters is the value --
+        # None says "unknown", which the planner now reads as the only licence to guess.
+        return None
 
 
 def normalize_text(value: str) -> str:
