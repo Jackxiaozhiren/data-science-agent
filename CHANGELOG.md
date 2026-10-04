@@ -133,6 +133,15 @@ shadowing + missing greenlet concurrency).
   `train_model` has no `metrics` field) and that an *empty* answer is still evidence -- `row_count=0`
   keeps proving "SQL returned 0 rows". Differential against the pre-fix module, rebuilt from git: zero
   changes on populated outputs, 13 flips on fieldless ones.
+- `dsa_agent.planner` no longer computes a keyword signal it cannot use (§107). The line read
+  ``if wants_viz or True:`` -- `wants_viz` was derived from six visualization keywords and consulted
+  nowhere else, so the branch could only ever be true. Measured against the shipped v2 catalog
+  (100 tasks, 13 queries naming a visualization, 0 plans without a chart), the unconditional chart is the
+  product rule: honouring the keyword would have removed the evidence chart from **87 of 100** plans. The
+  tautology is gone, the block dedented, and the rule is now stated and asserted --
+  `tests/unit/test_planner_chart_invariant.py` pins both that no plan lacks an evidence chart and that no
+  planner condition may be a tautology (AST, not grep). Behaviour-preserving: the pre-change planner was
+  re-imported from a copy and run over all 100 tasks, with 0 plans differing.
 - New gate: `scripts/find_orphan_reads.py` (--check wired into CI and both contributing guides) reports
   every `record.get("key", default)` in shipped code whose key nothing in the repository writes -- the
   shape §101's `trajectory` bug hid behind. 14 such reads remain, each declared in

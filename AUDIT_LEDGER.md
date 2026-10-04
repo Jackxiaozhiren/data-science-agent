@@ -5706,3 +5706,47 @@ an empty result read as agreement. The corrected measurement is the git-anchored
 open from §105's isolated lint sweep, untouched here: `planner.py:330` reads `if wants_viz or True:`, a
 condition that can never be false, which is the same "advertised check that cannot refuse" family and is
 the next item in this lane.
+## 107. A condition that could only be true was hiding the planner's real rule
+
+**Surfaced by §105's `ruff check --isolated` sweep and deferred honestly at the time:** `planner.py:330`
+read ``if wants_viz or True:``, with `wants_viz` computed from six keywords on line 152 and consulted
+nowhere else. The project's own ruff config does not select `SIM222`, so CI never saw it -- the isolated
+re-scan is the only reason it is visible at all (the `tests/**`-ignore lesson, applied to rule selection).
+
+**Which half is the defect was not obvious, so both were measured.** Reading the code cannot tell
+"always chart" from "chart when asked, plus a typo". Against the shipped v2 catalog, calling
+`heuristics_plan` with the production shape (`question`, dataset path, real columns from
+`_get_columns`): **100 tasks, 13 queries naming a visualization, 0 plans without a chart, and honouring
+the keyword would delete the chart from 87 of 100 plans.** So the unconditional branch is the product
+rule (every analysis carries at least one evidence chart, which is what the report and the evidence
+critic consume), and the keyword signal was decorative from the first commit -- `git log -S` puts
+`or True` in `b9425d5`, the planner's introduction, so it was never a regression.
+
+**Change: state the invariant, delete the dead signal.** The `if` is gone, the block is dedented, and a
+comment names the rule plus where it is checked. No behaviour can change: a tautology removed from a
+condition is not a decision.
+
+**Proven, not argued.**
+- *Differential:* the pre-change planner was re-imported from a `/tmp` copy and both versions run over
+  all 100 catalog tasks, comparing `(name, tool, description, inputs, depends_on)` per step --
+  **0 of 100 plans differ**.
+- *Red-first:* `tests/unit/test_planner_chart_invariant.py` has 4 tests; the two driving pins were red
+  on the old code (`test_the_planner_has_no_unused_visualization_signal`, and
+  `test_no_condition_in_the_planner_can_only_be_true` failing at line 330). The two invariant tests are
+  labelled green-on-arrival in their docstrings -- they assert the rule the tautology was protecting.
+- *Control:* re-introducing a dead `wants_viz = any(...)` assignment made the AST pin fail and nothing
+  else; the file was restored and `md5 -q` matched (`3b139ff8…`).
+
+**The general rule now enforced:** no boolean condition in the planner may be a tautology. That is an
+AST check, not a grep, so `if x or True` and `if x and False` both fail while a legitimate
+`if flags or fallback` does not.
+
+**Gates.** ruff `0`, `ruff format --check` `0` (232 files), mypy `0` (114), ratchet `OK`
+(`exceptHandlers` **185** / `swallowedExceptionSites` **8** / `todoMarkers` **0** -- the change removes 1
+line and adds a comment), orphan-reads `--check` `0`, full `pytest -q --cov` exit **`0`**, coverage
+**82.54%**. Planner mirror repaired with `sync_vendor --file`, verified by `diff -q`.
+
+**Still open in this lane, for the next section:** the same sweep reported `BLE001` blind catches and
+`I001` blocks in files I have not touched this session (`columns.py`, `graph.py`, `langgraph_graph.py`),
+which are not selected by the project config and therefore not CI findings; and `graph._get_columns`
+(D-L3-13) keeps the `[]`-for-everything shape that §98 removed from `_numeric_columns`.
