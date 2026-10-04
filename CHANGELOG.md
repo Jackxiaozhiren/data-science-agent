@@ -91,6 +91,19 @@ shadowing + missing greenlet concurrency).
   hash of nothing for a missing datasets dir), and `run_benchmark` records
   `details["statistical_eval_error"]` when the evaluator_v2 dimensions cannot be
   attached, instead of dropping them without a trace.
+- `Reproduction().run()` no longer publishes numbers the artifact never held
+  (`AUDIT_LEDGER.md` §101). Two defects, one root -- the facade read keys it assumed rather than
+  keys the harness writes. First, `trajectory` was always `0.0`: it read `reproduction_score`'s
+  `trajectory` key, which no producer writes, while the harness publishes the trajectory rate as
+  `semantic`. On this repository's own committed `reproduction/v2/comparison.json` every dimension
+  is `1.0`, and the public SDK reported `trajectory=0.0` -- on every run. Second, a missing or
+  unparseable `comparison.json`, one with no `reproduction_score`, and one missing a dimension the
+  facade publishes all returned the same `0.0` defaults with no signal. The map between the two
+  sides is now the named constant `REPRODUCTION_DIMENSION_KEYS`, absent dimensions are reported by
+  name, and a new additive `ReproductionResult.error` field carries the reason (the harness's own
+  failure text is appended when the fallback also failed). A measured `0.0` still reports
+  `error is None`; the Stable constructor and every existing call site keep working. `numerical`,
+  `statistical` and `evidence` are still dropped by the facade -- filed as D-L3-14.
 
 ### Added (unreleased, non-breaking)
 

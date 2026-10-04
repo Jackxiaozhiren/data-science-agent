@@ -546,9 +546,12 @@ class ReproductionResult:
     Parameters:
         overall: Overall score 0–1.
         execution: Execution match rate.
-        trajectory: Trajectory match rate.
+        trajectory: Trajectory match rate (the harness writes it as ``semantic``).
         by_level: Scores by level L0–L5.
         out_dir: Output directory.
+        error: Why the scores are not backed by a comparison artifact, or ``None`` when they are.
+            A measured ``0.0`` keeps ``error`` as ``None``; a score that was defaulted because the
+            artifact was missing, unreadable, or short a dimension reports the reason here.
 
     Return Value:
         ``ReproductionResult``.
@@ -569,6 +572,18 @@ class ReproductionResult:
     trajectory: float = 0.0
     by_level: dict[str, float] = field(default_factory=dict)
     out_dir: str = ""
+    error: str | None = None
+
+
+#: ``ReproductionResult`` field -> key ``dsa_evaluation.cli`` writes in ``reproduction_score``.
+#: The trajectory rate is published as ``semantic``; no producer writes a ``trajectory`` key, so
+#: reading for one reported ``0.0`` through this facade for every real run, including the committed
+#: ``reproduction/v2/comparison.json`` whose ``semantic`` is ``1.0``.
+REPRODUCTION_DIMENSION_KEYS: dict[str, str] = {
+    "overall": "overall",
+    "execution": "execution",
+    "trajectory": "semantic",
+}
 
 
 class Reproduction:
@@ -616,7 +631,8 @@ class Reproduction:
             ``ReproductionResult``.
 
         Errors:
-            Never raises for missing ``comparison.json`` (returns empty scores).
+            Never raises for missing ``comparison.json``: ``error`` says which scores were not read,
+            so a defaulted ``0.0`` is never mistaken for a measured one.
 
         Example:
             >>> Reproduction().run()  # doctest: +SKIP
@@ -627,27 +643,46 @@ class Reproduction:
         from dsa_evaluation.cli import _reproduce_benchmark
 
         # _reproduce_benchmark is internal; fallback to runner if missing
+        harness_error: str | None = None
         try:
             _reproduce_benchmark(Path(catalog), Path(datasets), Path(out))
-        except Exception:
+        except Exception as exc:
+            harness_error = f"{type(exc).__name__}: {exc}"
             from dsa_evaluation.runner import run_benchmark as _rb
 
             _rb(Path(catalog), Path(datasets), Path(out))
+        import json
+
+        comparison_path = Path(out) / "comparison.json"
+        why_harness = f"; harness also failed: {harness_error}" if harness_error else ""
         # Try to read comparison
         try:
-            import json
-
-            comp = json.loads((Path(out) / "comparison.json").read_text(encoding="utf-8"))
-            rs = comp.get("reproduction_score", {})
+            comp = json.loads(comparison_path.read_text(encoding="utf-8"))
+            rs = comp.get("reproduction_score")
+            if not isinstance(rs, dict):
+                return ReproductionResult(
+                    out_dir=str(out),
+                    error=f"{comparison_path} holds no 'reproduction_score' object{why_harness}",
+                )
+            absent = sorted(set(REPRODUCTION_DIMENSION_KEYS.values()) - rs.keys())
+            if absent:
+                return ReproductionResult(
+                    out_dir=str(out),
+                    error=(
+                        f"{comparison_path} 'reproduction_score' holds no {', '.join(absent)}"
+                        f"{why_harness}"
+                    ),
+                )
             return ReproductionResult(
-                overall=float(rs.get("overall", 0)),
-                execution=float(rs.get("execution", 0)),
-                trajectory=float(rs.get("trajectory", 0)),
+                overall=float(rs["overall"]),
+                execution=float(rs["execution"]),
+                trajectory=float(rs["semantic"]),
                 by_level=rs.get("by_level", {}),
                 out_dir=str(out),
             )
-        except Exception:
-            return ReproductionResult(out_dir=str(out))
+        except Exception as exc:
+            detail = f"could not read {comparison_path}: {type(exc).__name__}: {exc}"
+            return ReproductionResult(out_dir=str(out), error=f"{detail}{why_harness}")
 
 
 @dataclass

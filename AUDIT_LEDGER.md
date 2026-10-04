@@ -5301,3 +5301,85 @@ So the 0.8 → 1.0 claim in §99 holds on the runner, not only on the laptop tha
 
 
 
+## §101 — the reproducibility facade published a zero the artifact never measured
+
+**Came for one defect, found a worse one by reading the producer.** I came to fix the `error` surface
+of `Reproduction.run()` (`src/data_science_agent/sdk.py`): every field defaults to `0.0`, every failure
+path returned the defaults, so "the reproduction scored zero" and "there was no `comparison.json` to
+read" were the same object to a caller. Before writing the test I read what actually writes the file --
+`packages/evaluation/src/dsa_evaluation/cli.py:134` -- and found the consumer was reading a key that
+does not exist anywhere in the codebase.
+
+**Defect A (as filed): no-data disguised as data.** `float(rs.get("overall", 0))` and the blanket
+`except Exception: return ReproductionResult(out_dir=str(out))` meant three distinct worlds -- missing
+file, unparseable JSON, an artifact with no `reproduction_score` -- all reported `overall == 0.0` with
+no signal. The class documents that `run` never raises, so raising was not available; the fix is
+additive.
+
+**Defect B (found here, the one that matters): `trajectory` was always `0.0`.** The facade read
+`rs.get("trajectory", 0)`. The producer writes the trajectory rate under `"semantic"`
+(`"semantic": trajectory_rate`, `cli.py:139`) and no shipped code writes a `trajectory` key -- `grep`
+for it returns only the consumer itself. Measured on the repo's own committed artifact:
+
+| source | value |
+| --- | --- |
+| `reproduction/v2/comparison.json` `reproduction_score` | `execution 1.0, numerical 1.0, statistical 1.0, evidence 1.0, semantic 1.0, overall 1.0` |
+| `Reproduction().run()` reported, same file | `overall=1.0, execution=1.0, `**`trajectory=0.0`** |
+
+So the public SDK reported a trajectory match rate of zero against the artifact this repository ships
+as its reproducibility evidence, on every run, forever. `docs/reproducibility.md:23` already documented
+the key set correctly (`{execution, numerical, statistical, evidence, semantic, overall}`) -- the docs
+were right and the code was wrong, and nothing reconciled them.
+
+**Fix.** `error: str | None = None` appended to the Stable dataclass (positional construction still
+works; `tests/sdk/test_sdk_contract.py:185` untouched), and a named map at the one place the two sides
+meet:
+
+```python
+REPRODUCTION_DIMENSION_KEYS: dict[str, str] = {
+    "overall": "overall", "execution": "execution", "trajectory": "semantic",
+}
+```
+
+`run()` now reports a reason whenever a published number was defaulted rather than read: no
+`comparison.json`, no `reproduction_score` object, `reproduction_score` missing one of the dimensions
+it publishes (the absent keys are named), or a value that will not convert -- and in every case it
+appends the harness's own failure text when the fallback also failed, which the old code discarded
+before reaching the read. A measured `0.0` keeps `error is None`.
+
+**Handler-neutral by construction.** The two `except Exception:` clauses became `except Exception as
+exc:`; no handler was added or removed. Measured after the change: `debt.exceptHandlers` **185**
+(ceiling 185, zero slack) and `debt.swallowedExceptionSites` **8** (ceiling 8), both unchanged.
+
+**Red/green and the controls.** 10 tests in `tests/sdk/test_reproduction_result_error_surface.py`, all
+10 red first (`AttributeError: 'ReproductionResult' object has no attribute 'error'`, plus the two
+value assertions). Two mutations of the finished code, each restored by hash:
+
+1. `rs["semantic"]` → `rs.get("trajectory", 0)` (the original defect): exactly the two key-mapping
+   tests went red -- `test_the_trajectory_rate_is_read_from_the_key_the_harness_writes`,
+   `test_the_committed_artifact_and_the_facade_agree`.
+2. the no-data `return ... error=f"{detail}{why_harness}"` → `return ReproductionResult(out_dir=...)`:
+   exactly the two error-surface tests went red.
+
+`cp /tmp/sdk_101_before.py` restored both times and `md5 -q` matched
+(`a2607dd555f5dc08c61b1ab17e9cd189`) before and after, so no mutation survived.
+
+**My own fixture was wrong first, which is the reason the key bug was findable.** The first draft of
+these tests wrote `{"reproduction_score": {"overall": 0.0, "execution": 0.0, "trajectory": 0.0}}` --
+transcribed from the consumer's field names, not from the producer. Had I kept it, the suite would have
+gone green over a fictional artifact and Defect B would still be live. The fixtures now use
+`PRODUCER_KEYS` copied from `cli.py`, and `test_the_committed_artifact_and_the_facade_agree` reads the
+real shipped `reproduction/v2/comparison.json` through the facade, so a rename on either side fails
+loudly instead of silently zeroing a dimension. A strict-dimension test also caught the implementation
+mid-flight: `test_unparseable_scores_are_reported_not_zeroed` originally supplied only a bad `overall`,
+and the new absent-key rule correctly fired first -- the fixture was narrowed, not the rule.
+
+**Filed, not built.** The dataclass docstring still says "6-dim" while carrying three scalars:
+`numerical`, `statistical` and `evidence` are written by the producer and dropped by the facade. Adding
+them is additive but changes what the Stable type publishes and how `repr` reads, so it is a contract
+decision (**D-L3-14**), not this section's to take.
+
+**State.** Gates: ruff `0` · `ruff format --check` `0` (225 files) · mypy `0` (113) · ratchet `OK` ·
+claims `0` (14 files scanned, 51 historical) · mkdocs `--strict` `0` · full `pytest -q --cov` `0` ·
+`testFunctions` 571 → **581**. `sdk.py` is top-level, not vendored, so no `sync_vendor --file` repair
+was due; the three foreign dirty files stay untouched.
