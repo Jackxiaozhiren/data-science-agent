@@ -325,11 +325,25 @@ def check_maturity() -> list[str]:
     return issues
 
 
+#: Finding prefixes that fail the run. Everything else is printed and exits 0, so a
+#: rule added here is the only way to make it a gate rather than a notice (§96).
+HIGH_SEVERITY_PREFIXES = (
+    "version_consistency",
+    "currency_claims",
+    "measurement_claims",
+    "old_package_pip",
+    "old_repo",
+    "unreadable_file",
+)
+
+
 def scan_file(path: Path) -> list[tuple[str, str, str]]:
     try:
         text = path.read_text(encoding="utf-8")
-    except Exception:
-        return []
+    except OSError as exc:
+        # D-L3-08: this returned [] before, so a scanned file that could not be read
+        # subtracted itself from the gate's scope while the gate still reported clean.
+        return [("unreadable_file", f"{type(exc).__name__}: {exc}", str(path))]
     findings: list[tuple[str, str, str]] = []
     # Check each pattern but allow historical versioned context
     for name, pat in PATTERNS.items():
@@ -477,21 +491,9 @@ def main(argv: list[str] | None = None) -> int:
     for kind, match, line in all_findings:
         print(f"  [{kind}] {match!r} — {line[:120]}")
 
-    # Fail if any high severity (version_consistency, old_package_pip, stale_test_counts without versioned annotation)
-    high = [
-        f
-        for f in all_findings
-        if f[0].startswith(
-            (
-                "version_consistency",
-                "currency_claims",
-                "measurement_claims",
-                "old_package_pip",
-                "old_repo",
-            )
-        )
-    ]
-    # stale_test_counts now versioned, so not high if annotated
+    # Fail if any high severity (see HIGH_SEVERITY_PREFIXES; stale_test_counts is now
+    # versioned, so it is not high when annotated)
+    high = [f for f in all_findings if f[0].startswith(HIGH_SEVERITY_PREFIXES)]
     if high:
         print(f"\n✗ {len(high)} high-severity issues — requires fix (see §18, §26)")
         return 1

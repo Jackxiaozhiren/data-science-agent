@@ -4948,6 +4948,75 @@ Gates on this tree: ruff `0` · `ruff format --check` `0` (217 files) · mypy `0
 leaving the concurrent session's single drifted file untouched. Nothing pushed since `4298344`; §94 and
 §95 are local pending the next authorization.
 
+## 96. The sentinel tranche censused: it cannot be gated syntactically, and two of its sites were actively unsafe
+
+**§95 closed with "the queue that remains is 38 single-`return` sentinels, and no key measures them --
+a key must exist before that tranche can be worked." The census says that was the wrong plan.** Enumerated
+by AST over the same shipped set, the 38 split by what they return:
+
+| returned value | count |
+| --- | --- |
+| `None` | 11 |
+| `[]` | 3 |
+| `{'type': 'object', 'properties': {}}` | 2 |
+| `False` | 2 |
+| `(None, str(e))` / `(None, reason)` / `(False, reason)` | 4 |
+| a dict carrying `isError` / `status: error` / `ok: False` / error text | 8 |
+| other single returns (`{}`, `default`, `result`, `[]` of errors, `'Unknown'`, `ReproductionResult(...)`) | 8 |
+
+Fourteen of them **put the failure inside the returned value**, which is exactly what §90-§95 kept
+adding. A syntactic ceiling over this set would count a correct error-carrying return and a fabricated
+empty answer as the same unit -- the identical mistake §92 just took three sections to undo. So no key was
+seeded; the class was triaged by what its consumers do with the sentinel, and the two cases where the
+sentinel is unsafe got fixed.
+
+**D-L3-07 -- a configured money ceiling disabled itself by a typo.** `_spend_cap_usd()` was
+`try: float(env) / except ValueError: return None`, and both guards at `providers.py:159` and `:290` read
+`if cap is not None and self.spent_usd >= cap`. So `DSA_MAX_COST_USD="5 USD"`, `"two"`, or `-1` produced
+`cap = None` and the provider kept making paid calls with **no ceiling at all**. The published contract
+in `docs/real-model-evaluation.md:141` says the guard refuses further calls "(loud error, no silent stop)"
+-- the old behaviour was the silent stop that document had already promised could not happen. Now: unset
+or blank means no cap (unchanged), a number means a cap (unchanged), an unparseable or negative value
+raises `ValueError` naming the variable. Before writing the raise I checked the thing §94's lesson
+demands: an AST walk over `providers.py` confirms both call sites are **not** inside any `try` handler,
+so nothing upstream can absorb it -- and that guard test itself failed first with
+`AttributeError: 'Load' object has no attribute 'end_lineno'`, because I had walked the handler for
+`end_lineno` instead of reading it off the handler. It errored loudly rather than passing vacuously,
+which is the only reason it was caught. Of the six tests, three are labelled green-on-arrival pins of the
+behaviour that had to survive (unset, blank, a valid number), two are the new refusals, one is the
+structural pin.
+
+**D-L3-08 -- the stale-claims gate subtracted its own scope.** `scan_file()` ended in
+`except Exception: return []`, so any scanned document that raised on read contributed nothing and the run
+still printed `✓ No stale claims detected`. Worse in shape than in size: the severity decision was an
+inline tuple inside `main()`, so a finding whose prefix was not in it would be *printed and exit 0*. An
+unreadable scanned file is now a finding with kind `unreadable_file` carrying the OS error, and the tuple
+moved out to `HIGH_SEVERITY_PREFIXES` -- a constant, so it is testable -- with `unreadable_file` added to
+it. The extraction is guarded from both sides: one test asserts the new member, another asserts the five
+rules that were already there survived the move. `check_public_claims.py --require-released-tags` still
+exits **0** on the real tree (14 scanned, 51 skipped as historical), so the gate did not become noisy.
+
+**Deferred, with the reason.** `metadata.dataset_hash` returns `None` on any failure, but the notebook
+header prints `dataset_hash:None` for a human to see, so the loss is visible rather than hidden -- a
+weaker case than §90's manifest field, where nothing rendered it. `adapter._tool_input_schema` and
+`_tool_output_schema` publish `{'type': 'object', 'properties': {}}` on failure, which tells an MCP
+client the tool accepts nothing -- a real wrong answer, but the fix is a schema error surface, not a
+one-liner. `graph._get_columns`, `planner._numeric_columns` and `planner._has_time_data` return `[]`/
+`False`, letting the agent reason from a fabricated "no columns / no numeric / no time data" world;
+that is the right next target but it touches the planner's decisions, so it needs its own loop.
+`sdk.py:649` returns a success-shaped `ReproductionResult` after a failure. The three
+`except SystemExit: return None` sites in `apps/jupyter/magic.py` are probably deliberate (IPython
+paths raise it) and were not read closely enough to claim either way.
+
+**Numbers.** `debt.swallowedExceptionSites` **8** and `debt.exceptHandlers` **185** -- both unchanged,
+the third consecutive section that added no handler. `testFunctions` 541 → **551**. Gates on this tree:
+ruff `0` · `ruff format --check` `0` (219 files) · mypy `0` (112) · `audit_facts --check` `OK` ·
+claims `0` on the real tree · full `pytest -q --cov` `0` at **81.24%** · new tests 10 passed, and
+`ruff check --isolated --select E,F,I,B,UP,SIM,S` on both new test files reports clean, which is the only
+way to see through the `tests/**` ignore list (§85). Vendor mirror repaired by `--file` for
+`dsa_llm/providers.py`; the concurrent session's `external_validation.py` drift remains untouched.
+
+
 
 
 

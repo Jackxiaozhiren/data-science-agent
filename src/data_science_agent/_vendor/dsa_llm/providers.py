@@ -64,12 +64,30 @@ def _usd_for_usage(usage: dict[str, Any]) -> float | None:
     return total_in / 1_000_000 * in_rate + total_out / 1_000_000 * out_rate
 
 
+_SPEND_CAP_ENV = "DSA_MAX_COST_USD"
+
+
 def _spend_cap_usd() -> float | None:
-    try:
-        cap = float(os.environ.get("DSA_MAX_COST_USD", ""))
-    except ValueError:
+    """The configured spend ceiling, or None only when no ceiling was asked for.
+
+    D-L3-07: this used to end in `except ValueError: return None`, and both cap guards test
+    `if cap is not None`, so `DSA_MAX_COST_USD="5 USD"` or a negative value was indistinguishable
+    from leaving it unset -- a configured money limit silently removed itself, and the run kept
+    making paid calls. An unparseable or negative ceiling is now a refusal, not an absence.
+    """
+    raw = os.environ.get("DSA_MAX_COST_USD", "")
+    if not raw.strip():
         return None
-    return cap if cap >= 0 else None
+    try:
+        cap = float(raw)
+    except ValueError:
+        raise ValueError(
+            f"{_SPEND_CAP_ENV}={raw!r} is not a number; refusing to run uncapped. "
+            "Set it to a USD amount like 4.50 or unset it to have no ceiling."
+        ) from None
+    if cap < 0:
+        raise ValueError(f"{_SPEND_CAP_ENV}={raw!r} is negative; a spend ceiling must be >= 0.")
+    return cap
 
 
 def _extract_output_text(payload: dict[str, Any]) -> str:

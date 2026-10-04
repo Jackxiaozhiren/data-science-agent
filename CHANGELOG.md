@@ -37,6 +37,18 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- `DSA_MAX_COST_USD` is now enforced or refused, never quietly absent. A malformed
+  value (`5 USD`, `two`) or a negative one used to parse-fail into `None`, and both
+  provider guards read `if cap is not None` — so a configured spend ceiling disabled
+  itself and paid calls continued uncapped, contradicting `docs/real-model-evaluation.md`
+  ("loud error, no silent stop"). Unset or blank still means no cap; a number still
+  means that cap; anything else raises `ValueError` naming the variable, from outside
+  any `try` that could absorb it.
+- `scripts/check_public_claims.py` can no longer report "clean" about a file it could
+  not read. `scan_file()` used to return `[]` on any read error, silently shrinking the
+  gate's own scope; an unreadable scanned document is now an `unreadable_file` finding,
+  and the severity list moved from an inline tuple into `HIGH_SEVERITY_PREFIXES` so that
+  membership in it is testable rather than positional.
 - The evaluator_v2 `ci_correctness` dimension no longer reports a wrong answer about a
   malformed confidence interval. `statistical_eval` dropped any CI pair that would not
   parse, so a run that emitted a garbage CI was scored `no CI emitted` (absence), and —
