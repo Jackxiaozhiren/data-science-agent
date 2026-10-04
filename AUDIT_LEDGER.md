@@ -5530,7 +5530,17 @@ explicitly a transcription guarded by the parsed pin above instead of an asserti
 module docstring says where the `1.0` numbers actually came from.
 
 **State.** Same gates as §102 plus: `ruff check --isolated tests/sdk/test_reproduction_result_error_surface.py`
-`0`, `tests/sdk` 41/41, `ruff format --check` 228 files clean. Verified on a `git archive HEAD` export
-before pushing (recorded in the commit message, not assumed). Six pre-existing `--isolated` findings
-remain in `tests/sdk/test_cli_contract.py` and `tests/sdk/test_sdk_contract.py` -- the known `tests/**`
-ignore blind spot, untouched here because they are not this section's files and are already queued.
+`0`, `tests/sdk` 41/41, `ruff format --check` 228 files clean. **The HEAD-export check this section
+mandates was run:** `git archive HEAD | tar -x` into a directory that has no `reproduction/`, and inside
+it `scripts/find_orphan_reads.py --check` exits **0** on the 14 declared keys -- so §102's list was not
+quietly shaped by another session's uncommitted `external_validation.py` -- and
+`test_reproduction_result_error_surface.py + test_sdk_contract.py +
+tests/contract/test_reproducibility_level_basis.py + tests/test_orphan_read_gate.py` reported
+**47 passed, exit 0**. One *other* test failed in that export,
+`tests/sdk/test_cli_contract.py::test_cli_benchmark_json`, which hits its own 30 s limit because the
+export has no `.venv` and that test shells out to `uv run dsa`; it is an artifact of the export harness,
+not of the tree, and CI -- which runs `uv sync` first -- is the authoritative surface for it.
+`sync_vendor --file` still reports exactly one drifting file, `dsa_evaluation/external_validation.py`,
+which is the concurrent session's and stays untouched. Six pre-existing `--isolated` findings remain in
+`tests/sdk/test_cli_contract.py` and `tests/sdk/test_sdk_contract.py` -- the known `tests/**` ignore
+blind spot, untouched here because they are not this section's files and are already queued.
