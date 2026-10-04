@@ -8,13 +8,15 @@ Two defects, one root -- the facade read keys it assumed rather than keys the ha
    the fix is not to raise: ``error`` names the reason, the Stable constructor keeps working.
 2. the harness writes the trajectory rate under ``semantic`` (``dsa_evaluation/cli.py``
    ``reproduction_score``), and no producer anywhere writes a ``trajectory`` key, so
-   ``ReproductionResult.trajectory`` was ``0.0`` for every real run. The committed
-   ``reproduction/v2/comparison.json`` reports ``semantic: 1.0`` while the facade published
-   ``trajectory=0.0``.
+   ``ReproductionResult.trajectory`` was ``0.0`` for every real run. A local reproduction run into the
+   gitignored ``reproduction/v2/`` directory scored every dimension ``1.0`` while the facade reported
+   ``trajectory=0.0``; the defect is proven from the producer's source, and the pin below parses that
+   source rather than any run artifact.
 """
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import json
 from pathlib import Path
@@ -27,7 +29,9 @@ from data_science_agent.sdk import (
     ReproductionResult,
 )
 
-#: The key set ``dsa_evaluation.cli`` actually writes, transcribed from the producer.
+#: The key set ``dsa_evaluation.cli`` writes, transcribed from the producer. Kept for the fixture
+#: bodies; ``test_the_sdk_reads_only_keys_the_producer_actually_writes`` guards this transcription
+#: against drift by parsing the source.
 PRODUCER_KEYS = ("execution", "numerical", "statistical", "evidence", "semantic", "overall")
 
 
@@ -118,18 +122,39 @@ def test_the_trajectory_rate_is_read_from_the_key_the_harness_writes(
     )
 
 
-def test_the_committed_artifact_and_the_facade_agree(silent_harness: None) -> None:
-    """End-to-end drift pin: the shipped ``reproduction/v2`` artifact, read through the facade."""
-    artifact = Path("reproduction/v2/comparison.json")
-    rs = json.loads(artifact.read_text(encoding="utf-8"))["reproduction_score"]
+def _producer_score_keys() -> set[str]:
+    """The `reproduction_score` key set, read off the source that writes it.
 
-    res = Reproduction().run(out=artifact.parent)
+    Not transcribed, and not read from a run artifact: `reproduction/` is gitignored (``.gitignore``
+    line 34), so the first draft of this pin passed on the laptop that had run the harness and failed
+    on a clean checkout (CI run 37174811493). Parsing the producer works everywhere and cannot rot.
+    """
+    cli_path = Path(__file__).resolve().parents[2] / "packages/evaluation/src/dsa_evaluation/cli.py"
+    tree = ast.parse(cli_path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)):
+            continue
+        assigned = any(
+            isinstance(target, ast.Name) and target.id == "reproduction_score"
+            for target in node.targets
+        )
+        if not assigned:
+            continue
+        return {
+            key.value
+            for key in node.value.keys
+            if isinstance(key, ast.Constant) and isinstance(key.value, str)
+        }
+    raise AssertionError("no `reproduction_score = {...}` literal found in dsa_evaluation/cli.py")
 
-    assert res.overall == pytest.approx(rs["overall"])
-    assert res.execution == pytest.approx(rs["execution"])
-    assert res.trajectory == pytest.approx(rs["semantic"])
-    assert res.by_level == rs["by_level"]
-    assert res.error is None
+
+def test_the_sdk_reads_only_keys_the_producer_actually_writes() -> None:
+    """The §101 class, pinned: a renamed producer key must fail loudly, not read as a measured zero."""
+    assert set(REPRODUCTION_DIMENSION_KEYS.values()) <= _producer_score_keys()
+    assert "semantic" in _producer_score_keys()
+    assert "trajectory" not in _producer_score_keys(), (
+        "if the harness ever writes a `trajectory` key, the facade's mapping must be revisited"
+    )
 
 
 def test_a_missing_comparison_is_reported_as_missing_not_as_zero(

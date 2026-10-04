@@ -5483,3 +5483,54 @@ and the coverage footer are the only self-reported signals there, which is why t
 the collector rather than from parsing dots. Vendored mirrors repaired with `sync_vendor --file` for the
 two shipped files I changed; `--check` still reports exactly one drifting file,
 `dsa_evaluation/external_validation.py`, which is the concurrent session's and stays untouched.
+## 103. The runner disproved my own evidence: §101's artifact pin read a gitignored file
+
+**CI run 37174811493 (`ci` job, step `Run uv run pytest -q --cov --cov-report=term-missing`) failed on
+the first push of §101**, in exactly one test:
+
+> `FAILED tests/sdk/test_reproduction_result_error_surface.py::test_the_committed_artifact_and_the_facade_agree`
+> `E FileNotFoundError: [Errno 2] No such file or directory: 'reproduction/v2/comparison.json'`
+
+Every static gate passed on that run. The red is mine, and it is a premise error, not a flake:
+`git check-ignore -v` returns `.gitignore:34:reproduction/`, and `git ls-files reproduction/` lists
+**0 files**. The directory is a local run product, so the "end-to-end drift pin against the shipped
+artifact" was a test that only passes on the machine that once ran the harness.
+
+**What stands and what is corrected.** The §101 defect does not depend on that file: `sdk.py` read
+`reproduction_score["trajectory"]` (a key no shipped producer writes) while `cli.py:139` writes the
+trajectory rate as `semantic` -- both tracked sources, both re-read here. What was wrong is §101's
+wording, and I leave the original text in place rather than editing history:
+
+- *"the repo's own committed artifact"* / *"against the artifact this repository ships as its
+  reproducibility evidence"* -- **false.** Nothing under `reproduction/` is committed. The measured
+  table (every dimension `1.0`, facade `trajectory=0.0`) is real but describes an untracked local run,
+  so it is evidence about my laptop, not about the published repository.
+- The repository therefore ships **no** reproduction artifact at all; `docs/reproducibility.md` describes
+  the format of a file that is generated on demand. §100 hit the neighbour of this same hazard
+  (`raw_runs.json` was listed in a README as if it were committed) and annotated it `NOT committed`;
+  the fix here is the same annotation applied to my own claim.
+
+**Replacement pin, and why it is stronger than the file it replaced.** The test now parses the producer:
+`_producer_score_keys()` walks `packages/evaluation/src/dsa_evaluation/cli.py` for the
+`reproduction_score = {...}` literal and returns its keys, and the test asserts the facade's mapping is a
+subset of them, that `semantic` is among them, and that `trajectory` is **not** -- so if the harness ever
+starts writing a `trajectory` key, the test fails and asks for the mapping to be revisited. That works on
+any checkout, and it pins the same drift the artifact was supposed to prove (§93's rule again: enumerate
+from the AST, do not remember or transcribe).
+
+**The process lesson, which is the part worth keeping.** My standing habit is to re-run a *locally red*
+gate on a `git archive HEAD` export before blaming the repo. This is the mirror case: a gate that is
+locally **green** because it read an untracked file. So the rule generalises -- any test that touches a
+path resolved from repository *data* (not code) must be run against a HEAD export before pushing, green
+or red. That check is now the gate before this section's push, and §102's new orphan gate is held to it
+too, because its exemption list was measured on a tree that contains another session's uncommitted edits.
+
+**Also corrected here, from §101's own suite:** the fixture set `PRODUCER_KEYS` stays, but it is now
+explicitly a transcription guarded by the parsed pin above instead of an assertion of fact, and the
+module docstring says where the `1.0` numbers actually came from.
+
+**State.** Same gates as §102 plus: `ruff check --isolated tests/sdk/test_reproduction_result_error_surface.py`
+`0`, `tests/sdk` 41/41, `ruff format --check` 228 files clean. Verified on a `git archive HEAD` export
+before pushing (recorded in the commit message, not assumed). Six pre-existing `--isolated` findings
+remain in `tests/sdk/test_cli_contract.py` and `tests/sdk/test_sdk_contract.py` -- the known `tests/**`
+ignore blind spot, untouched here because they are not this section's files and are already queued.

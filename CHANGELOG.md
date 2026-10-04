@@ -95,8 +95,8 @@ shadowing + missing greenlet concurrency).
   (`AUDIT_LEDGER.md` §101). Two defects, one root -- the facade read keys it assumed rather than
   keys the harness writes. First, `trajectory` was always `0.0`: it read `reproduction_score`'s
   `trajectory` key, which no producer writes, while the harness publishes the trajectory rate as
-  `semantic`. On this repository's own committed `reproduction/v2/comparison.json` every dimension
-  is `1.0`, and the public SDK reported `trajectory=0.0` -- on every run. Second, a missing or
+  `semantic`. On a reproduction run into the gitignored `reproduction/v2/` directory every dimension
+  is `1.0`, while the public SDK reported `trajectory=0.0` -- on every run. Second, a missing or
   unparseable `comparison.json`, one with no `reproduction_score`, and one missing a dimension the
   facade publishes all returned the same `0.0` defaults with no signal. The map between the two
   sides is now the named constant `REPRODUCTION_DIMENSION_KEYS`, absent dimensions are reported by
@@ -155,6 +155,13 @@ shadowing + missing greenlet concurrency).
 
 ### Corrections to published numbers (no code change)
 
+- §101 described `reproduction/v2/comparison.json` as "this repository's own committed artifact". It is
+  not committed: `.gitignore` line 34 ignores `reproduction/` and `git ls-files reproduction/` returns
+  nothing, so a drift pin built on that file passed locally and failed on the first CI run of §101
+  (`FileNotFoundError`, run 37174811493). The §101 defect itself stands -- `sdk.py` read a
+  `reproduction_score.trajectory` key that `dsa_evaluation/cli.py` never writes -- but the evidence is
+  now the producer's parsed source, not a run artifact (`AUDIT_LEDGER.md` §103). The repository ships
+  no reproduction artifact; that directory is generated on demand.
 - `benchmarks/baseline/README.md` listed `raw_runs.json` in its directory tree as one of the
   committed artifacts. It was never committed -- it is what a reproduce run writes into its own
   `--out` directory -- so the listing is now annotated and pinned by
