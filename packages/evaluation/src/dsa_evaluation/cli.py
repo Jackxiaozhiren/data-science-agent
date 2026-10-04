@@ -56,6 +56,20 @@ def _datasets_sha256(datasets: Path) -> tuple[str | None, str]:
         return None, f"{type(exc).__name__}: {exc}"
 
 
+def _comparison_record(
+    state: dict[str, Any], dataset_sha256: str | None, environment: dict[str, str] | None
+) -> dict[str, Any]:
+    """The record `compare_runs` was written for: the analysis state plus that run's own provenance.
+
+    §104. `build_experiment_json` writes `dataset_sha256` and `environment`, and `compare_runs` decides
+    L2 and L3 from them, but the harness used to pass bare `AnalysisState` dumps -- so L2 fell back to
+    `dataset_id` equality and L3 to a lenient pass, and a dataset edited between the two runs still
+    reported same-data. Absent provenance stays absent: the comparator then says which weaker basis it
+    used instead of implying a comparison that did not happen.
+    """
+    return dict(state, dataset_sha256=dataset_sha256, environment=environment)
+
+
 def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
     from dsa_evidence.reproducibility import compare_runs
 
@@ -99,7 +113,12 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
             )
         )
         score = compare_runs(
-            rr1 if isinstance(rr1, dict) else {}, rr2 if isinstance(rr2, dict) else {}
+            _comparison_record(
+                rr1 if isinstance(rr1, dict) else {}, a.get("dataset_sha256"), a.get("environment")
+            ),
+            _comparison_record(
+                rr2 if isinstance(rr2, dict) else {}, b.get("dataset_sha256"), b.get("environment")
+            ),
         )
         # Derive 6-dim gate values for this task
         same_exec = ok1 == ok2

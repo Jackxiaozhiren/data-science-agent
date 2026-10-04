@@ -113,7 +113,14 @@ shadowing + missing greenlet concurrency).
   `L5_basis`, `dataset_sha256_match` reports `None` unless a hash pair was actually compared, and the
   method string describes the conditional. No level's value moved: a characterisation test asserts the
   booleans against the pre-fix formulas across 8 record-shape pairs. Making L2/L3 real checks by
-  feeding the harness its designed record is filed as D-L3-15.
+  feeding the harness its designed record followed in §104 (that record is untracked output, so no
+  published number was at stake -- the release-decision framing here was wrong and is corrected).
+- The reproduction harness now carries that record (§104, closing D-L3-15). `run_benchmark` captures the
+  dataset's `sha256` and the run's `environment` **before** each task and stores both in its `raw_runs`
+  record; `dsa_evaluation.cli._comparison_record` merges them into what `compare_runs` receives. So L2 is
+  decided by content, not by identifier: two runs of the same `dataset_id` over different bytes now
+  report `L2_same_data: False`, where before §104 they reported `True`. A run with no hash still
+  reports its weaker basis instead of implying a comparison. Additive to `raw_runs.json`; handler-neutral.
 - New gate: `scripts/find_orphan_reads.py` (--check wired into CI and both contributing guides) reports
   every `record.get("key", default)` in shipped code whose key nothing in the repository writes -- the
   shape §101's `trajectory` bug hid behind. 14 such reads remain, each declared in

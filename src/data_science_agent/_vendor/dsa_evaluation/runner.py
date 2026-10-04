@@ -3,10 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import platform
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
+from dsa_datasets.hash_utils import sha256_file
 from dsa_evaluation.catalog import BenchmarkTask, Catalog
 from dsa_evaluation.metrics import (
     EvaluationResult,
@@ -182,6 +185,20 @@ def _attach_statistical(
         return ev
 
 
+def dataset_provenance(dataset_path: Path) -> tuple[str | None, dict[str, str]]:
+    """The bytes a run is about to read, and the interpreter it runs on.
+
+    §104: `compare_runs` decides L2 from ``dataset_sha256`` and L3 from ``environment``, so the
+    reproduction harness has to record both per run -- otherwise the comparison silently degrades to
+    ``dataset_id`` equality and cannot see a dataset edited between the two runs. Hashed before the
+    run so the value describes what the agent is about to read. An absent dataset yields ``None``
+    rather than an exception: the run already reports that as its own error, and L2 names the weaker
+    basis it fell back to.
+    """
+    sha = sha256_file(dataset_path) if dataset_path.exists() else None
+    return sha, {"python_version": sys.version, "platform": platform.platform()}
+
+
 def run_benchmark(
     catalog_path: Path,
     datasets_dir: Path,
@@ -205,6 +222,7 @@ def run_benchmark(
 
     async def _run_all() -> None:
         for task in tasks:
+            ds_sha256, environment = dataset_provenance(datasets_dir / task.dataset)
             run_result, elapsed, err = await _run_one(task, datasets_dir)
             if err and run_result is None:
                 ev = evaluate_task(task, None, elapsed_ms=elapsed)
@@ -217,7 +235,14 @@ def run_benchmark(
             ev = _attach_statistical(ev, task, run_result, elapsed_ms=elapsed)
             results.append(ev)
             raw_runs.append(
-                {"task_id": task.id, "elapsed_ms": elapsed, "run_result": run_result, "error": err}
+                {
+                    "task_id": task.id,
+                    "elapsed_ms": elapsed,
+                    "run_result": run_result,
+                    "error": err,
+                    "dataset_sha256": ds_sha256,
+                    "environment": environment,
+                }
             )
 
     asyncio.run(_run_all())

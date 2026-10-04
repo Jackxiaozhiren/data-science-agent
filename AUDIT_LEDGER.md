@@ -5544,3 +5544,57 @@ not of the tree, and CI -- which runs `uv sync` first -- is the authoritative su
 which is the concurrent session's and stays untouched. Six pre-existing `--isolated` findings remain in
 `tests/sdk/test_cli_contract.py` and `tests/sdk/test_sdk_contract.py` -- the known `tests/**` ignore
 blind spot, untouched here because they are not this section's files and are already queued.
+## 104. D-L3-15 closed: the harness now hands the comparator the record it was written for
+
+**§102 filed this as a decision and the filing rested on a false premise, so it went back on the table
+immediately.** §102 said threading the per-run provenance into the comparison "is a change in what the
+published reproduction score means -- the same class of release decision as §99's α re-freeze". §103 then
+proved `reproduction/` is gitignored: the reproduction artifact is *never* published, so no frozen number
+can move. The change is ordinary work, and it was the last unclaimed item in the L3 wrong-value tranche.
+
+**What was missing was never the data, only the plumbing.** `graph.py` computes the dataset hash at run
+time and writes it, with `sys.version`/`platform`, into `experiment.json` (`repro.py:51,57`) -- the exact
+record `compare_runs` reads. The benchmark harness just compared `AnalysisState` dumps instead.
+
+**Fix, three moves, all handler-neutral.**
+- `dsa_evaluation.runner.dataset_provenance(path)` returns `(sha256_file(path) | None, env)`. It is
+  captured *before* the run so the hash describes the bytes the agent is about to read, and it checks
+  `path.exists()` instead of wrapping in `try` -- an absent dataset is a fact about the run, not an
+  exception to swallow, and it keeps `debt.exceptHandlers` where it is.
+- `run_benchmark`'s `raw_runs` record gains `dataset_sha256` and `environment` (additive; the other two
+  consumers, `reliability.py` and `verify_release.py`, read `run_result`/`len()` and are unaffected).
+- `dsa_evaluation.cli._comparison_record(state, sha, env)` merges them into the compared record, so
+  `compare_runs` sees a hash when one exists and, when it does not, still reports `dataset_id` as its
+  basis rather than implying a comparison.
+
+**The capability this buys, demonstrated:** two runs of the same `dataset_id` whose bytes differ now
+produce `L2_same_data: False`. Before §104 the same pair produced `True` -- §102's table row, turned from
+a documented limitation into a failing test.
+
+**Red/green and controls.** `tests/evals/test_reproduction_record_contract.py`, 7 tests, counted from the
+file rather than remembered, red on arrival as
+`ImportError: cannot import name 'dataset_provenance'`. Two mutations of the finished code:
+1. revert the call site to `compare_runs(rr1, rr2)` → exactly
+   `test_reproduction_now_decides_l2_from_a_hash` and
+   `test_a_dataset_edited_between_the_two_runs_now_fails_l2` went red (the latter regressing to `True`,
+   which is the defect reproduced on demand);
+2. delete the two keys from the runner's `raw_runs.append({...})` literal → exactly the AST producer pin
+   `test_the_runner_appends_provenance_into_every_raw_run` went red.
+Both files were restored from `/tmp` copies and `md5 -q` matched before and after. The first attempt at
+mutation 1 silently did nothing -- the anchor had moved when `ruff format` reflowed the call -- and the
+"7 passed" it printed was therefore meaningless; the assertion in the patch script caught it.
+
+**What is not measured here, stated.** No 50-task reproduction was re-run in this section. CI's benchmark
+step is `dsa --limit 5` on the `run` action, not `reproduce`, so the live `raw_runs.json` shape is covered
+by the unit + faked-harness integration tests above and by the producer pin, not by a runner-side
+reproduction. The score on unchanged bytes is 1.0 either way (both hashes equal, same interpreter), which
+the `test_reproduction_now_decides_l2_from_a_hash` case pins.
+
+**State.** Gates: ruff `0` · `ruff format --check` `0` (229 files) · mypy `0` (113) · ratchet `OK`
+(`exceptHandlers` **185**, `swallowedExceptionSites` **8**, `todoMarkers` **0** -- ceilings unmoved by a
+fix that touched two shipped modules) · orphan-reads `--check` `0` · `tests/evals` 63/63. Vendor mirrors
+for `dsa_evaluation/cli.py` and `dsa_evaluation/runner.py` repaired with `sync_vendor --file` and verified
+by `diff -q`; only the concurrent session's `external_validation.py` still drifts. Full `pytest -q --cov`
+exit **`0`** with total coverage **82.02%** and `testFunctions` 600 → **607** (7 new). **Runner: §103's push
+`fbed11c` produced run 37178661505, `completed success`** -- main is green with §101's producer-parsed
+pin and §102's new gate executing on the runner.
