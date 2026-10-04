@@ -5301,7 +5301,7 @@ So the 0.8 → 1.0 claim in §99 holds on the runner, not only on the laptop tha
 
 
 
-## §101 — the reproducibility facade published a zero the artifact never measured
+## 101. The reproducibility facade published a zero the artifact never measured
 
 **Came for one defect, found a worse one by reading the producer.** I came to fix the `error` surface
 of `Reproduction.run()` (`src/data_science_agent/sdk.py`): every field defaults to `0.0`, every failure
@@ -5383,3 +5383,103 @@ decision (**D-L3-14**), not this section's to take.
 claims `0` (14 files scanned, 51 historical) · mkdocs `--strict` `0` · full `pytest -q --cov` `0` ·
 `testFunctions` 571 → **581**. `sdk.py` is top-level, not vendored, so no `sync_vendor --file` repair
 was due; the three foreign dirty files stay untouched.
+## 102. Two levels of the reproducibility score reported that they had compared something
+
+**The method that found §101, made mechanical.** §101 was a hand-discovered consumer/producer key
+mismatch. So the first move here was to generalise it: AST every `record.get("key", default)` in shipped
+code (§101's exact shape -- a read that answers with a value instead of an error) against every key
+shipped code *writes*. Scratch reading: 154 defaulted reads, 13 keys with no writer.
+
+**Two of the three interesting ones were my probe's blindness, not defects, and I checked before
+filing.** `agent_messages` looked unwritten but `AnalysisState.agent_messages` is a pydantic field
+(`state.py:110`) that serialises into the record; `disabled` looked unwritten but
+`disable_plugin` writes it with `state.setdefault("disabled", {})[name] = True` (`registry.py:265`) --
+a method-call key the first writer did not recognise. Teaching the producer scan annotated class fields,
+`setdefault`/`pop`/`update` and subscript stores cut the orphan set to 14, every one of them an env var,
+an HTTP header, or a provider/npm/ollama response field. That triage is why the surviving list is
+credible rather than noisy.
+
+**The live finding: `compare_runs` was written for one record shape and its only caller passes
+another.** `dsa_evidence/repro.py:51,57` -- `build_experiment_json` -- writes `dataset_sha256` and
+`environment`, which is exactly what `compare_runs` reads. Its only shipped caller,
+`dsa_evaluation/cli.py:101`, passes `run_result`, i.e. `AnalysisState.model_dump()`, which has
+neither field. Measured, both shapes through the same comparator:
+
+| record fed to `compare_runs` | L2 says | how it really decided | L3 says | how it really decided |
+| --- | --- | --- | --- | --- |
+| `AnalysisState` dump (what the harness passes) | `same_data: True` | `dataset_id` string equality -- no hash existed to compare | `same_env: True` | the lenient `else True` -- no environment existed to compare |
+| `experiment.json` shape | `same_data: False` when the shas differ | a real sha comparison | `same_env: False` when `python_version` differs | a real comparison |
+
+The consequence stated plainly: **two runs over different bytes of the same dataset id report
+`L2_same_data: True`.** The one thing a reproducibility gate exists to catch was invisible, and
+`comparison.json`'s own published `method` string advertised "L2 data hash, L3 env". The comparator is
+not broken -- it detects a changed hash and a changed interpreter when fed the record it was designed
+for. `docs/reproducibility.md:23` documents the six-dim object correctly, as §101's docs did.
+
+**Fix, and what deliberately did not change.** Every level now names its basis in `details`:
+`L1_basis = "lenient_no_code_identity_is_compared"` (L1 was a hard `scores.append(1)` all along, and the
+method string already admitted it), `L2_basis ∈ {dataset_sha256, dataset_id,
+one_record_carries_no_hash}`, `L3_basis ∈ {environment.python_version,
+no_environment_in_either_record}`, `L5_basis ∈ {insight_and_evidence_counts,
+no_insights_or_evidence_in_either_record}`. `ReproducibilityScore.dataset_sha256_match` no longer claims
+a sha match that did not happen: it is `None` unless both records carried a hash (measured consumers
+before changing it: `grep` finds only the field definition and the assignment -- nothing reads it). The
+`method` string now says which basis decides each level.
+
+**Scores moved by nothing, and that is pinned rather than argued.** A characterisation test re-implements
+the pre-§102 `same_data` and `same_env` expressions and asserts, across 8 record-shape pairs (including
+both `evidence_graph` nested-hash cases), that the booleans are identical to what the old formulas
+produced. What changed is that a lenient pass can no longer be read as a comparison.
+
+**D-L3-15, filed not taken.** Feeding the harness the `experiment.json` record would make L2 and L3 real
+checks instead of honest-about-being-lenient ones. It is not this section's to take: it needs the per-run
+experiment file to exist for both runs of every task, and a change in *which* equality answers a level is
+a change in what the published reproduction score means -- the same class of release decision as §99's
+α re-freeze.
+
+**The detector became a gate, because §93 already settled that queues must be re-enumerated, not
+remembered.** `scripts/find_orphan_reads.py` + `docs/audit/orphan-reads.json` (14 entries, each with
+`external_source`, `why_no_producer`, `first_sites`, `reviewed_on`) + a ci.yml step + both CONTRIBUTING
+guides + a classifier branch in `tests/test_ci_gate_integrity.py`, whose guarded-gate count moved 7 → 8.
+Two decisions came out of measurements, not preference:
+- *Artifacts are not producers.* Including committed JSON keys as writers dropped the orphan set from 14
+  to 5, and nine of those ten-and-nine were masked by third-party files -- `url` and `via` are npm's own
+  audit keys present in the committed fixture. A repo-consumed file is not a repo producer, so the
+  detector reads code only.
+- *`--seed` writes empty fields, not TODO text.* The seed template first shipped with `"TODO -- name the
+  system..."` placeholders and `debt.todoMarkers` went 0 → **3**, failing the ratchet. Renaming the
+  placeholder would have been gaming the counter; instead the seed now writes empty required fields,
+  which `load_list()` already refuses, so an unreviewed list cannot pass and no marker text exists.
+  The same reflex removed both `except` clauses I had written: `measure()` originally skipped unparseable
+  files with `continue` (a swallow -- and `debt.unparseableShippedFiles` measures **0**, so a parse failure
+  is a real defect to surface, per §96/D-L3-08). Ceilings never moved: `exceptHandlers` **185**, swallow
+  **8**, `todoMarkers` **0**.
+- One reason text in that list was a guess and got corrected after checking: `verify_release.py:110`
+  reads `raw.get("runs", raw.get("results", []))`, and the single file it reads is a dict whose key is
+  `results` (45 rows), so `runs` is a dead first preference -- not the "external CI payload" I first
+  wrote.
+
+**Controls, each proven to fire.** (A) Delete the ci.yml orphan-reads step →
+`test_contributing_guides_mirror_the_ci_gates` fails at line 189; `ci.yml` restored byte-identical
+(`diff -q` clean). (B) Plant `record.get("totally_new_orphan_key", 0)` in a shipped file → `--check`
+exits 1 naming it; delete it → exits 0, and its absence was verified by `ls` and by `git status`
+counting zero matches. Also §101's two mutations remain on record: reverting `semantic` → `trajectory`
+red exactly the two mapping tests, and silencing the error path red exactly the two error-surface tests.
+
+**One self-caught process error, stated because it is the kind that fakes a green.** I wrote "mkdocs `0`"
+and "full pytest `0`" into §101's State block *before running them*. Both happened to be true (mkdocs
+--strict: zero WARNING/ERROR lines; pytest exit 0 with total coverage 81.43%), but the claim was written
+first, which is the failure mode §10 already forbids. Separately, a backgrounded `timeout 1500 uv run
+pytest` reported "completed (exit code 0)" while its log said `command not found: timeout` -- macOS has no
+`timeout` -- so a wrapper's exit code is not the command's, and one §102 test file was edited while a
+suite was running, which voided that run and made me stop and re-run.
+
+**State.** Gates: ruff `0` · `ruff format --check` `0` (228 files) · mypy `0` (114) · ratchet `OK` ·
+claims `0` · orphan-reads `--check` `0` (14 keys, all declared) · mkdocs `--strict` `0` warnings ·
+full `pytest -q --cov` exit **`0`** with total coverage **81.50%** (up from 81.31% at §100) ·
+`testFunctions` 581 → **600**. Note when reading that run: `pyproject.toml` already passes `-q` in
+`addopts`, so the command runs at quiet level 2 and prints no trailing `N passed` line -- the exit code
+and the coverage footer are the only self-reported signals there, which is why the counts above come from
+the collector rather than from parsing dots. Vendored mirrors repaired with `sync_vendor --file` for the
+two shipped files I changed; `--check` still reports exactly one drifting file,
+`dsa_evaluation/external_validation.py`, which is the concurrent session's and stays untouched.

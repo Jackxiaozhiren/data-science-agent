@@ -104,6 +104,22 @@ shadowing + missing greenlet concurrency).
   failure text is appended when the fallback also failed). A measured `0.0` still reports
   `error is None`; the Stable constructor and every existing call site keep working. `numerical`,
   `statistical` and `evidence` are still dropped by the facade -- filed as D-L3-14.
+- The reproducibility levels now name the equality that decided them (`AUDIT_LEDGER.md` §102).
+  `compare_runs` reads `dataset_sha256` and `environment`, which `build_experiment_json` writes but
+  the reproduction harness never passes: it feeds `AnalysisState` dumps, which carry neither, so L2
+  was decided by `dataset_id` string equality and L3 by a lenient pass -- two runs over different
+  bytes of the same dataset id reported `L2_same_data: True`, while `comparison.json`'s own `method`
+  string advertised "L2 data hash, L3 env". `details` now carries `L1_basis`/`L2_basis`/`L3_basis`/
+  `L5_basis`, `dataset_sha256_match` reports `None` unless a hash pair was actually compared, and the
+  method string describes the conditional. No level's value moved: a characterisation test asserts the
+  booleans against the pre-fix formulas across 8 record-shape pairs. Making L2/L3 real checks by
+  feeding the harness its designed record is filed as D-L3-15.
+- New gate: `scripts/find_orphan_reads.py` (--check wired into CI and both contributing guides) reports
+  every `record.get("key", default)` in shipped code whose key nothing in the repository writes -- the
+  shape §101's `trajectory` bug hid behind. 14 such reads remain, each declared in
+  `docs/audit/orphan-reads.json` with the outside system that supplies it; a new orphan or a stale
+  entry both fail, and `--seed` writes empty fields rather than placeholder text so an unreviewed list
+  cannot ship.
 
 ### Added (unreleased, non-breaking)
 

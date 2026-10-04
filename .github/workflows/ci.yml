@@ -83,6 +83,12 @@ jobs:
       # not a printout: without refs the release-line rules have no verdict, and on a
       # release/vX-rc ref the version rule is skipped too, so a degraded run would exit 0.
       - run: uv run python scripts/check_public_claims.py --require-released-tags
+      # A `record.get("key", default)` reads a key nothing writes and returns the default, so a
+      # renamed producer is invisible: that is how §101's SDK published trajectory=0.0 against an
+      # artifact holding 1.0. Every remaining orphan read must declare the outside system it comes
+      # from in docs/audit/orphan-reads.json, and a declared key that gains a producer must be
+      # pruned (audit §102).
+      - run: uv run python scripts/find_orphan_reads.py --check
       # Node deps: tests/vscode runs `npm run compile` (tsc) and the web build
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps

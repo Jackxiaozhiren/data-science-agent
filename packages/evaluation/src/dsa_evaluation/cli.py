@@ -138,7 +138,11 @@ def _reproduce_benchmark(catalog: Path, datasets: Path, out: Path) -> None:
         "evidence": summ1.get("evidence_coverage"),
         "semantic": trajectory_rate,
         "overall": overall,
-        "method": "compare_runs L0=L1 (code lenient), L2 data hash, L3 env, L4 trajectory, L5 conclusion (insights/evidence ±20%)",
+        "method": (
+            "compare_runs L0=L1 (code lenient), L2 decided by details.L2_basis (a sha is compared "
+            "only when both runs carry one, else dataset_id equality), L3 by details.L3_basis, "
+            "L4 trajectory, L5 conclusion (insights/evidence ±20%)"
+        ),
         "by_level": {
             lvl: round(sum(1 for t in per_task if t["L_level"] == lvl) / N, 4)
             for lvl in ("L0", "L1", "L2", "L3", "L4", "L5")

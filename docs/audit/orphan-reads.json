@@ -1,0 +1,133 @@
+{
+  "_do_not_run_ruff_format_on_this_file": true,
+  "_purpose": "Defaulted dict reads whose key has no producer in this repository and whose data comes from outside it. scripts/find_orphan_reads.py --check fails if a key appears here that is no longer an orphan, or if a new orphan is not listed.",
+  "entries": [
+    {
+      "external_source": "the operator's environment",
+      "first_sites": [
+        "packages/llm/src/dsa_llm/providers.py:78"
+      ],
+      "key": "DSA_MAX_COST_USD",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "an env var is set by whoever runs the agent; nothing in the repo writes it"
+    },
+    {
+      "external_source": "the CI/local environment",
+      "first_sites": [
+        "scripts/generate_release_announcement.py:31",
+        "scripts/update_contributors.py:32"
+      ],
+      "key": "GITHUB_TOKEN",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "a credential the runner injects; the repo must never contain it"
+    },
+    {
+      "external_source": "installed distributions' metadata (importlib.metadata / pip)",
+      "first_sites": [
+        "scripts/generate_sbom.py:132"
+      ],
+      "key": "License",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "third-party package metadata is authored by each upstream project"
+    },
+    {
+      "external_source": "the shell that launched the process",
+      "first_sites": [
+        "scripts/audit_facts.py:483"
+      ],
+      "key": "PATH",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "an OS-provided variable read to locate git"
+    },
+    {
+      "external_source": "the HTTP client's request headers",
+      "first_sites": [
+        "apps/api/src/dsa_api/routers/analysis.py:95"
+      ],
+      "key": "accept",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "a browser or SDK sends it; the server only reads it"
+    },
+    {
+      "external_source": "the HTTP client's request headers",
+      "first_sites": [
+        "apps/api/src/dsa_api/core/security.py:137"
+      ],
+      "key": "authorization",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "a bearer token arrives from the caller"
+    },
+    {
+      "external_source": "an OpenAI-compatible provider response body",
+      "first_sites": [
+        "packages/llm/src/dsa_llm/providers.py:356"
+      ],
+      "key": "completion_tokens",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "token accounting comes back from the provider"
+    },
+    {
+      "external_source": "an Ollama response body",
+      "first_sites": [
+        "packages/llm/src/dsa_llm/providers.py:356"
+      ],
+      "key": "eval_count",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "Ollama reports its own evaluation counters"
+    },
+    {
+      "external_source": "an Ollama response body",
+      "first_sites": [
+        "packages/llm/src/dsa_llm/providers.py:355"
+      ],
+      "key": "prompt_eval_count",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "Ollama reports its own evaluation counters"
+    },
+    {
+      "external_source": "an OpenAI-compatible provider response body",
+      "first_sites": [
+        "packages/llm/src/dsa_llm/providers.py:355"
+      ],
+      "key": "prompt_tokens",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "token accounting comes back from the provider"
+    },
+    {
+      "external_source": "a raw_runs dict shape this reader tolerates but no producer emits",
+      "first_sites": [
+        "packages/evaluation/src/dsa_evaluation/verify_release.py:110"
+      ],
+      "key": "runs",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "verified 2026-10-04: verify_release.py reads only benchmarks/external/datascibench/results/raw_runs.json, which is a dict holding `results` (45 rows), so raw.get(\"runs\", ...) always falls through to `results`; no shipped code and no committed artifact writes a top-level `runs` key. Dead first preference, not a wrong value (audit \u00a7102)"
+    },
+    {
+      "external_source": "npm's audit report",
+      "first_sites": [
+        "scripts/check_npm_advisories.py:87"
+      ],
+      "key": "url",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "npm writes the advisory URL into the audit JSON this gate consumes"
+    },
+    {
+      "external_source": "npm's audit report",
+      "first_sites": [
+        "scripts/check_npm_advisories.py:85"
+      ],
+      "key": "via",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "npm names the dependency path in the audit JSON"
+    },
+    {
+      "external_source": "package.json authored by the npm toolchain",
+      "first_sites": [
+        "scripts/check_npm_workspace_lock.py:63"
+      ],
+      "key": "workspaces",
+      "reviewed_on": "2026-10-04",
+      "why_no_producer": "npm's own manifest field, read not written here"
+    }
+  ]
+}

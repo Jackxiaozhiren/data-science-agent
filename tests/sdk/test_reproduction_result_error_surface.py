@@ -34,7 +34,7 @@ PRODUCER_KEYS = ("execution", "numerical", "statistical", "evidence", "semantic"
 @pytest.fixture
 def silent_harness(monkeypatch: pytest.MonkeyPatch) -> None:
     """Neutralise the harness itself; this test is about what `run` reports, not about scoring."""
-    import dsa_evaluation.cli as cli
+    from dsa_evaluation import cli
 
     def no_op(*args: object, **kwargs: object) -> None:
         return None

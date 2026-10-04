@@ -141,6 +141,8 @@ def _classify(tokens: set[str]) -> str | None:
         return "advisories"
     if any(tok.endswith("audit_facts.py") for tok in tokens):
         return "ratchet"
+    if any(tok.endswith("find_orphan_reads.py") for tok in tokens):
+        return "orphan-reads"
     return None
 
 
@@ -184,7 +186,7 @@ def _guide_gates(path: Path) -> dict[str, set[str]]:
 
 def test_contributing_guides_mirror_the_ci_gates() -> None:
     expected = _ci_gates()
-    assert len(expected) == 7, f"expected 7 guarded gates in ci.yml, parsed {sorted(expected)}"
+    assert len(expected) == 8, f"expected 8 guarded gates in ci.yml, parsed {sorted(expected)}"
     offenders: list[str] = []
     for rel in GUIDES:
         guide = _guide_gates(ROOT / rel)
