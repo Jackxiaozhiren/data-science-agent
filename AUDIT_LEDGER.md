@@ -5651,3 +5651,58 @@ unknown tool) rather than softened to match the defect.
 **Runner.** §104's push `fbed11c..43c56d3` produced run **37179256194**, `completed success` in 5m32s
 (the `ci` job, all 31 steps) -- so the provenance-carrying comparison and the §102 orphan gate are green
 on the runner, not only on this laptop.
+## 106. The evidence builder stopped inventing confident claims from objects that carry no fields
+
+**Found by a test that refused to be softened.** §105's seam test originally asserted that a
+`correlation_analysis` result with no fields yields `None`; it failed, returning
+`Evidence(claim='Correlation  vs : r=0.000', source_type='statistical_test', confidence=0.8)`. The
+tempting fix was to relax the assertion to match the code. Instead the behaviour was measured, then
+fixed, and the assertion kept -- every branch of `build_tool_evidence` reads through
+`getattr(output, name, default)`, so an object that is *not* that tool's result is quietly coerced into
+a measurement that was never made.
+
+**Live or latent, measured before filing.** The 29-case differential from §105 showed **13 of 13** handled
+tools fabricate evidence from a fieldless object. But a claim only matters on a reachable path, so both
+call sites were read: `graph.py` guards with `if ok and output is not None` at both the exec path and the
+critic-retry path, `langgraph_graph.py` guards the same way, and `_run_tool` returns
+`(None, False, result.error)` whenever `result.status != "ok"` -- verified live: a correlation over two
+text columns returns `ToolResult(error="Columns must be numeric: could not convert string to float: 'a'")`,
+the executor answers `ok=False, output=None`, and the builder is never called. So **latent, not live**,
+and that is stated rather than oversold: the guard belongs in the builder because the next caller is not
+obliged to repeat the orchestrator's.
+
+**Fix.** `EVIDENCE_FIELDS`, a table of the attributes each branch reads, checked once before any claim is
+formatted: unknown tool, absent output, or a missing required attribute ⇒ `None`. Placed in the builder
+rather than at the call sites because the rule is about what a claim requires, not about who asks.
+
+**The guard cannot strangle real results, and that is pinned from the producer side.**
+`test_the_guard_requires_nothing_a_real_tool_result_lacks` asserts every tuple in `EVIDENCE_FIELDS` is a
+subset of that tool's declared `output_model` fields -- necessary because the tools genuinely differ:
+`train_model` has no `metrics` field at all (it declares `cv_mean`/`cv_scores`), which is exactly why the
+train branch requires `("model", "cv_scores")` while `evaluate_model` requires `("metrics", "model")`.
+`test_the_guard_table_and_the_branches_cover_the_same_tools` ties the table, the AST branch set and the
+suite's `HANDLED_TOOLS` into one equality, so a new branch cannot arrive without a field tuple.
+
+**Blast radius, measured against git rather than memory.** `/tmp` had been cleared, so the pre-fix
+reference was rebuilt with `git show f7d4d29:packages/agent/src/dsa_agent/tool_evidence.py` and both
+versions were run over the same probes in one process:
+- populated outputs (14 cases): **no differences** -- the orchestrator's real path is untouched;
+- fieldless outputs: **13 tools flip from a populated `Evidence` to `None`**;
+- empty-but-real answers are preserved deliberately: `run_sql` with `row_count=0` still claims
+  "SQL returned 0 rows", `profile_dataset` with `{"rows":0,"columns":0}` still claims
+  "Profile: 0 rows, 0 cols". The rule is *missing attribute*, never *falsy value* -- a tool that ran and
+  found nothing is evidence; an object that is not that tool's result is not.
+
+**Gates.** 10 tests in `tests/unit/test_tool_evidence_seam.py` (was 6), the two new fabrication cases red
+first. ruff `0`, `ruff format --check` `0` (231 files), mypy `0` (114), ratchet `OK` with
+`exceptHandlers` **185** / `swallowedExceptionSites` **8** / `suppressionDirectives` **42** / `todoMarkers`
+**0** -- the guard adds no handler and no suppression. Orphan-reads `--check` `0`. Full `pytest -q --cov`
+exit **`0`**, coverage **82.33%**, `testFunctions` 613 → **617**. Vendor mirror repaired with
+`sync_vendor --file` for `tool_evidence.py` and verified by `diff -q`.
+
+**One process note, because it is the second time in three sections.** The first attempt at this
+differential printed "changed hunks: 0" while `diff` had actually errored on a missing baseline file --
+an empty result read as agreement. The corrected measurement is the git-anchored one above. Also still
+open from §105's isolated lint sweep, untouched here: `planner.py:330` reads `if wants_viz or True:`, a
+condition that can never be false, which is the same "advertised check that cannot refuse" family and is
+the next item in this lane.

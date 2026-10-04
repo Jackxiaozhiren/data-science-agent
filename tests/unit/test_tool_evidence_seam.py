@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 from dsa_agent.graph import build_tool_evidence as graph_binding
 from dsa_agent.langgraph_graph import build_tool_evidence as langgraph_binding
-from dsa_agent.tool_evidence import build_tool_evidence
+from dsa_agent.tool_evidence import EVIDENCE_FIELDS, build_tool_evidence
 
 #: The tools the builder turns into evidence. A branch added here without a case below is a gap.
 HANDLED_TOOLS = (
@@ -125,6 +125,64 @@ def test_an_absent_result_or_an_unknown_tool_yields_no_evidence() -> None:
     """The two paths that already answer honestly: no output, or a tool with no rule."""
     assert build_tool_evidence("run_sql", "c", None) is None
     assert build_tool_evidence("not_a_known_tool", "c", SimpleNamespace(rows=[])) is None
+
+
+def test_no_tool_invents_a_confident_claim_from_an_object_with_no_fields() -> None:
+    """§106: the builder used to read every field through `getattr(output, name, default)`.
+
+    Measured before the fix: 13 of 13 handled tools answered with a populated `Evidence` when handed an
+    object that had none of the fields -- `Correlation  vs : r=0.000` at confidence 0.8,
+    `Assumption check: ` with `passed: true`. Every shipped call site guards on `ok and output is not
+    None`, so this is a latent path, not a live one; the guard belongs in the builder, because the next
+    caller may not repeat it.
+    """
+    empty = SimpleNamespace()
+
+    fabricated = {tool: build_tool_evidence(tool, "c", empty) for tool in HANDLED_TOOLS}
+
+    wrong = {tool: ev for tool, ev in fabricated.items() if ev is not None}
+    assert not wrong, {tool: ev.claim for tool, ev in wrong.items()}
+
+
+def test_a_result_that_ran_but_found_nothing_still_proves_that() -> None:
+    """The opposite error: an empty *answer* is real evidence and must not be discarded."""
+    zero_rows = build_tool_evidence(
+        "run_sql", "c", SimpleNamespace(columns=[], row_count=0, rows=[])
+    )
+    assert zero_rows is not None
+    assert zero_rows.claim == "SQL returned 0 rows"
+
+    empty_profile = build_tool_evidence(
+        "profile_dataset", "c", SimpleNamespace(profile={"rows": 0, "columns": 0})
+    )
+    assert empty_profile is not None
+    assert "0 rows" in empty_profile.claim
+
+
+def test_the_guard_requires_nothing_a_real_tool_result_lacks() -> None:
+    """The other half of §106: the field table must be a subset of what the tools actually declare.
+
+    Without this, tightening the builder would silently drop evidence from real runs -- and the tools
+    do differ (`train_model` has no ``metrics`` field, which is why it requires ``cv_scores``).
+    """
+    from dsa_tools import bootstrap, get as get_tool
+
+    bootstrap()
+    offenders: dict[str, list[str]] = {}
+    for tool, required in EVIDENCE_FIELDS.items():
+        declared = set(getattr(get_tool(tool).output_model, "model_fields", {}))
+        missing = [name for name in required if name not in declared]
+        if missing:
+            offenders[tool] = missing
+
+    assert not offenders, f"required fields no tool declares: {offenders}"
+
+
+def test_the_guard_table_and_the_branches_cover_the_same_tools() -> None:
+    """A new branch without a required-field tuple would sail straight past the guard."""
+    tree = ast.parse((AGENT_DIR / "tool_evidence.py").read_text(encoding="utf-8"))
+
+    assert set(EVIDENCE_FIELDS) == _tool_branch_names(tree) == set(HANDLED_TOOLS)
 
 
 def test_the_seam_depends_on_nothing_but_the_evidence_type() -> None:

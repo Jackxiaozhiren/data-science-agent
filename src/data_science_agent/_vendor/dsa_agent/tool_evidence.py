@@ -17,13 +17,42 @@ from typing import Any
 
 from dsa_agent.state import Evidence
 
+#: The attributes each branch of ``build_tool_evidence`` reads to form its claim. A tool result
+#: missing one of these is not that tool's result, so no evidence is recorded -- an ``r`` of
+#: ``None`` formatted as ``r=0.000`` at confidence 0.8 would otherwise publish a measurement that
+#: was never made. Every tuple is a subset of the corresponding tool's declared ``output_model``
+#: fields, so a real result always passes (``train_model`` legitimately has no ``metrics`` field,
+#: which is why it requires ``cv_scores`` instead).
+EVIDENCE_FIELDS: dict[str, tuple[str, ...]] = {
+    "run_sql": ("columns", "row_count", "rows"),
+    "correlation_analysis": ("r", "p_value", "method", "x", "y"),
+    "hypothesis_test": ("statistic", "p_value", "test"),
+    "regression_analysis": ("metrics", "model"),
+    "train_model": ("model", "cv_scores"),
+    "evaluate_model": ("metrics", "model"),
+    "forecast": ("forecast", "metrics", "method"),
+    "feature_importance": ("importances", "target"),
+    "assumption_check": ("checks", "passed", "recommendation"),
+    "causal_check": ("estimate", "method", "passes_causal_bar", "confidence_note"),
+    "create_chart": ("artifact_path", "chart_type"),
+    "profile_dataset": ("profile",),
+    "run_python": ("stdout", "error"),
+}
+
 
 def build_tool_evidence(tool: str, call_id: str, output: Any) -> Evidence | None:
     """The evidence record this tool result supports, or ``None`` when it supports none.
 
-    Unknown tools, an absent output, and a result that will not format all answer ``None``;
-    the caller records no evidence rather than a fabricated one.
+    Unknown tools, an absent output, a result missing the attributes this branch reads, and a value
+    that will not format all answer ``None``: the caller records no evidence rather than a fabricated
+    one. An *empty* answer is still evidence -- a SQL result with ``row_count=0`` keeps all its
+    attributes and yields "SQL returned 0 rows".
     """
+    required = EVIDENCE_FIELDS.get(tool)
+    if required is None or output is None:
+        return None
+    if not all(hasattr(output, name) for name in required):
+        return None
     eid = f"E-{uuid.uuid4().hex[:8]}"
     claim = ""
     source_type: Any = "python"

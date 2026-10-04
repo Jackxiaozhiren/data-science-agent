@@ -121,6 +121,18 @@ shadowing + missing greenlet concurrency).
   decided by content, not by identifier: two runs of the same `dataset_id` over different bytes now
   report `L2_same_data: False`, where before §104 they reported `True`. A run with no hash still
   reports its weaker basis instead of implying a comparison. Additive to `raw_runs.json`; handler-neutral.
+- `dsa_agent.tool_evidence.build_tool_evidence` no longer manufactures a confident evidence record from
+  an object that is not that tool's result (§106). Every branch read through
+  `getattr(output, name, default)`, so a fieldless result became `Correlation  vs : r=0.000` at
+  confidence 0.8, `Assumption check: ` with `passed: true`, `SQL returned 0 rows` from an object with no
+  `row_count` at all -- measured at 13 of 13 handled tools. It is latent rather than live: both call
+  sites guard on `ok and output is not None` and the executor returns `ok=False` for any result whose
+  `status != "ok"`, so the guard belongs in the builder for the next caller. A new `EVIDENCE_FIELDS`
+  table names the attributes each claim requires and short-circuits to `None` when one is missing, with
+  tests pinning that every tuple is a subset of the tool's declared `output_model` (the tools differ:
+  `train_model` has no `metrics` field) and that an *empty* answer is still evidence -- `row_count=0`
+  keeps proving "SQL returned 0 rows". Differential against the pre-fix module, rebuilt from git: zero
+  changes on populated outputs, 13 flips on fieldless ones.
 - New gate: `scripts/find_orphan_reads.py` (--check wired into CI and both contributing guides) reports
   every `record.get("key", default)` in shipped code whose key nothing in the repository writes -- the
   shape §101's `trajectory` bug hid behind. 14 such reads remain, each declared in
