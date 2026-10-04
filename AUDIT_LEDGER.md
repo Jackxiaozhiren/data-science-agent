@@ -5137,6 +5137,95 @@ drops `known-first-party` and wants `dsa_agent` sorted as third-party. The proje
 difference is the profile, not a hidden finding, and it is named so nobody "fixes" the order into a
 real failure. Vendor mirrors of `columns.py` and `planner.py` refreshed through two `--file` repairs.
 
+## 99. `"ate"` meant ATE, matched as a substring, and cost the benchmark four tasks
+
+**The defect, in one token.** `heuristics_plan` reads intent from keyword lists matched with `k in q`.
+That convention is deliberate for the stems in those lists -- `classif`, `correlat`, `visual`,
+`predict`, `significan`, `declin` -- so "classification"/"classifier", "correlated"/"correlation" all
+land. One entry is not a stem: `wants_causal` carries `"ate"`, the acronym for average treatment
+effect. As a substring it matches *create, validate, duplicates, regenerate, estimate, calculate,
+state, appropriately*. The fix is one token: `"ate"` removed from the list and replaced by a
+word-bounded `_ATE_ACRONYM_RE = re.compile(r"\bate\b")`, with the reason recorded next to it.
+
+**Audited across all eight lists, not just the one that hurt.** Rather than fix the symptom I found,
+the AST pulled every `any(k in q for k in [...])` list out of `heuristics_plan` and counted, per
+keyword, how many of the 150 catalog queries match it as a substring but not as a word:
+
+| list | tokens matching only inside a longer word |
+| --- | --- |
+| `wants_causal` | `ate` 35, `cause` 2, `effect` 1 |
+| `wants_stats` | `correlat` 11, `significant` 2 |
+| `wants_model` | `classif` 9, `predict` 6, `model` 2 |
+| `wants_viz` | `visual` 7, `plot` 2 |
+| `wants_forecast` | `predict` 6 |
+| `wants_decline` | `down` 1 |
+
+Only `ate` is a token whose substring-hit profile is *acronym* behaviour, and `cause`/`effect` are
+stems whose extra hits ("because", "effective") are benign next to a real causal signal. The rest of
+the table is the convention working as designed -- which is why the change touches one token and not
+the matcher.
+
+**Blast radius, measured twice with independent instruments.** Production passes the real column
+headers (`graph.run_analysis` → `cols = _get_columns(dataset_path)` → `plan_analysis(..., cols)`), and
+the first differential missed it: my plan dumper called `heuristics_plan` with `columns` unset, got 8
+digits identical to HEAD, and reported "0 plans changed" -- the wrong instrument, since `cols = []`
+turns off the very branches involved. Redone through the production helper, **33 of 150 plans change,
+and all 33 lose a `causal_check` step; none gains anything.** An independent count over the same 150
+tasks (which ones carry `causal_check` with no causal-shaped word in the question) produced the same
+33.
+
+**The chain from that token to a failing task, in the artifacts.** Four tasks move `False → True`:
+
+| task | the accidental match | before | after |
+| --- | --- | --- | --- |
+| `eda-01` ("…rows, columns, missing values and duplicates") | duplic**ate**s | S08, verdict FAILED | clean, 1.0 |
+| `stats-06` ("Are series_a and series_b correlated?") | correl**ate**d | S02+S08, FAILED | S02 only |
+| `clf-03` ("Classify disease and evaluate with F1 and ROC-AUC") | evalu**ate** | S08, FAILED | clean |
+| `viz-01` ("Create a histogram of revenue") | cre**ate** | S08, FAILED | clean |
+
+The mechanism is not a guess, it is the evidence each run wrote: the extra `causal_check` step put
+causal phrasing into the report, the critic's `unsupported_claim_check` returned *"Causal language
+detected without causal evidence; rewrite as association"*, `statistical_error_codes` gained `S08`,
+`failed_agent_verdict` became `FAILED`, and `task_success` went false. Removing a step nobody asked
+for removed a false causal claim the report could not support.
+
+**Benchmark numbers, both shapes, before and after.** 50 tasks via `run_benchmark(limit=None)`:
+**0.92 → 1.00** (aggregate `task_success_rate`, from the two `results.json` files on disk). CI's own
+shape, `dsa --limit 5`: **0.8 → 1.0** (`Task success rate: 1.0 / By category: {'EDA': {'n': 5,
+'task_success': 1.0}}`). Both measured after the vendor sync below; the source-only run said 1.0 while
+the CLI still said 0.8, which is the D-INFRA-03 lesson reproduced on purpose.
+
+**Why the CLI disagreed with the tests, again.** I changed `planner.py`, ran the suite (which demotes
+`_vendor`) and got 1.0; the `dsa` console script loads `data_science_agent`, which imports
+`src/data_science_agent/_vendor/dsa_agent/planner.py` -- still the old file, still 0.8. Two instruments,
+two answers, one cause: the fix had not been mirrored. After
+`sync_vendor.py --file packages/agent/src/dsa_agent/planner.py` the CLI agreed with the source. The
+rule this re-teaches: any claim about what the *product* scores has to come from the artifact the
+product runs, not from the source tree the tests import.
+
+**Correction to §86, appended not overwritten.** §86 recorded the 50-task measurement as **0.92** and
+attributed the 4 failures to a mix of "1 evaluator-honesty artifact and 3 genuine behavioural
+changes", with `stats-06`/`clf-03`/`viz-01` left open as *"improved detection or a defect"*, and said
+D-L7-01 (`Budget.max_steps`) and D-L7-02 (sandbox deadline) each changed which runs report FAILED.
+On the evidence here, all four were this keyword bug: same task ids, same S08 mechanism, and they
+disappear when the token does. §86's attribution was wrong in both direction and cause -- the deficit
+was not the budget/sandbox work tightening honesty, it was a spurious plan step. **Consequence for α:
+the frozen `1.0` is reachable again** (the 50-task probe now reads 1.00 and the CI probe 1.0), so the
+premise behind "`a lower measured number is honesty rather than regression`" no longer describes
+today's tree. α was never a fix; it is a release decision (version bump per `docs/reproducibility.md`
+§Immutability) and it is now materially cheaper -- re-freezing would pin the number the project already
+scores rather than one it has to earn back.
+
+**State.** `tests/unit/test_planner_intent_keywords.py` is 9 defs: 6 parametrized red-first cases, then
+three that had to stay green through the change -- a genuinely causal question still gets the step, the
+acronym written as a word still gets it (word-bounded, not deleted), and the stem lists elsewhere still
+match by substring, which is the pin against someone "fixing" the convention too.
+`debt.swallowedExceptionSites` 8, `debt.exceptHandlers` 185 (unchanged -- no handler added),
+`testFunctions` 562 → **566**. Gates: ruff `0` · format `0` (223 files) · mypy `0` (113) ·
+ratchet `OK` · mkdocs `--strict` `0` · full `pytest -q --cov` `0` at **81.31%**. `sync_vendor --check`
+still reports the concurrent session's single file, untouched.
+
+
 
 
 

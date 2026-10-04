@@ -37,6 +37,14 @@ shadowing + missing greenlet concurrency).
   `npm audit --audit-level=high` gate failed on it. Both lockfiles (root
   workspace + `apps/web`) regenerated; the diff touches 10 `next`/`@next/*`
   packages and nothing else.
+- The planner stopped reading the acronym `ate` (average treatment effect) as a substring. The
+  intent keyword was matched with `k in q`, like the stems around it, so *create*, *validate*,
+  *duplicates*, *estimate*, *calculate*, *correlated* and *state* all registered as a causal
+  request: 33 of the 150 catalog tasks carried a `causal_check` step nobody asked for. The report
+  then used causal phrasing, the critic flagged `S08` "causal language without causal evidence",
+  and four tasks (`eda-01`, `stats-06`, `clf-03`, `viz-01`) scored FAILED because of it. `ate` is
+  now word-bounded and everything else keeps its stem matching. Benchmark: 50 tasks
+  **0.92 → 1.00**, and the CI `--limit 5` probe **0.8 → 1.0**.
 - The planner can no longer mistake "I could not read this dataset" for "this dataset has
   no numeric columns". `_numeric_columns()` returned `[]` for both, and
   `heuristics_plan`'s `_numeric_columns(path) or <guess-by-column-name>` overwrote the fact

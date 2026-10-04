@@ -51,6 +51,14 @@ _EXPORT_FILENAME_HINTS = (
 #: Guarded by ``test_declared_tabular_sources_really_are_tabular``.
 _TABULAR_TOOLS = ("run_sql",)
 
+#: ``ate`` means ATE -- average treatment effect -- and is an acronym, not a stem, so it is
+#: the one intent token that must match as a word. Every other list here matches by substring
+#: on purpose (``classif``, ``correlat``, ``visual``), which is why ``ate`` looked fine: measured
+#: on the shipped catalogs, 35 of 150 queries contain ``ate`` only inside a longer word
+#: (cre*ate*, *ate*, valid*ate*, duplic*ate*s, regener*ate*, estim*ate*, calcul*ate*, st*ate*),
+#: and 33 of them were being handed a causal_check step they never asked for (audit §99).
+_ATE_ACRONYM_RE = re.compile(r"\bate\b")
+
 
 def _terminal_export_steps(q: str, steps: list[Any]) -> list[tuple[str, str, str, str]]:
     """Decide terminal export steps: (name, filename, source_tool, format).
@@ -149,8 +157,8 @@ def heuristics_plan(
     wants_decline = any(k in q for k in ["declin", "drop", "decrease", "down"])
     wants_importance = any(k in q for k in ["importance", "explain", "shap", "feature"])
     wants_causal = any(
-        k in q for k in ["cause", "causal", "effect", "impact", "treatment", "intervention", "ate"]
-    )
+        k in q for k in ["cause", "causal", "effect", "impact", "treatment", "intervention"]
+    ) or bool(_ATE_ACRONYM_RE.search(q))
     explicit_hypothesis = any(k in q for k in ["hypothesis", "t-test", "welch", "anova", "mann"])
 
     cols = columns or []
@@ -162,9 +170,7 @@ def heuristics_plan(
     if profiled_numeric is not None:
         numeric_cols = profiled_numeric
     else:
-        numeric_cols = [
-            c for c in cols if c not in ("date", "region", "category", "group")
-        ] or cols
+        numeric_cols = [c for c in cols if c not in ("date", "region", "category", "group")] or cols
     target_col = _pick_target_column(q, cols, numeric_cols)
     treatment_col = _pick_treatment_column(q, cols, numeric_cols, target_col)
     predictor_col = _pick_numeric_predictor(q, numeric_cols, target_col)
