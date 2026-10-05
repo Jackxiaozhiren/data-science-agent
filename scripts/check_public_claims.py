@@ -20,20 +20,36 @@ EXPECTED = {
     "version": "4.4.0",
 }
 
-# Build/dependency trees that never carry a public claim.
-NOISE_SUBSTRINGS = [".venv", "node_modules", ".git", "site", "dist", ".mypy_cache", ".ruff_cache"]
+# Build/dependency trees that never carry a public claim. `.workspace` is the vendored DataSciBench
+# clone (with its own venv and MetaGPT checkout: 6,590 files under benchmarks/ alone, of which 16
+# are upstream READMEs), so it belongs with node_modules rather than with this repository's prose.
+NOISE_SUBSTRINGS = [
+    ".venv",
+    "node_modules",
+    ".git",
+    "site",
+    "dist",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".workspace",
+]
 
-# Paths whose whole purpose is to quote superseded numbers: migration guides,
-# release-integrity reports, and SDK docstrings labelling maturity as
-# "Stable since 4.0.0". They cannot simply be scanned -- PATTERNS has no notion
-# of negation, so measured across these prefixes it yields 34 matches, 0 of them
-# real and 2 build-failing. Skipping them is the lesser error, but it also means
-# "0 issues" describes a smaller surface than SCAN_GLOBS advertises, so the
-# skipped set is counted and printed rather than left invisible.
+# Paths whose whole purpose is to quote superseded numbers: migration guides, release-integrity
+# reports, and SDK docstrings labelling maturity as "Stable since 4.0.0". They cannot simply be
+# scanned -- PATTERNS has no notion of negation, and every match it produces across them is a
+# reference to a superseded release rather than a false claim. Skipping them is the lesser error,
+# but it also means "0 issues" describes a smaller surface than SCAN_GLOBS advertises, so the
+# skipped set is counted and printed by scan_scope() rather than left invisible. No figure for that
+# surface is typed here: the first version of this comment asserted "34 matches, 0 of them real",
+# measured against a rule set §76 later retired, and nothing recomputed the number since.
+#
+# §113 removed `benchmarks/` from this list. The freeze document under it is current-tense product
+# prose -- it tells a reader what a PR must not regress today -- and tests/test_automation_scripts.py
+# now fails if an entry here names a tree no SCAN_GLOBS pattern can reach, which is exactly how
+# `benchmarks/` and `research/` sat here while the checker never opened either.
 HISTORICAL_PREFIXES = [
     "docs/",
     "research/",
-    "benchmarks/",
     "plugins/",
     "apps/jupyter/",
     "src/data_science_agent/",
@@ -49,6 +65,8 @@ SCAN_GLOBS = [
     "mkdocs.yml",
     "SECURITY.md",
     "docs/**/*.md",
+    "research/**/*.md",
+    "benchmarks/**/README.md",
     "packages/**/README.md",
     "plugins/**/README.md",
     "apps/**/README.md",

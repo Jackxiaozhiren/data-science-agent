@@ -271,3 +271,86 @@ def test_public_claims_release_candidate_ref_is_narrow(
     monkeypatch.delenv("GITHUB_HEAD_REF", raising=False)
     monkeypatch.setenv("GITHUB_REF_NAME", "release/v4.3.0-rc1")
     assert public_claims._is_release_candidate_ref("4.3.0")
+
+
+# --- §113: the claim checker's own scope claims ------------------------------------------------
+#
+# `HISTORICAL_PREFIXES` is a declaration that a surface was read and judged era-bound. Two of its
+# six entries named trees no `SCAN_GLOBS` pattern can reach, so `scan_scope()` never opened them
+# and never counted them: the printed "N skipped as historical" understated nothing about the trees
+# it *did* read, but the list itself promised coverage that did not exist. Phase 4 target 1 asks
+# for the skip-list to be derived rather than assumed, which is what these measure.
+
+
+def _reachable_prefix_counts(root: Path) -> dict[str, int]:
+    """How many files each declared exemption can actually reach through the configured globs."""
+    counts = dict.fromkeys(public_claims.HISTORICAL_PREFIXES, 0)
+    for pattern in public_claims.SCAN_GLOBS:
+        for path in root.glob(pattern):
+            if any(x in str(path) for x in public_claims.NOISE_SUBSTRINGS):
+                continue
+            rel = str(path.relative_to(root))
+            for prefix in counts:
+                if rel.startswith(prefix):
+                    counts[prefix] += 1
+    return counts
+
+
+def test_no_historical_prefix_is_declared_without_a_glob_that_reaches_it() -> None:
+    """RED before §113: `research/` and `benchmarks/` were unreachable exemptions."""
+    counts = _reachable_prefix_counts(public_claims.ROOT)
+    dead = sorted(prefix for prefix, n in counts.items() if n == 0)
+    assert not dead, f"declared exempt but reachable by no SCAN_GLOB (never opened): {dead}"
+
+
+def test_the_control_an_unreachable_prefix_is_reported_and_a_reachable_one_is_not(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guard above must key on reachability, not on the shipped list."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "guide.md").write_text("x\n", encoding="utf-8")
+    monkeypatch.setattr(public_claims, "SCAN_GLOBS", ["README.md", "docs/**/*.md"])
+    counts = _reachable_prefix_counts(tmp_path)
+    assert counts.get("docs/") == 1, counts
+    dead = sorted(p for p, n in counts.items() if n == 0)
+    assert "research/" in dead, dead
+    assert "src/data_science_agent/" in dead, dead
+
+    (tmp_path / "research").mkdir()
+    (tmp_path / "research" / "paper.md").write_text("x\n", encoding="utf-8")
+    monkeypatch.setattr(
+        public_claims, "SCAN_GLOBS", ["README.md", "docs/**/*.md", "research/**/*.md"]
+    )
+    assert "research/" not in [p for p, n in _reachable_prefix_counts(tmp_path).items() if n == 0]
+
+
+def test_the_benchmark_readmes_are_inside_the_surface_the_checker_reads() -> None:
+    """The freeze document is current-tense product prose, not a historical record."""
+    scanned, skipped = public_claims.scan_scope(public_claims.ROOT)
+    names = {str(p.relative_to(public_claims.ROOT)) for p in scanned}
+    assert "benchmarks/baseline/README.md" in names, sorted(n for n in names if "benchmark" in n)
+    assert "benchmarks/baseline/README.md" not in {
+        str(p.relative_to(public_claims.ROOT)) for p in skipped
+    }
+
+
+def test_the_vendored_workspace_tree_is_neither_scanned_nor_counted(tmp_path: Path) -> None:
+    """`.workspace` holds a third-party clone, so it belongs with `node_modules`, not with prose.
+
+    Exercised on a fixture rather than the shipped tree, because `.workspace` is gitignored
+    (`.gitignore:49`, zero files tracked): on a clean checkout the glob under test matches nothing,
+    so a premise asserted against disk would pass here and go red on the runner -- §103's exact trap,
+    re-earned.
+    """
+    assert ".workspace" in public_claims.NOISE_SUBSTRINGS, "the vendored-tree exclusion was dropped"
+    (tmp_path / "benchmarks/baseline").mkdir(parents=True)
+    (tmp_path / "benchmarks/baseline/README.md").write_text("x\n", encoding="utf-8")
+    deep = tmp_path / "benchmarks/external/datascibench/.workspace/MetaGPT"
+    deep.mkdir(parents=True)
+    (deep / "README.md").write_text("pip install metagpt\n", encoding="utf-8")
+    scanned, skipped = public_claims.scan_scope(tmp_path)
+    names = sorted(str(p.relative_to(tmp_path)) for p in (*scanned, *skipped))
+    assert "benchmarks/baseline/README.md" in [str(p.relative_to(tmp_path)) for p in scanned], names
+    assert not any(".workspace" in n for n in names), (
+        f"a vendored README reached the claim scan: {names}"
+    )

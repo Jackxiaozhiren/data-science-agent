@@ -1,6 +1,6 @@
 # Baseline Freeze — V1.8 → V2.0 Regression Contract
 
-> Frozen on `v1.8.0` (`587c4bf`) · live-verified 2026-08-16 · `docs/v2/Baseline Report.md` is authoritative.
+> Frozen on `v1.8.0` (`587c4bf`) · live-verified 2026-08-16 · re-measured 2026-10-05 at `9f6ab35` · `docs/v2/Baseline Report.md` is authoritative.
 
 This directory is the **regression anchor** for V2.0. Every V2 workstream must not regress these without an ADR.
 
@@ -24,6 +24,27 @@ uv run dsa --limit 50 --out /tmp/dsa-bench-baseline
 cat /tmp/dsa-bench-baseline/summary.json
 diff /tmp/dsa-bench-baseline/summary.json benchmarks/baseline/summary.json
 ```
+
+Read `DSA_LLM_MODE` before trusting that diff. It is unset in the command above, and the runner
+resolves it to `stub`: the heuristic provider, zero model calls (`call_count: 0` in the manifest a
+reproduce run writes). Nothing here records which mode produced *these* numbers -- the frozen
+`results.json` has no `execution` block and no `run_manifest.json` was ever committed -- so the two
+sides of the diff are not known to be the same kind of run.
+
+Measured on 2026-10-05 at `9f6ab35`, four runs of the command above (§113):
+
+- `task_success_rate`, `statistical_accuracy`, `sql_accuracy`, `code_execution_success` and
+  `evidence_coverage` reproduce exactly: 50/50 @ 1.0 in all four.
+- `unsupported_claim_rate` reads 0.0, against the 0.06 stored here and the 0.08 §86 measured on
+  2026-10-03. The direction is a reduction in unsupported claims, so it is not a regression; which
+  of §99 (the planner's spurious `causal_check` step) or §107 (its always-chart branch) accounts for
+  it is not pinned, and saying "the metric became honest" again would launder an unattributed delta.
+- `mean_latency_ms` is not comparable in either direction. The same command on the same commit read
+  162.3, 73.04 and 89.56 within minutes of each other, so a latency delta says more about the
+  machine than about the code, and the 47.92 ms stored here is a 2026-08-16 reading on a different
+  tree. The figure that carries weight is the ceiling in
+  `tests/regression/test_regression_matrix.py::test_baseline_contract`, which is checked against
+  this stored file and never against a fresh run.
 
 ## Provenance of the frozen numbers
 
@@ -64,6 +85,15 @@ Two scope notes so the gates above are not read as more than they are:
 
 ## Gates anchored here
 
-- Functional: 86 tests pass · 74% coverage branch · mypy 81 files clean · ruff 184 frozen · next 7/7 · compose valid
-- Budget: 50 tasks / 20 datasets (seed 42) — mean_latency 47.92ms baseline
-- Tolerance: any W2+ PR that drops `task_success_rate` or raises `unsupported_claim_rate` without ADR fails CI
+- Functional: `pytest -q --cov` against the `fail_under` floor in `pyproject.toml`, with `ruff check`,
+  `ruff format --check` and `mypy` as CI steps. No count is quoted on this line on purpose: the
+  figures it used to carry were a dated snapshot of a different tree, and this directory sat outside
+  every prose guard until §113 brought it inside `scripts/check_public_claims.py`.
+- Budget: 50 tasks / 20 datasets (seed 42). Those three are catalog facts with owners, and
+  `tests/test_baseline_readme_integrity.py` re-derives each from `benchmarks/ds-agent-benchmark/`
+  and `scripts/generate_benchmark_datasets.py` rather than restating them.
+- Tolerance: nothing in CI recomputes this snapshot, so a product regression that leaves the stored
+  file untouched stays green. `tests/regression/test_regression_matrix.py::test_baseline_contract`
+  compares the file against `1.0`; the ADR requirement is a review convention, not a check. Adding a
+  workflow step that re-runs the 50 tasks would be the way to make the old sentence true, and is not
+  something this document can promise on its own.

@@ -168,6 +168,31 @@ shadowing + missing greenlet concurrency).
   (§111). It is the only field that changed: a differential over a real run compared evidence, insights,
   tool_calls, validation and report_markdown as identical, and pinned the format with
   `test_timestamps_reach_the_mcp_client_in_iso_8601`.
+- `benchmarks/baseline/README.md` no longer claims CI enforces the freeze (§113). The tolerance bullet
+  read "any W2+ PR that drops `task_success_rate` or raises `unsupported_claim_rate` without ADR fails
+  CI"; `.github/workflows/ci.yml` contains zero references to `benchmarks/baseline`, and the file's own
+  scope notes two paragraphs above already said nothing recomputes the snapshot. The bullet now names
+  the check that does exist and states that no automated check recomputes the artifact. Its dated gate
+  counts ("86 tests pass · 74% coverage branch · mypy 81 files clean · ruff 184 frozen · next 7/7") are
+  removed rather than corrected: §76 had already deleted the literal `86 tests` rule from the claim
+  checker because it could only certify transcription, and the figure went on living in the one document
+  no prose guard read.
+- The reproduce section now declares the mode the documented command runs in (§113). `dsa --limit 50`
+  resolves `DSA_LLM_MODE` to `stub` -- heuristic provider, `call_count: 0` in the manifest a run writes
+  -- while the frozen `results.json` carries no `execution` block and no `run_manifest.json` was ever
+  committed, so neither side of the prescribed `diff` records what produced it. Measured at `9f6ab35`,
+  four runs: every accuracy field reproduces exactly, `unsupported_claim_rate` reads 0.0 against the 0.06
+  stored here (a reduction, and not attributed further), and `mean_latency_ms` spans 73.04-162.3 on the
+  same commit, so a latency delta in that diff is not evidence of anything.
+- `scripts/check_public_claims.py` declared exemptions for two trees it never opened (§113, Phase 4
+  target 1). `HISTORICAL_PREFIXES` listed `research/` and `benchmarks/`, and measured against
+  `SCAN_GLOBS` neither was reachable by a single pattern -- the printed "N skipped as historical" never
+  counted them, and the list justified itself with a "34 matches, 0 of them real" figure taken from a
+  rule set §76 had since retired (re-measured against today's three rules: 4 matches across the whole
+  exempt surface). `research/**/*.md` is now reached and counted (34 files), `benchmarks/**/README.md`
+  is reached and *scanned* rather than exempt, the vendored `.workspace` clone is excluded as the
+  dependency tree it is, and a guard fails if any declared exemption is unreachable by any glob.
+  Scanned surface 14 → 19 files; `0 issues` before and after.
 
 
 ### Added (unreleased, non-breaking)

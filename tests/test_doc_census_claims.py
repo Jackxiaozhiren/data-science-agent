@@ -9,8 +9,10 @@ derived comparison. This guard applies the same rule to the reader-facing docume
 number is derived by a check that runs, or the sentence does not carry one.
 
 Scope, stated rather than implied:
-- Scanned: ``README.md``, ``docs/**/*.md``, ``apps/**/*.md`` -- what a user or reviewer reads as
-  the current product.
+- Scanned: ``README.md``, ``docs/**/*.md``, ``apps/**/*.md`` and ``benchmarks/**/README.md`` -- what
+  a user or reviewer reads as the current product. The benchmarks entry arrived with §113, after the
+  freeze document turned out to sit outside both prose checks; it guards the census shape there,
+  while the dated gate counts §113 removed are guarded per file.
 - Exempt, as era-bound records rather than present-tense claims: ``research/**`` (papers, drafts,
   claim matrices), ``docs/v3`` and ``docs/v4_3``, ``CHANGELOG.md``, and this repository's own audit
   documents. A paper describing release N is allowed to cite release N's counts; a portfolio page
@@ -36,7 +38,7 @@ _CENSUS = re.compile(
     re.IGNORECASE,
 )
 
-SCAN_GLOBS = ("README.md", "docs/**/*.md", "apps/**/*.md")
+SCAN_GLOBS = ("README.md", "docs/**/*.md", "apps/**/*.md", "benchmarks/**/README.md")
 
 EXEMPT_PREFIXES = (
     "docs/v3/",
@@ -70,7 +72,20 @@ COMMAND_LINE = re.compile(r"^\s*(?:\$|uv run|npm |python3? |git |docker |dsa |gh
 # `apps/web/node_modules/next/dist/docs/**` through the `apps/**/*.md` glob and reported ~40
 # "offences" in third-party documentation -- the same mistake as counting generated output, which
 # is why the exclusion is a path-segment test and not a file-name list.
-SKIP_SEGMENTS = frozenset({"node_modules", ".next", ".venv", "site", "_vendor", "dist", "build"})
+SKIP_SEGMENTS = frozenset(
+    {
+        "node_modules",
+        ".next",
+        ".venv",
+        "site",
+        "_vendor",
+        "dist",
+        "build",
+        # The vendored DataSciBench clone under benchmarks/external/ brings its own venv and a
+        # MetaGPT checkout: sixteen upstream READMEs that are not this repository's prose.
+        ".workspace",
+    }
+)
 
 
 def _candidate_files() -> list[Path]:
@@ -141,3 +156,10 @@ def test_exempt_surfaces_are_what_they_claim() -> None:
     scanned = {p.relative_to(ROOT).as_posix() for p in _candidate_files()}
     assert not any(rel.startswith("research/") for rel in scanned), sorted(scanned)[:5]
     assert any(rel.startswith("docs/") for rel in scanned), "no docs/ file scanned -- glob broken"
+    # §113: `benchmarks/baseline/README.md` is the regression contract and speaks in the present
+    # tense, so it belongs here. What this guard buys for that file is protection against the census
+    # shape it does not currently take -- replayed against the pre-§113 revision it reports zero
+    # offences there, because "86 tests / 74% coverage" is not a route-or-tool count. The counts that
+    # were actually wrong are guarded by tests/test_baseline_readme_integrity.py.
+    assert "benchmarks/baseline/README.md" in scanned, sorted(r for r in scanned if "benchmark" in r)
+    assert not any(".workspace" in rel for rel in scanned), "vendored upstream prose reached the guard"

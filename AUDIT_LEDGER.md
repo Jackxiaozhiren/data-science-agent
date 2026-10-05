@@ -6009,3 +6009,143 @@ ruff `0` · format `0` · mypy `0` (117 files) · ratchet `OK` with `exceptHandl
 `sync_vendor --check` reports only the concurrent session's `dsa_evaluation` file; the top-level
 `data_science_agent` package is not mirrored, so no `--file` repair was due. Restored files verified by
 `md5 -q` after each control.
+
+## 113. The freeze document's claims about the repository, and a skip-list naming two trees it never opened
+
+**Why this was worth a section rather than a fix.** `benchmarks/baseline/` is the one place the repository
+states a contract in the present tense and then describes the enforcement behind it. α -- re-freezing it to
+post-§99 numbers -- stays a release decision (`docs/reproducibility.md:44`: "Immutable baselines (e.g.
+`benchmarks/baseline/`) are pinned; changes require a version bump", and 4.4.0 is tagged, and a version bump
+is the maintainer's call). Everything *around* the frozen numbers is ordinary in-repo diagnosis, and §86
+already listed four items of it as "cheap, in-repo and not release-gated". Three were still open.
+
+### 113.1 Re-measured at `9f6ab35`, four runs of the README's own command
+
+| field | frozen (`587c4bf`, 2026-08-16) | §86 (2026-10-03) | 11:23 | `9f6ab35` a/b/c | |
+| --- | --- | --- | --- | --- | --- |
+| `task_success_rate` | 1.0 | 0.92 (46/50) | 1.0 | 1.0 / 1.0 / 1.0 | reproduces |
+| statistical / sql / code / evidence | 1.0 | 1.0 | 1.0 | 1.0 | reproduces |
+| `unsupported_claim_rate` | 0.06 | 0.08 | 0.0 | 0.0 / 0.0 / 0.0 | moved, not attributed |
+| `mean_latency_ms` | 47.92 | 98.26 | 76.7 | 162.3 / 73.04 / 89.56 | not comparable |
+
+Two things follow that §86 could not see. The 0.92 deficit is gone at the current head: `dsa --limit 50`
+measures 50/50 again, and read at row level the four tasks §86 named -- `eda-01`, `stats-06`, `clf-03`,
+`viz-01` -- each carry `task_success: True, unsupported_claim: False` in all three runs, so its "resolve the
+`stats-06` / `clf-03` / `viz-01` question first" advice is moot as a *blocker*; the failures it wanted
+explained are not reproducible on this tree. (Row shape, read before asserting: `task_id / category /
+dataset / question / error / metrics / details` -- `task_success` lives under `metrics`, and a first probe
+keyed on a row-level `task_success` returned `None` for all four, which is the "print one row first" lesson
+from §86's own closing paragraph recurring on me.) And `mean_latency_ms` on **one commit** spans
+73.04 → 162.3 ms (2.22×), which settles the attribution question §86 left open in the opposite direction:
+the 47.92 → 98.26 move it could not explain without a paired A/B needs no explanation at all, because the
+reading is not a property of the code. `unsupported_claim_rate` was stable at 0.0 across all four runs, so
+its 0.06 → 0.0 move against the freeze is real; §99 (the spurious `causal_check` step) is the obvious
+candidate and §107 (the always-chart branch) the second, and I did not pin which, so the README says "a
+reduction, not attributed" instead of recycling §86's "the metric became honest" story.
+
+α itself is untouched: no file in `benchmarks/baseline/` other than `README.md` was modified, and the
+`summary.json` figures still say what the 2026-08-16 run said.
+
+### 113.2 Three sentences about the repository that the repository contradicted
+
+1. **A CI enforcement that does not exist.** "Tolerance: any W2+ PR that drops `task_success_rate` or
+   raises `unsupported_claim_rate` without ADR **fails CI**." Measured: `benchmarks/baseline` appears
+   **0** times in `.github/workflows/ci.yml`. The file's own scope note two paragraphs earlier already said
+   "Nothing in CI recomputes the snapshot", so the headline asserted what its footnote denied. §86 had
+   noticed and excused it ("which is why the headline claim reads as a leftover"); a leftover is still a
+   false claim.
+2. **Dated counts wearing present tense.** "Functional: 86 tests pass · 74% coverage branch · mypy 81 files
+   clean · ruff 184 frozen · next 7/7 · compose valid." The sharpest evidence that this class was unswept:
+   §76 deleted the literal `86 tests` rule from `scripts/check_public_claims.py`'s `PATTERNS` *because a
+   typed count can only certify transcription*, and the same figure went on being printed in the document
+   that defines the regression contract. Today the collector measures 663 test functions and CI's mypy
+   covers 117 files, so every number on that line was wrong -- not stale-by-one, wrong.
+3. **A reproduction whose two sides are not the same kind of run.** `dsa --limit 50` resolves
+   `DSA_LLM_MODE` to `stub` (`runner.py:61`, and `providers.py:424` for the client), which is what the
+   fresh manifest records: `"llm_mode": "stub", "provider": "stub", "call_count": 0`. The frozen
+   `results.json` has top-level keys `catalog / datasets_dir / n_tasks / aggregate / results` -- no
+   `execution` block -- and `run_manifest.json` was never committed. So the mode that produced the frozen
+   numbers is recorded nowhere in the artifacts, and the README's `diff` invites a reader to treat a
+   non-empty result as a regression report.
+
+### 113.3 The checker's own scope claim, derived rather than assumed (Phase 4 target 1)
+
+`HISTORICAL_PREFIXES` is a declaration that a surface was read and judged era-bound. Measured against
+`SCAN_GLOBS`, two of its six entries -- `research/` and `benchmarks/` -- were reachable by **zero**
+patterns, so `scan_scope()` never opened them and never counted them: the printed "51 skipped as
+historical" was not wrong about the trees it had read, but the list promised coverage of two it had not.
+The comment justifying the whole list quoted "measured across these prefixes it yields 34 matches, 0 of
+them real and 2 build-failing" -- re-measured today against the three surviving `PATTERNS` rules the figure
+is 4 (docs/ 2, apps/jupyter/ 1, src/data_science_agent/ 1, research/ 0, benchmarks/ 0, plugins/ 0). The 34
+was counted against the pre-§76 rule set and no check recomputed it after, which is §16's drift class
+sitting inside a script comment.
+
+Landed: `research/**/*.md` and `benchmarks/**/README.md` added to `SCAN_GLOBS`; `benchmarks/` removed from
+the exemptions (the freeze document is current-tense product prose, not a historical record); `.workspace`
+added to `NOISE_SUBSTRINGS` -- `find` counts 49,421 of the 49,516 files under `benchmarks/` as living in the
+vendored clone, sixteen of them upstream `README.md` files, and without this the widening would have
+"scanned" third-party documentation, the same mistake §82 records the census guard making with
+`node_modules`. (The first figure written here was 6,590, which was the *suffix-filtered* read count from my
+probe rather than a file count -- measured before quoting.) Surface measured before → after: scanned **14 → 19**, skipped **51 → 85**, issues **0 → 0**.
+No new red from a wider net is the point of target 1: raising what *can* fail does not require something to
+fail now.
+
+`tests/test_doc_census_claims.py` gained the same `benchmarks/**/README.md` glob and the `.workspace`
+segment exclusion, and its scope test now asserts the freeze document is inside the scanned set. Stated
+without overclaiming: replayed against `git show HEAD:benchmarks/baseline/README.md`, that guard reports
+**zero** offences there, because `_CENSUS` matches route/tool/command counts and finding 2's line is
+neither. It is protection for the census shape going forward; the counts that were actually wrong are
+guarded by §113.4.
+
+### 113.4 Red → green, and the controls
+
+Six new guards, all in `tests/test_baseline_readme_integrity.py` (8) and `tests/test_automation_scripts.py`
+(4). Reds captured against the working tree before each fix, then re-run against `git show HEAD:` so a guard
+keyed on a shape the defect never took cannot pass as a fix:
+
+| guard | red before | HEAD-replay |
+| --- | --- | --- |
+| `test_the_tolerance_rule_does_not_claim_ci_enforcement_...` | 1 offender line | 1 offender |
+| `test_the_tolerance_rule_names_the_check_that_actually_runs` | pointer absent | absent |
+| `test_the_gates_section_carries_no_measurement_count_...` | `['86 tests','74% coverage','mypy 81','ruff 184','next 7/7']` | same 5 |
+| `test_the_reproduce_block_declares_the_mode_...` | "the switch is not named at all" | `DSA_LLM_MODE`/`stub` both absent |
+| `test_no_historical_prefix_is_declared_without_a_glob_...` | `['benchmarks/','research/']` | (script, not prose) |
+| `test_the_benchmark_readmes_are_inside_the_surface_...` | scanned set had no benchmark file | -- |
+
+Controls: the CI-claim and gate-figure controls are **synthetic fixtures**, not edits of the shipped file --
+the first cut planted text into `README.md`'s own strings, which would have made each control a lie the day
+the prose was fixed. Both assert in the two directions (a planted `999 tests` is caught; `50 tasks / 20
+datasets (seed 42)` is not). The mode control moves the *runner source* in a `tmp_path` copy and requires
+the guard to go red when the default it reads moves, and asserts the edit landed before concluding from it.
+The reachability control toggles `SCAN_GLOBS` on a `tmp_path` tree so the same prefix flips from dead to
+live by adding a file. `test_the_vendored_workspace_tree_is_neither_scanned_nor_counted` needs a story of
+its own, because its first version would have been **red on the runner while green here**: it asserted its
+premise off disk (`assert vendored` over sixteen local `README.md` matches containing `.workspace`), and
+`.workspace/` is gitignored (`.gitignore:49`) with **zero** tracked files -- a clean checkout matches
+nothing, the premise fires, and §103's trap is stepped in again eleven sections later on a file I had just
+measured. It now drives the exclusion through a `tmp_path` tree holding one real and one vendored README,
+so the same branch is exercised wherever the test runs. The widening's premises were then checked against
+`git ls-files` instead of the working tree: `research/` has 34 tracked `.md` (the +34 skipped),
+`benchmarks/` 5 tracked `README.md` (the +5 scanned), and `plugins/dsa-time-series/README.md`,
+`apps/jupyter/README.md` and `src/data_science_agent/sdk.py` are each tracked, so every exemption the
+reachability guard requires to be live is live in a fresh checkout.
+`test_the_budget_bullet_quotes_sizes_the_catalog_actually_has` is **green-on-arrival** too: 50
+tasks and 20 datasets derive from `catalog.json` and the datasets directory, and seed 42 from
+`random.Random(42)` in the generator.
+
+**My own two slips, recorded because both were caught by instruments.** The first `test_the_tolerance_rule_names_...`
+took `tolerance[0]` from `splitlines()`, so it compared the wrapped bullet's first line only and reported a
+pointer present in the same sentence as missing. The first reachability control asserted
+`"benchmarks/" in dead` after §113.3 had removed `benchmarks/` from the list it reads -- a control pinned to
+the pre-fix shape of the thing it guards. Both were red before any claim of green.
+
+**Gates.** Full `pytest -q --cov` exit **`0`**, **689 passed / 1 skipped** (the skip is
+`test_cli_help_surface.py:30`, "dsa console script not on PATH" -- environmental, pre-existing), coverage
+**82.57%** against `fail_under = 79` · ruff `0` · format `0` · mypy untouched by this section (CI scans
+`packages apps/api src apps/jupyter`; nothing here lives in them) · ratchet `OK`, `testFunctions`
+651 → **663**, `exceptHandlers` **185**, `swallowedExceptionSites` **8**, `todoMarkers` 0, no ceiling moved
+· orphan-reads `0` (14 declared keys) · claims `0` · `claims --require-released-tags` `0` · mkdocs
+`--strict` exit `0`. `sync_vendor --check` reports exactly one drifted file,
+`dsa_evaluation/external_validation.py`, which is the concurrent session's uncommitted source and was not
+touched or repaired; every file this section changed lives in `scripts/` or `tests/`, neither of which is
+mirrored, and `benchmarks/` is data.
