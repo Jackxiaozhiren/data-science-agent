@@ -172,6 +172,15 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `data_science_agent.measurement` holds the benchmark and reproduction facades
+  (`Benchmark`, `BenchmarkResult`, `Reproduction`, `ReproductionResult`, plus the
+  `REPRODUCTION_DIMENSION_KEYS` mapping from §101), split out of `data_science_agent.sdk`, which was 716
+  lines of agent surface and measurement surface together (`AUDIT_LEDGER.md` §112, Phase 4 target 2 seam
+  #5). `sdk.py` 716 → 488 and left the five largest shipped sources; it re-exports the four names, so
+  `from data_science_agent.sdk import Benchmark` and the `API_STABILITY` registry are unchanged for every
+  existing caller. Pinned by `tests/sdk/test_measurement_seam.py`, including that the new module depends on
+  `dsa_evaluation` and must not import `dsa_agent` -- the dependency direction is the boundary.
+
 - New internal module `dsa_agent.run_summary` holds the run-level contract itself (§111, Phase 4 target
   3): `RUN_SUMMARY_FIELDS` (the nine canonical names) and `run_summary(state)`, which builds the payload
   from that list so a field cannot be forgotten by omission, plus `normalize_records`, the

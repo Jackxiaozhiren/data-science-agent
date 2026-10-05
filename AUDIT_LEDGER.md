@@ -5965,3 +5965,47 @@ orphan-reads `0` · full `pytest -q --cov` exit **`0`**, coverage **82.56%**,
 `testFunctions` 637 → **646**. Mirrors for `run_summary.py`, `adapter.py` and
 `routers/analysis.py` verified with `diff -q`. Runner: §110's push `3eef9e9` produced CI
 `completed success`.
+## 112. Phase 4 target 2, seam #5: the measurement facades are not the agent surface
+
+**The boundary, stated the way §15.3 demands.** `data_science_agent.sdk` was 716 lines holding eleven
+classes of two kinds: the analysis surface (`Agent` plus the six value dataclasses a run produces) and
+the measurement surface (`Benchmark`/`BenchmarkResult`, `Reproduction`/`ReproductionResult`), the latter
+being the only part that shells into `dsa_evaluation`. Splitting on that dependency, `sdk.py` → **488**
+and the new `data_science_agent.measurement` → **264**; `sdk.py` left the five largest shipped sources
+entirely.
+
+**The public path is unchanged on purpose.** `API_STABILITY` still names all eleven classes and
+`docs/v4_3/V4_2_FINAL_TRUTH.md`'s table still resolves, because `sdk.py` re-exports the four moved names.
+Written as `from data_science_agent.measurement import Reproduction as Reproduction` -- the `as` form is
+what tells mypy a re-export is intentional; my first version, mid-file and unaliased, produced five
+F401s, an E402, and four `does not explicitly export attribute` errors from mypy. All were the gate's
+findings, not mine.
+
+**What the loop caught, three times over.**
+1. `@dataclass` sits *above* the class line, so slicing from `class BenchmarkResult:` to `class Report:`
+   left `Report`'s decorator behind in `sdk.py` and dragged a dangling `@dataclass` into
+   `measurement.py` -- a `SyntaxError` on parse, caught by the AST inspection rather than by the import
+   cache. Repaired, then verified class-by-class from the syntax tree.
+2. Removing the re-export line made `tests/sdk/test_measurement_seam.py` fail at **collection**
+   (`ImportError`, exit 2) rather than as an assertion: the documented import path breaking is louder than
+   a test failing, which is the point of pinning `Benchmark is measurement.Benchmark` by identity.
+3. §109's pin `test_the_sdk_reaches_the_harness_through_its_public_name` went red in the *full* suite --
+   invisible to the `tests/sdk`-only run I had just done -- because it parsed `sdk.py`, and §112 had moved
+   the harness call to `measurement.py`. That is a seam signal, not a bug: the assertion was pinned to a
+   filename instead of to the SDK surface, so it now scans `sdk.py` **and** `measurement.py` and says why
+   in its docstring. It is also the second section running where a stale file-path pin cost a red --
+   §103's lesson, recurring.
+
+**Tests** (`tests/sdk/test_measurement_seam.py`, 5; all red on arrival as an ImportError): the four
+classes are defined in `measurement.py` and not in `sdk.py`; both import paths resolve to the same
+objects, including through the package root; every name `API_STABILITY` declares is importable from the
+SDK (so a future move cannot orphan a registry entry); and the dependency direction is now separated too
+-- `measurement.py` imports `dsa_evaluation` and must not import `dsa_agent`, which is the actual test
+that the split is a boundary rather than a filing cabinet.
+
+**Gates.** Full `pytest -q --cov` exit **`0`**, coverage **82.57%**, `testFunctions` 646 → **651** ·
+ruff `0` · format `0` · mypy `0` (117 files) · ratchet `OK` with `exceptHandlers` **185** and
+`swallowedExceptionSites` **8** · orphan-reads `0` · claims `0` · mkdocs `--strict` 0 warnings.
+`sync_vendor --check` reports only the concurrent session's `dsa_evaluation` file; the top-level
+`data_science_agent` package is not mirrored, so no `--file` repair was due. Restored files verified by
+`md5 -q` after each control.

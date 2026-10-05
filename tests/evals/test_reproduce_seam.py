@@ -44,12 +44,18 @@ def test_the_cli_no_longer_defines_the_harness() -> None:
 
 
 def test_the_sdk_reaches_the_harness_through_its_public_name() -> None:
-    """The SDK used to import a name documented as internal and paper over it with a fallback."""
-    tree = ast.parse(SDK.read_text(encoding="utf-8"))
+    """The SDK used to import a name documented as internal and paper over it with a fallback.
+
+    Scanned across both files rather than one path, because §112 moved `Reproduction` out of `sdk.py`
+    into `measurement.py` -- pinning a filename here would only restate where the code happened to sit.
+    """
+    sdk_dir = SDK.parent
     imported: list[tuple[str, str]] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.module:
-            imported.append((node.module, ",".join(a.name for a in node.names)))
+    for name in ("sdk.py", "measurement.py"):
+        tree = ast.parse((sdk_dir / name).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                imported.append((node.module, ",".join(a.name for a in node.names)))
 
     assert ("dsa_evaluation.reproduce", "reproduce_benchmark") in imported, imported
     assert not any(
