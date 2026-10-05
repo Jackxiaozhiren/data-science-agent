@@ -5849,3 +5849,61 @@ a present dir is `"ok"` (`reproduce.py:43`). The test was corrected to the code,
 coverage **82.55%**, `testFunctions` 625 → **631**. `cli.py` 702 → **507** and leaves the top four
 largest shipped sources; `reproduce.py` **217**. Mirrors for both files repaired with `sync_vendor --file`
 and verified by `diff -q`.
+## 110. The sentinel tranche is closed: three handlers cleared, and the real defect was one line earlier
+
+**§96 left a debt of honesty here:** the three `except SystemExit: return None` handlers in
+`apps/jupyter/magic.py` were recorded as "probably deliberate (IPython paths raise it) and were not read
+closely enough to claim either way". Claiming it now, with the handlers driven directly.
+
+**Verdict: benign, and measured rather than reasoned.** `%dsa benchmark --limit` (a declared flag with no
+value) reaches argparse's error path, which writes **110-113 bytes** of
+`usage: %dsa benchmark [--limit LIMIT] [--json]` to stderr *before* raising; the handler then returns
+`None` so a traceback stays out of the notebook. A user sees the error. That is the same shape §94/§95
+accepted for the seven documented swallows, and these three are the last un-dispositioned sites in the
+sentinel class.
+
+**The defect was one line earlier, and the probe found it by accident.** Each parsing handler read
+``ns, _ = parser.parse_known_args(args)`` -- the leftover list thrown away. `parse_known_args` never
+errors on an *unknown* token, so `%dsa profile benchmarks/v2/datasets/sales.csv --jsoon` (a typo of
+`--json`) printed **0 bytes of complaint** about `--jsoon` and profiled the dataset as though the flag
+had never been typed. Measured on the real magic through a live `TerminalInteractiveShell`, before and
+after: the fixed path now emits
+`%dsa profile: ignoring unrecognized arguments: --jsoon` on stderr while the cell output is unchanged.
+
+**Fix.** `_known_args(parser, args)` -- one helper, three call sites, inside the existing
+`except SystemExit` handlers so no handler is added (`exceptHandlers` **185**,
+`swallowedExceptionSites` **8**, both unmoved). It reports on stderr, not stdout, because a notebook
+renders the magic's stdout as the cell's result; that choice is asserted, not assumed
+(`test_the_report_goes_to_stderr_and_not_stdout`).
+
+**Two structural pins, so the class cannot come back:** no assignment may bind a
+`parse_known_args(...)` result to `_` (AST over `magic.py`), and exactly three handlers must route
+through `_known_args`. Plus the behaviour pair (a typo is named; a clean invocation is silent).
+
+**Two mistakes of mine, both caught by the loop, recorded because they are the instructive kind.**
+1. I asserted `--limit` on the *profile* parser would raise `SystemExit`. It cannot -- that parser never
+   declared `--limit`, so it is just an unknown token, which is precisely the hole being closed. The
+   test premise was wrong, not the code; it now declares `--limit` itself and expects the raise.
+2. My insertion script anchored on `class DSAMagic` and landed the helper **between `@magics_class` and
+   its class**, so the decorator wrapped a function and magic registration broke --
+   5 pre-existing `tests/jupyter/test_jupyter_integration.py` tests went red, including
+   ``%dsa`` not being found at all. Fixed by moving the helper above the decorator; the suite is green
+   and the file was restored hash-verified (`6a8398d8…`) after the control.
+
+**Control.** Replacing `if extras:` with `if False:` made exactly the two behavioural tests fail and left
+both AST pins green -- the pins guard the *shape*, the behaviour tests guard the message.
+
+**Remaining sentinel dispositions, so this lane ends with nothing unexamined:**
+`_adapter._tool_input_schema` / `_tool_output_schema` -- latent, §102 measured 0 of 18 tools hitting
+them; `metadata.dataset_hash` -- §96's own reading holds, the notebook header prints `dataset_hash:None`,
+so the loss is visible; `planner._has_time_data` -- `False` on an unreadable dataset, but the planner
+already loses the time-series step for a path it cannot read either way, blast radius 0 plans;
+`graph._get_columns` -- D-L3-13, a product decision about unreadable datasets, not this lane's.
+
+**Filed as D-L3-19, not taken:** unrecognised arguments are now *reported* and still ignored. Making them
+an error would be stricter and is defensible, but `%dsa` is a user-facing notebook surface and changing
+warn → refuse is its own call.
+
+**Gates.** ruff `0` · `ruff format --check` `0` (236 files) · mypy `0` (115) · ratchet `OK` ·
+orphan-reads `0` · full `pytest -q --cov` exit **`0`**, coverage **82.56%**,
+`testFunctions` 631 → **637**. Mirror repaired with `sync_vendor --file` for `dsa_jupyter/magic.py`.

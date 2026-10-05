@@ -154,6 +154,15 @@ shadowing + missing greenlet concurrency).
   `docs/audit/orphan-reads.json` with the outside system that supplies it; a new orphan or a stale
   entry both fail, and `--seed` writes empty fields rather than placeholder text so an unreviewed list
   cannot ship.
+- The `%dsa` notebook magics no longer swallow an argument they do not recognise (§110). Each parsing
+  handler bound `parse_known_args`'s leftover list to `_` and dropped it, so
+  `%dsa profile data.csv --jsoon` printed nothing about the typo and ran as if `--json` had been given.
+  A new `_known_args` helper reports the unrecognised tokens on stderr (verified through a live IPython
+  shell: `%dsa profile: ignoring unrecognized arguments: --jsoon`) while the cell output is unchanged;
+  unrecognised arguments are still ignored, and making them an error is filed as D-L3-19. This also
+  closes the last unexamined sites of the L3 sentinel census: the three `except SystemExit` handlers are
+  benign -- argparse writes its usage block to stderr first (110-113 bytes measured) -- and the two AST
+  pins now forbid re-binding those leftovers to `_`.
 
 ### Added (unreleased, non-breaking)
 

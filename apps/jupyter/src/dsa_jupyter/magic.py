@@ -72,6 +72,22 @@ def _run_sync(coro_factory: Any) -> Any:
         raise
 
 
+def _known_args(parser: argparse.ArgumentParser, args: list[str]) -> argparse.Namespace:
+    """Parse what a magic knows about, and say so out loud when it does not know something.
+
+    ``parse_known_args`` hands back the unrecognised tokens and all three callers used to bind them to
+    ``_`` and drop them, so ``%dsa profile sales.csv --jsoon`` ran exactly as if the typo had not been
+    typed. The report goes to stderr: a notebook renders that separately from the cell's own result.
+    """
+    ns, extras = parser.parse_known_args(args)
+    if extras:
+        print(
+            f"{parser.prog}: ignoring unrecognized arguments: {' '.join(extras)}",
+            file=sys.stderr,
+        )
+    return ns
+
+
 @magics_class
 class DSAMagic(Magics):  # type: ignore[misc]
     """%dsa magic — §28 MVP.
@@ -161,7 +177,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
         parser.add_argument("dataset", nargs="?", default=None)
         parser.add_argument("--json", action="store_true")
         try:
-            ns, _ = parser.parse_known_args(args)
+            ns = _known_args(parser, args)
         except SystemExit:
             return None
         if not ns.dataset:
@@ -225,7 +241,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
         parser.add_argument("--json", action="store_true")
         # allow --task with quote
         try:
-            ns, _ = parser.parse_known_args(args)
+            ns = _known_args(parser, args)
         except SystemExit:
             return None
         if not ns.dataset or not ns.task:
@@ -292,7 +308,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
         parser.add_argument("--limit", type=int, default=1)
         parser.add_argument("--json", action="store_true")
         try:
-            ns, _ = parser.parse_known_args(args)
+            ns = _known_args(parser, args)
         except SystemExit:
             return None
         if display is not None:
