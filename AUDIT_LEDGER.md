@@ -6149,3 +6149,40 @@ the pre-fix shape of the thing it guards. Both were red before any claim of gree
 `dsa_evaluation/external_validation.py`, which is the concurrent session's uncommitted source and was not
 touched or repaired; every file this section changed lives in `scripts/` or `tests/`, neither of which is
 mirrored, and `benchmarks/` is data.
+
+### 113.5 Erratum: the section's own `format 0` claim came from a hand-typed file list
+
+**What the runner said.** Run `37261622024` (`3cbcfb8`, event push) finished **failure** in job `ci`, at the
+step `uv run ruff format --check packages apps/api tests src apps/jupyter scripts`; every later step was
+skipped and `web-regression` passed on its own. §113's Gates block above states "format `0`", and at the
+revision that push carried, that sentence was false.
+
+**Why it was green here and red there.** The formatter check I ran named the files I had edited. Four files
+changed in this section; my command named three. `tests/test_doc_census_claims.py` was edited last -- the
+`SCAN_GLOBS` line and two new assertions -- and its two long `assert ..., sorted(...)` lines are exactly
+what the whole-tree check wanted to wrap. Nothing about the tool differed (`ruff 0.16.3` on both sides,
+verified against `uv run --frozen ruff --version`), and nothing about the checkout differed. The gate I ran
+was a *smaller* gate than the one CI runs, which is §16's drift class applied to my own verification claim
+rather than to a document: the invocation's file list was typed from memory instead of derived from the
+changeset.
+
+**Fix and the rule it changes.** One file reformatted, then all seven runner commands re-run **verbatim over
+whole trees**, each exit code read from the command itself rather than through a pipe:
+`ruff check` **0** · `ruff format --check` **0** (240 files) · `mypy packages apps/api src apps/jupyter` **0**
+(117 source files) · `audit_facts --check` **OK** (no ceiling moved) · `find_orphan_reads --check` **0** ·
+`check_public_claims --require-released-tags` **0** · `pytest -q --cov` **0**, 689 passed / 1 skipped,
+coverage **82.57%** against `fail_under = 79`. From here on a green claim is made from the CI invocation, not
+from a per-file list, and the count line is read from the run being cited. No suppression was added, no path
+was excluded, no ceiling was re-seeded; the correction is whitespace in one test file.
+
+**Adjacent finding, recorded rather than fixed (D-L4-06).** `ci.yml` carries **33** `run:` steps and there is
+no local runner for them: `scripts/dev.sh` starts `uvicorn` and `npm run dev` and contains zero
+`ruff`/`pytest` invocations, so reproducing the gate set means copying commands out of the workflow by hand.
+Phase 4 target 6 asks for a documented, discoverable command surface, and the honest answer for the *gate*
+surface is that it does not exist -- which is the precondition that made a hand-typed file list possible in
+the first place. Options: a `scripts/run_gates.sh` that derives its commands from the workflow's own `run:`
+steps (one source, but it executes strings from a YAML file), or a documented gate list in
+`CONTRIBUTING.md` pinned to `ci.yml` by a test the way `tests/test_ci_gate_integrity.py` already pins the
+guide tables. The second fits this repository's existing shape and adds no exec; it is the recommendation.
+Deferring costs a repeat of this section's failure mode -- a locally green claim the runner contradicts -- and
+each repeat costs a push and a full CI run to discover.

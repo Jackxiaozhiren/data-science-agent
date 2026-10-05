@@ -161,5 +161,9 @@ def test_exempt_surfaces_are_what_they_claim() -> None:
     # shape it does not currently take -- replayed against the pre-§113 revision it reports zero
     # offences there, because "86 tests / 74% coverage" is not a route-or-tool count. The counts that
     # were actually wrong are guarded by tests/test_baseline_readme_integrity.py.
-    assert "benchmarks/baseline/README.md" in scanned, sorted(r for r in scanned if "benchmark" in r)
-    assert not any(".workspace" in rel for rel in scanned), "vendored upstream prose reached the guard"
+    assert "benchmarks/baseline/README.md" in scanned, sorted(
+        r for r in scanned if "benchmark" in r
+    )
+    assert not any(".workspace" in rel for rel in scanned), (
+        "vendored upstream prose reached the guard"
+    )
