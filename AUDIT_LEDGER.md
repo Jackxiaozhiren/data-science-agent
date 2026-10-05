@@ -6418,3 +6418,106 @@ worth naming here so the next reader does not re-derive it.
 **0** · `check_public_claims --require-released-tags` **0** · `pytest -q --cov` **0**, coverage **82.63%**
 · `mkdocs build --strict` **0**. `dsa_llm`'s vendor mirror re-synced after every source edit including the
 formatter pass; `sync_vendor --check` still reports only the concurrent session's `dsa_evaluation` file.
+
+## 117. Phase 5 reporting for this run (§113 – §116), per §25
+
+### 117.1 Executive summary
+The code is green on the runner and honest about what it enforces: five commits (`3cbcfb8`, `ad7a3f5`,
+`458a3e1`, `1aaad32`, `ff05e18`), every one verified by a CI run that completed `success`.
+The two findings that mattered most were not in the code but in the *claims about* it -- `benchmarks/baseline`
+asserting a CI tolerance no workflow reads (§113), and `check_public_claims.py` declaring exemptions for two
+trees it never opened (§113.3). Four seams were taken (§114 resources, §115 report composition, §116 cost),
+each behaviour-preserving with a differential that was shown capable of failing. Deliberately not done: the
+α re-freeze (release-gated), and three verdict/contract changes now filed as D-L4-07/08 and the status
+vocabulary question. Needs the maintainer: the six decisions in §117.5, of which the npm advisory exemption
+has a date on it (2026-11-07).
+
+### 117.2 Repairs
+| id | sev | what was wrong | commit | verify_before | verify_after | ceiling key |
+| --- | --- | --- | --- | --- | --- | --- |
+| §113.1 | S2 | freeze README promised "fails CI"; `benchmarks/baseline` appears 0 times in `ci.yml` | `3cbcfb8` | guard red: 1 offender line; HEAD-replay same | red → 0 offenders | none needed |
+| §113.2 | S2 | "86 tests pass · 74% coverage · mypy 81 files · ruff 184 · next 7/7" -- dated counts in present tense, in a file no prose guard read | `3cbcfb8` | 5 offenders extracted | 0 | none |
+| §113.3 | S2 | `HISTORICAL_PREFIXES` named `research/`, `benchmarks/` unreachable by any glob; skip-list justified by an unreproducible "34 matches" | `3cbcfb8` | `['benchmarks/','research/']` dead | none dead; scanned 14 → 19 | none |
+| §113.4 | S2 | reproduce block ran `DSA_LLM_MODE=stub` silently against a snapshot stamping no mode | `3cbcfb8` | "switch not named at all" | named + default derived from source | none |
+| §113.5 | S1(self) | my own `format 0` claim came from a per-file list; whole-tree `ruff format --check` was red on the runner | `ad7a3f5` | run 37261622024 `ci: failure` at the format step | run 37262155863 `ci: success` | none |
+| §114 | S3 | 632-line adapter holding tool and resource surfaces; `_ANALYSIS_STORE` isolated under the wrong module after the move | `458a3e1` | ImportError / `AttributeError` at conftest:94 | 36 resources + 12 reads byte-identical; 14 → 19 scanned files | none |
+| §115 | S3 | 179-line `_node_report`, largest function in the tree, mixing composition with orchestration | `1aaad32` | 3 guards red (module missing, node not a delegate, no dep-direction check) | 3 arms byte-identical incl. artifact file bodies | none |
+| §116 | S2/S3 | spend ceiling and call log living inside transport; `dsa_llm.providers` still named as the container's home in §87's isolation list | `ff05e18` | 4 guards red; conftest fixture would clear a nonexistent attr | 70 outcomes byte-identical; identity asserted by `is` | none |
+
+### 117.3 Numeric attestation
+Both sides of every row below come from the same command run in the same vantage: a `git archive` export of
+the named revision with `scripts/audit_facts.py --write` executed there. Re-measuring this way is what turned
+a smooth-but-wrong "+27" into the true "+29" -- §112's recorded 651 was a working-tree number taken while the
+concurrent session's uncommitted tests were present, and the two sides of a delta must not come from different
+vantages (§25.3's rule, caught here on my own bookkeeping).
+
+| metric | `9f6ab35` (§112's head) | `ff05e18` (this run) | delta | command |
+| --- | --- | --- | --- | --- |
+| `debt.testFunctions` | 649 | 678 | +29 | `scripts/audit_facts.py --write` in a HEAD export |
+| `capabilities.sourceFiles` | 189 | 192 | +3 | same |
+| `debt.exceptHandlers` | 185 | 185 | 0 (at its ceiling, and the gate still passes) | same |
+| `debt.swallowedExceptionSites` | 8 | 8 | 0 | same |
+| `debt.suppressionDirectives` | 42 | 42 | 0 -- nothing suppressed to get green | same |
+| `debt.todoMarkers` | 0 | 0 | 0 | same |
+| `debt.pytestSkipXfail` | 0 | 0 | 0 | same |
+| largest shipped source | 948 | 948 | 0 (`scripts/generate_benchmark_v2.py`, no seam: §116.2) | `capabilities.largestSourceFiles` |
+| `dsa_mcp/adapter.py` lines (was #2 at 632) | 632 | 340 | −292 | `wc -l packages/mcp/src/dsa_mcp/adapter.py` |
+| `dsa_agent/langgraph_graph.py` lines | 524 | 348 | −176 | `wc -l packages/agent/src/dsa_agent/langgraph_graph.py` |
+| `dsa_llm/providers.py` lines | 503 | 456 | −47 | `wc -l packages/llm/src/dsa_llm/providers.py` |
+| tests passed (both sides a working-tree run, so both include the concurrent session's uncommitted tests) | 689 passed / 1 skipped | 706 passed / 1 skipped | +17 collected | `uv run --frozen python -m pytest -q --cov` |
+| coverage | 82.57% | 82.63% | +0.06 pt | same (macOS arm64, `fail_under = 79` in `pyproject.toml`) |
+| lint findings | 0 | 0 | 0 | `uv run --frozen ruff check packages apps/api tests src apps/jupyter scripts` |
+| format | 0 / 240 files | 0 / 246 files | +6 files | `uv run --frozen ruff format --check <same six roots>` |
+| type errors | 0 / 117 files | 0 / 120 files | +3 files | `uv run --frozen mypy packages apps/api src apps/jupyter --ignore-missing-imports` |
+| tracked files | 793 | 802 | +9 | `git ls-files` counted with `wc -l` |
+| ceiling keys moved | — | none | 0 | `uv run --frozen python scripts/audit_facts.py --check` |
+| runner verification | run 37259225956 `success` | runs 37262155863, 37263202955, 37264589454, 37265354744 all `success` | 4 green pushes | `gh run view --json jobs,conclusion` |
+
+### 117.4 Probes refuted, items judged correct, and what was not run
+- **Refuted by measurement:** "the frozen baseline's `unsupported_claim_rate` 0.06 → 0.0 move needs an
+  attribution story" -- §86's 0.92 / four-failure state is not reproducible at this head, and the four tasks
+  each read `task_success: True, unsupported_claim: False` in three runs. §86's blocker question dissolved.
+- **Refuted by my own fixture:** "`artifacts` disappears when a report write fails." It did not: the key was
+  absent from *my synthetic* state, so `None` was the fixture talking. Filed nowhere, and recorded because I
+  nearly wrote it up as a defect.
+- **Refuted:** `publication.py`'s `execution` metadata requirement does not apply to `benchmarks/baseline/`
+  (no shipped reader of the frozen file calls it), so the frozen file's missing `execution` block is a
+  provenance gap, not a crash.
+- **Examined and correct:** `docs/reproducibility.md:44`'s immutability rule (why α was not taken);
+  §100's "NOT committed" annotation convention, which §113's mode disclosure deliberately did *not* copy
+  because a declared marker for a value derived from code is weaker than reading the code;
+  §87's loud `AttributeError` in the isolation fixture (it caught two moves this run, §114 and §116).
+- **PROTECTED, untouched:** `README.md`, `packages/evaluation/src/dsa_evaluation/external_validation.py`,
+  `tests/evals/test_external_validation.py` (a concurrent session's dirty files -- never staged, and their
+  drift is why `sync_vendor --check` still reports one file); `data-science-agent/` (second clone);
+  `benchmarks/external/datascibench/.workspace/` (read-only ground truth, now also excluded from the claim
+  scan as the dependency tree it is); `benchmarks/baseline/summary.json` and `results.json` (release-gated);
+  the four `项目经历-DSA-*.md` files (the maintainer's own, untracked).
+- **Open hypotheses:** whether the wheel-install artifact root is *observed* unwritable anywhere (derived by
+  path arithmetic only, D-L4-07); whether `check_public_claims.py` or `publication.py` yields a seam worth a
+  commit (boundaries stated in §116.3, neither examined to the node level); whether §113's 0.0 vs frozen 0.06
+  is attributable to §99 or §107 (stated as unattributed in the README rather than guessed).
+- **Lanes not run this session, with the reason:** L4 (runtime/browser verification) -- no dev server was
+  started in this shared worktree; L8 (callback-shape test seams) -- not reached; L5 claim re-runs beyond the
+  changed documents -- the claim checker ran whole-surface, but no fresh release-line review was done, since
+  no version was bumped.
+
+### 117.5 Decisions required
+| id | situation | options | recommendation | cost of deferring |
+| --- | --- | --- | --- | --- |
+| **α re-freeze** | `benchmarks/baseline/` still publishes 2026-08-16 numbers; current stub runs measure 50/50 @ 1.0 with `unsupported 0.0` | re-freeze + version bump, or keep β (declare staleness) | keep β; α is a release action and the README now says what the diff cannot show | the freeze stays non-comparable; every reader must re-derive it |
+| **D-L4-06** | `ci.yml` carries 33 `run:` steps; nothing in the repo runs them locally, which is how §113.5's false `format 0` happened | derived gate runner, or a CI-pinned gate list in `CONTRIBUTING.md` | the second: it fits `tests/test_ci_gate_integrity.py`'s existing shape and adds no exec | another locally-green/runner-red push, each costing a full CI run to discover |
+| **D-L4-07** | report artifacts land at `Path(__file__).parents[4]` -- the interpreter's lib dir in a wheel install | cwd-relative, a configured `--out`, or documented env override | cwd-relative with an env override; a product writing inside `site-packages` is indefensible | a `pip install`ed user loses reports into their venv tree and never sees the failure |
+| **D-L4-08** | a run whose report could not be persisted returns `COMPLETED` with `error` set (0 of 50 runs here, live where D-L4-07 bites) | fail the verdict, add a degraded status, or accept and publish the error field | publish + degraded status is honest, but it is a contract change every interface carries; the pinned test makes the status quo visible | the evaluator keeps scoring unwritable-report runs as successes wherever the root is read-only |
+| **D-L3-13 / -14 / -18 / -19** | unchanged from earlier sections: `graph._get_columns`, the SDK facade dropping three dimensions, run-level alias unification (breaking), unknown magic args (warn vs refuse) | as recorded | as recorded | as recorded |
+| **npm advisory exemption** | §89's pinned exemption list re-review due **2026-11-07** | re-review or retire the exemption | re-review on the date | a stale exemption becomes the thing §113.3 called a declared-but-unreachable skip |
+
+### 117.6 Self-audit
+Three of this run's five reds were my instruments, not the repository: the per-file format list (§113.5), the
+`ast.Assign`-only helper that made an absence guard blind (§114), and a fake `uuid4` that put every arm of a
+differential into the code's error branch while it reported byte-identical (§115). Each was caught by a
+control that was required to prove it fired -- the planted literal, the repeat run, the `assert new != t`
+before any conclusion -- not by argument. Two claims were corrected after being written into the ledger in
+this same session (the 6,590-file count in §113.3, and the "+27" delta here), each time by re-running the
+command instead of re-reading my own prose. Where the record still disagrees with a file, the file is right:
+that is what §113's README rewrite and §116.2's correction of my own §114 note are for.
