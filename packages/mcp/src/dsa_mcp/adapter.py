@@ -98,6 +98,10 @@ MCP_DESCRIPTIONS: dict[str, str] = {
     "analyze": "Run full analysis (§36 Dataset→Question→Analysis→Evidence→Viz→Report) — stateless with explicit run_id handle.",
 }
 
+#: Names this surface publishes for canonical run fields: MCP keeps the SDK's `validation` spelling and
+#: adds `analysis_id` as the handle alias of `run_id` (§38).
+MCP_RUN_ALIASES = {"validation": "validation_results", "analysis_id": "run_id"}
+
 EVIDENCE_VIA_VALIDATE = {"validate_result"}
 
 
@@ -540,20 +544,26 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
             agent = Agent()
             analysis_res = await agent.analyze(raw_ds, task, run_id=run_id)
+            from dsa_agent.run_summary import normalize_records, run_summary
+
+            summary = run_summary(analysis_res.raw_state) if analysis_res.raw_state else {}
             payload_raw = {
                 "run_id": analysis_res.run_id,
                 "analysis_id": analysis_res.run_id,
                 "status": analysis_res.status,
-                "report_markdown": analysis_res.report_markdown,
-                "evidence": [e.__dict__ for e in analysis_res.evidence],
-                "insights": [i.__dict__ for i in analysis_res.insights],
-                "artifacts": [a.__dict__ for a in analysis_res.artifacts],
-                "tool_calls": analysis_res.tool_calls,
+                "report_markdown": summary.get("report_markdown", analysis_res.report_markdown),
+                "evidence": summary.get("evidence") or normalize_records(analysis_res.evidence),
+                "insights": summary.get("insights") or normalize_records(analysis_res.insights),
+                "artifacts": summary.get("artifacts") or normalize_records(analysis_res.artifacts),
+                "tool_calls": summary.get("tool_calls")
+                or normalize_records(analysis_res.tool_calls),
                 # §108: the critic's verdicts and the run's error are part of the same contract the
                 # SDK and REST publish. An MCP client that cannot see them cannot tell a verified
                 # analysis from an unvalidated one.
-                "validation": analysis_res.validation,
-                "error": analysis_res.error,
+                "validation": (
+                    summary.get("validation_results") or normalize_records(analysis_res.validation)
+                ),
+                "error": summary.get("error", analysis_res.error),
             }
             # Ensure JSON serializable (§38, MCP spec)
             payload = _json.loads(_json.dumps(payload_raw, default=str, ensure_ascii=False))

@@ -163,8 +163,21 @@ shadowing + missing greenlet concurrency).
   closes the last unexamined sites of the L3 sentinel census: the three `except SystemExit` handlers are
   benign -- argparse writes its usage block to stderr first (110-113 bytes measured) -- and the two AST
   pins now forbid re-binding those leftovers to `_`.
+- Artifact timestamps now reach MCP clients as ISO 8601 (`2026-10-05T03:09:28.604628Z`) instead of
+  Python's `str(datetime)` with a space (`2026-10-05 03:09:28.604628+00:00`), which is not RFC 3339
+  (§111). It is the only field that changed: a differential over a real run compared evidence, insights,
+  tool_calls, validation and report_markdown as identical, and pinned the format with
+  `test_timestamps_reach_the_mcp_client_in_iso_8601`.
+
 
 ### Added (unreleased, non-breaking)
+
+- New internal module `dsa_agent.run_summary` holds the run-level contract itself (§111, Phase 4 target
+  3): `RUN_SUMMARY_FIELDS` (the nine canonical names) and `run_summary(state)`, which builds the payload
+  from that list so a field cannot be forgotten by omission, plus `normalize_records`, the
+  pydantic/dataclass/dict normalization that was hand-rolled five times across the SDK and MCP adapter.
+  The REST report endpoint and the MCP `analyze` result now derive from it and declare their own aliases
+  explicitly (`REST_RUN_ALIASES`, `MCP_RUN_ALIASES`); the SDK's `Analysis` is pinned against the list.
 
 - New internal module `dsa_evaluation.reproduce` holds the fresh-twice reproduction harness
   (`reproduce_benchmark`, the dataset hashing from §90, and the §104 comparison record), split verbatim

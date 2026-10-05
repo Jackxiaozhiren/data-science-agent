@@ -5907,3 +5907,61 @@ warn → refuse is its own call.
 **Gates.** ruff `0` · `ruff format --check` `0` (236 files) · mypy `0` (115) · ratchet `OK` ·
 orphan-reads `0` · full `pytest -q --cov` exit **`0`**, coverage **82.56%**,
 `testFunctions` 631 → **637**. Mirror repaired with `sync_vendor --file` for `dsa_jupyter/magic.py`.
+## 111. Phase 4 target 3, second half: one definition of the run-level contract
+
+§108 measured the diagnosis; this is the repair of the mechanism. Three surfaces re-listed
+`AnalysisState`'s run-level fields by hand -- SDK, the REST report, the MCP `analyze` result -- and the
+normalization rule (`model_dump` / `__dict__` / plain dict) existed four times inside `sdk.py` alone and
+a fifth way in MCP (`[e.__dict__ for e in ...]`). A lost field is the symptom; the hand-list is the
+mechanism.
+
+**New: `dsa_agent.run_summary`.** `RUN_SUMMARY_FIELDS` is the contract's nine canonical names, and
+`run_summary(state)` accepts either an `AnalysisState` model or its serialized `state_json` dict and
+builds the payload **from the list**, so a field cannot be forgotten by omission -- the returned key set
+is structurally equal to the constant. `normalize_records` holds the three-shape rule once.
+
+**Consumers.** The REST report endpoint and the MCP result now derive from it and each applies only its
+own declared aliases at its own boundary (`REST_RUN_ALIASES = {"markdown": "report_markdown",
+"validation": "validation_results"}`, `MCP_RUN_ALIASES = {"validation": "validation_results",
+"analysis_id": "run_id"}`). Published key names did not change on either surface; the SDK keeps its
+typed members and is *pinned* to the list instead of rebuilt from it, so its `validation` spelling is an
+alias the tests know about rather than an undocumented divergence.
+
+**Two controls, and the first attempt at one was decorative.** (A) Adding `budget_used` to
+`RUN_SUMMARY_FIELDS` made `test_the_sdk_surface_cannot_drift_from_the_list` fail -- the pin is live.
+(B) Reverting MCP's `validation` line to `analysis_res.validation` changed nothing at first, because the
+existing stub cannot tell the two sources apart: same values, so no test could fail. That is a weak pin
+wearing a strong label, so §111 added the discriminating case -- an agent whose `Analysis.validation`
+*disagrees* with its own `raw_state` -- and only then did the mutation fail
+`test_the_payload_follows_the_state_and_not_the_projected_object`. Both files restored, `md5 -q`
+verified.
+
+**One intentional behaviour change, measured rather than assumed.** Artifact timestamps reach MCP clients
+differently: `[a.__dict__ ...]` then `json.dumps(default=str)` produced
+`2026-10-05 03:09:28.604628+00:00` (a space where RFC 3339 wants `T`), while the projection's
+`model_dump(mode="json")` produces `2026-10-05T03:09:28.604628Z`. The differential over a real run
+compared every collection field: `evidence`, `insights`, `tool_calls`, `validation`, `report_markdown`
+**SAME**; `artifacts` **DIFFERS**, on that one field. ISO 8601 is the better output and clients that
+parse it gain, but it is a format change on a published surface, so it is pinned by
+`test_timestamps_reach_the_mcp_client_in_iso_8601` and recorded here rather than left implicit.
+
+**Two of my own errors, caught by the loop.** (1) I inserted the `run_summary` import into `adapter.py`
+against an anchor that does not exist in that file (it imports `dsa_agent` lazily inside functions), so
+the name was undefined at call time -- and the module's own broad `except Exception` turned it into
+`isError: "name 'normalize_records' is not defined"`. Five MCP tests named it immediately. The lesson is
+the §96 one again: a wide catch converts a hard failure into a payload, and my print of "mcp rewired"
+described intent, not an outcome -- I had verified the API import but not that one. (2) My first
+`_StubAgent` edit left a nonsense expression in a test (`{"validation": ...}.get and set(...)`) and a
+second assertion compared against a literal the stub never produces; both were corrected to the real
+source before anything was claimed.
+
+**Tests.** `tests/contract/test_run_summary_contract.py` (8: canonical keys, three-shape normalization,
+model-vs-dict equivalence, SDK pin, both surfaces derive, aliases declared, a new field reaching the
+payload) and `tests/mcp/test_analyze_contract.py` +2 (ISO stamp, state-wins discrimination).
+
+**Gates.** ruff `0` · format `0` (238 files) · mypy `0` (116) · ratchet `OK`
+(`exceptHandlers` **185**, `swallowedExceptionSites` **8**, `suppressionDirectives` **42**) ·
+orphan-reads `0` · full `pytest -q --cov` exit **`0`**, coverage **82.56%**,
+`testFunctions` 637 → **646**. Mirrors for `run_summary.py`, `adapter.py` and
+`routers/analysis.py` verified with `diff -q`. Runner: §110's push `3eef9e9` produced CI
+`completed success`.

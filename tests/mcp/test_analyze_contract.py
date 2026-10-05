@@ -20,12 +20,15 @@ pin the naming so drift has to be declared instead of discovered.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 from dsa_mcp import adapter
 
-from data_science_agent import Analysis, Evidence, Insight
+from data_science_agent import Analysis, Artifact, Evidence, Insight
+from dsa_agent.state import Artifact as StateArtifact
+from dsa_agent.state import Evidence as StateEvidence
 
 #: Canonical field -> the name each interface uses for it. A surface may only use a name listed here,
 #: so a fourth spelling of "the report text" fails the gate below rather than silently appearing.
@@ -93,12 +96,58 @@ class _StubAgent:
                 )
             ],
             insights=[Insight(id="I-1", finding="growth", evidence_ids=["E-1"])],
-            artifacts=[],
+            artifacts=[
+                Artifact(
+                    id="A-1",
+                    type="report",
+                    path="artifacts/A-1.md",
+                    metadata={},
+                    created_by="agent",
+                    created_at=datetime(2026, 10, 5, 3, 4, 5, 604628, tzinfo=UTC),
+                )
+            ],
             tool_calls=[{"call_id": "c-1", "tool": "run_sql", "status": "ok"}],
             validation=list(_VERDICTS),
             error=None,
-            raw_state={},
+            raw_state=_raw_state(),
         )
+
+
+def _raw_state() -> dict[str, Any]:
+    """What the SDK carries alongside the projection: the run's own ``AnalysisState``, serialized.
+
+    Built from the agent's models rather than transcribed, so the MCP surface is exercised on the
+    shape it actually receives (§111).
+    """
+    return {
+        "run_id": "run-stub-1",
+        "status": "COMPLETED",
+        "report_markdown": "# Report",
+        "evidence": [
+            StateEvidence(
+                id="E-1",
+                claim="sales grew",
+                source_type="sql",
+                source_id="c-1",
+                result={"rows": 3},
+                confidence=0.9,
+            ).model_dump(mode="json")
+        ],
+        "insights": [{"id": "I-1", "finding": "growth", "evidence_ids": ["E-1"]}],
+        "artifacts": [
+            StateArtifact(
+                id="A-1",
+                type="report",
+                path="artifacts/A-1.md",
+                metadata={},
+                created_by="agent",
+                created_at=datetime(2026, 10, 5, 3, 4, 5, 604628, tzinfo=UTC),
+            ).model_dump(mode="json")
+        ],
+        "tool_calls": [{"call_id": "c-1", "tool": "run_sql", "status": "ok"}],
+        "validation_results": list(_VERDICTS),
+        "error": None,
+    }
 
 
 @pytest.fixture
@@ -167,3 +216,48 @@ def test_no_interface_invents_a_fourth_name_for_a_shared_concept() -> None:
         - mcp_extra
     )
     assert not unmapped_mcp, f"MCP declares keys with no canonical concept: {sorted(unmapped_mcp)}"
+
+
+async def test_timestamps_reach_the_mcp_client_in_iso_8601(stub_agent: None) -> None:
+    """§111 changed one thing on purpose, so it is pinned rather than left implied.
+
+    The payload used to serialize artifact timestamps through ``str(datetime)``, which produces
+    ``2026-10-05 03:09:28.604628+00:00`` -- a space where RFC 3339 requires the ``T``. Deriving the
+    payload from ``run_summary`` makes them ISO 8601, which a client can parse.
+    """
+    output = await _mcp_output()
+
+    stamp = output["artifacts"][0]["created_at"]
+    assert "T" in stamp, stamp
+    assert datetime.fromisoformat(stamp.replace("Z", "+00:00")).year == 2026
+
+
+async def test_the_payload_follows_the_state_and_not_the_projected_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The discriminating case for §111: hand-listing from `Analysis` must not pass this.
+
+    Two sources are made to disagree for one run -- the SDK object says one verdict set, the
+    ``AnalysisState`` it was built from says another. ``run_summary`` is the contract, so the state's
+    value is the one that reaches the client; a surface that re-listed fields off the dataclass would
+    publish the other answer and still satisfy every other test here.
+    """
+    import data_science_agent
+
+    # `_raw_state()` below carries `_VERDICTS`; the SDK object is made to disagree with it.
+    object_verdicts = [{"check": "evidence_bundle", "passed": False, "message": "from the object"}]
+
+    class _DisagreeingAgent(_StubAgent):
+        async def analyze(self, dataset: str, task: str, run_id: str | None = None) -> Analysis:
+            base = await super().analyze(dataset, task, run_id)
+            patched = base.__class__(**{**base.__dict__, "validation": list(object_verdicts)})
+            return patched
+
+    monkeypatch.setattr(data_science_agent, "Agent", _DisagreeingAgent)
+
+    output = await _mcp_output()
+
+    assert output["validation"] == _VERDICTS, output["validation"]
+    assert output["validation"] != object_verdicts, (
+        "the canonical state is the source; §111 exists so this is not decided per surface"
+    )

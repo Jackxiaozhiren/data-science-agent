@@ -11,6 +11,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dsa_agent.run_summary import run_summary
 from dsa_api.core.database import get_session
 from dsa_api.services.analysis_service import (
     analysis_progress,
@@ -20,6 +21,9 @@ from dsa_api.services.analysis_service import (
     list_analysis_runs,
     sse_events_for_state,
 )
+
+#: Names this endpoint publishes for canonical fields, kept explicit at the boundary.
+REST_RUN_ALIASES = {"markdown": "report_markdown", "validation": "validation_results"}
 
 router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
 
@@ -132,13 +136,14 @@ async def get_analysis_report(
         if not md:
             raise HTTPException(status_code=404, detail="Report not yet generated")
         return PlainTextResponse(content=md, media_type="text/markdown; charset=utf-8")
+    summary = run_summary(state)
     return {
         "run_id": run_id,
-        "status": row.get("status"),
-        "markdown": md,
-        "insights": state.get("insights", []),
-        "evidence": state.get("evidence", []),
-        "validation": state.get("validation_results", []),
+        "status": row.get("status") or summary["status"],
+        "markdown": summary[REST_RUN_ALIASES["markdown"]],
+        "insights": summary["insights"],
+        "evidence": summary["evidence"],
+        "validation": summary[REST_RUN_ALIASES["validation"]],
     }
 
 
