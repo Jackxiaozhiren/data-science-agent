@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from dsa_evaluation.cli import _datasets_sha256
+from dsa_evaluation.reproduce import _datasets_sha256
 from dsa_evaluation.metrics import EvaluationResult, TaskMetrics
 from dsa_evaluation.runner import _attach_statistical
 

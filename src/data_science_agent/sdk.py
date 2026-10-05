@@ -619,7 +619,8 @@ class Reproduction:
         """Run reproduction harness.
 
         Description:
-            Execute ``_reproduce_benchmark`` (or fallback ``run_benchmark``) and parse
+            Execute ``dsa_evaluation.reproduce.reproduce_benchmark`` (or fallback
+            ``run_benchmark``) and parse
             ``comparison.json`` for 6-dim scores.
 
         Parameters:
@@ -640,12 +641,12 @@ class Reproduction:
         Version:
             4.0.0 Stable
         """
-        from dsa_evaluation.cli import _reproduce_benchmark
+        from dsa_evaluation.reproduce import reproduce_benchmark
 
-        # _reproduce_benchmark is internal; fallback to runner if missing
+        # fallback to the runner if the harness itself fails
         harness_error: str | None = None
         try:
-            _reproduce_benchmark(Path(catalog), Path(datasets), Path(out))
+            reproduce_benchmark(Path(catalog), Path(datasets), Path(out))
         except Exception as exc:
             harness_error = f"{type(exc).__name__}: {exc}"
             from dsa_evaluation.runner import run_benchmark as _rb

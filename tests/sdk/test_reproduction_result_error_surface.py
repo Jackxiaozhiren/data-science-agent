@@ -38,12 +38,12 @@ PRODUCER_KEYS = ("execution", "numerical", "statistical", "evidence", "semantic"
 @pytest.fixture
 def silent_harness(monkeypatch: pytest.MonkeyPatch) -> None:
     """Neutralise the harness itself; this test is about what `run` reports, not about scoring."""
-    from dsa_evaluation import cli
+    from dsa_evaluation import reproduce
 
     def no_op(*args: object, **kwargs: object) -> None:
         return None
 
-    monkeypatch.setattr(cli, "_reproduce_benchmark", no_op)
+    monkeypatch.setattr(reproduce, "reproduce_benchmark", no_op)
 
 
 def _write(out: Path, payload: object) -> Path:
@@ -129,7 +129,9 @@ def _producer_score_keys() -> set[str]:
     line 34), so the first draft of this pin passed on the laptop that had run the harness and failed
     on a clean checkout (CI run 37174811493). Parsing the producer works everywhere and cannot rot.
     """
-    cli_path = Path(__file__).resolve().parents[2] / "packages/evaluation/src/dsa_evaluation/cli.py"
+    cli_path = (
+        Path(__file__).resolve().parents[2] / "packages/evaluation/src/dsa_evaluation/reproduce.py"
+    )
     tree = ast.parse(cli_path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if not (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)):
@@ -145,7 +147,9 @@ def _producer_score_keys() -> set[str]:
             for key in node.value.keys
             if isinstance(key, ast.Constant) and isinstance(key.value, str)
         }
-    raise AssertionError("no `reproduction_score = {...}` literal found in dsa_evaluation/cli.py")
+    raise AssertionError(
+        "no `reproduction_score = {...}` literal found in dsa_evaluation/reproduce.py"
+    )
 
 
 def test_the_sdk_reads_only_keys_the_producer_actually_writes() -> None:

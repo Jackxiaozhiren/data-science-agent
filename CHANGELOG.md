@@ -157,6 +157,17 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `dsa_evaluation.reproduce` holds the fresh-twice reproduction harness
+  (`reproduce_benchmark`, the dataset hashing from §90, and the §104 comparison record), split verbatim
+  out of `dsa_evaluation.cli`, which was 702 lines of argparse plus 195 lines of harness
+  (`AUDIT_LEDGER.md` §109, Phase 4 target 2 seam #3). `dsa_evaluation.cli` 702 → 507 lines and no longer
+  holds the two names that `data_science_agent.sdk` had been importing across the package boundary as
+  "internal" -- the SDK now imports the public entry from its own module. Move-only: both versions were
+  run over the same faked harness input and all four artifacts (`comparison.json`, `results.json`,
+  `manifest.json`, `environment.json`) came back byte-identical, and handler/suppression counts are
+  unchanged. Pinned structurally by `tests/evals/test_reproduce_seam.py`, including the negative pin that
+  the SDK must not reach the harness through the CLI module again.
+
 - New contract gate: `tests/mcp/test_analyze_contract.py` installs an explicit alias map (canonical
   `AnalysisState` field -> the name each interface uses) and fails if any surface declares a key with
   no mapped concept, so a fourth spelling of an existing idea cannot ship silently. The measured drift

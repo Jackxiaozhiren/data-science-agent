@@ -20,7 +20,7 @@ from typing import Any
 
 import pytest
 from dsa_datasets.hash_utils import sha256_file
-from dsa_evaluation import cli as evaluation_cli
+from dsa_evaluation import reproduce as harness
 from dsa_evaluation.runner import dataset_provenance
 
 #: The keys §104 carries from the runner into the compared record.
@@ -65,10 +65,8 @@ def _fake_run_benchmark(first_payload: list[dict[str, Any]], second_payload: lis
 
 
 def _comparison(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, one: list, two: list) -> dict:
-    monkeypatch.setattr(evaluation_cli, "run_benchmark", _fake_run_benchmark(one, two))
-    evaluation_cli._reproduce_benchmark(
-        tmp_path / "catalog.json", tmp_path / "datasets", tmp_path / "out"
-    )
+    monkeypatch.setattr(harness, "run_benchmark", _fake_run_benchmark(one, two))
+    harness.reproduce_benchmark(tmp_path / "catalog.json", tmp_path / "datasets", tmp_path / "out")
     return json.loads((tmp_path / "out" / "comparison.json").read_text(encoding="utf-8"))
 
 
@@ -93,7 +91,7 @@ def test_a_missing_dataset_yields_no_hash_rather_than_a_crash(tmp_path: Path) ->
 
 def test_the_compared_record_carries_both_provenance_keys() -> None:
     state = _state_dump()
-    record = evaluation_cli._comparison_record(state, "a" * 64, {"python_version": "3.12"})
+    record = harness._comparison_record(state, "a" * 64, {"python_version": "3.12"})
 
     assert record["dataset_sha256"] == "a" * 64
     assert record["environment"] == {"python_version": "3.12"}

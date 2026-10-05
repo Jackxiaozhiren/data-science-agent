@@ -5802,3 +5802,50 @@ full `pytest -q --cov` exit **`0`**, coverage **82.54%**, `testFunctions` 617 �
 repaired with `sync_vendor --file`, verified by `diff -q`. Runner status for the preceding sections:
 §104 run 37179256194 `success`, §105 run 37181413476 `success`, §106 run 37186664964 `success`,
 §107 run 37188479862 `success`.
+## 109. Phase 4 target 2, seam #3: the reproduction harness stopped living inside the CLI parser
+
+**The boundary §15.3 asks for.** `dsa_evaluation/cli.py` was 702 lines holding two unrelated jobs: the
+`dsa` command surface (`main()`, ~470 lines of argparse and dispatch) and the fresh-twice reproduction
+harness -- dataset hashing, the per-task comparison record, and `_reproduce_benchmark` itself, 195
+lines. The harness now lives in `dsa_evaluation/reproduce.py` and exports one public entry,
+`reproduce_benchmark`.
+
+**The seam announced itself through a consumer, exactly as §97's did.** `sdk.py:643` had
+`from dsa_evaluation.cli import _reproduce_benchmark` -- importing a name the SDK's own comment called
+internal, wrapped in a fallback to `run_benchmark` for the case where it "is missing". A private name
+crossing a package boundary is not encapsulation, it is an unlabelled dependency: the fallback existed
+only because the address was wrong. Also `tests/evals/test_benchmark_provenance_failures.py` (§90)
+imported `_datasets_sha256` from the CLI module for the same reason.
+
+**Move, not rewrite.** `_resolve_datasets_dir` stayed -- it resolves CLI arguments, which is the
+command's concern, not the harness's. `hashlib` and `platform` became unused imports in `cli.py` and the
+project gate reported them (F401) rather than me noticing by eye.
+
+**Proven identical by artifact, not by assertion.** Pre-move `cli.py` was copied to `/tmp/pre109`
+before editing, then both versions ran the same faked harness input (one task, provenance carried per
+§104) into separate directories:
+`comparison.json` 1429 bytes, `results.json` 687, `manifest.json` 375, `environment.json` 528 -- all four
+**IDENTICAL**, with only the timestamp fields excluded on the two files that carry them. The same
+inputs also flow through §104's `L2_basis`, and the seam test asserts it stays `dataset_sha256`.
+
+**Tests** (`tests/evals/test_reproduce_seam.py`, 6; all 6 red first -- ImportError plus the AST pins):
+the harness module owns the three names; `cli.py` defines none of them; the SDK imports
+`dsa_evaluation.reproduce.reproduce_benchmark` and *not* the harness through the CLI module (asserted as
+a negative, so re-introducing the cross-boundary private import fails); `dsa reproduce` is still wired;
+the moved harness still produces the full six-dimension score object with a real dataset hash and the
+`"ok"` provenance note from §90.
+
+**Six existing tests broke first, and every one was my own pointer, not a regression.** §101's producer
+pin parsed `cli.py` for the `reproduction_score` literal (now in `reproduce.py`); §104's four tests
+patched `dsa_evaluation.cli.run_benchmark` and called `cli._reproduce_benchmark`; §101's fixture patched
+the same. They were repointed to the new module and re-run -- the failures were the seam's own consumer
+signal, which is the point of making a boundary. One genuine wrong assumption surfaced while doing it: I
+asserted `datasets_sha256_note == ""` for a present directory, but §90's convention names the state, and
+a present dir is `"ok"` (`reproduce.py:43`). The test was corrected to the code, not the code to the test.
+
+**Gates.** ruff `0` · `ruff format --check` `0` (235 files) · mypy `0` (115) · ratchet `OK` with
+`exceptHandlers` **185**, `swallowedExceptionSites` **8**, `suppressionDirectives` **42**, `todoMarkers`
+**0** -- all four unmoved, since a move changes no handler. Full `pytest -q --cov` exit **`0`**,
+coverage **82.55%**, `testFunctions` 625 → **631**. `cli.py` 702 → **507** and leaves the top four
+largest shipped sources; `reproduce.py` **217**. Mirrors for both files repaired with `sync_vendor --file`
+and verified by `diff -q`.
