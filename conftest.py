@@ -54,7 +54,7 @@ except Exception:  # noqa: S110 - best-effort test-only path demotion
 _ISOLATED_GLOBALS = (
     ("dsa_agent.graph", "_TOOL_CACHE"),
     ("dsa_llm.providers", "_CALL_LOG"),
-    ("dsa_mcp.adapter", "_ANALYSIS_STORE"),
+    ("dsa_mcp.resources", "_ANALYSIS_STORE"),
     ("dsa_tools.registry", "_REGISTRY"),
 )
 

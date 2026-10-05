@@ -197,6 +197,18 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `dsa_mcp.resources` holds the MCP **resource** surface (`_discover_datasets`, the
+  `_ANALYSIS_STORE` explicit-handle store, `store_analysis`, `list_resources`, `read_resource` over
+  `dataset:// evidence:// report:// analysis:// artifact://`), split out of `dsa_mcp.adapter`, which was
+  632 lines carrying both that and the tool surface (`AUDIT_LEDGER.md` §114, Phase 4 target 2 seam #6).
+  The adapter is now 340 lines: schemas, classification and dispatch. Verbatim move, proven by a capture
+  differential -- `list_resources()` through `dsa_mcp.server` plus 12 `read_resource()` calls covering
+  every scheme and every not-found/unreadable branch -- byte-identical before and after, with the control
+  that plants one literal and shows the capture move. `server.py`, `conftest.py`'s `_ISOLATED_GLOBALS`
+  and three test importers follow the new path; `tests/mcp/test_resources_seam.py` (7 tests) pins the
+  boundary, including that the resource module must not import the dispatcher and that the container the
+  per-test isolation fixture clears is the one `store_analysis` writes.
+
 - New internal module `data_science_agent.measurement` holds the benchmark and reproduction facades
   (`Benchmark`, `BenchmarkResult`, `Reproduction`, `ReproductionResult`, plus the
   `REPRODUCTION_DIMENSION_KEYS` mapping from §101), split out of `data_science_agent.sdk`, which was 716

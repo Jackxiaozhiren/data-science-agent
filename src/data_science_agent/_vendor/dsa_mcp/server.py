@@ -7,7 +7,8 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools, list_resources, read_resource
+from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools
+from dsa_mcp.resources import list_resources, read_resource
 
 app = FastAPI(title="Data Science MCP Server", version="0.1.0")
 

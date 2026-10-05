@@ -9,8 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from dsa_api.main import app as main_app
-from dsa_mcp.adapter import call_mcp_tool, list_resources, read_resource, store_analysis
+from dsa_mcp.adapter import call_mcp_tool
 from dsa_mcp.app import app as mcp_app
+from dsa_mcp.resources import list_resources, read_resource, store_analysis
 from dsa_mcp.server import app as mcp_server
 
 # §39 Client→Connect→Discover→Call Tool→Receive→Open Resource→Render App→Inspect Evidence

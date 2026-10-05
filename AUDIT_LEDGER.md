@@ -6186,3 +6186,73 @@ steps (one source, but it executes strings from a YAML file), or a documented ga
 guide tables. The second fits this repository's existing shape and adds no exec; it is the recommendation.
 Deferring costs a repeat of this section's failure mode -- a locally green claim the runner contradicts -- and
 each repeat costs a push and a full CI run to discover.
+
+**Confirmed on the runner, which is how §113 closes.** Run `37262155863` (`ad7a3f5`, event push) completed
+**success**: job `ci` success and job `web-regression` success, with only the two conditional steps skipped
+(`Upload regression screenshots`, `Verify v4.3.0 release candidate`), which is the shape every green `main` run
+here has. So the whole-tree `ruff format --check` step that failed on `3cbcfb8` passed on the corrected
+revision, and §113's claims are now backed by the runner rather than by my re-run of them.
+
+## 114. Phase 4 target 2 seam #6: the MCP resource surface moves out of the adapter
+
+**Which seam, and why this one.** `packages/mcp/src/dsa_mcp/adapter.py` was 632 lines and the second-
+largest shipped file (`scripts/generate_benchmark_v2.py` at 948 is a script body, single top-level function,
+and §24's "split along the seams §15.3 identified" does not make one). Inside it sat two protocol surfaces
+MCP clients reach through *different* handlers: tools (schemas, `MCP_TOOL_MAP`/`MCP_TOOL_CLASS`/
+`MCP_IDEMPOTENT`/`MCP_WRITE`, `list_mcp_tools`, `call_mcp_tool`) and resources (`_discover_datasets`, the
+`_ANALYSIS_STORE` handle store, `store_analysis`, `list_resources`, `read_resource` over `dataset://
+evidence:// report:// analysis:// artifact://`). The evidence that the boundary is real rather than
+convenient: `server.py` already imported the two groups in one line, and `call_mcp_tool` needed exactly two
+of the five resource names.
+
+**Landed.** `packages/mcp/src/dsa_mcp/resources.py` (304 lines) owns the resource side; the adapter is 340.
+Verbatim move -- the extraction script asserted the first and last lines of the slice and that the block ended
+on the `unknown scheme` return, so the file content is transcribed from the source rather than retyped. The
+now-unused module-level `from pathlib import Path` left with the code that used it. Five importers repointed:
+`server.py` (its own two groups, on separate lines), `conftest.py`'s `_ISOLATED_GLOBALS` entry,
+`tests/unit/test_coverage_sweep.py`, `tests/mcp/test_mcp_app_acceptance.py`, and a docstring note in
+`tests/test_process_global_isolation.py` so §87's measured list is not read as current. The `dsa_mcp` vendor
+mirror was repaired with `sync_vendor --package dsa_mcp` after checking that no file under `packages/mcp` is
+one of the concurrent session's; `dsa_evaluation`'s drift was left alone deliberately.
+
+**The differential is the proof, and it was shown to be capable of failing.** A capture script drove
+`list_resources()` through `dsa_mcp.server`'s own import path plus 12 `read_resource()` calls -- every scheme,
+plus the not-found and unreadable branches and both artifact fallbacks (text / JSON-descriptor / missing) --
+against a store seeded with a fixed payload. Before the move and after it: **byte-identical**, same md5
+(`902c6e34…`), 36 resources and 12 reads on both sides. Then the control: one literal in the moved block
+(`"Dataset: "` → `"Dataset ~ "`) was planted, with `assert new != t` before the run so a silently-failed edit
+could not masquerade as a passing control; the capture moved. The file was restored from a `/tmp` copy and the
+restore verified by md5 -- `git checkout` is not used in this shared tree.
+
+**Two guards that would have been decorative, caught while writing them.**
+`test_the_tool_surface_stays_in_the_adapter` failed for the wrong reason at first: `_top_level_defs()` read
+only `ast.Assign`, and `MCP_TOOL_MAP: dict[str, str] = {...}` is an `ast.AnnAssign`. The same omission made
+`test_the_adapter_no_longer_defines_the_resource_surface` pass on the *un*-moved tree, because
+`_ANALYSIS_STORE: dict[str, dict[str, Any]] = {}` is annotated too -- an absence guard that cannot see the
+thing it forbids. Both were fixed by handling `AnnAssign`, and the red state re-captured afterwards (7 reds →
+7 greens). This is §105's control-that-did-nothing lesson in a new costume.
+
+**Couplings the move had to keep.** §87's per-test isolation registered `("dsa_mcp.adapter",
+"_ANALYSIS_STORE")`; the first run after the move raised `AttributeError: module 'dsa_mcp.adapter' has no
+attribute '_ANALYSIS_STORE'` from `conftest.py:94` -- the fixture fails loudly rather than isolating a
+container nobody writes to, which is the behaviour §87 chose deliberately. `tests/test_process_global_isolation.py`
+re-derives the mutated-globals set from the shipped tree by path, so it followed the move without being told,
+and its completeness assertion is the guard that the new module is *in* the isolated set rather than silently
+outside it.
+
+**Tests.** `tests/mcp/test_resources_seam.py` (7): the module exists and defines all five resource names;
+the adapter defines none of them (a copy, not a move, would mean two stores); the tool surface is still the
+adapter's; `resources.py` does not import the dispatcher (without this the split is two files with the same
+cycle); `server.py` wires each surface from where it lives; the container the isolation fixture clears is the
+one `store_analysis` writes, checked through `store_analysis.__globals__ is resources.__dict__` and a
+store→`list_resources`→`read_resource` round trip; and the adapter's dependency on the catalogue is explicit
+in its import statement. Red on arrival (the module did not exist), green after; 7 → 0.
+
+**Gates.** Re-measured with the runner's own whole-tree invocations, each exit code read from the command:
+`ruff check` **0** · `ruff format --check` **0** (240 files; two files needed it after the move and after the
+resync -- §113.5's rule, applied) · `mypy packages apps/api src apps/jupyter` **0** (117 files) ·
+`audit_facts --check` **OK** · `find_orphan_reads --check` **0** · `check_public_claims --require-released-tags`
+**0** · `pytest -q --cov` **0**, coverage **82.58%** against the 79 floor. Coverage inventoried rather than
+admired: TOTAL statements 7847 → **7851**, missing statements **1119 → 1119**, branches **2236 → 2236**,
+missing branches **416 → 416** -- the move added the module header's four statements and no new untested path.
+`sync_vendor --check` now reports only the concurrent session's `dsa_evaluation` file.

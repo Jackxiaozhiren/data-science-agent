@@ -337,8 +337,9 @@ def test_jupyter_magic_benchmark_failure_path(
     assert DSAMagic._handle_benchmark(_dummy_magic(), ["--limit", "1"]) is None
 
 
-async def test_mcp_adapter_resources_and_discovery() -> None:
-    from dsa_mcp.adapter import _discover_datasets, list_resources, list_tools, read_resource
+async def test_mcp_resources_and_discovery() -> None:
+    from dsa_mcp.adapter import list_tools
+    from dsa_mcp.resources import _discover_datasets, list_resources, read_resource
 
     assert len(list_tools()) >= 17
     assert len(_discover_datasets()) >= 1
