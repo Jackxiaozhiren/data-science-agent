@@ -6263,7 +6263,7 @@ missing branches **416 → 416** -- the move added the module header's four stat
 largest function in the shipped tree -- doing six jobs in one `async def`: rebuilding the state model
 *twice*, rendering markdown, persisting artifacts, building the reproducibility bundle, merging its
 validation results, and shaping the graph's return envelope. Composition sitting inside orchestration,
-which is the boundary §105 drew around `graph.py`. `dsa_agent.reporting.compose_report` (200 lines) now
+which is the boundary §105 drew around `graph.py`. `dsa_agent.reporting.compose_report` (201 lines) now
 owns it; the graph module is 524 → 348 lines and the node is one `return compose_report(state)`.
 
 **What the capture harness is, and the two ways it lied before it told the truth.** The state fed to the
@@ -6341,3 +6341,80 @@ added a module header, the two new node tests drove both branches, and no new pa
 `dsa_agent`'s vendor mirror re-synced after each edit (`sync_vendor --package dsa_agent`), including after
 the formatter pass, which is the second time in three sections that a local format run invalidated a
 mirror I had already synced; `sync_vendor --check` still reports only the concurrent session's file.
+
+## 116. Phase 4 target 2 seam #8: money leaves the transport module -- and target 2 closes with a stated boundary per file
+
+### 116.1 The split
+
+`dsa_llm/providers.py` held the pricing estimate, the spend ceiling and the call log between two HTTP
+client classes. The ceiling is a control -- §96 converted an unparseable `DSA_MAX_COST_USD` from a silent
+"no limit" into a refusal -- and a money limit that a reviewer has to find by reading past transport code
+is a limit nobody audits. `packages/llm/src/dsa_llm/cost.py` (77 lines) now owns `_CALL_LOG`,
+`reset_call_log`, `get_call_log`, `_usd_for_usage`, `_SPEND_CAP_ENV` and `_spend_cap_usd`; providers is
+503 → 456.
+
+No consumer changed. `dsa_llm.providers` re-exports the two log helpers with the `import X as X` idiom
+§112 established for the SDK facade -- deliberate re-export, no suppression directive -- and the four
+private helpers arrive through the same import because providers' own `_request` calls them. The one
+required repoint was `conftest.py`'s `_ISOLATED_GLOBALS`, whose `dsa_llm.providers` entry for `_CALL_LOG`
+moved to `dsa_llm.cost`: the fixture failed loudly (`AttributeError`) on the first run rather than
+quietly isolating a container nobody writes to, which is the §87 design holding a second time.
+
+**Differential.** A 10 × 6 matrix over the three environment knobs (`DSA_MAX_COST_USD` unset/empty/valid/
+zero/negative/unparseable/garbage, crossed with rate combinations) against six usage dicts (including
+`{"input_tokens": True}` and nested `input_tokens_details`, the two shapes §96's guard had to distinguish),
+plus a real write-then-read round trip on the call log. Reached through `dsa_llm.providers` in **both**
+arms, so the capture also proves the re-exported binding is the live object. The harness was shown
+repeatable (two runs identical) before any claim: 70 outcomes **byte-identical** across the split, and the
+planted control (`if cap < 0:` → `if cap < -1:`, with `assert new != t` first) moves it.
+
+**Tests.** `tests/llm/test_cost_seam.py` (5): cost owns the six names; providers defines none of them (a
+copy would mean two logs and two ceiling policies); cost must not import providers; the container the
+fixture clears is the one the writers append to, asserted both structurally (conftest's AST) and by
+identity (`providers._CALL_LOG is cost._CALL_LOG`) with a live round trip; and the evaluation harness's
+lazy `from dsa_llm.providers import get_call_log, reset_call_log` is executed as written, because a lazy
+import that breaks fails during a benchmark run, not at collection. Four red on arrival, one
+green-on-arrival (the last, by design: it must stay green through the split).
+
+### 116.2 A measurement that corrected my own earlier claim
+
+§114's write-up said `scripts/generate_benchmark_v2.py` is "a single top-level function, i.e. a script
+body". Parsed at §116 it is **one** `FunctionDef` (`write_csv`, 6 lines) plus 22 module-level assignments,
+**9 top-level `for` loops**, one `if`, and 21 bare expressions -- 32 module-level executable statements.
+So the verdict is right and the reason I gave was wrong: it is a notebook-style script whose top level
+*is* the program, and turning it into functions is a rewrite, which §24 forbids under a target whose
+discipline is "behaviour-preserving". Recorded because the corrected number, not the remembered one, is
+what the closure table below rests on.
+
+### 116.3 Target 2 closure: the top of the ranking, and the boundary verdict for each
+
+The collector's `capabilities.largestSourceFiles`, re-measured with `audit_facts.py --write` after this
+section's edits, so the ranks are the post-split ones and every line count is the shipped file's:
+
+| rank | lines | file | boundary | verdict |
+| --- | --- | --- | --- | --- |
+| 1 | 948 | `scripts/generate_benchmark_v2.py` | top level is the program (§116.2) | **no seam** -- splitting it is a rewrite |
+| 2 | 523 | `scripts/check_public_claims.py` | rules (`PATTERNS`, currency checks) vs scan scope vs CLI | not taken; §113 grew it by 18 lines while fixing its skip-list |
+| 3 | 515 | `dsa_agent/graph.py` | tool evidence (§105), column detection (§97/98) | **seams taken** |
+| 4 | 507 | `dsa_evaluation/cli.py` | reproduction (§109) | **seam taken** |
+| 5 | 488 | `data_science_agent/sdk.py` | measurement facades (§112) | **seam taken** |
+| 6 | 482 | `dsa_agent/planner.py` | column detection (§97/98) | **seam taken** |
+| 7 | 456 | `dsa_llm/providers.py` | money vs transport (§116, from 503) | **seam taken**; what remains is duplication, not a boundary: `OpenAIResponsesProvider.stream` and `metadata` and `OpenAIChatProvider`'s are byte-identical (`ast.unparse` lengths 186/186 and 241/241, `SequenceMatcher` ratio **1.00**), `__init__` 0.53 |
+| 8 | 447 | `dsa_evaluation/publication.py` | the `_validate_*` family vs the bundle writer | not examined; the next real candidate |
+| 9 | 410 | `dsa_jupyter/magic.py` | per-magic arg handling (§110 touched it, did not split) | no seam taken |
+| 10 | 348 | `dsa_agent/langgraph_graph.py` | report composition (§115, from 524) | **seam taken** |
+
+`dsa_mcp/adapter.py` left the list entirely at 632 → 340 (§114). Eight seams are landed
+(§97/98, §105, §109, §111, §112, §114, §115, §116), every one with a differential or a key-set proof and a
+red/green loop, and the two files still above the fold have stated boundaries rather than silent ones.
+What target 2 does **not** claim: that 450-line modules are finished. `check_public_claims.py` and
+`publication.py` are the next seams if the work continues, and providers' 1.00-similar method pair is a
+de-duplication item that §15.3 files under "duplicated structures" rather than under god files --
+worth naming here so the next reader does not re-derive it.
+
+**Gates.** All eight runner commands verbatim, exit codes read from the commands: `ruff check` **0** ·
+`ruff format --check` **0** · `mypy` **0** (120 source files, +1 for `cost.py`) · `audit_facts --check`
+**OK** (`exceptHandlers` 185, `swallowedExceptionSites` 8, no ceiling moved) · `find_orphan_reads --check`
+**0** · `check_public_claims --require-released-tags` **0** · `pytest -q --cov` **0**, coverage **82.63%**
+· `mkdocs build --strict` **0**. `dsa_llm`'s vendor mirror re-synced after every source edit including the
+formatter pass; `sync_vendor --check` still reports only the concurrent session's `dsa_evaluation` file.

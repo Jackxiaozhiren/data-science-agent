@@ -7,7 +7,8 @@ module-level containers are written after import --
     dsa_mcp.adapter._ANALYSIS_STORE  dsa_tools.registry._REGISTRY
 
 (`dsa_mcp.adapter._ANALYSIS_STORE` is where §87 found it; §114 moved the MCP resource surface to
-`dsa_mcp.resources`, and `conftest.py`'s entry follows the file that now owns the container.)
+`dsa_mcp.resources`, and `dsa_llm.providers._CALL_LOG` moved to `dsa_llm.cost` at §116.
+`conftest.py`'s entries follow the file that now owns each container.)
 
 and `conftest.py` isolated none of them. The consequences were visible in the suite rather than
 hypothetical: `tests/unit/test_tool_cache_failure_not_stored.py` hand-rolls `_TOOL_CACHE.pop(key)`

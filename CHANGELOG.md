@@ -197,6 +197,24 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `dsa_llm.cost` holds the money side of the LLM layer -- the call log
+  (`_CALL_LOG`, `get_call_log`, `reset_call_log`), the pricing estimate `_usd_for_usage`, and the
+  `DSA_MAX_COST_USD` ceiling `_spend_cap_usd` that §96 made a refusal rather than an absence -- split out
+  of `dsa_llm/providers`, which held them between two HTTP client classes
+  (`AUDIT_LEDGER.md` §116, Phase 4 target 2 seam #8). providers 503 → 456; `dsa_llm.providers`
+  re-exports the two log helpers with the `import X as X` idiom §112 uses, so no consumer changed and no
+  suppression was added. Equivalence: a 10-by-6 matrix over the three environment knobs crossed with six
+  usage shapes (including `{"input_tokens": True}` and nested `input_tokens_details`) plus a live
+  write-then-read round trip on the log -- 70 outcomes byte-identical across the split, reached through
+  `dsa_llm.providers` in both arms, with a planted control shown to move it.
+  `tests/llm/test_cost_seam.py` (5) pins the boundary, the dependency direction, and that the container
+  §87's isolation fixture clears is the one the writers append to. §116 also closes Phase 4 target 2 with
+  a measured boundary verdict for each of the ten largest sources: two have stated no-seam reasons
+  (`generate_benchmark_v2.py` is a script whose top level is the program; `magic.py` has no seam taken),
+  two remain genuine candidates (`check_public_claims.py`, `publication.py`), and
+  `providers`' residual is duplication rather than a boundary -- its two classes' `stream` and `metadata`
+  are byte-identical.
+
 - New internal module `dsa_agent.reporting` holds report composition (`compose_report`), split out of
   `dsa_agent.langgraph_graph._node_report`, which had grown to 179 lines -- the largest function in the
   shipped tree -- by rebuilding the state model twice, rendering markdown, persisting artifacts, building

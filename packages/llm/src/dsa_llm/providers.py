@@ -13,18 +13,22 @@ from pydantic import BaseModel, ValidationError
 
 from dsa_llm import LLMProvider
 
+# `get_call_log`/`reset_call_log` are re-exported, not used here: `dsa_llm.providers` is the path
+# dsa_evaluation's benchmark harness and two tests import from. `import X as X` says "deliberate" to
+# the linter without a suppression, the way §112's SDK facade does.
+from dsa_llm.cost import (
+    _CALL_LOG,
+    _spend_cap_usd,
+    _usd_for_usage,
+)
+from dsa_llm.cost import (
+    get_call_log as get_call_log,
+)
+from dsa_llm.cost import reset_call_log as reset_call_log
+
 DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
 _REAL_MODES = {"real", "openai"}
 _STUB_MODES = {"stub", "offline", "heuristic"}
-_CALL_LOG: list[dict[str, Any]] = []
-
-
-def reset_call_log() -> None:
-    _CALL_LOG.clear()
-
-
-def get_call_log() -> list[dict[str, Any]]:
-    return [dict(item) for item in _CALL_LOG]
 
 
 def _strip_json_fence(text: str) -> str:
@@ -37,57 +41,6 @@ def _strip_json_fence(text: str) -> str:
     if lines and lines[-1].strip() == "```":
         lines = lines[:-1]
     return "\n".join(lines).strip()
-
-
-def _usd_for_usage(usage: dict[str, Any]) -> float | None:
-    """Estimated USD for one Responses API usage dict using env pricing.
-
-    Returns None when rates are not configured (then no cap can apply).
-    """
-    try:
-        in_rate = float(os.environ["DSA_INPUT_COST_PER_MILLION"])
-        out_rate = float(os.environ["DSA_OUTPUT_COST_PER_MILLION"])
-    except (KeyError, ValueError):
-        return None
-
-    def _n(*keys: str) -> int:
-        for k in keys:
-            v = usage.get(k)
-            if isinstance(v, bool):
-                continue
-            if isinstance(v, (int, float)):
-                return int(v)
-        return 0
-
-    total_in = _n("input_tokens") + _n("input_tokens_details")
-    total_out = _n("output_tokens") + _n("output_tokens_details")
-    return total_in / 1_000_000 * in_rate + total_out / 1_000_000 * out_rate
-
-
-_SPEND_CAP_ENV = "DSA_MAX_COST_USD"
-
-
-def _spend_cap_usd() -> float | None:
-    """The configured spend ceiling, or None only when no ceiling was asked for.
-
-    D-L3-07: this used to end in `except ValueError: return None`, and both cap guards test
-    `if cap is not None`, so `DSA_MAX_COST_USD="5 USD"` or a negative value was indistinguishable
-    from leaving it unset -- a configured money limit silently removed itself, and the run kept
-    making paid calls. An unparseable or negative ceiling is now a refusal, not an absence.
-    """
-    raw = os.environ.get("DSA_MAX_COST_USD", "")
-    if not raw.strip():
-        return None
-    try:
-        cap = float(raw)
-    except ValueError:
-        raise ValueError(
-            f"{_SPEND_CAP_ENV}={raw!r} is not a number; refusing to run uncapped. "
-            "Set it to a USD amount like 4.50 or unset it to have no ceiling."
-        ) from None
-    if cap < 0:
-        raise ValueError(f"{_SPEND_CAP_ENV}={raw!r} is negative; a spend ceiling must be >= 0.")
-    return cap
 
 
 def _extract_output_text(payload: dict[str, Any]) -> str:

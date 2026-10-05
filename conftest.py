@@ -53,7 +53,7 @@ except Exception:  # noqa: S110 - best-effort test-only path demotion
 # fifth cache added to shipped code turns that test red instead of quietly going unisolated.
 _ISOLATED_GLOBALS = (
     ("dsa_agent.graph", "_TOOL_CACHE"),
-    ("dsa_llm.providers", "_CALL_LOG"),
+    ("dsa_llm.cost", "_CALL_LOG"),
     ("dsa_mcp.resources", "_ANALYSIS_STORE"),
     ("dsa_tools.registry", "_REGISTRY"),
 )
