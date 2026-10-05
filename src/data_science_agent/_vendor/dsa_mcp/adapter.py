@@ -143,11 +143,22 @@ def _analyze_output_schema() -> dict[str, Any]:
         "type": "object",
         "properties": {
             "run_id": {"type": "string", "description": "Explicit handle (§38)"},
+            "analysis_id": {
+                "type": "string",
+                "description": "Alias of run_id, emitted for handle compatibility (§38)",
+            },
             "status": {"type": "string"},
             "report_markdown": {"type": "string"},
             "evidence": {"type": "array", "items": {"type": "object"}},
             "insights": {"type": "array", "items": {"type": "object"}},
             "artifacts": {"type": "array", "items": {"type": "object"}},
+            "tool_calls": {"type": "array", "items": {"type": "object"}},
+            "validation": {
+                "type": "array",
+                "items": {"type": "object"},
+                "description": "Evidence-critic verdicts; the same checks the SDK and REST publish",
+            },
+            "error": {"type": ["string", "null"]},
         },
         "required": ["run_id", "status"],
     }
@@ -538,6 +549,11 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
                 "insights": [i.__dict__ for i in analysis_res.insights],
                 "artifacts": [a.__dict__ for a in analysis_res.artifacts],
                 "tool_calls": analysis_res.tool_calls,
+                # §108: the critic's verdicts and the run's error are part of the same contract the
+                # SDK and REST publish. An MCP client that cannot see them cannot tell a verified
+                # analysis from an unvalidated one.
+                "validation": analysis_res.validation,
+                "error": analysis_res.error,
             }
             # Ensure JSON serializable (§38, MCP spec)
             payload = _json.loads(_json.dumps(payload_raw, default=str, ensure_ascii=False))

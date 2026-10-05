@@ -142,6 +142,12 @@ shadowing + missing greenlet concurrency).
   `tests/unit/test_planner_chart_invariant.py` pins both that no plan lacks an evidence chart and that no
   planner condition may be a tautology (AST, not grep). Behaviour-preserving: the pre-change planner was
   re-imported from a copy and run over all 100 tasks, with 0 plans differing.
+- The MCP `analyze` surface now publishes the evidence-critic verdicts (§108, Phase 4 target 3). Its
+  result payload was the only one of the five interfaces (CLI/SDK/REST/MCP/Jupyter) that omitted
+  `validation`, so an MCP client could not distinguish a validated analysis from an unvalidated one
+  while the notebook, SDK and REST all could. `validation` and `error` are added to the payload, and the
+  advertised output schema now declares them plus `tool_calls` and `analysis_id`, which were already
+  emitted but undeclared -- a validating client is entitled to drop an undeclared key. Additive only.
 - New gate: `scripts/find_orphan_reads.py` (--check wired into CI and both contributing guides) reports
   every `record.get("key", default)` in shipped code whose key nothing in the repository writes -- the
   shape §101's `trajectory` bug hid behind. 14 such reads remain, each declared in
@@ -151,6 +157,12 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New contract gate: `tests/mcp/test_analyze_contract.py` installs an explicit alias map (canonical
+  `AnalysisState` field -> the name each interface uses) and fails if any surface declares a key with
+  no mapped concept, so a fourth spelling of an existing idea cannot ship silently. The measured drift
+  it documents -- `validation_results` -> `validation` in the SDK and REST, `report_markdown` ->
+  `markdown` in the REST report -- is filed as D-L3-18: those are public key names, and unifying them is
+  a breaking change that needs a decision and a version bump, not an agent's preference.
 - New internal module `dsa_agent.tool_evidence` holds the per-tool evidence rule
   (`build_tool_evidence`), moved verbatim out of `dsa_agent.graph`, which had been both orchestrating
   runs and deciding what a tool result proves (`AUDIT_LEDGER.md` §105, Phase 4 target 2 seam #2).

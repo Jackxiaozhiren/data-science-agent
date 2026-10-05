@@ -5750,3 +5750,55 @@ line and adds a comment), orphan-reads `--check` `0`, full `pytest -q --cov` exi
 `I001` blocks in files I have not touched this session (`columns.py`, `graph.py`, `langgraph_graph.py`),
 which are not selected by the project config and therefore not CI findings; and `graph._get_columns`
 (D-L3-13) keeps the `[]`-for-everything shape that §98 removed from `_numeric_columns`.
+## 108. Phase 4 target 3: the interfaces do mirror one contract by hand, and one of them was hiding a dimension
+
+**The question the target asks** ("does one contract definition serve CLI/SDK/API/MCP/Jupyter, or does
+each mirror it by hand?") was answered by enumerating what each surface publishes for the same object,
+not by reading docs. Canonical shape: `dsa_agent.state.AnalysisState`, 23 fields, stored as
+`state_json` and consumed verbatim by the web inspector (`RunInspector.tsx:34-35` declares
+`validation_results` and `report_markdown`) and by the SSE stream.
+
+| surface | how it produces its shape | report text | critic verdicts |
+| --- | --- | --- | --- |
+| canonical `AnalysisState` | the model itself | `report_markdown` | `validation_results` |
+| SDK `Analysis` (10 fields) | hand projection, `raw_state` kept | `report_markdown` | **`validation`** (renamed) |
+| API `GET /analysis/{id}/report` | hand dict, `routers/analysis.py:135-142` | **`markdown`** (renamed) | **`validation`** (renamed) |
+| MCP `analyze` | hand dict, `adapter.py:532-541` | `report_markdown` | **absent** |
+| Jupyter | consumes the SDK object | inherits | inherits |
+
+`Evidence`/`Artifact`/`Insight` match field-for-field between SDK and agent (7/7, 6/6, 6/6 -- measured,
+not assumed), so the drift is confined to the run-level projection. Two distinct findings follow, and
+they are not the same kind of thing:
+
+**D-L3-18 (filed, not taken): three names for two concepts.** `validation_results` → `validation` and
+`report_markdown` → `markdown` are *public* REST/SDK key names. Renaming them is a breaking change for
+the web app, whose inspector already reads the canonical names from a different endpoint -- so the two
+spellings are simultaneously live in one product. Unifying needs a decision and a version bump, not an
+agent's preference; recorded with the measured table above so the cost of deferring is visible.
+
+**Fixed here: MCP published no critic verdicts at all.** That is a capability gap, not a spelling: an
+MCP client could not tell a validated analysis from an unvalidated one, while the notebook, the SDK and
+REST all could. `payload_raw` gains `validation` and `error` from the SDK result, and
+`_analyze_output_schema()` now declares `validation`, `tool_calls`, `error` and `analysis_id`. The last
+two were already *emitted but undeclared* -- found by the second test, not by me: a schema that omits a
+key entitles a validating client to drop it, so `tool_calls` was silently second-class. Additive keys
+only, so no existing MCP consumer changes behaviour.
+
+**Tests** (`tests/mcp/test_analyze_contract.py`, 8; red on arrival: 3, after the fix: 0). Beyond the gap,
+they install `ALIASES` -- canonical field → the name each interface uses -- and assert (a) every mapped
+MCP name is actually declared, (b) every SDK/API name in the map exists on that surface, and (c) no
+surface declares a key with no mapped concept, so a fourth spelling of an existing idea fails the gate
+instead of shipping. Same bounded-declaration shape as §89's npm exemption list and §102's orphan list:
+the drift is allowed only where it is written down.
+
+**Control.** Deleting the `validation` line from the payload made exactly
+`test_the_mcp_analyze_result_carries_the_critic_verdicts` fail; the two schema-side assertions did not,
+correctly, since they read the declaration rather than the emission. Restored file verified by
+`md5 -q` (`64494dc2…`, both copies identical).
+
+**Gates.** ruff `0` · `ruff format --check` `0` (233 files) · mypy `0` (114) · ratchet `OK`
+(`exceptHandlers` **185**, `swallowedExceptionSites` **8**, `todoMarkers` **0**) · orphan-reads `0` ·
+full `pytest -q --cov` exit **`0`**, coverage **82.54%**, `testFunctions` 617 → **625**. MCP mirror
+repaired with `sync_vendor --file`, verified by `diff -q`. Runner status for the preceding sections:
+§104 run 37179256194 `success`, §105 run 37181413476 `success`, §106 run 37186664964 `success`,
+§107 run 37188479862 `success`.
