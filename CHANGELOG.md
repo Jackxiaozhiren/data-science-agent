@@ -197,6 +197,20 @@ shadowing + missing greenlet concurrency).
 
 ### Added (unreleased, non-breaking)
 
+- New internal module `dsa_agent.reporting` holds report composition (`compose_report`), split out of
+  `dsa_agent.langgraph_graph._node_report`, which had grown to 179 lines -- the largest function in the
+  shipped tree -- by rebuilding the state model twice, rendering markdown, persisting artifacts, building
+  the reproducibility bundle, merging validation results and shaping the graph's envelope in one graph
+  node (`AUDIT_LEDGER.md` §115, Phase 4 target 2 seam #7). `langgraph_graph.py` 524 → 348 and the node is
+  now a single delegated return, pinned from the AST so re-inlining it goes red. Equivalence is a capture
+  differential over three real runs' own `run_result` payloads -- artifacts and their file contents
+  included -- byte-identical across the split with `uuid4` and timestamps pinned and each normalisation's
+  count compared. Two defects surfaced while reading that body and are filed with measurements rather
+  than folded into this commit: D-L4-07 (the report root is `Path(__file__).parents[4]`, which resolves
+  inside the interpreter's library tree for an installed wheel) and D-L4-08 (a run whose report could not
+  be persisted still returns `status: COMPLETED` with an `error` set; 0 of 50 runs hit it on this layout,
+  and the shape is now pinned by a test so a fix cannot pass unnoticed).
+
 - New internal module `dsa_mcp.resources` holds the MCP **resource** surface (`_discover_datasets`, the
   `_ANALYSIS_STORE` explicit-handle store, `store_analysis`, `list_resources`, `read_resource` over
   `dataset:// evidence:// report:// analysis:// artifact://`), split out of `dsa_mcp.adapter`, which was

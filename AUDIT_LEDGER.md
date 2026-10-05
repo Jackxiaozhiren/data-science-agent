@@ -6256,3 +6256,88 @@ resync -- §113.5's rule, applied) · `mypy packages apps/api src apps/jupyter` 
 admired: TOTAL statements 7847 → **7851**, missing statements **1119 → 1119**, branches **2236 → 2236**,
 missing branches **416 → 416** -- the move added the module header's four statements and no new untested path.
 `sync_vendor --check` now reports only the concurrent session's `dsa_evaluation` file.
+
+## 115. Phase 4 target 2 seam #7: report composition leaves the graph, and a control catches a decorative differential
+
+**The seam.** `_node_report` in `packages/agent/src/dsa_agent/langgraph_graph.py` was 179 lines -- the
+largest function in the shipped tree -- doing six jobs in one `async def`: rebuilding the state model
+*twice*, rendering markdown, persisting artifacts, building the reproducibility bundle, merging its
+validation results, and shaping the graph's return envelope. Composition sitting inside orchestration,
+which is the boundary §105 drew around `graph.py`. `dsa_agent.reporting.compose_report` (200 lines) now
+owns it; the graph module is 524 → 348 lines and the node is one `return compose_report(state)`.
+
+**What the capture harness is, and the two ways it lied before it told the truth.** The state fed to the
+node is a real run's own `run_result` dict taken from `raw_runs.json` -- the producer's shape, three
+different runs -- wrapped the way the graph wraps it. `uuid.uuid4` and the generated-at timestamps are
+pinned, and each normalisation's *count* is carried into the comparison so a structural change cannot
+hide inside it. Two confounders had to be found and removed:
+
+1. **The pin was broken, and both arms were comparing failures.** The first `_SeqUuid` returned a
+   *method* for `.hex`, so `uuid.uuid4().hex[:8]` raised `TypeError: 'function' object is not
+   subscriptable` inside the node, the outer `except` caught it, and every arm returned
+   `error: "Report write failed: 'function' object is not subscriptable"` with `status: COMPLETED`. The
+   three arms were byte-identical, and the claim they supported was nothing. The planted-literal control
+   is what said so: the plant landed (`assert new != t` held), the capture did not move, and a
+   differential that cannot see the body it compares is decorative -- §113.4's "guard that can only fail
+   while the defect stands" in a new costume. The harness now asserts the branch it means to measure:
+   no `error` key, `status == COMPLETED`, and at least five composed artifacts.
+2. **Two roots, one code path, different dedup.** Re-measuring "before" from a `git archive` export put
+   the composed artifacts under `/private/tmp/pre115/artifacts/…` while the fixture's own five artifacts
+   still named `/Users/jackson/Data agent/artifacts/…`, so the `if sp not in existing` dedup skipped
+   nothing there and skipped two here -- `roots=10` vs `roots=8`. That delta was the measurement design,
+   not the code. Both arms then ran in one root, with HEAD's `langgraph_graph.py` restored from
+   `git show` and `reporting.py` moved aside (reverted afterwards by md5-verified copy-back, never
+   `git checkout`): **three arms byte-identical**, artifacts and file contents included, and the plant
+   re-tested against the moved body -- it moves.
+
+**A type the split exposed.** `mypy` went red at the delegation line: `LGState` is a `TypedDict`, which is
+not a `dict[str, Any]`. The honest fix was not a cast -- `compose_report` only reads its argument -- so the
+parameter is `Mapping[str, Any]`, which is both accepted and tighter than what was written. 119 source
+files clean (the new module is the +2).
+
+**Tests.** `tests/agent/test_reporting_seam.py` (5): the module and function exist; **the node is one
+`Return` of a `compose_report(state)` call**, asserted from the AST so a future re-inlining goes red rather
+than silently doubling the implementation; `reporting.py` must not import `langgraph_graph` (without this
+the split is two files sharing one cycle); and two **green-on-arrival** pins on the node's behaviour, driven
+through the same patch point the existing graph tests use (`dsa_agent.report.write_report_artifacts`).
+
+### 115.1 Two adjacent defects measured, neither fixed (D-L4-07, D-L4-08)
+
+Both came out of reading the body I moved, and both are behaviour questions, so they are filed with their
+evidence rather than folded into a refactor commit.
+
+- **D-L4-07 -- the artifact root is derived from `__file__`'s great-grandparent.**
+  `dsa_agent/report.py:86` computes the report directory as
+  `Path(__file__).resolve().parents[4] / "artifacts" / "reports" / run_id`. Measured by path arithmetic on
+  the three layouts this repository ships: source checkout → repo root ✓; vendored inside the repo
+  (`src/data_science_agent/_vendor/…`) → repo root ✓; **installed wheel**
+  (`<venv>/lib/python3.12/site-packages/data_science_agent/_vendor/dsa_agent/report.py`) →
+  `<venv>/lib/python3.12`, i.e. reports are written into the interpreter's own library tree, next to
+  `site-packages`, not where the user ran the command. The container path is fine for a different reason
+  worth stating: `docker/Dockerfile.api` does `chown -R appuser:appuser /app` and `USER appuser`, and its
+  layout is the source one, so `/app/artifacts` is writable. Not observed end-to-end in an installed wheel
+  (CI builds it and runs only `dsa --help`); the claim is derived from the rule, and said so.
+- **D-L4-08 -- a run whose report could not be persisted reports COMPLETED.** Forced failure measured on
+  three arms (`write_report_artifacts` raising `OSError`): the node returns `status: COMPLETED`,
+  `analysis_state.status: COMPLETED`, `error: "Report write failed: read-only filesystem"`, and the input
+  artifacts unchanged -- so the persisted-report claim in the payload is false while the verdict says
+  success. The field is not hidden: `dsa_mcp/adapter.py:274` publishes `summary.get("error", ...)` beside
+  the status, and `error` is one of §111's nine `RUN_SUMMARY_FIELDS`. Blast radius measured on this tree:
+  **0 of 50** benchmark runs carry an `error` field, because the source layout writes fine here -- latent
+  locally, live wherever D-L4-07's wheel path is not writable. Fixing it is a verdict change: the status
+  vocabulary in `dsa_agent/state.py` has `COMPLETED`/`FAILED`/`HUMAN_REVIEW` and no degraded state, so
+  either a partially-succeeded run becomes `FAILED` (which the evaluator counts against `task_success_rate`,
+  a gated figure) or a new status value enters the contract every interface publishes. That is the
+  maintainer's call, which is why it is encoded as a passing test (`test_a_failed_report_write_still_reports_completed`)
+  rather than left invisible: the day someone fixes it, that test goes red and says so.
+
+**Gates.** All eight runner commands re-run verbatim over whole trees, exit codes read from the commands:
+`ruff check` **0** · `ruff format --check` **0** · `mypy` **0** (119 files) · `audit_facts --check` **OK**
+(no ceiling moved; `exceptHandlers` stays 185, `swallowedExceptionSites` 8) · `find_orphan_reads --check`
+**0** · `check_public_claims --require-released-tags` **0** · `pytest -q --cov` **0**, coverage **82.62%**
+against the 79 floor · `mkdocs build --strict` **0**. Coverage inventoried: TOTAL statements 7851 → **7859**,
+missing statements 1119 → **1117**, branches **2236 → 2236**, missing branches **416 → 416** -- the split
+added a module header, the two new node tests drove both branches, and no new path is untested.
+`dsa_agent`'s vendor mirror re-synced after each edit (`sync_vendor --package dsa_agent`), including after
+the formatter pass, which is the second time in three sections that a local format run invalidated a
+mirror I had already synced; `sync_vendor --check` still reports only the concurrent session's file.
