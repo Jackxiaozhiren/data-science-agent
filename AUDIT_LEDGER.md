@@ -6656,3 +6656,63 @@ an empty or unparseable capture, so a scan that never ran cannot read green.
 a CI-enforcement claim that CI did not implement, and here an enforcement claim that CI *does* implement fired
 on upstream data without anyone being asked. The cheap wrong move -- adding a dated exemption -- was available
 in one edit and is the exact failure §89 exists to make expensive.
+
+## 120. Phase 4 target 1 + target 6: the gate surface stops being a list somebody remembered
+
+**The premise, corrected first.** §117.5's D-L4-06 row says "nothing in the repo runs them locally,
+so reproducing the gate set means typing its commands out of the workflow by hand". Half of that was
+already wrong when I wrote it: `CONTRIBUTING.md` lists 13 commands and `docs/contributing.md` 17, and
+`tests/test_ci_gate_integrity.py` already pins those guides to `ci.yml` token-for-token. Recorded
+rather than quietly corrected, because the *rest* of the finding is worse than the part I got wrong.
+
+**What the measurement said.** Of `ci.yml`'s 27 single-line `run:` steps, **19 produced `None`** from
+the guard's `_classify` -- so they were invisible to the mirror test and to any future "a gate was
+added" question. Seven of the 19 are real gates that a contributor is expected not to break:
+
+| step | gate | was it in the guides? |
+| --- | --- | --- |
+| `uv lock --check` | dependency pinning (§46) | neither |
+| `uv run python scripts/sync_vendor.py --check` | vendored mirrors match source | neither -- the gate this run leaned on for four sections |
+| `uv run python scripts/check_npm_workspace_lock.py` | root lock vs workspace manifests | neither |
+| `scripts/generate_sbom.py && test -f release/sbom.json` | SBOM (§47) | docs only, and spelled differently (no `test -f` half) |
+| `uv run python -m mkdocs build --strict` | docs | prose in CONTRIBUTING, block in docs/ only |
+| `node apps/web/scripts/regression.mjs` | the Web tour | neither |
+| `uv run dsa --limit 5 --out /tmp/ci-bench --catalog … --datasets …` | benchmark smoke | both, but as bare `dsa --limit 5` |
+
+Worse structurally: the guard asserted `len(expected) == 8`. A hand-typed count of its own vocabulary
+means adding a ninth gate to `ci.yml` is not a coverage question at all -- it is invisible. That is
+§24's target 1 sentence exactly ("derive the list, do not assume it"), and §16's drift class applied to
+a guard rather than to a document.
+
+**Landed.** `_classify` names nine more gates (vendor, workspace-lock, sbom, lock-check, docs, compose,
+web-tour, bench-smoke, web-build). `_LOG_PLUMBING` strips `set`/`-o`/`pipefail;`/`2>&1` before
+comparison, because pipefail is owned by `test_piped_ci_steps_declare_pipefail` in the same file and
+the alternative was pasting shell noise into contributor docs to make a token set match. `CI_ONLY_STEPS`
+maps eight substrings to reasons (npm installs, the runner's `uv`, the npm *scan* whose exit code §89
+showed cannot read, the two image builds, the CLI smoke inside one of them), and the hand-typed
+`== 8` became an assertion that the eight original gate names are still all found -- which is what
+actually catches a broken parser.
+
+**Red first, on the shipped corpus, not on a fixture.** The widened classification made
+`test_contributing_guides_mirror_the_ci_gates` fail with 13 offenders, e.g.
+`CONTRIBUTING.md: never runs the vendor gate CI runs (['--check', 'scripts/sync_vendor.py'])` and
+`docs/contributing.md: sbom differs from ci.yml -- missing ['&&', '-f', 'release/sbom.json', 'test']`.
+Both guides were then rewritten to CI's spelling; green after. The new guards' own bite is proven
+separately: `test_the_control_an_unknown_step_is_reported_and_a_declared_one_is_not` plants
+`scripts/check_licenses.py` in a synthetic workflow body and requires exactly that one report, then
+swaps in `generate_sbom.py` and requires silence, then checks the declared set is the one enumerated
+and every declaration carries a reason; `test_no_declared_setup_step_is_also_a_gate` fails if a
+declared setup step is also a gate -- which would hide a gate behind an excuse.
+
+**One thing the guides now tell contributors that they did not:** the benchmark smoke line carries CI's
+`--out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets …`. That is
+explicitness, not a behavior change -- the CLI's own defaults resolve to the same catalog and datasets,
+which is what `run_manifest.json` from §113's four runs records (`catalog:
+benchmarks/ds-agent-benchmark/catalog.json`), so the pinned spelling cannot quietly mean something else.
+
+**Gates.** Whole-tree battery re-run, exit codes from the commands: `ruff check` **0** ·
+`ruff format --check` **0** (247; one file needed it after these edits, caught by the whole-tree form
+per §113.5's rule) · `mypy` **0** (120) · ratchet **OK** · orphan-reads **0** · claims **0** ·
+`mkdocs build --strict` **0** · `pytest -q --cov` **0**. `tests/test_ci_gate_integrity.py` 9 → **12**
+tests, all passing; D-L4-06's remaining half -- one command to *run* the whole surface, rather than the 23 lines a contributor
+copy-pastes from `CONTRIBUTING.md` today -- continues as §121.

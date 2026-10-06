@@ -7,19 +7,29 @@ Before PR — these mirror `.github/workflows/ci.yml` verbatim, and
 
 ```bash
 uv sync --dev
+uv lock --check                                  # §46 dependency pinning
 uv run python scripts/audit_facts.py --check
+uv run python scripts/sync_vendor.py --check     # vendored dsa_* must match source
+uv run python scripts/check_npm_workspace_lock.py
 uv run python scripts/check_public_claims.py --require-released-tags
 uv run python scripts/find_orphan_reads.py --check
 uv run ruff check packages apps/api tests src apps/jupyter scripts
 uv run ruff format --check packages apps/api tests src apps/jupyter scripts
 uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
 uv run pytest -q --cov --cov-report=term-missing
-uv run dsa --limit 5
+uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets
+npm --prefix apps/web ci --legacy-peer-deps       # installs what the two lines below consume
 npm --prefix apps/web audit --json > /tmp/npm-audit-web.json
 uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
+node apps/web/scripts/regression.mjs             # boots `next start`, tours every static route
+uv run python scripts/generate_sbom.py && test -f release/sbom.json   # §47 SBOM
 docker compose config
+uv run python -m mkdocs build --strict
 ```
+
+`node apps/web/scripts/regression.mjs` needs the build above and Playwright's browsers; CI hosts
+the Docker image builds and the packaged-CLI smoke inside them, which are not on this list.
 
 Also verify (when touching relevant areas):
 

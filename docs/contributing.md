@@ -17,25 +17,32 @@ If you want to learn the extension surface, [Build a Hello-World Plugin](plugin-
 
 ```bash
 uv sync --dev
+uv lock --check
 uv run python scripts/audit_facts.py --check
+uv run python scripts/sync_vendor.py --check
+uv run python scripts/check_npm_workspace_lock.py
 uv run python scripts/check_public_claims.py --require-released-tags
 uv run python scripts/find_orphan_reads.py --check
 uv run ruff check packages apps/api tests src apps/jupyter scripts
 uv run ruff format --check packages apps/api tests src apps/jupyter scripts
 uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
 uv run pytest -q --cov --cov-report=term-missing
-uv run python scripts/generate_sbom.py
-uv run dsa --limit 5
+uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets
 uv run dsa demo
 npm --prefix apps/web ci --legacy-peer-deps
 npm --prefix apps/web audit --json > /tmp/npm-audit-web.json
 uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
+node apps/web/scripts/regression.mjs
+uv run python scripts/generate_sbom.py && test -f release/sbom.json
 docker compose config
 uv run python -m mkdocs build --strict
 ```
 
-CI also builds the API/Web Docker images and verifies the packaged `dsa` CLI inside the API image.
+`node apps/web/scripts/regression.mjs` boots `next start` itself and needs the build above plus
+Playwright's browsers. CI also builds the API/Web Docker images and verifies the packaged `dsa` CLI
+inside the API image; those are the only gated checks a contributor is not asked to reproduce, and
+`tests/test_ci_gate_integrity.py` names each one with its reason rather than leaving it unclassified.
 
 Keep `uv.lock` pinned, do not commit private datasets or credentials, and preserve the local-first deterministic path for ordinary regression work. Security guidance lives in `SECURITY.md`.
 

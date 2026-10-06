@@ -124,6 +124,32 @@ GUIDES = ("CONTRIBUTING.md", "docs/contributing.md")
 # `uv run python -m` is invocation scaffolding, not part of the gate.
 _SCAFFOLD = frozenset({"uv", "run", "python", "-m"})
 
+# CI's log plumbing. `set -o pipefail` is required by ``test_piped_ci_steps_declare_pipefail``
+# and `2>&1` is where it writes; neither is part of the command a contributor types, and the
+# pipefail guard already owns that concern. Without this, every piped gate would differ from its
+# guide line by plumbing alone, and the honest fix would be to paste shell noise into the docs.
+_LOG_PLUMBING = frozenset({"set", "-o", "pipefail;", "2>&1"})
+
+# Steps CI runs that are not gates a contributor is asked to reproduce: they provision the runner,
+# install dependencies, or build the container images CI alone hosts. Naming them here is the
+# point -- an unclassified step that is not in this dict fails
+# ``test_every_ci_step_is_a_gate_or_a_declared_ci_only_step``, so a new gate cannot join `ci.yml`
+# as an item the guides silently never tell anyone to run. That was measured live: 19 of 27
+# single-line steps were invisible to `_classify`, among them `sync_vendor.py --check`,
+# `check_npm_workspace_lock.py`, `uv lock --check`, `mkdocs build --strict`, the SBOM check,
+# `docker compose config` and the Web regression tour -- seven gates the guides do not mirror.
+CI_ONLY_STEPS = {
+    "npm --prefix apps/web ci": "installs node_modules for the build and tour steps below",
+    "npm --prefix apps/vscode ci": "installs node_modules for `npm run compile` in tests/vscode",
+    'pip install "uv==': "provisions the runner's package manager, not a repository verdict",
+    "uv sync --dev": "creates the environment the gates then run in",
+    "npm --prefix apps/web audit --json": "the scan, whose exit code §89 showed cannot distinguish "
+    "'no fix exists' from 'the gate is mute'; the reader is the gate and is classified",
+    "docker build -f docker/Dockerfile.api": "CI hosts the image build; local contributors run compose",
+    "docker build -f docker/Dockerfile.web": "CI hosts the image build; local contributors run compose",
+    "docker run --rm dsa-api:ci": "the packaged-CLI smoke inside the image CI just built",
+}
+
 
 def _classify(tokens: set[str]) -> str | None:
     """Name the gate a token stream implements, or None if it is not one we guard."""
@@ -143,13 +169,31 @@ def _classify(tokens: set[str]) -> str | None:
         return "ratchet"
     if any(tok.endswith("find_orphan_reads.py") for tok in tokens):
         return "orphan-reads"
+    if any(tok.endswith("sync_vendor.py") for tok in tokens):
+        return "vendor"
+    if any(tok.endswith("check_npm_workspace_lock.py") for tok in tokens):
+        return "workspace-lock"
+    if any(tok.endswith("generate_sbom.py") for tok in tokens):
+        return "sbom"
+    if "lock" in tokens and "--check" in tokens:
+        return "lock-check"
+    if "mkdocs" in tokens and "--strict" in tokens:
+        return "docs"
+    if "compose" in tokens and "config" in tokens:
+        return "compose"
+    if any(tok.endswith("regression.mjs") for tok in tokens):
+        return "web-tour"
+    if "dsa" in tokens and "--limit" in tokens:
+        return "bench-smoke"
+    if "npm" in tokens and "build" in tokens and "apps/web" in tokens:
+        return "web-build"
     return None
 
 
 def _tokens(cmd: str) -> set[str]:
     """Command tokens, with inline comments and CI's log-piping removed."""
     body = cmd.split("#", 1)[0].split("|", 1)[0]
-    return set(body.split()) - _SCAFFOLD
+    return set(body.split()) - _SCAFFOLD - _LOG_PLUMBING
 
 
 def _bash_lines(text: str) -> list[str]:
@@ -186,7 +230,23 @@ def _guide_gates(path: Path) -> dict[str, set[str]]:
 
 def test_contributing_guides_mirror_the_ci_gates() -> None:
     expected = _ci_gates()
-    assert len(expected) == 8, f"expected 8 guarded gates in ci.yml, parsed {sorted(expected)}"
+    # The eight gates this guard was written with must always be found; a parser that quietly
+    # returns nothing would otherwise make the comparison below vacuously true. The count itself
+    # is no longer asserted -- `test_every_ci_step_is_a_gate_or_a_declared_ci_only_step` makes the
+    # whole surface accountable, which a hand-typed number ("expected 8") cannot do: it turns a
+    # newly added gate into a red herring instead of a coverage question.
+    required = {
+        "ruff-check",
+        "ruff-format",
+        "mypy",
+        "pytest",
+        "claims",
+        "advisories",
+        "ratchet",
+        "orphan-reads",
+    }
+    missing_core = sorted(required - set(expected))
+    assert not missing_core, f"the ci.yml parser lost gates: {missing_core}"
     offenders: list[str] = []
     for rel in GUIDES:
         guide = _guide_gates(ROOT / rel)
@@ -201,6 +261,89 @@ def test_contributing_guides_mirror_the_ci_gates() -> None:
                 )
     assert not offenders, (
         "guide commands must match the CI gate they tell you to run:\n" + "\n".join(offenders)
+    )
+
+
+def _unaccounted_steps(text: str) -> list[str]:
+    """Single-line run steps that are neither a classified gate nor a declared CI-only step."""
+    out: list[str] = []
+    for lineno, cmd in _single_line_run_steps(text):
+        if _classify(_tokens(cmd)):
+            continue
+        if any(needle in cmd for needle in CI_ONLY_STEPS):
+            continue
+        out.append(f"{lineno}: {cmd[:90]}")
+    return out
+
+
+def test_every_ci_step_is_a_gate_or_a_declared_ci_only_step() -> None:
+    """The gate surface is derived from the workflow, not from a list somebody remembered.
+
+    Measured before this guard: 19 of ci.yml's 27 single-line steps produced ``None`` from
+    ``_classify``, so neither the mirror test above nor the guides saw them -- seven of those were
+    real gates (``sync_vendor.py --check``, ``check_npm_workspace_lock.py``, ``uv lock --check``,
+    ``mkdocs build --strict``, the SBOM assertion, ``docker compose config``,
+    ``node apps/web/scripts/regression.mjs``). A contributor following the guide to the letter got
+    green locally and red remotely on a check the guide never mentioned, which is the failure mode
+    §113.5 records from the other side.
+    """
+    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    unaccounted = _unaccounted_steps(ci)
+    assert not unaccounted, (
+        "steps must be classified as a gate or declared in CI_ONLY_STEPS with a reason:\n"
+        + "\n".join(unaccounted)
+    )
+
+
+def test_no_declared_setup_step_is_also_a_gate() -> None:
+    """A step in `CI_ONLY_STEPS` that `_classify` also names would hide a gate behind an excuse."""
+    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    clashes: list[str] = []
+    for needle in CI_ONLY_STEPS:
+        for lineno, cmd in _single_line_run_steps(ci):
+            if needle not in cmd:
+                continue
+            key = _classify(_tokens(cmd))
+            if key:
+                clashes.append(
+                    f"{needle!r} is declared setup but classifies as {key} (line {lineno})"
+                )
+    assert not clashes, "\n".join(clashes)
+
+
+def test_the_control_an_unknown_step_is_reported_and_a_declared_one_is_not(tmp_path: Path) -> None:
+    """The coverage guard above must be able to fail on a new gate, and stay silent on noise."""
+    sample = "\n".join(
+        [
+            "  ci:",
+            "    steps:",
+            "      - uses: actions/checkout@deadbeef # v5",
+            "      - run: uv run python scripts/check_licenses.py",
+            "      - run: npm --prefix apps/web ci --legacy-peer-deps",
+            "      - run: set -o pipefail; uv run python -m mkdocs build --strict 2>&1 | tail -n 50",
+        ]
+    )
+    reported = _unaccounted_steps(sample)
+    assert len(reported) == 1 and "check_licenses.py" in reported[0], reported
+    assert not _unaccounted_steps(
+        sample.replace("scripts/check_licenses.py", "scripts/generate_sbom.py")
+    ), "a classified gate was still reported as unaccounted"
+    declared = {
+        "npm --prefix apps/web ci",
+        "npm --prefix apps/vscode ci",
+        'pip install "uv==',
+        "uv sync --dev",
+        "npm --prefix apps/web audit --json",
+        "docker build -f docker/Dockerfile.api",
+        "docker build -f docker/Dockerfile.web",
+        "docker run --rm dsa-api:ci",
+    }
+    assert declared == set(CI_ONLY_STEPS), (
+        f"CI_ONLY_STEPS drifted from this test's enumeration: "
+        f"{sorted(set(CI_ONLY_STEPS) ^ declared)}"
+    )
+    assert all(reason.strip() for reason in CI_ONLY_STEPS.values()), (
+        "a declaration without a reason"
     )
 
 

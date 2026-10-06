@@ -211,6 +211,14 @@ shadowing + missing greenlet concurrency).
   not touched -- `docs/audit/npm-advisory-exceptions.json` admits only advisories with no published fix, and
   this one had one. Verified: `npm ci`, `check_npm_workspace_lock.py`, `npm run build` and
   `check_npm_advisories.py` all exit 0 against the refreshed lock.
+- The pre-PR gate list is now derived from `ci.yml` instead of remembered. `tests/test_ci_gate_integrity.py`
+  compared the contributor guides against a hand-typed vocabulary of 8 gates and asserted that exactly 8
+  were found, so 19 of CI's 27 run steps were invisible to it -- among them `sync_vendor.py --check`,
+  `check_npm_workspace_lock.py`, `uv lock --check`, `mkdocs build --strict`, the SBOM assertion,
+  `node apps/web/scripts/regression.mjs` and the benchmark smoke (`AUDIT_LEDGER.md` §120, Phase 4 targets 1
+  and 6). Nine more gates are now classified, eight genuinely CI-only steps are declared with a reason each,
+  and any step that is neither fails the suite. Both guides were rewritten to CI's own spelling, which is what
+  the "mirrors ci.yml verbatim" line above them has claimed since §113 and could not previously be checked.
 
 ### Added (unreleased, non-breaking)
 
