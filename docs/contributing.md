@@ -44,6 +44,11 @@ Playwright's browsers. CI also builds the API/Web Docker images and verifies the
 inside the API image; those are the only gated checks a contributor is not asked to reproduce, and
 `tests/test_ci_gate_integrity.py` names each one with its reason rather than leaving it unclassified.
 
+One command for the whole list: `scripts/run_gates.sh` (add `--list` to print the gate commands
+without running them). `tests/test_command_surface.py` fails if that runner and `ci.yml` ever cover
+different gates, and checks that every command the runner names is a real invocation in this tree --
+which is what stops the list from becoming a second, smaller truth.
+
 Keep `uv.lock` pinned, do not commit private datasets or credentials, and preserve the local-first deterministic path for ordinary regression work. Security guidance lives in `SECURITY.md`.
 
 Versioned workstream history lives in `CHANGELOG.md`; research artifacts should preserve the path from raw inputs to scripts to published outputs.

@@ -6612,6 +6612,17 @@ say §113.5 twice: `ad7a3f5` is §113.5 (the format-gate correction, and the sub
 For the same reason the note is *in* §118 rather than replacing anything in it: the ledger's rule is append,
 not overwrite, and a mistake in my own commit message is not licence to rewrite the section around it.
 
+**Recurred at `cf5546d` (§120), same cause.** That commit's subject is
+`refactor(mcp): §114 the resource surface stops sharing a module with the tool surface` -- a subject
+belonging to an already-pushed commit -- because the heredoc's first line was again a note-to-myself
+sample rather than the subject, and git takes line one. Its body does carry the correct subject
+(`fix(gates): §120 the contributor gate list is derived from ci.yml, not remembered`) and the full
+description, so `git log --format=%B` is right while `--oneline` is wrong twice over now
+(`dbbfc87` → §118, `cf5546d` → §120). Not amended, for the reasons above. Procedure adopted from the
+next commit onward: compose the subject as the literal first line of the heredoc, then read
+`git log -1 --format=%s` and compare it with the section number before pushing anything. §121 is the
+first commit written under that check.
+
 ## 119. A new advisory arrived under the gate while the report was being written, and the rule decided the action
 
 **What happened.** `96274fe`'s CI run (37406295986) failed at
@@ -6716,3 +6727,54 @@ per §113.5's rule) · `mypy` **0** (120) · ratchet **OK** · orphan-reads **0*
 `mkdocs build --strict` **0** · `pytest -q --cov` **0**. `tests/test_ci_gate_integrity.py` 9 → **12**
 tests, all passing; D-L4-06's remaining half -- one command to *run* the whole surface, rather than the 23 lines a contributor
 copy-pastes from `CONTRIBUTING.md` today -- continues as §121.
+
+## 121. Phase 4 target 6: one command for the gate surface, and the executable bits that were missing
+
+**What §117.5 deferred, now decided.** The D-L4-06 recommendation was "a documented gate list pinned to
+`ci.yml`, not a runner that executes workflow strings". §120 delivered the first half and this one the
+second, in the form the objection allowed: `scripts/run_gates.sh` holds its commands **literally**, so a
+reader sees exactly what runs and nothing evaluates YAML at run time, and the pin
+(`tests/test_command_surface.py`) compares that literal list against `ci.yml`'s gate set through the
+derived classifier §120 introduced. Add a gate to the workflow without adding it here and the suite goes
+red -- the runner cannot quietly become the smaller truth, which is the shape of §113.5's failure.
+
+**The executable-bit half of target 6, with evidence.** §24's target 6 says: "If no task runner exists and
+helper scripts lack an executable bit, say so with evidence." Enumerated over `scripts/`: 15 files, and
+**six of the seven that carry a `#!` line are not executable** -- `dev.sh` (the documented way to start the
+API and Web dev servers), `sync_vendor.py`, `generate_sbom.py`, `generate_benchmark_v2.py`,
+`generate_benchmark_datasets.py`, `run_perf_matrix.py`. One file (`check_public_claims.py`) was already
+shebang + executable, so the convention existed and was simply not followed. All seven are now `+x`
+(the six plus the new runner). The guard is written as a two-way rule so `chmod +x` cannot buy green:
+a script with a shebang must be executable **and** an executable script must have a shebang, which is why
+the eight module-style helpers without one (`audit_facts.py`, `find_orphan_reads.py`, …) stay non-executable
+and are held there by the same rule. (Eight, measured with `git ls-files -s scripts/` against the HEAD blobs:
+15 tracked scripts, 7 with a shebang, 1 of those already `+x`. An earlier draft of this entry said seven;
+the count was written before it was taken, which is the §117 habit this section keeps having to re-learn.)
+The defect itself was reproduced rather than assumed: HEAD's `scripts/dev.sh` written to a scratch directory
+at mode 644 and started as `./dev.sh` gives `Permission denied`, exit **126**.
+
+**Red first, six of them.** Before the script existed the new file failed on: the runner being absent, the
+gate-set comparison (nothing to compare), the shebang/executable rule (six offenders), its own control,
+the `--list` smoke, and the docs pointer. After: 7 passed.
+
+**Controls, because a runner no one executes is a document with a `.sh` suffix.** `--list` is run for real
+in the suite and its printed count must equal the array's length, and it must not have executed anything --
+the §118/§119 lesson that a silent exit 0 is not evidence. The set comparison is driven by a planted
+dropped gate (the ratchet line removed must disappear from the classified set, proving the reader parses
+rather than guesses), and the path check is driven by a planted rename (`scripts/audit_facts.py` →
+`scripts/audit_debt.py` must be the one reported miss). The two skips the path check makes are declared in
+code, not silent: absolute paths point outside the tree, and the path after `test -f` is the artifact the
+same command produces.
+
+**One lint finding worth recording.** `if token == "-f":` triggered S105, "possible hardcoded password
+assigned to `token`" -- ruff pattern-matching the *variable name*. Renamed to `arg`; no noqa, no
+per-file-ignore, and `debt.suppressionDirectives` stays at its 42 ceiling. (The same trap caught me once
+already this section: an unused `# noqa: S603` in a file where `tests/**` already ignores S603 would have
+been the 43rd.)
+
+**Gates.** Whole-tree battery at this tree, exit codes from the commands: `ruff check` **0** ·
+`ruff format --check` **0** (**248** files) · `mypy` **0** (120) · ratchet **OK** · orphan-reads **0** ·
+claims **0** · `mkdocs build --strict` **0** · `pytest -q --cov` **0**, coverage **82.63%**. `tests/`
+now holds **692** test functions (`debt.testFunctions`, the collector's reading taken at this tree: 682
+before §120's three gate-integrity tests and §121's seven command-surface tests, and 651 at the start of
+this section's Phase 4 work); no ceiling moved, nothing excluded.

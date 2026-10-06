@@ -219,8 +219,22 @@ shadowing + missing greenlet concurrency).
   and 6). Nine more gates are now classified, eight genuinely CI-only steps are declared with a reason each,
   and any step that is neither fails the suite. Both guides were rewritten to CI's own spelling, which is what
   the "mirrors ci.yml verbatim" line above them has claimed since §113 and could not previously be checked.
+- Six of the fifteen scripts under `scripts/` carried a `#!/usr/bin/env` shebang but no executable bit, so
+  `./scripts/dev.sh` and `./scripts/sync_vendor.py` failed with `permission denied` (exit 126, measured
+  against a HEAD copy) while `uv run python scripts/sync_vendor.py` worked. The convention was documented
+  and simply not followed. A two-way guard now enforces it over every shipped script: shebang implies `+x`,
+  `+x` implies shebang, and the eight module-style helpers with neither are held in place by the same rule
+  rather than exempted (`AUDIT_LEDGER.md` §121).
 
 ### Added (unreleased, non-breaking)
+
+- `scripts/run_gates.sh` runs the whole gate set in one command: 17 literal CI gate invocations, in CI's
+  order, each reported with its own exit code, plus `--list` which prints them without running anything.
+  The set is not a second hand-typed list -- `tests/test_command_surface.py` loads the readers from
+  `tests/test_ci_gate_integrity.py` and fails if the runner's set diverges from the one `ci.yml` yields,
+  so this is the §113.5 failure mode (a locally-green claim narrower than CI's) made structurally
+  impossible rather than discouraged (`AUDIT_LEDGER.md` §121, Phase 4 target 6 / D-L4-06). Internal only:
+  no shipped package, CLI flag, or REST surface changed.
 
 - New internal module `dsa_llm.cost` holds the money side of the LLM layer -- the call log
   (`_CALL_LOG`, `get_call_log`, `reset_call_log`), the pricing estimate `_usd_for_usage`, and the

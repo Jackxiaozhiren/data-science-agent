@@ -31,6 +31,10 @@ uv run python -m mkdocs build --strict
 `node apps/web/scripts/regression.mjs` needs the build above and Playwright's browsers; CI hosts
 the Docker image builds and the packaged-CLI smoke inside them, which are not on this list.
 
+One command for the whole list: `scripts/run_gates.sh` (add `--list` to print the gate commands
+without running them). `tests/test_command_surface.py` fails if that runner and `ci.yml` ever
+cover different gates, which is what keeps this list from becoming a second, smaller truth.
+
 Also verify (when touching relevant areas):
 
 ```bash
