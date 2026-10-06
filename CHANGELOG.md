@@ -252,6 +252,18 @@ shadowing + missing greenlet concurrency).
   `dsa reproduce --benchmark v2` both exit **2** with `unrecognized arguments`, because the sub-parser
   advertises flags the handler's own parser refuses. `dsa reproduce` works bare, and `dsa --reproduce
   v2 --out …` is the spelling that takes arguments.
+- `dsa reproduce` now accepts the flags it advertises (D-L4-11, `AUDIT_LEDGER.md` §123). The subcommand
+  declared `--json` on its parser and then re-parsed `sys.argv[2:]` with a second parser built inside the
+  handler, so measured on the shipped entry point `dsa reproduce --benchmark v2` exited 2 with
+  `unrecognized arguments: --benchmark v2` and `dsa reproduce --json` exited 2 with
+  `unrecognized arguments: --json`: the four real flags were refused before the handler that reads them,
+  and the one advertised flag was refused by it. `--benchmark`, `--catalog`, `--datasets` and `--out` are
+  declared on the sub-parser now (with their own `dest` names, so they cannot collide with the top-level
+  benchmark flags) and the second parser is gone. `--json` was removed instead of implemented -- the
+  reproduction run prints text and returns `None`, writing its comparison to `<out>/comparison.json` --
+  so there was nothing to serialise and inventing a payload would have been a feature posing as a fix.
+  `docs/architecture.md` had documented `dsa reproduce --benchmark v2` all along; the code was the wrong
+  side of that claim.
 
 ### Added (unreleased, non-breaking)
 

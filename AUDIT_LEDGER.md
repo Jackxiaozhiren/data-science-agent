@@ -6894,3 +6894,60 @@ from an MCP tool call) is closed here, refused at the resolver and pinned by fiv
 **D-L4-11** (`dsa reproduce`'s advertised flags are refused by its own handler, both spellings measured at
 exit **2**) is open: docs corrected to the truth, parser untouched, taken as the next item. §117.5's table
 is a dated record and stays as written; this paragraph is its correction.
+
+## 123. D-L4-11: the subcommand advertised the flag it refused and refused the flags its help string named
+
+**What §122 uncovered and this section closes.** `dsa reproduce` was two parsers deep: the sub-parser
+`p_repro` declared only `--json`, while the handler built a second `ArgumentParser` and re-parsed
+`sys.argv[2:]` for `--benchmark/--catalog/--datasets/--out`. Measured on the shipped entry point (not
+on a replica): `dsa reproduce --benchmark v2` exited **2** with `unrecognized arguments: --benchmark v2`
+from the *outer* parser, so it never reached the parser that knows the flag; `dsa reproduce --json`
+exited **2** with `unrecognized arguments: --json` from the *inner* one. The command's help advertised
+a flag nothing reads, its own description advertised a flag the outer parser refuses, and the only
+working spelling was bare `dsa reproduce`. `docs/architecture.md:168` had been documenting
+`dsa reproduce --benchmark v2` all along: the docs were right and the code was wrong, which is the
+reverse of most of this ledger's documentation findings.
+
+**Fix, and what was deliberately not added.** The four real flags moved onto `p_repro` (with `dest=`
+prefixes, because the top-level parser already owns `--catalog/--datasets/--out` for the benchmark
+path and a shared attribute would let one subcommand's value leak into another's branch), the handler
+reads `args.repro_*`, and the second parser is gone. `--json` was **removed rather than implemented**:
+`reproduce_benchmark` prints text and returns `None` (`dsa_evaluation/reproduce.py:62`), its comparison
+lands in `<out>/comparison.json` (line 195), so there was no object to serialise and inventing one would
+have been a feature disguised as a fix. Refusing `--json` at the outer parser -- before any work, with
+one message from one parser -- is the honest shape until someone adds JSON output.
+
+**Red first, then green, four cases.** Before: `test_reproduce_help_advertises_the_flags_it_accepts`,
+`test_every_advertised_reproduce_flag_reaches_the_handler` (5 spellings) and
+`test_reproduce_bare_still_reaches_the_handler` failed on the shipped CLI; after, `tests/sdk/test_cli_contract.py`
+is **17 passed**. Every acceptance probe pairs the flag under test with a catalog that cannot exist and an
+`--out` inside `tmp_path`, so the run fails on the file rather than executing a fresh-twice benchmark --
+and each is asserted on the *refusal signature* (`unrecognized arguments` absent) plus a non-zero exit,
+which is the pair that distinguishes "flag parsed, then failed on the file" from "flag refused".
+The control asserts the detector can say no: `--totally-made-up` and `--json` both exit **2** with the
+refusal text, and `--json` creates no `reproduction/` directory, so the green in the acceptance test is
+not a vacuous "nothing was ever refused".
+
+**The vendor trap, caught by the test rather than by reading.** The first run after the fix still
+failed: the `dsa` console script imports `src/data_science_agent/_vendor/dsa_evaluation/cli.py`, not the
+workspace package, so editing the source alone changes nothing the CLI user sees. `sync_vendor --file`
+on that one file, and the same four cases went green. §58 paid this exact fee -- a fix to `metrics.py`
+had zero effect on the `dsa` command until the mirror was regenerated -- and §59 recorded the mechanism
+(four workspace modules import the published façade, whose import puts `_vendor` on `sys.path[0]`, so a
+source edit can be inert while the suite stays green). Third collection of the same toll.
+
+**One thing seen and left.** The `--reproduce` flag form (`cli.py:442-471`) resolves its catalog and
+datasets with ternaries whose two branches are the same expression --
+`catalog = args.catalog if <cond> else args.catalog` -- so the condition decides nothing. Filed as
+**D-L4-12** (dead branch in the shipped CLI path), untouched here: it is a behaviour-preserving
+cleanup in a block this section had no reason to re-validate, and a fix to it belongs with a differential
+over the `--reproduce` spellings rather than with a parser-visibility change.
+
+**Gates.** Whole-tree, exit codes from the commands: `ruff check` **0** · `ruff format --check` **0**
+(250 files over CI's paths) · `mypy` **0** (121) · ratchet **OK** (except **185** at ceiling, suppression
+**42** at ceiling, nothing added) · orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** ·
+`pytest -q --cov` **0**, coverage **82.78%**, **738** cases (`-o addopts=""`), `debt.testFunctions`
+**703 → 707**. Vendor mirror repaired with one `--file`; `sync_vendor --check` still reports
+`dsa_evaluation` drift on this machine, which is the concurrent session's uncommitted
+`external_validation.py` and not this change -- the §122 HEAD export said `OK: vendored dsa_* is in sync`,
+and §122 itself is runner-verified at CI run 37416581317 (`ci` and `web-regression` both success).

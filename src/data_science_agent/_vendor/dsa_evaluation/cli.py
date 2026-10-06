@@ -79,8 +79,20 @@ def main() -> None:
     p_benchmark.add_argument("--catalog", type=Path, default=None)
     p_benchmark.add_argument("--datasets", type=Path, default=None)
     p_benchmark.add_argument("--json", action="store_true", help="JSON output")
-    p_repro = sub.add_parser("reproduce", help="Reproduce (§37): dsa reproduce [--benchmark v2]")
-    p_repro.add_argument("--json", action="store_true", help="JSON output")
+    p_repro = sub.add_parser(
+        "reproduce",
+        help="Reproduce (§37): dsa reproduce [--benchmark v2] [--catalog P] [--datasets DIR] [--out DIR]",
+    )
+    p_repro.add_argument(
+        "--benchmark",
+        type=str,
+        default="v2",
+        help="v2 | ds-agent-benchmark",
+        dest="repro_benchmark",
+    )
+    p_repro.add_argument("--catalog", type=Path, default=None, dest="repro_catalog")
+    p_repro.add_argument("--datasets", type=Path, default=None, dest="repro_datasets")
+    p_repro.add_argument("--out", type=Path, default=None, dest="repro_out")
     p_plugin = sub.add_parser(
         "plugin",
         help="Plugin registry (§21 lifecycle): dsa plugin [list|validate|install|remove|disable|enable|execute]",
@@ -463,28 +475,19 @@ def main() -> None:
         reproduce_benchmark(catalog, datasets, out)
         return
 
-    # Spelled subcommand `dsa reproduce --benchmark v2`
+    # Spelled subcommand `dsa reproduce --benchmark v2` (§123: these flags are parsed by the
+    # sub-parser now; they used to be declared by a second parser built here, which --help never
+    # showed and the outer parser refused).
     if args.cmd == "reproduce":
-        rp = argparse.ArgumentParser(description="Reproduce benchmark (fresh twice + compare)")
-        rp.add_argument("--benchmark", type=str, default="v2", help="v2 | ds-agent-benchmark")
-        rp.add_argument("--catalog", type=Path, default=None)
-        rp.add_argument("--datasets", type=Path, default=None)
-        rp.add_argument("--out", type=Path, default=None)
-        rargs = rp.parse_args(sys.argv[2:])
-        bench = (rargs.benchmark or "v2").lower()
-        catalog = rargs.catalog or (
-            Path("benchmarks/v2/catalog.json")
-            if "v2" in bench
-            else Path("benchmarks/ds-agent-benchmark/catalog.json")
+        bench = (args.repro_benchmark or "v2").lower()
+        is_v2 = "v2" in bench
+        catalog = args.repro_catalog or Path(
+            "benchmarks/v2/catalog.json" if is_v2 else "benchmarks/ds-agent-benchmark/catalog.json"
         )
-        datasets = rargs.datasets or (
-            Path("benchmarks/v2/datasets")
-            if "v2" in bench
-            else Path("benchmarks/ds-agent-benchmark/datasets")
+        datasets = args.repro_datasets or Path(
+            "benchmarks/v2/datasets" if is_v2 else "benchmarks/ds-agent-benchmark/datasets"
         )
-        out = rargs.out or (
-            Path("reproduction/v2") if "v2" in bench else Path("reproduction/benchmark")
-        )
+        out = args.repro_out or Path("reproduction/v2" if is_v2 else "reproduction/benchmark")
         reproduce_benchmark(catalog, datasets, out)
         return
 

@@ -17,10 +17,12 @@ uv run dsa --reproduce v2 --out reproduction/v2    # the spelling that takes arg
 
 Output: `reproduction/{manifest.json, environment.json, results.json, comparison.json, logs/}`.
 
-`dsa reproduce` is a bare subcommand. Its own help advertises `--json`, and its parser description
-mentions `--benchmark v2`, and both are refused before any work starts — measured on the shipped CLI:
-`dsa reproduce --json` and `dsa reproduce --benchmark v2` each exit 2 with `unrecognized arguments`
-(§122, filed as D-L4-11). Use the `--reproduce` flag form for `--catalog`, `--datasets` and `--out`.
+`dsa reproduce` takes `--benchmark v2|ds-agent-benchmark`, `--catalog`, `--datasets` and `--out`. It
+does not take `--json`: the reproduction run prints text and writes its comparison to
+`<out>/comparison.json`. Until §123 this subcommand advertised `--json` and refused the four flags it
+actually implements -- `dsa reproduce --benchmark v2` and `dsa reproduce --json` each exited 2 with
+`unrecognized arguments`, because a second parser built inside the handler, not the one `--help`
+shows, was doing the real parsing (D-L4-11, closed in `AUDIT_LEDGER.md` §123).
 For one run's own reproduction, use the bundle rather than a flag: `reproduce.sh` and `analysis.ipynb`
 are written into the run's artefact directory, described next.
 
