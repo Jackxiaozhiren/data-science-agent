@@ -265,6 +265,26 @@ shadowing + missing greenlet concurrency).
   `docs/architecture.md` had documented `dsa reproduce --benchmark v2` all along; the code was the wrong
   side of that claim.
 
+- The documentation site was hiding **23 of its own pages**: they were tracked under `docs/`, built by
+  mkdocs, and referenced by no `nav:` entry -- including `security/VERIFY_RELEASE.md`,
+  `security/VERIFY_PYPI_RELEASE.md`, `security/OSPS_BASELINE.md`, `production-hardening.md` and the entire
+  `v4_3/` evidence record (11 files, 1,594 lines). The nav is now 8 sections over 47 pages (was 21 entries
+  over 24), the counter `capabilities.navOrphanPages` reads **0** under its unchanged ceiling, and
+  `tests/test_docs_nav_coverage.py` derives reachability from the collector's own definition so the gate and
+  the test cannot disagree. URLs are unchanged -- grouping does not move a page, verified against the built
+  tree (`AUDIT_LEDGER.md` §124, Phase 4 target 7).
+- `docs/getting-started.md`'s runtime floors are derived instead of remembered, and the page now states the
+  divergence it was hiding: CI builds and tests the dashboard on Node **22** while `docker/Dockerfile.web`
+  ships `node:20-alpine`, so the container runs a Node the dashboard build has never been proven on
+  (D-L4-14; the base-image change itself is left to a machine with a docker daemon). Python's floor is
+  singular and true: `requires-python = ">=3.12"` and CI's `python-version: "3.12"`, pinned by
+  `tests/test_runtime_version_claims.py` against all four declaring files.
+- `docs/announcements/README.md` explains what `latest.md` actually is -- a copy the release workflow writes
+  at publish time, not a live lookup. Measured state (D-L4-13, open): `latest.md` names v4.2.10 while
+  `pyproject.toml`, `data_science_agent.__version__` and the newest tag all say **4.4.0**, and the five
+  intervening tags have CHANGELOG sections but no announcement copy. Regenerating it is a release action, so
+  the docs stop short of claiming to be current.
+
 ### Added (unreleased, non-breaking)
 
 - `scripts/run_gates.sh` runs the whole gate set in one command: 17 literal CI gate invocations, in CI's

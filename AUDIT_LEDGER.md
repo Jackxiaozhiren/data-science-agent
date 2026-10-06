@@ -6951,3 +6951,76 @@ over the `--reproduce` spellings rather than with a parser-visibility change.
 `dsa_evaluation` drift on this machine, which is the concurrent session's uncommitted
 `external_validation.py` and not this change -- the §122 HEAD export said `OK: vendored dsa_* is in sync`,
 and §122 itself is runner-verified at CI run 37416581317 (`ci` and `web-regression` both success).
+
+## 124. Target 7: the docs site was hiding 23 of its own pages, and two runtime floors nobody had re-derived
+
+**The number had been reported for sections on end and never acted on.** `capabilities.navOrphanPages`
+sat at its 23 ceiling; `mkdocs build` printed the same list as an INFO block every time it ran. Listing
+them from `git ls-files docs` minus the `nav:` targets: `ADR/ADR-002`, `GROWTH_PLAN.md`, the three
+`announcements/*`, the two `portfolio/*`, `production-hardening.md`, `release-readiness-v4.3.md`, all
+three `security/*` guides, and the eleven `v4_3/*` records -- 1,594 lines of the project's own evidence
+trail, plus the two release-verification procedures a security reviewer is the intended audience for.
+Every one is real content (12 to 755 lines each, measured with `wc -l`), so "nobody wrote those pages
+yet" was never the explanation.
+
+**Fixed by reachability, not by exemption.** The alternative -- declaring a carve-out list so the counter
+could stay 23 legitimately -- is the same move as adding a `noqa`, and the objective forbids it. So
+`mkdocs.yml`'s nav went from **21 top-level entries covering 24 pages** to **8 sections covering 47**
+(both counted by walking the parsed YAML, and 24 + 23 = 47 is the arithmetic that says nothing was
+duplicated or dropped). The orphans folded into where a reader would look for them: Start / Architecture
+(incl. API, Frontend, both ADRs) / Evaluation / Operations & Security / Releases / V4.3 record / Project.
+Grouping does not change any URL:
+`site/security/VERIFY_RELEASE/index.html` is where that page already built, and is where it still builds,
+so no inbound link breaks -- checked in the built tree, not asserted from mkdocs' docs.
+
+**Red first, with the list as the evidence.** `tests/test_docs_nav_coverage.py` (4 tests) went red naming
+all 23 pages; after the nav edit, 7 passed with `test_ci_gate_integrity.py`'s mkdocs checks. The orphan
+definition is imported from `scripts/audit_facts.py::_collect_capabilities` rather than restated, so the
+test and the ratchet cannot disagree about what "reachable" means -- one number, one owner. Controls:
+dropping the `evidence.md` entry from a fixture copy of `mkdocs.yml` must make that page an orphan, and
+planting `- Ghost: not-a-page.md` must be reported as dangling; the guard that the tracked-page list did
+not silently come back empty is an `assert len(pages) >= 40` in the helper, because a broken
+`git ls-files` read would otherwise look like a clean nav. Pages are enumerated from *tracked* files, not
+from disk -- the §113 lesson, since `docs/audit/facts.snapshot.json` and the scratch trees are gitignored
+and would move a disk-derived count between machines.
+
+**D-L4-13, found while deciding what to label the announcements.** `docs/announcements/latest.md`
+titles itself "Data Science Agent v4.2.10", while `pyproject.toml:3` says `version = "4.4.0"`,
+`data_science_agent.__version__` prints `4.4.0`, and `git tag --sort=-v:refname` tops out at `v4.4.0`.
+`latest.md` and `v4.2.10.md` are the same copy, and the five tags since (`v4.3.0`, `v4.3.1`, `v4.3.2`,
+`v4.3.3`, `v4.4.0`) have CHANGELOG sections but no announcement files. The producer is
+`scripts/generate_release_announcement.py`, which writes the page *and pushes it* as part of publishing
+(line 151) -- so regenerating it is a release action, not a documentation fix, and it stays with the
+maintainer. What this section did instead: named the mechanism in `docs/announcements/README.md` (the
+copy is produced at release time, not looked up live; if it names an older version, the workflow has not
+run; GitHub Releases is authoritative), and labelled the nav entry "Announcement copy" rather than
+"Latest release", which would have been an over-claim I had just measured.
+
+**D-L4-14, the stale-support-table half of target 7, is a divergence rather than a wrong number.**
+`docs/getting-started.md` claimed "Node 20+" with nothing behind it. Derived from the files that decide
+it: CI installs `node-version: 22` (`.github/workflows/ci.yml:27`), `docker/Dockerfile.web:1,13` build and
+run `node:20-alpine`, `pyproject.toml:6` declares `requires-python = ">=3.12"` and CI runs exactly that one
+interpreter (`python-version: "3.12"`). So the Python floor is true and singular, and the Node story is two
+different majors: the runner green proves the dashboard builds on 22, and the image ships 20 -- a runtime
+nothing tests. The page now states all four numbers and says so plainly. Aligning them (moving the image to
+`node:22-alpine`) is the actual fix and was **not** taken here: it changes a shipped base image, and there
+is no reachable docker daemon on this machine to build and boot-test it first -- measured, `docker version`
+fails with `connect: no such file or directory` on `~/.docker/run/docker.sock`, so the only evidence a
+change could carry would be CI's own `docker build` on main. Filed, with the change to make and the
+evidence to gather, rather than half-applied.
+
+**The new guard bit its author, which is the point.** `tests/test_runtime_version_claims.py` re-derives
+those four values and reports any way the page disagrees. Written after the prose, it went red immediately:
+my own sentence said "has not been verified against" while the rule looked for the canonical phrase, so the
+divergence was stated but not in the one wording the guard recognises. Two iterations to make phrase and
+predicate name the same thing once, then 7 passed. Falsifiability is asserted rather than assumed: a floor
+edited to `3.10`, a CI bumped to `3.13`, an image mention deleted, and an empty page each produce their own
+issue; and a separate test pins the four probes to real values (floor 12, CI 3.12) so a regex that matched
+nothing could not report a clean sheet.
+
+**Gates.** `ruff check` **0** · `ruff format --check` **0** (**252** files over CI's six paths) · `mypy`
+**0** (121) · ratchet **OK** with `navOrphanPages` **23 → 0** under its unchanged ceiling and
+`exceptHandlers` still **185** · orphan-reads **0** · claims **0** · `mkdocs build --strict` **0**, and the
+not-in-nav INFO block is gone · `pytest -q --cov` **0**, coverage **82.78%**, `debt.testFunctions`
+**707 → 714**. The collector's `warnings.contradictions` list dropped its `navOrphanPages:23` entry,
+leaving only `selfReportedDebt`. Nothing excluded, no suppression added, no ceiling re-seeded.

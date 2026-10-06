@@ -14,31 +14,59 @@ markdown_extensions:
   - pymdownx.superfences
 nav:
   - Home: README.md
-  - Getting Started: getting-started.md
-  - Product Tour: product-tour.md
-  - Hosted Demo: hosted-demo.md
-  - Architecture: architecture.md
-  - Agent: agent.md
-  - Agent System: agent-system.md
-  - Tools: tools.md
-  - Plugin Walkthrough: plugin-walkthrough.md
-  - Statistics: statistics.md
-  - Evidence: evidence.md
-  - MCP: MCP_DESIGN.md
-  - MCP Conformance: mcp.md
-  - ADR: ADR/ADR-001-mcp-2026-07-28-stateless-core.md
-  - API: api.md
-  - Frontend: FRONTEND_IA.md
-  - Security: security.md
-  - Benchmark:
-      - Overview: benchmark.md
-      - Contribute a Task: benchmark-task-contribution.md
+  - Start:
+      - Getting Started: getting-started.md
+      - Product Tour: product-tour.md
+      - Hosted Demo: hosted-demo.md
+  - Architecture:
+      - Overview: architecture.md
+      - Agent: agent.md
+      - Agent System: agent-system.md
+      - Tools: tools.md
+      - Plugin Walkthrough: plugin-walkthrough.md
+      - Statistics: statistics.md
+      - Evidence: evidence.md
+      - MCP: MCP_DESIGN.md
+      - MCP Conformance: mcp.md
+      - API: api.md
+      - Frontend: FRONTEND_IA.md
+      - ADR — MCP stateless core: ADR/ADR-001-mcp-2026-07-28-stateless-core.md
+      - ADR — Output artefact export: ADR/ADR-002-output-artifact-export-2026-09-08.md
   - Evaluation:
-      - Overview: evaluation.md
+      - Benchmark: benchmark.md
+      - Contribute a Task: benchmark-task-contribution.md
+      - Evaluation: evaluation.md
       - Real-model Evaluation: real-model-evaluation.md
       - Reproducibility: reproducibility.md
-  - Research: research.md
-  - Contributing: contributing.md
+      - Research: research.md
+  - Operations & Security:
+      - Security: security.md
+      - OSPS Baseline: security/OSPS_BASELINE.md
+      - Verify a Release: security/VERIFY_RELEASE.md
+      - Verify a PyPI Release: security/VERIFY_PYPI_RELEASE.md
+      - Production Hardening: production-hardening.md
+  - Releases:
+      - Release Readiness v4.3: release-readiness-v4.3.md
+      - Announcements index: announcements/README.md
+      - Announcement copy: announcements/latest.md
+      - v4.2.10 announcement: announcements/v4.2.10.md
+  - V4.3 record:
+      - Early Adopter Guide: v4_3/EARLY_ADOPTER_GUIDE.md
+      - Scorecard: v4_3/SCORECARD.md
+      - Community Status: v4_3/COMMUNITY_STATUS.md
+      - Supply-Chain Security: v4_3/SUPPLY_CHAIN_SECURITY.md
+      - External Validation History: v4_3/EXTERNAL_VALIDATION_HISTORY.md
+      - Phase B Adapter Architecture: v4_3/PHASE_B_ADAPTER_ARCHITECTURE.md
+      - DataSciBench Feasibility: v4_3/DATASCIBENCH_FEASIBILITY.md
+      - DS-AgentBench Feasibility: v4_3/DSAGENTBENCH_FEASIBILITY.md
+      - V4.2.1 Changeset Audit: v4_3/V4_2_1_CHANGESET_AUDIT.md
+      - V4.2.1 Reconciliation: v4_3/V4_2_1_RECONCILIATION.md
+      - V4.2 Final Truth: v4_3/V4_2_FINAL_TRUTH.md
+  - Project:
+      - Contributing: contributing.md
+      - Growth Plan: GROWTH_PLAN.md
+      - Project Summary: portfolio/PROJECT_SUMMARY.md
+      - One-Minute Pitch: portfolio/ONE_MINUTE_PITCH.md
 
 validation:
   links:
