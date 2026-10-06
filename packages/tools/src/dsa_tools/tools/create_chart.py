@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import polars as pl
 from pydantic import BaseModel, Field
 
+from dsa_datasets.artifact_paths import artifact_root
 from dsa_datasets.loader import load_dataframe
 from dsa_datasets.validate import detect_format
 from dsa_tools.base import BaseTool
@@ -36,7 +37,7 @@ class CreateChartOutput(BaseModel):
 
 
 def _artifacts_dir() -> Path:
-    return Path(__file__).resolve().parents[4] / "artifacts" / "charts"
+    return artifact_root("charts")
 
 
 class CreateChartTool(BaseTool[CreateChartInput, CreateChartOutput]):

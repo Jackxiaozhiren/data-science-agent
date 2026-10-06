@@ -6778,3 +6778,119 @@ claims **0** · `mkdocs build --strict` **0** · `pytest -q --cov` **0**, covera
 now holds **692** test functions (`debt.testFunctions`, the collector's reading taken at this tree: 682
 before §120's three gate-integrity tests and §121's seven command-surface tests, and 651 at the start of
 this section's Phase 4 work); no ceiling moved, nothing excluded.
+
+## 122. D-L4-07 was worse than filed: the artefact root was not one wrong directory, it was four -- and one of them was chosen by the caller's string
+
+§115.1 filed D-L4-07 as "the wheel install writes into the interpreter's tree". That is one of four
+outcomes of the same expression, and the wheel is the least used of them. Re-derived by resolving the
+shipped `Path(__file__).resolve().parents[4] / "artifacts"` for each layout the project actually has:
+
+| Layout (the module the interpreter loaded) | Root it chose |
+|--------------------------------------------|----------------|
+| `packages/agent/src/dsa_agent/report.py` | `<repo>/artifacts` |
+| `packages/tools/src/dsa_tools/tools/save_artifact.py` | `<repo>/packages/artifacts` |
+| `src/data_science_agent/_vendor/dsa_agent/report.py` | `<repo>/artifacts` |
+| `src/data_science_agent/_vendor/dsa_tools/tools/save_artifact.py` | `<repo>/src/artifacts` |
+| installed wheel (`…/site-packages/data_science_agent/_vendor/…`) | `<venv>/lib/python3.12/site-packages/artifacts` |
+
+Depth, not layout, decided it: the tool modules sit one directory deeper than the agent modules, so the
+same `parents[4]` names a different place. Three of the repo-side spellings exist on this machine and
+hold real output -- measured 2026-10-06 with `find <dir> -type f`: **125,854** files under `artifacts/`,
+**25,183** under `packages/artifacts/`, **6,154** under `src/artifacts/`. `.gitignore` lines 20-22 list
+all three (`/artifacts/`, `packages/artifacts/`, `/src/artifacts/`), which is the record of the split
+being noticed and then ignored rather than fixed.
+
+**The readers disagreed with the writers, and that is the user-visible half.** `dsa_mcp/resources.py`
+resolved `Path(f"artifacts/reports/{run_id}/report.md")` against the working directory, as did the
+time-series plugin (`Path("artifacts") / "charts"`). So the write root and the read root are the same
+directory only when the process happens to be running in the repo root. Started anywhere else, the agent
+writes a report and the MCP server answers `report for <id> not found` about a file it just made.
+
+**Reproduced, not assumed.** Two probes, both in `/tmp`, both writing nothing into the repository.
+(1) Setting `dsa_tools.tools.save_artifact.__file__` to a fake
+`<tmp>/venv/lib/python3.12/site-packages/data_science_agent/_vendor/…` path moved the whole artefact tree
+to `<tmp>/probe_tree/packages/artifacts/` -- the install location choosing where user output lands, with
+no other change. (2) `run_id` is concatenated into that path unchecked, so `run_id="../../escaped"` wrote
+`<tmp>/probe_tree/escaped/note.txt`: two directories above the artefact root the tool claims to save
+"under artifacts/<run_id>/". `inp.filename` was validated for `..`, `/` and `\`; `inp.run_id` was not
+validated at all, and the `dest.resolve().relative_to(root)` check below it cannot help because `root`
+itself already carries the escape. Filed as **D-L4-09**, and it was reachable from any MCP tool call.
+
+**The rule now** (`dsa_datasets.artifact_paths.artifact_root`, §122): `$DSA_ARTIFACT_ROOT` when set,
+otherwise `<cwd>/artifacts`; every argument is one path component, validated, or the call is refused.
+Eight sites moved onto it -- six writers (`dsa_agent/report.py`, `dsa_agent/graph.py`, `create_chart`,
+`feature_importance`, `generate_report`, `save_artifact`) and two readers (`dsa_mcp/resources.py` twice,
+the time-series plugin). The readers' rule was the one kept, because it is the rule the docs already
+described (`docs/agent.md`, `docs/evidence.md`, `docs/architecture.md` all write `artifacts/reports/<run_id>/`)
+and the rule that survives an install; the writers were the deviation.
+
+**Why the rule lives in `dsa_datasets`, decided by measurement rather than by name.** The first draft put
+it in `dsa_tools`, which is where four of the eight call sites are. Timed on this tree:
+`import dsa_tools` costs **2791 ms** and pulls matplotlib and sklearn in behind its tool registry, while
+`import dsa_agent.report` costs **294 ms** and `import dsa_mcp.server` **420 ms**, neither of which loads
+either library today. Putting the rule there would have made every `import dsa_agent` pay for a plotting
+stack -- a tenfold import cost bought by a nicer-looking module name. `dsa_datasets` (**283 ms**) is
+already resident on the agent, tool and plugin paths and imports no other `dsa_*` package, so it is free
+where it is already loaded and the one new edge (`dsa_mcp.resources`) takes the import inside the single
+function that needs it. `dsa_evidence` (**424 ms**) was the other semantic candidate; `dsa_reports`
+(**1 ms**) turned out to be an empty shell holding only `__version__`. A test pins the decision:
+importing the resolver must leave `matplotlib`, `sklearn` and `dsa_tools` unloaded.
+
+**The ratchet caught this change, which is what it is for.** The first cut of the two tool sites wrapped
+the resolver call in `try/except ValueError` to convert it into `ToolExecutionError`. `debt.exceptHandlers`
+went **185 → 187** and `tests/unit/test_debt_ratchet.py` went red on the full suite. The fix was not a
+raised ceiling and not a `noqa`: the resolver grew `is_safe_segment()` so a tool boundary asks first and
+raises its own error in one `if`, handler-neutral by construction. Counter back to **185**, ceiling
+untouched.
+
+**Red first, thirteen of them.** Before the resolver existed: 13 failed, 1 passed -- the passing one being
+the scanner's own control, which is green on arrival by design and labelled as such in the test file. After:
+**15 passed** (11 functions, 15 cases). The guards are the two halves of one claim: no site derives a root
+from its own module path (AST scan for `.parents[…]` subscripts and `Path("artifacts…")` literals), and
+every site names `artifact_root` -- because deleting the defect without wiring a rule would satisfy the
+first test alone. Behaviour: default is `<cwd>/artifacts`; the env switch wins when the two point at
+different directories (a discriminating arm, so a resolver that ignored it cannot pass); retargeting a
+module's `__file__` no longer moves the tree; five traversal shapes for `run_id` are refused with nothing
+created anywhere; and one end-to-end arm where the writer and the MCP reader must agree with `cwd` and the
+root deliberately different, plus its negative arm (an unknown id must come back `not found`, proving the
+reader consulted the filesystem and not the in-process store).
+
+**One guard that was wrong and what fixed it.** `assert "__file__" not in source` tripped on the resolver's
+own docstring, which quotes the old expression as prose. Replaced with an AST scan for a `Name` called
+`__file__`, and the control test now asserts both directions: a real use is caught, a quoted mention is not.
+Same class as §118's substring mistake; the parser is the fix both times.
+
+**Blast radius, measured by counting files before and after a whole suite run.** Before §122: 125,854 /
+25,183 / 6,154. After one full `pytest --cov` at this tree: `artifacts/` **126,700** (+846),
+`packages/artifacts/` **25,183** (+0), `src/artifacts/` **6,154** (+0). The suite writes into one root now
+and into the other two not at all. The 31,337 files already sitting in the two abandoned directories were
+left in place: they are gitignored output this project produced over many runs, some of it possibly the
+operator's own, and deleting 31k files to make a directory listing tidier is not this section's call.
+
+**Found while fact-checking one line of docs (D-L4-11, not yet fixed).** `docs/reproducibility.md`
+documented `dsa reproduce --run <run_id>`. The CLI has no `--run` on that subcommand -- and not only that:
+`dsa reproduce --json` exits **2** with `unrecognized arguments: --json` (the sub-parser advertises it, a
+second parser built inside the handler then refuses it), and `dsa reproduce --benchmark v2` exits **2**
+with `unrecognized arguments: --benchmark v2` from the outer parser, so the spelling its own help string
+names is refused before the help string's flag is reached. `dsa reproduce` works bare; `dsa --reproduce
+v2 --out …` is the form that takes arguments. The docs now say what was measured and the page carries the
+`Where run artefacts land` section; the parser itself is untouched, because a CLI-contract change does not
+belong in a commit about filesystem roots. Next item.
+
+**Gates.** Whole-tree battery at this tree, exit codes from the commands: `ruff check` **0** ·
+`ruff format --check` **0** (**250** files over CI's own six paths; **253** when `plugins`, which CI does
+not pass, is added) · `mypy` **0** (121) · ratchet **OK** (185 / 8 / 42 / 0) ·
+orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** · `pytest -q --cov` **0**, coverage
+**82.73%**, **719 → 734** cases (counted with `-o addopts=""`; the `-qq` CI adds hides the line). `debt.testFunctions` **692 → 703**;
+no ceiling moved, no exclusion or suppression added. `sync_vendor --check` reports one drift on this
+machine -- `dsa_evaluation`, which is the concurrent session's uncommitted file, not mine -- so the nine
+files in this change were mirrored with `sync_vendor --file` one at a time, and the HEAD export at
+`/tmp/head122` says `OK: vendored dsa_* is in sync`, which is what CI checks out.
+
+**Status of the items this section touches.** D-L4-07 (§115.1, §117.5) is closed here -- its filed form
+described one wrong directory and there were four plus a disagreeing reader. **D-L4-09** (this section's
+new finding: `run_id` as an unsanitised path component in `save_artifact` and `generate_report`, reachable
+from an MCP tool call) is closed here, refused at the resolver and pinned by five parametrised shapes.
+**D-L4-11** (`dsa reproduce`'s advertised flags are refused by its own handler, both spellings measured at
+exit **2**) is open: docs corrected to the truth, parser untouched, taken as the next item. §117.5's table
+is a dated record and stays as written; this paragraph is its correction.

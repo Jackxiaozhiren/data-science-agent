@@ -11,12 +11,35 @@ Developer Run → Archive → Fresh Environment → Fresh Clone → Fresh Instal
 Commands:
 
 ```bash
-dsa reproduce --run <run_id>            # single run via artifacts/reports/<runId>/reproduce.sh + analysis.ipynb
-dsa reproduce --benchmark v2            # full benchmark fresh-twice
-uv run dsa --reproduce v2 --out reproduction/v2   # equivalent (alias)
+dsa reproduce                                     # full benchmark, fresh twice, compared
+uv run dsa --reproduce v2 --out reproduction/v2    # the spelling that takes arguments
 ```
 
 Output: `reproduction/{manifest.json, environment.json, results.json, comparison.json, logs/}`.
+
+`dsa reproduce` is a bare subcommand. Its own help advertises `--json`, and its parser description
+mentions `--benchmark v2`, and both are refused before any work starts — measured on the shipped CLI:
+`dsa reproduce --json` and `dsa reproduce --benchmark v2` each exit 2 with `unrecognized arguments`
+(§122, filed as D-L4-11). Use the `--reproduce` flag form for `--catalog`, `--datasets` and `--out`.
+For one run's own reproduction, use the bundle rather than a flag: `reproduce.sh` and `analysis.ipynb`
+are written into the run's artefact directory, described next.
+
+## Where run artefacts land
+
+One directory, chosen by the process rather than by the installed package: `$DSA_ARTIFACT_ROOT` when
+set, otherwise `<cwd>/artifacts`. `report.md`, `experiment.json`, `reproduce.sh`, `analysis.ipynb` and
+`evidence_graph.json` go under `<root>/reports/<run_id>/`; charts go under `<root>/charts/`; tool
+exports under `<root>/<run_id>/exports/`. The rule lives in `dsa_datasets.artifact_paths.artifact_root`
+and every writer and reader asks it, so a report is always findable by the interface that wrote it.
+
+| Layout | Artefact root |
+|--------|---------------|
+| Source checkout, invoked from the repo root | `<repo>/artifacts/` |
+| Installed wheel, invoked from any directory | `<cwd>/artifacts/`, or `$DSA_ARTIFACT_ROOT` |
+| API container (`docker/Dockerfile.api`, `WORKDIR /app`) | `/app/artifacts/` |
+
+`run_id` must be one path component: a value containing `/`, `\`, `..`, or starting with a dot is
+refused with `Invalid run_id` instead of being joined into the write path (§122's D-L4-09).
 
 ## Comparison & Classes & Score
 

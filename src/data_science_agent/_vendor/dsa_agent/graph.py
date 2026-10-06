@@ -24,6 +24,7 @@ from dsa_agent.state import (
     ValidationResult,
 )
 from dsa_agent.tool_evidence import build_tool_evidence
+from dsa_datasets.artifact_paths import artifact_root
 from dsa_datasets.loader import load_dataframe
 from dsa_datasets.validate import detect_format
 
@@ -86,7 +87,7 @@ def _resolve_refs(inputs: dict[str, Any], prior_calls: list[dict[str, Any]]) -> 
 
 
 def _export_workspace(run_id: str | None) -> str:
-    root = Path(__file__).resolve().parents[4] / "artifacts" / (run_id or "run-local")
+    root = artifact_root(run_id or "run-local")
     return str(root / "exports")
 
 

@@ -183,6 +183,7 @@ class TimeSeriesPlugin(BasePlugin):
         Returns {"artifact_path": str, "base64_png": str, "diagnostics": dict}
         Suitable for Notebook (§30) and Report (§27) embedding.
         """
+        from dsa_datasets.artifact_paths import artifact_root
         from dsa_datasets.loader import load_dataframe
         from dsa_datasets.validate import detect_format
         from dsa_tools.tools.forecast import _detect_cols
@@ -235,7 +236,7 @@ class TimeSeriesPlugin(BasePlugin):
             plt.close(fig)
             png = buf.getvalue()
             b64 = base64.b64encode(png).decode()
-            out_dir = Path("artifacts") / "charts"
+            out_dir = artifact_root("charts")
             out_dir.mkdir(parents=True, exist_ok=True)
             fname = f"{uuid.uuid4().hex[:10]}_forecast.png"
             out_path = out_dir / fname

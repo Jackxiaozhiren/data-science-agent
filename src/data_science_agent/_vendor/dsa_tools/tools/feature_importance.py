@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 
+from dsa_datasets.artifact_paths import artifact_root
 from dsa_datasets.loader import load_dataframe
 from dsa_datasets.validate import detect_format
 from dsa_tools.base import BaseTool
@@ -164,7 +165,7 @@ class FeatureImportanceTool(BaseTool[FeatureImportanceInput, FeatureImportanceOu
         plt.close(fig)
         png = buf.getvalue()
         b64 = base64.b64encode(png).decode()
-        out_dir = Path(__file__).resolve().parents[4] / "artifacts" / "charts"
+        out_dir = artifact_root("charts")
         out_dir.mkdir(parents=True, exist_ok=True)
         dest = out_dir / f"{uuid.uuid4().hex[:8]}_featimp.png"
         dest.write_bytes(png)

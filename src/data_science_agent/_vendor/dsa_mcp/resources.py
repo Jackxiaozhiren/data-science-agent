@@ -192,11 +192,11 @@ async def read_resource(uri: str) -> dict[str, Any]:
                 "mimeType": "application/json",
                 "text": __import__("json").dumps(ev, indent=2, ensure_ascii=False, default=str),
             }
-        # Try to load from artifacts/reports/<run_id>/evidence_graph.json if store empty
+        # Try to load from <artifact root>/reports/<run_id>/evidence_graph.json if store empty
         try:
-            from pathlib import Path as _P
+            from dsa_datasets.artifact_paths import artifact_root
 
-            eg = _P(f"artifacts/reports/{run_id}/evidence_graph.json")
+            eg = artifact_root("reports", run_id, "evidence_graph.json")
             if eg.exists():
                 return {
                     "uri": uri,
@@ -226,11 +226,11 @@ async def read_resource(uri: str) -> dict[str, Any]:
                 "mimeType": "text/markdown",
                 "text": str(payload["report_markdown"]),
             }
-        # try artifacts
+        # try the artefact root
         try:
-            from pathlib import Path as _P
+            from dsa_datasets.artifact_paths import artifact_root
 
-            rp = _P(f"artifacts/reports/{run_id}/report.md")
+            rp = artifact_root("reports", run_id, "report.md")
             if rp.exists():
                 return {
                     "uri": uri,

@@ -226,6 +226,33 @@ shadowing + missing greenlet concurrency).
   `+x` implies shebang, and the eight module-style helpers with neither are held in place by the same rule
   rather than exempted (`AUDIT_LEDGER.md` §121).
 
+- Run artefacts had **four** directories and one rule did not exist. Six writers derived the artefact root
+  from their own installed location (`Path(__file__).resolve().parents[4] / "artifacts"`), which resolves by
+  module depth, not by layout: the agent modules chose `<repo>/artifacts`, the tool modules
+  `<repo>/packages/artifacts`, the vendored tools `<repo>/src/artifacts`, and an installed wheel the
+  interpreter's own `site-packages` tree. Both readers used the working directory instead, so a run started
+  in any other directory wrote a report the MCP server answered `not found` about. One rule now --
+  `$DSA_ARTIFACT_ROOT`, else `<cwd>/artifacts` -- in `dsa_datasets.artifact_paths.artifact_root`, asked by
+  all eight sites. Measured blast radius on this machine: the suite used to leave output in three roots
+  (125,854 / 25,183 / 6,154 files); after the change one root grew (+846) and the other two grew by zero.
+  Placement was decided by import cost, not by name: `import dsa_tools` costs 2791 ms and drags matplotlib
+  and sklearn behind it, so the rule lives in the layer every caller already loads (`AUDIT_LEDGER.md` §122,
+  closing D-L4-07).
+- `run_id` was concatenated straight into the artefact write path by `save_artifact` and `generate_report`,
+  while only `filename` was checked for `..` and separators -- and the `relative_to(root)` guard below it
+  cannot help, because `root` already contains the escape. Reproduced: `run_id="../../escaped"` wrote two
+  directories above the artefact root, from any MCP tool call. Every component passed to the resolver must
+  now be one safe path segment, or the tool refuses with `Invalid run_id` and creates nothing (D-L4-09).
+  Handler-neutral by construction: the resolver grew `is_safe_segment()` rather than the tools growing a
+  `try/except` -- the first draft's two handlers took `debt.exceptHandlers` from 185 to 187 and the ratchet
+  went red, which is the gate doing its job.
+- `docs/reproducibility.md` told readers to run `dsa reproduce --run <run_id>`, a flag the CLI has never
+  had; the page also now documents the artefact root and `$DSA_ARTIFACT_ROOT`. Measuring it surfaced a
+  second, unfixed defect (D-L4-11, `AUDIT_LEDGER.md` §122): `dsa reproduce --json` and
+  `dsa reproduce --benchmark v2` both exit **2** with `unrecognized arguments`, because the sub-parser
+  advertises flags the handler's own parser refuses. `dsa reproduce` works bare, and `dsa --reproduce
+  v2 --out …` is the spelling that takes arguments.
+
 ### Added (unreleased, non-breaking)
 
 - `scripts/run_gates.sh` runs the whole gate set in one command: 17 literal CI gate invocations, in CI's

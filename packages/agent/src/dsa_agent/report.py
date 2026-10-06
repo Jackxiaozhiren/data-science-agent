@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from dsa_agent.state import AnalysisState
+from dsa_datasets.artifact_paths import artifact_root
 
 
 def _final_report_status(state: AnalysisState) -> str:
@@ -83,7 +84,7 @@ def build_markdown_report(state: AnalysisState) -> str:
 
 
 def write_report_artifacts(state: AnalysisState, out_dir: Path | None = None) -> dict[str, str]:
-    root = out_dir or (Path(__file__).resolve().parents[4] / "artifacts" / "reports" / state.run_id)
+    root = out_dir or artifact_root("reports", state.run_id)
     root.mkdir(parents=True, exist_ok=True)
     md = build_markdown_report(state)
     md_path = root / "report.md"

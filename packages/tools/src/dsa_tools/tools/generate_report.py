@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from dsa_datasets.artifact_paths import artifact_root, is_safe_segment
 from dsa_tools.base import BaseTool
 from dsa_tools.errors import ToolExecutionError
 
@@ -33,9 +34,9 @@ class GenerateReportTool(BaseTool[GenerateReportInput, GenerateReportOutput]):
     output_model = GenerateReportOutput
 
     async def execute(self, inp: GenerateReportInput) -> GenerateReportOutput:
-        if not inp.run_id.strip():
-            raise ToolExecutionError("run_id required")
-        root = Path(__file__).resolve().parents[4] / "artifacts" / "reports" / inp.run_id
+        if not is_safe_segment(inp.run_id):
+            raise ToolExecutionError(f"Invalid run_id {inp.run_id!r}: use one path component")
+        root = artifact_root("reports", inp.run_id)
         root.mkdir(parents=True, exist_ok=True)
 
         md_path = root / "report.md"

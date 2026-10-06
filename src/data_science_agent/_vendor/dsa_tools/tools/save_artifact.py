@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dsa_datasets.artifact_paths import artifact_root, is_safe_segment
 from dsa_tools.base import BaseTool
 from dsa_tools.errors import ToolExecutionError
 
@@ -36,7 +37,9 @@ class SaveArtifactTool(BaseTool[SaveArtifactInput, SaveArtifactOutput]):
     async def execute(self, inp: SaveArtifactInput) -> SaveArtifactOutput:
         if ".." in inp.filename or "/" in inp.filename or "\\" in inp.filename:
             raise ToolExecutionError("Invalid filename")
-        root = Path(__file__).resolve().parents[4] / "artifacts" / inp.run_id
+        if not is_safe_segment(inp.run_id):
+            raise ToolExecutionError(f"Invalid run_id {inp.run_id!r}: use one path component")
+        root = artifact_root(inp.run_id)
         root.mkdir(parents=True, exist_ok=True)
         dest = root / inp.filename
         # Prevent overwrite traversal

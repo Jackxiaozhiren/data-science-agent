@@ -1,4 +1,4 @@
-"""Dataset layer: registry, validation, loader, profiler, hash."""
+"""Dataset layer: registry, validation, loader, profiler, hash, artefact paths."""
 
 from dsa_datasets.errors import (
     DatasetError,
