@@ -203,6 +203,14 @@ shadowing + missing greenlet concurrency).
   dropped its `# noqa: S603` once `tests/**/*`'s per-file-ignores were read -- adding it would have been
   the 43rd suppression directive against a ceiling of 42.
 
+- `source-map-js` 1.2.1 → 1.2.2 in both lockfiles, closing GHSA-68fv-2mgg-jv7q (high, CVSS 7.5 --
+  event-loop denial of service through indexed source-map section offsets), which npm published after the
+  previous green run and which the advisory gate caught on the next push (`AUDIT_LEDGER.md` §119). A patch
+  inside `postcss`'s own `^1.2.1` requirement, so no manifest changed and no `package.json` was edited:
+  `git diff` is three lines per lockfile (version, resolved, integrity). The exemption file was deliberately
+  not touched -- `docs/audit/npm-advisory-exceptions.json` admits only advisories with no published fix, and
+  this one had one. Verified: `npm ci`, `check_npm_workspace_lock.py`, `npm run build` and
+  `check_npm_advisories.py` all exit 0 against the refreshed lock.
 
 ### Added (unreleased, non-breaking)
 

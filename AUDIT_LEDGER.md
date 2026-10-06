@@ -6611,3 +6611,48 @@ say §113.5 twice: `ad7a3f5` is §113.5 (the format-gate correction, and the sub
 
 For the same reason the note is *in* §118 rather than replacing anything in it: the ledger's rule is append,
 not overwrite, and a mistake in my own commit message is not licence to rewrite the section around it.
+
+## 119. A new advisory arrived under the gate while the report was being written, and the rule decided the action
+
+**What happened.** `96274fe`'s CI run (37406295986) failed at
+`uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json`:
+
+```
+FAIL source-map-js: high advisory GHSA-68fv-2mgg-jv7q (source-map-js) has no exemption
+     -- fix it, or add a dated entry to docs/audit/npm-advisory-exceptions.json saying why it is unactionable
+```
+
+Nothing in this run touched npm. The same gate passed on `579732b` at 05:44Z on 2026-10-05 and failed at
+02:53Z on 2026-10-06, so the change is in npm's advisory index, not in the repository -- which is exactly
+what §89's design anticipated: the gate is meant to go red when upstream says something new.
+
+**Why the answer was a bump and not an exemption.** `docs/audit/npm-advisory-exceptions.json` states its
+own admission test: an entry belongs there "only when the advisory's own first_patched is null and no
+reachable version of the named package sits outside affected_range", and "anything actionable belongs in a
+dependency bump, not here". Measured against the registry: `npm view source-map-js version` → **1.2.2**, the
+advisory range is `>=1.0.0 <1.2.2` (CVSS 7.5, event-loop DoS through indexed source-map section offsets), and
+`postcss@8.5.26` requires `source-map-js: ^1.2.1` -- so 1.2.2 satisfies the existing semver requirement.
+Actionable, therefore not exemptible. The file was not edited; it still carries one bounded entry (the
+braces chain, review due 2026-11-07).
+
+**Change.** `npm --prefix apps/web update source-map-js` and the same at the root. `git diff` is 3 lines per
+lockfile -- `version`, `resolved`, `integrity` for the one nested block in each -- and nothing else moved.
+No `package.json` changed, so no manifest touched the declared ranges.
+
+**Verify before → after**, each from the command's own exit code:
+`npm --prefix apps/web audit --json` listed `source-map-js` among 8 vulnerable names before and does not
+list it after; `scripts/check_npm_advisories.py` on the fresh capture: **FAIL / 1 violation → clean, with 5
+bounded exemption(s) carried above**, exit **1 → 0**; `npm --prefix apps/web ci --legacy-peer-deps` from the
+new lock **0**; `scripts/check_npm_workspace_lock.py` **0** ("Root npm workspace lockfile matches all
+workspace manifests"); `npm --prefix apps/web run build` **0**, static and dynamic routes emitted. The
+`|| true` on CI's audit capture is safe here for the reason the workflow comment gives: the reader exits 2 on
+an empty or unparseable capture, so a scan that never ran cannot read green.
+
+**Gates.** Python battery re-run whole-tree after the lock change, all eight **0** (`ruff check`,
+`ruff format --check` 247 files, `mypy` 120 files, `audit_facts --check` OK, `find_orphan_reads --check`,
+`check_public_claims --require-released-tags`, `mkdocs build --strict`, `pytest -q --cov` 82.63%).
+
+**What this section is evidence of, beyond the bump.** The gate earned its keep twice in a day: §113 removed
+a CI-enforcement claim that CI did not implement, and here an enforcement claim that CI *does* implement fired
+on upstream data without anyone being asked. The cheap wrong move -- adding a dated exemption -- was available
+in one edit and is the exact failure §89 exists to make expensive.
