@@ -6595,3 +6595,19 @@ no ceiling moved · `find_orphan_reads --check` **0** · `check_public_claims --
 floor.
 
 Counting those tests cost three commands and is worth recording, because the cause was mine: `pyproject.toml:171` already sets `addopts = "-q --asyncio-mode=auto"`, so adding `-q` on the command line yields `-qq`, which suppresses pytest's `N passed` summary line entirely. A blank tail is not "no tests ran"; re-reading it as a negative result is the failure mode §113.5 and §118 are both about. The fix is `-o addopts=""`, and the number above comes from that run.
+
+### 118.1 The commit carrying §118 has a garbled subject, and why it stays that way
+
+`dbbfc87` -- which contains exactly §118's three files, 185 insertions and 0 deletions -- is titled
+`style(tests): §113.5 the format gate I ran was smaller than the one CI runs`, and its body opens with a
+note to myself about that subject already being taken. The heredoc I composed the message in had that note
+as its first line, and git took the first line as the subject.
+
+It stays as it is because the only ways to change it are `--amend` and a history rewrite, both outside what
+I am authorised to do here, and a forward-fix that deleted and re-added the same files to get a prettier
+log would spend a real change to hide a cosmetic one. The cost is that `git log --oneline` now appears to
+say §113.5 twice: `ad7a3f5` is §113.5 (the format-gate correction, and the subject it belongs to), and
+`dbbfc87` is §118. The record of what each did is in this file and in the commit bodies, which are correct.
+
+For the same reason the note is *in* §118 rather than replacing anything in it: the ledger's rule is append,
+not overwrite, and a mistake in my own commit message is not licence to rewrite the section around it.
