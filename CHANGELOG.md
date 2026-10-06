@@ -194,6 +194,15 @@ shadowing + missing greenlet concurrency).
   dependency tree it is, and a guard fails if any declared exemption is unreachable by any glob.
   Scanned surface 14 → 19 files; `0 issues` before and after.
 
+- One table in the audit ledger did not render (`AUDIT_LEDGER.md`), and a guard now fails if any tracked
+  markdown has a pipe table whose second line is not a delimiter row (§118,
+  `tests/test_markdown_tables_render.py`). A blank line had split a long claim/evidence table so that its
+  continuation rows carried no header; the renderer showed them as a paragraph, and the record looked
+  complete. Measured with the parser the repository builds with: 1 broken block in 249, across 136 tracked
+  `.md` files. The repair is additive (27 lines inserted, 0 deleted), and the first draft of the guard
+  dropped its `# noqa: S603` once `tests/**/*`'s per-file-ignores were read -- adding it would have been
+  the 43rd suppression directive against a ceiling of 42.
+
 
 ### Added (unreleased, non-breaking)
 
