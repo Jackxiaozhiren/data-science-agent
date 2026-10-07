@@ -7228,3 +7228,37 @@ any formatting, then re-check. Recorded as an improvement to make in §128: `--c
 per-package count ("1 file(s) differ") and not the file names, so the diagnosis needed a manual `cmp`
 loop over nine candidates -- a gate that cannot say *which* thing is wrong costs minutes at the moment
 someone is reading it in a hurry.
+
+## 128. The drift gate can now say which file drifted, and both guides say when to run it
+
+§127.1 diagnosed a red `main` with a `cmp` loop over nine candidate files because `sync_vendor --check`
+reported `dsa_agent: 1 file(s) differ` and stopped there. The count was the tool's whole answer at the
+moment someone most needed a name.
+
+**Change.** `_diff()` in `scripts/sync_vendor.py` now lists the offending paths per category -- differing,
+absent from `_vendor`, present only in `_vendor` -- capped at 12 names with a `+N more` tail, keeping the
+count text verbatim so the strings the rest of the toolchain already matches are unchanged. Measured on
+this tree: `dsa_evaluation: 1 file(s) differ [external_validation.py]`, which is the concurrent session's
+uncommitted file and now identifiable without opening the script.
+
+**Red first, and one control that was wrong before it was useful.** Two tests added to
+`tests/test_sync_vendor_check.py`: a scratch tree with one drifted file, one absent file and one faithful
+file must name the first two and not the third; and 20 drifted files must still read `20 file(s) differ`
+while naming only the first twelve. The first draft of the second test asserted
+`stderr.count("m0") <= 12`, which could not have failed either way -- `m0` occurs ten times in a full list
+of `m00..m19` and ten times in a truncated one, so it measured nothing. Rewritten to require `m00.py`
+present and `m19.py` absent, which is what distinguishes bounded from unbounded, and both tests were then
+red against the shipped script (13 and 12 passed respectively) before the change made them green.
+
+**The procedure the red `main` actually taught.** Both guides now carry the same paragraph: mirror after
+formatting, `--check` last before committing, and never sample the gate list -- `scripts/run_gates.sh`
+already ends with `sync_vendor.py --check`, so the run I skipped in favour of a hand-picked subset was the
+one that would have caught it. The general form, which is the third time this run has paid for it (§113.5's
+too-small format command, §123's vendor mirror, §127.1's skipped check): a gate omitted because it is
+confounded is a gate that cannot see your own mistake, and the fix is to read the gate's *output* rather
+than drop it from the battery.
+
+**Gates.** `ruff check` **0** · `ruff format --check` **0** (253) · `mypy` **0** (121) · ratchet **OK** ·
+orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** · `pytest -q --cov` **0** at **82.80%**,
+**754** cases, `debt.testFunctions` **721 → 723**; the sync, gate-integrity and command-surface files are
+**33 passed** together. `sync_vendor --check` still exits 1 here for the foreign file alone, by design.

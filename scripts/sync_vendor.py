@@ -57,23 +57,35 @@ def _package_files(base: Path) -> dict[str, bytes]:
     }
 
 
+def _named(names: list[str], limit: int = 12) -> str:
+    """The file names behind a count, bounded so a wide drift stays readable."""
+    shown = names[:limit]
+    tail = f", +{len(names) - len(shown)} more" if len(names) > len(shown) else ""
+    return "[" + ", ".join(shown) + tail + "]"
+
+
 def _diff(name: str, src: Path, dst: Path) -> str | None:
-    """Describe why `dst` is not a faithful copy of `src`, or None if it is."""
+    """Describe why `dst` is not a faithful copy of `src`, or None if it is.
+
+    The counts alone were not enough (§127.1): a CI line reading `dsa_agent: 1 file(s) differ` sends
+    whoever reads it into a manual comparison of every file in the package, at the moment they are
+    already diagnosing a red build. Each category names its files, bounded.
+    """
     src_files = _package_files(src)
     dst_files = _package_files(dst)
     if src_files == dst_files:
         return None
     shared = set(src_files) & set(dst_files)
-    differs = sum(1 for rel in shared if src_files[rel] != dst_files[rel])
-    missing = len(set(src_files) - set(dst_files))
-    extra = len(set(dst_files) - set(src_files))
+    differing = sorted(rel for rel in shared if src_files[rel] != dst_files[rel])
+    missing = sorted(set(src_files) - set(dst_files))
+    extra = sorted(set(dst_files) - set(src_files))
     parts = []
-    if differs:
-        parts.append(f"{differs} file(s) differ")
+    if differing:
+        parts.append(f"{len(differing)} file(s) differ {_named(differing)}")
     if missing:
-        parts.append(f"{missing} file(s) absent from _vendor")
+        parts.append(f"{len(missing)} file(s) absent from _vendor {_named(missing)}")
     if extra:
-        parts.append(f"{extra} file(s) only in _vendor")
+        parts.append(f"{len(extra)} file(s) only in _vendor {_named(extra)}")
     return f"{name}: " + ", ".join(parts)
 
 

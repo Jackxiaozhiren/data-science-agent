@@ -204,3 +204,41 @@ def test_check_advice_names_a_scoped_command_not_a_bare_one(tmp_path: Path) -> N
 
     assert "--package" in result.stderr, result.stderr
     assert "dsa_agent" in result.stderr
+
+
+# --- drift reporting detail (§128) --------------------------------------------------
+
+
+def test_check_names_the_files_that_drift_not_just_a_count(tmp_path: Path) -> None:
+    """§127.1: a package-level count sent a manual `cmp` loop over nine candidate files.
+
+    The CI step that failed printed `dsa_agent: 1 file(s) differ`. The name of the file is the
+    whole diagnosis, and it was already known here -- it just was not said.
+    """
+    root = _scratch(tmp_path)
+    _make(root, AGENT_SRC, {"__init__.py": b"NEW\n", "graph.py": b"MINE\n", "newcomer.py": b"N\n"})
+    _make(root, VENDOR / "dsa_agent", {"__init__.py": b"NEW\n", "graph.py": b"STALE\n"})
+
+    result = _run(root, "--check")
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "dsa_agent: 1 file(s) differ" in result.stderr, result.stderr
+    assert "graph.py" in result.stderr, "the drifted file was not named"
+    assert "newcomer.py" in result.stderr, "the file missing from _vendor was not named"
+    assert "__init__.py" not in result.stderr.split("differ", 1)[-1], (
+        "a faithful file was reported as a problem"
+    )
+
+
+def test_check_keeps_the_count_when_it_has_to_shorten_the_list(tmp_path: Path) -> None:
+    """Bounded output may not cost the number: 20 drifted files must still read as 20."""
+    root = _scratch(tmp_path)
+    many = {f"m{i:02d}.py": b"SOURCE\n" for i in range(20)}
+    _make(root, AGENT_SRC, many)
+    _make(root, VENDOR / "dsa_agent", {name: b"STALE\n" for name in many})
+
+    result = _run(root, "--check")
+
+    assert "20 file(s) differ" in result.stderr, result.stderr
+    assert "m00.py" in result.stderr, result.stderr
+    assert "m19.py" not in result.stderr, "the report listed every name, bounded by nothing"

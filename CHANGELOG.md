@@ -320,6 +320,15 @@ shadowing + missing greenlet concurrency).
   (`AUDIT_LEDGER.md` §127, Phase 4 target 1). `ruff check` over CI's six paths still exits 0 afterwards,
   which is the proof that nothing real was being suppressed.
 
+- `scripts/sync_vendor.py --check` named the package and a count (`dsa_agent: 1 file(s) differ`) and
+  nothing else, so diagnosing a red `main` meant comparing every file in that package by hand. It now
+  lists the offending paths for each category -- differing, absent from `_vendor`, present only in the
+  mirror -- capped at 12 with a `+N more` tail, with the count text unchanged. Both contributor guides also
+  state the ordering the failure actually taught: mirror after formatting, `--check` last before
+  committing, and run `scripts/run_gates.sh` rather than a hand-picked subset of gates -- the runner already
+  ends with the check I had skipped because it was red for someone else's file, which is the third time this
+  run a skipped or narrowed gate cost a wrong green (§128, following §127.1).
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_lint_exemption_reachability.py` now requires every remaining lint exemption to earn its
