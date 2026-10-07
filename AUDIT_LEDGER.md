@@ -7262,3 +7262,25 @@ than drop it from the battery.
 orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** · `pytest -q --cov` **0** at **82.80%**,
 **754** cases, `debt.testFunctions` **721 → 723**; the sync, gate-integrity and command-surface files are
 **33 passed** together. `sync_vendor --check` still exits 1 here for the foreign file alone, by design.
+
+### 128.1 The subject mistake recurred a fourth time, one commit later, and what the procedure did about it
+
+`e6f0652` was committed with `feat(gates): §122 one artefact root for eight sites...` as its subject --
+§128's body describing §122's title, pasted from the previous message -- and its body opened with a note
+admitting exactly that. Same shape as `dbbfc87` (§118), `cf5546d` (§120) and `472ad02` (§125, corrected in
+§118.1's addendum). The heredoc's first line is the subject, and I keep composing the first line from the
+last message I wrote rather than the one I am writing.
+
+What is different this time is that the check prescribed in §118.1 ran *before* any other command, printed
+the mismatch, and was acted on in the same turn: `git reset --soft` back to `03ce45c`, re-committed, and
+both times `HEAD^{tree}` compared (`321d2d0820f91d03d9cd084a175b5c1fc6ff1b97` before and after), so the
+content is provably the six files and nothing moved with them. Nothing was pushed while the subject was
+wrong, which is the only property the mistake actually threatens.
+
+A mechanical guard exists and is deliberately not installed here: a `commit-msg` hook that extracts the
+`§N` from the subject and from the body and refuses when the body's section is not the subject's. All four
+occurrences would have been caught by it -- in every case the body named the right section. It is not
+installed because a hook lives in `.git/` of a worktree another session commits into, and silently
+rejecting someone else's commit message is a change to shared state that is not mine to make. It is
+offered to the maintainer as a two-line check; meanwhile the check that is mine to keep running is the one
+above, and it worked.
