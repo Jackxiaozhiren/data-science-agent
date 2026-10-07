@@ -189,10 +189,21 @@ def compose_report(state: Mapping[str, Any]) -> dict[str, Any]:
                 analysis2["validation_results"] = bundle_v
         except Exception as exc:
             analysis2["error"] = f"Report write failed: {exc}"
+            analysis2["status"] = "FAILED"
+        persisted = analysis2["status"] == "COMPLETED"
         return {
             "analysis_state": analysis2,
-            "status": "COMPLETED",
-            "messages": [{"role": "assistant", "content": "Report generated"}],
+            "status": analysis2["status"],
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": (
+                        "Report generated"
+                        if persisted
+                        else f"Report could not be persisted: {analysis2['error']}"
+                    ),
+                }
+            ],
         }
     except Exception as e:
         return {

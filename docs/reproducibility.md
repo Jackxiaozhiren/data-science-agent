@@ -43,6 +43,11 @@ and every writer and reader asks it, so a report is always findable by the inter
 `run_id` must be one path component: a value containing `/`, `\`, `..`, or starting with a dot is
 refused with `Invalid run_id` instead of being joined into the write path (§122's D-L4-09).
 
+The verdict follows the write. A run reports `COMPLETED` only if its report and bundle were actually
+written; when persistence fails the status is `FAILED` and `error` names the reason, while the computed
+`report_markdown`, evidence and validation results stay in the payload -- nothing computed is discarded,
+but a consumer is no longer told that artifacts exist when they do not (§125, D-L4-08).
+
 ## Comparison & Classes & Score
 
 Compare: `Task Success / Statistical Results / Numerical Metrics / Tool Trajectory / Evidence Graph / Artifacts / Report Structure`. Classes: `Exact / Numerical / Semantic / Analytical`. Score: the CLI's `reproduction_score` object `{execution, numerical, statistical, evidence, semantic, overall}` + `method` + `by_level L0..L5`, produced by `compare_runs` (the pydantic model in `dsa_evidence` is a different type, `ReproducibilityScore`):

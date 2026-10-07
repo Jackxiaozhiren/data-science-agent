@@ -58,20 +58,18 @@ def test_composition_does_not_import_the_graph_module() -> None:
     assert not offenders, f"reporting.py imports the graph: {offenders}"
 
 
-def test_a_failed_report_write_still_reports_completed(monkeypatch) -> None:
-    """GREEN ON ARRIVAL. The verdict shape today, encoded as a test rather than left unnoticed.
+def test_a_failed_report_write_reports_failed_and_keeps_the_explanation(monkeypatch) -> None:
+    """D-L4-08, closed by §125. The verdict must agree with the `error` field beside it.
 
-    Measured on 2026-10-05: forcing ``write_report_artifacts`` to raise makes the node return
-    ``status: COMPLETED`` with ``error: 'Report write failed: ...'`` and no artifacts, and the MCP
-    adapter publishes that error field (``dsa_mcp/adapter.py:274``) beside the COMPLETED status.
-    Blast radius measured on this tree: 0 of 50 benchmark runs carry an ``error`` field, because the
-    source layout puts ``artifacts/`` under a writable repo root -- the branch is live wherever the
-    install is read-only, which is filed as D-L4-08 together with D-L4-07 (the artifact root is
-    derived from ``__file__``'s great-grandparent directory, so a wheel install writes reports into
-    the interpreter's own tree).
+    Measured on 2026-10-05 and pinned as green-on-arrival by the earlier version of this test:
+    forcing ``write_report_artifacts`` to raise made the node return ``status: COMPLETED`` with
+    ``error: 'Report write failed: ...'``, and the MCP adapter published that contradiction
+    (``dsa_mcp/adapter.py:274``). The pin did its job -- this assertion is the flipped shape, and it
+    was red against the shipped code before the change.
 
-    This assertion is deliberately a pin on the *current*, known-wrong shape: fixing the verdict must
-    turn this red rather than slip through as an unobservable change.
+    Kept on purpose: ``report_markdown`` and the computed evidence stay in the payload, because the
+    analysis itself succeeded and a consumer that only reads the text loses nothing. What the verdict
+    may no longer claim is that the run delivered its artifacts.
     """
     from dsa_agent import report as dsa_report
 
@@ -101,9 +99,11 @@ def test_a_failed_report_write_still_reports_completed(monkeypatch) -> None:
             }
         )
     )
-    assert out["status"] == "COMPLETED", out
-    assert out["analysis_state"]["status"] == "COMPLETED", out
+    assert out["status"] == "FAILED", out
+    assert out["analysis_state"]["status"] == "FAILED", out
     assert "Report write failed" in out["analysis_state"]["error"], out
+    assert out["analysis_state"]["report_markdown"], "the computed report must not be discarded"
+    assert "Report write failed" in out["messages"][-1]["content"], out["messages"]
 
 
 def test_the_success_envelope_is_the_node_own_shape(monkeypatch, tmp_path) -> None:

@@ -216,3 +216,61 @@ async def test_recorded_hard_check_flips_terminal_status(
     # value comparison, not identity: AnalysisStatus has two possible objects, and
     # the installed path resolves to the vendored one (audit §59.2)
     assert state.status == AnalysisStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_unpersisted_report_flips_the_terminal_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-L4-08's other graph (audit §125): `run_analysis` ended a non-persisting run as COMPLETED.
+
+    `graph.py:507` recorded ``state.error = 'Report write failed: ...'`` and then `:514` assigned
+    COMPLETED anyway, because only a *hard critic check* could flip the verdict. The critic is
+    patched to pass here so the write failure is the only thing that can move the status -- and the
+    same harness with a working writer is asserted to stay COMPLETED, so the guard is not just a
+    switch that hangs everything red.
+    """
+    import dsa_agent.graph as graph
+
+    async def fake_plan_analysis(
+        user_query: str, dataset_path: str | None, columns: list[str]
+    ) -> AnalysisPlan:
+        return AnalysisPlan(objective=user_query, steps=[])
+
+    def writer(tmp_state: object) -> dict[str, str]:
+        report = tmp_path / "report.md"
+        report.write_text("# report\n", encoding="utf-8")
+        return {"markdown": str(report), "experiment": str(report)}
+
+    monkeypatch.setattr(graph, "plan_analysis", fake_plan_analysis)
+    monkeypatch.setattr(graph, "build_markdown_report", lambda state: "# report\n")
+    monkeypatch.setattr(graph, "critic_validate", lambda state: [])
+
+    csv = tmp_path / "t.csv"
+    _make_csv(csv)
+
+    def boom(state: object) -> dict[str, str]:
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(graph, "write_report_artifacts", boom)
+    failed = await graph.run_analysis(
+        dataset_path=str(csv),
+        dataset_id="ds-write-fail",
+        user_query="summarise it",
+        run_id="r-write-fail",
+    )
+    assert failed.status == AnalysisStatus.FAILED, failed.status
+    assert "Report write failed" in (failed.error or ""), failed.error
+    assert failed.report_markdown, "the computed report must survive the verdict flip"
+    assert failed.artifacts == [], "no artifact may be claimed when nothing was written"
+
+    monkeypatch.setattr(graph, "write_report_artifacts", writer)
+    ok = await graph.run_analysis(
+        dataset_path=str(csv),
+        dataset_id="ds-write-ok",
+        user_query="summarise it",
+        run_id="r-write-ok",
+    )
+    assert ok.status == AnalysisStatus.COMPLETED, ok.status
+    assert ok.error is None, ok.error
+    assert ok.artifacts, "the persisted run must claim its artifacts"

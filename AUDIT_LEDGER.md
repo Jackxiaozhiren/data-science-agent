@@ -7024,3 +7024,65 @@ nothing could not report a clean sheet.
 not-in-nav INFO block is gone · `pytest -q --cov` **0**, coverage **82.78%**, `debt.testFunctions`
 **707 → 714**. The collector's `warnings.contradictions` list dropped its `navOrphanPages:23` entry,
 leaving only `selfReportedDebt`. Nothing excluded, no suppression added, no ceiling re-seeded.
+
+## 125. D-L4-08: a run whose report never reached disk now says FAILED, and the field that meant two things is filed instead of quietly unified
+
+**The defect was in both graphs, not one.** §115.1 filed D-L4-08 from the LangGraph path. The plain
+graph carries it too: `graph.py:507` caught the writer's exception into `state.error = "Report write
+failed: ..."` and `:514` then assigned `AnalysisStatus.FAILED if has_hard_fail else COMPLETED` --
+`has_hard_fail` looks only at critic checks, so the write failure could not move the verdict. Same in
+`reporting.py`: `analysis2["status"]` was hardcoded `"COMPLETED"` and the returned envelope hardcoded
+it again, so one `except` that sets an error and one that ignores it sat two lines apart.
+
+**Why FAILED rather than a new degraded status.** §117.5 listed three options; the deciding evidence was
+that the machinery to consume a failure already exists and the agent was the only component lying about
+it. `dsa_evaluation/metrics.py:77-84` says in its own comment that "a run that reports FAILED ... must not
+score as a task success" and computes `task_success = has_ok and (has_report or tcalls) and verdict_ok`;
+that rule is pinned by `tests/unit/test_benchmark.py::test_task_success_refuses_a_run_that_reported_failure`.
+The status vocabulary in `dsa_agent/state.py:19-21` already has FAILED, the Web's status filter already
+offers `value="COMPLETED"` and `value="FAILED"` (`tests/contract/test_web_analysis_status_vocabulary.py`),
+and `analysis_service.py:139` renders progress as 100 only for COMPLETED -- so a fourth enum value would
+have entered every published contract to express something the existing two already mean, while the run
+that cannot deliver its artifact is not a different kind of success. What the analysis *did* produce is
+kept: `report_markdown`, evidence, insights and validation results stay in the payload, and the test
+asserts they do, because the flip is about the delivery claim, not a data loss.
+
+**Red first, two of them, then green.** `tests/agent/test_reporting_seam.py`'s pin --
+`test_a_failed_report_write_still_reports_completed`, written by §115.1 explicitly as "the current,
+known-wrong shape ... fixing the verdict must turn this red" -- was replaced by
+`test_a_failed_report_write_reports_failed_and_keeps_the_explanation`, and
+`tests/integration/test_agent_analysis.py::test_unpersisted_report_flips_the_terminal_status` was added
+for the plain graph. Both were red against the shipped code (`AssertionError: COMPLETED`), and the new
+integration test patches `critic_validate` to return nothing so the write failure is the *only* thing
+that can move the status -- otherwise a critic hard-fail would have made the assertion pass for the
+wrong reason. Falsification is the second arm inside the same test: the same harness with a working
+writer must still report COMPLETED, `error is None`, and non-empty `artifacts`, which is what stops the
+change from being a switch that marks everything failed. 272 passed across `tests/agent`,
+`tests/integration`, `tests/mcp`, `tests/unit`; full suite **746 passed**, coverage **82.80%**.
+
+**Blast radius measured on the benchmark, not assumed.** 50 v2 tasks at `dsa --limit 50 --out
+/tmp/bench125 --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets`: exit 0, `Task
+success rate: 1.0`, per-category all 1.0, and **0 of 50** result rows carry an `error` field -- the same
+reading §115.1 took, so no published figure moves, and the reason it stays 0 is §122's own fix (the root
+is now the caller's working directory, writable wherever the caller can write). The branch is not dead
+code: it fires on a read-only target, which is what the two tests force.
+
+**A finding I filed and then voided, because the code did not support it.** While writing the guard I
+claimed `error` was one field with two meanings -- `graph.py:376` was going to leave a run holding
+`correction_message(...)` while still reporting COMPLETED, which would have made any
+"COMPLETED carries no error" invariant unsafe. Measured instead: all four other `state.error` assignments
+in the file (`:301`, `:311`, `:318`, `:376`) set `AnalysisStatus.FAILED` themselves in the same branch,
+and `:376` returns immediately, so **no shipped path pairs an error with a COMPLETED verdict**. The
+overloading claim is therefore void, not caveated -- and it is the reason the fix could sit on the final
+status line without a model-level validator: the invariant already holds everywhere except the two write
+branches this section fixed. What the measurement does leave open is whether a validator belongs at all:
+`AnalysisState` is rebuilt from persisted dicts by the REST resume path and from checkpoints, so a
+construct-time refusal could turn a stored row into a load error -- a new failure mode traded for one that
+tests already cover. Not added; the behaviour is pinned at both nodes instead.
+
+**Gates.** `ruff check` **0** · `ruff format --check` **0** (252) · `mypy` **0** (121) · ratchet **OK**
+(`exceptHandlers` **185** at ceiling -- the fix added no handler -- `suppressionDirectives` **42** at
+ceiling, `navOrphanPages` **0**) · orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** ·
+`pytest -q --cov` **0**, coverage **82.80%**, `debt.testFunctions` **714 → 715**. Vendor mirrors for the
+two changed agent files repaired with `sync_vendor --file`, one at a time. `docs/reproducibility.md` now
+states the rule the code enforces: the verdict follows the write.

@@ -393,6 +393,7 @@ async def run_analysis(
     md = build_markdown_report(state)
     state.report_markdown = md
     # persist artifacts + reproducibility bundle (experiment.json + reproduce.sh + notebook)
+    report_unpersisted = False
     try:
         paths = write_report_artifacts(state)
         state.report_id = state.run_id
@@ -506,11 +507,15 @@ async def run_analysis(
             )
     except Exception as e:
         state.error = f"Report write failed: {e}"
+        report_unpersisted = True
 
-    # Final status
+    # A run that could not put its report on disk did not deliver, whatever the critic thought:
+    # publishing it as COMPLETED while `error` says otherwise is D-L4-08 (§125).
     has_hard_fail = any(
         not r.passed for r in state.validation_results if r.check in HARD_FAIL_CHECKS
     )
-    state.status = AnalysisStatus.FAILED if has_hard_fail else AnalysisStatus.COMPLETED
+    state.status = (
+        AnalysisStatus.FAILED if (has_hard_fail or report_unpersisted) else AnalysisStatus.COMPLETED
+    )
     state.touch()
     return state

@@ -285,6 +285,18 @@ shadowing + missing greenlet concurrency).
   intervening tags have CHANGELOG sections but no announcement copy. Regenerating it is a release action, so
   the docs stop short of claiming to be current.
 
+- A run whose report could not be written to disk reported `COMPLETED` while its own `error` field said
+  otherwise, in both graphs: `graph.py` assigned the verdict from critic hard-fails alone after catching
+  the writer's exception, and `reporting.py` hardcoded `"COMPLETED"` twice, two lines below the branch
+  that records the failure. `FAILED` is now the verdict whenever the report did not reach disk, and the
+  computed `report_markdown`, evidence, insights and validation results stay in the payload -- the flip
+  withdraws the delivery claim, it does not discard the analysis. Chosen over a new "degraded" status
+  because the consumer already treats the agent's verdict as part of success
+  (`dsa_evaluation/metrics.py:77-84`, pinned by `test_task_success_refuses_a_run_that_reported_failure`)
+  and FAILED is already in the published vocabulary that SDK, REST, MCP and the Web all read
+  (`AUDIT_LEDGER.md` §125, closing D-L4-08). Benchmark blast radius measured: 50 v2 tasks still
+  `Task success rate: 1.0` with 0 of 50 rows carrying an `error`.
+
 ### Added (unreleased, non-breaking)
 
 - `scripts/run_gates.sh` runs the whole gate set in one command: 17 literal CI gate invocations, in CI's
