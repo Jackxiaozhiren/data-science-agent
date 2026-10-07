@@ -7394,3 +7394,8 @@ pushes, so it is a release action; **D-L4-14** CI proves Node 22 while `docker/D
 `node:20-alpine` -- the change is one line, and the evidence is a docker build this machine cannot run
 (the daemon is absent), so it is left with the measurement attached; and the α re-freeze, which needs a
 version bump. The npm exemption for `braces` expires 2026-11-07 and the gate will say so.
+
+**Runner confirmation, appended after §131 was written.** `572adba` (§129-§130) came back green: CI run
+37570134387 `success`, `ci` and `web-regression` both `success`, alongside Secret Scan and CodeQL. The
+commit carrying this map is pushed next and gets its own run, which is the rule §127.1 amended rather than
+a courtesy.
