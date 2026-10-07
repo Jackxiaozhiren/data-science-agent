@@ -310,7 +310,27 @@ shadowing + missing greenlet concurrency).
   is the generated `next-env.d.ts`), so the image-optimisation route that loads sharp is unused today
   (`AUDIT_LEDGER.md` §126).
 
+- 75 of the 118 declared `per-file-ignores` entries in `pyproject.toml` could not fire: the rule never
+  occurs in that tree, or `lint.ignore` already covers it globally (the `S101` entries in `tests`,
+  `packages/plugins`, `packages/mcp` and `apps/jupyter`, and the `E501` entries in `packages/plugins` and
+  `apps/jupyter`), or the same rule was listed twice in one pattern (`tests/**/*` declared `S110` twice;
+  `packages/tools/**/*` declared `SIM103` and `UP046` twice). `packages/mcp/**/*` was inert in all seven
+  entries and is removed. They are deleted rather than kept as documentation, because an exemption that
+  cannot be observed reads as a decision, and nothing counted or guarded that surface
+  (`AUDIT_LEDGER.md` §127, Phase 4 target 1). `ruff check` over CI's six paths still exits 0 afterwards,
+  which is the proof that nothing real was being suppressed.
+
 ### Added (unreleased, non-breaking)
+
+- `tests/test_lint_exemption_reachability.py` now requires every remaining lint exemption to earn its
+  place: it rebuilds the project's own `[tool.ruff]` settings with one entry removed at a time and demands
+  that the rule actually fire in that tree, so an inert entry reddens the suite instead of accumulating.
+  The method matters -- `ruff --isolated` would have given the wrong answer, because isolated also drops
+  `line-length = 100` and reports 29 `E501` findings in `apps/jupyter` at ruff's default 88 columns that
+  do not exist at the project's real width. Also guarded: no duplicate declaration in one pattern, no
+  per-tree entry for a globally ignored rule, each global ignore still hiding something (removing `S101`
+  exposes 2033 findings, `E501` 2776), the 43-entry live set pinned so the removed entries cannot be
+  re-added quietly, and a two-sided control that plants one inert and one live entry.
 
 - `scripts/run_gates.sh` runs the whole gate set in one command: 17 literal CI gate invocations, in CI's
   order, each reported with its own exit code, plus `--list` which prints them without running anything.

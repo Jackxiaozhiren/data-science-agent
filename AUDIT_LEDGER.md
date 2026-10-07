@@ -7152,3 +7152,79 @@ route would take the vulnerable path the moment anyone adds one. `sharp@0.35.5` 
 **0** (252) · `mypy` **0** (121) · ratchet **OK** (`exceptHandlers` 185, `suppressionDirectives` 42,
 `navOrphanPages` 0) · orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** ·
 `pytest -q --cov` **0** at **82.80%**, 746 cases.
+
+## 127. Target 1: 75 of the 118 declared lint exemptions could not fire, and the census method itself was the finding
+
+**What was declared.** `pyproject.toml` carried `[tool.ruff.lint.per-file-ignores]` with 11 patterns and
+**118** `(pattern, rule)` entries, plus a global `ignore = ["S101", "E501"]`. Nothing in the repository
+asked whether any of those entries could fire: `debt.suppressionDirectives` counts inline `# noqa` /
+`# type: ignore` / `nosec` / `skip` markers in shipped code (42, at its ceiling), and
+`debt.unwiredCheckers` counts checker scripts no workflow runs (0) -- but the *config-level* exemption
+surface had no number and no guard, so an entry could outlive its reason silently, and a re-widening
+would have been invisible to every gate.
+
+**Measured: 75 of the 118 hide nothing.** Broken down, they are three different kinds of dead:
+the rule does not occur in that tree at all (the majority); the rule is *already* ignored globally, so the
+per-tree entry is shadowed (`S101` in `tests`, `packages/plugins`, `packages/mcp`, `apps/jupyter`,
+`E501` in `packages/plugins` and `apps/jupyter`); and the same rule is listed twice in one pattern --
+`tests/**/*` declared `S110` twice, `packages/tools/**/*` declared `SIM103` and `UP046` twice.
+`packages/mcp/**/*` was inert in all seven of its entries and is gone. What remains -- **43 entries** --
+each hides at least one real finding, so each is a blind spot that now has to be defended rather than
+inherited. The two global ignores are emphatically live: removing `S101` exposes 2033 findings over CI's
+six paths, `E501` exposes 2776.
+
+**The method was the second finding, and it nearly produced a wrong deletion.** The obvious probe is
+`ruff check --isolated --select <rule> <tree>`, and it lies: `--isolated` also drops `line-length = 100`,
+so `E501` fires 29 times in `apps/jupyter` at ruff's default 88 columns and zero times at the width this
+project actually lints at. Under the isolated probe three entries looked live that are inert, and the
+shadowed ones looked merely dead rather than shadowed. The shipped checker therefore builds a
+`ruff.toml` that differs from the project's `[tool.ruff]` **only** by removing the one entry under test,
+runs ruff with `--config` against it, and requires the rule to appear in the JSON output. That is the
+question an exemption should answer -- *would deleting this line change what the gate reports?* -- and it
+is the only formulation under which deleting an entry is provably safe, which is exactly what the removal
+run needed before touching `pyproject.toml`.
+
+**Red first, five of six.** Before the deletion the new `tests/test_lint_exemption_reachability.py` failed
+naming the inert entries, the duplicate declarations, and the shadowed ones; after the 75 were removed,
+`ruff check packages apps/api tests src apps/jupyter scripts` still exits **0** ("All checks passed!") --
+the direct proof that nothing they suppressed was real -- and the file is **6 passed**. One test pins the
+removed set by name per pattern, so the direction of travel is one-way: an entry cannot be re-added
+without either earning its place (and then the reachability tests would have to accept it) or being
+re-added knowingly. The control plants an inert entry (`packages/tools -> E402`, which §127 measured as
+never firing) and requires it to be the single report, then plants a live one (`F401`, which fires there)
+and requires it not to be reported -- the guard rejects both "everything is fine" and "nothing is fine".
+
+**The other half of target 1, falsified rather than cited.** `debt.unwiredCheckers` reads 0 and six
+checker scripts exist, all named in `ci.yml`, a workflow, or a manifest. A zero is only evidence if it can
+stop being zero, so the counter was probed: a file `scripts/check_probe_unwired_tmp.py` offering `--check`
+was dropped in, and `_unwired_checkers()` returned exactly `['scripts/check_probe_unwired_tmp.py']`; after
+deleting it (verified absent) it returned `[]`. The probe file was mine, lived for one command, and never
+entered the index.
+
+**Gates.** `ruff check` **0** · `ruff format --check` **0** (**253** files) · `mypy` **0** (121) · ratchet
+**OK** (185 / 8 / 42 / 0, and `unwiredCheckers` 0 with the falsification above) · orphan-reads **0** ·
+claims **0** · `mkdocs build --strict` **0** · `pytest -q --cov` **0** at **82.80%**, **752** cases,
+`debt.testFunctions` **715 → 721**. No exemption list grew; 75 entries left.
+
+### 127.1 The §125 push went red on the runner for a reason my own battery had skipped
+
+CI run 37567482100 on `470d96b` failed at `uv run python scripts/sync_vendor.py --check`
+(`ci: failure`, `web-regression: success`). Not the concurrent session's `dsa_evaluation` drift: a HEAD
+export of `470d96b` reports `dsa_agent: 1 file(s) differ`, and the file is mine.
+
+Cause, in time order. `sync_vendor --file` for `graph.py` and `reporting.py` ran at 11:24:34. At
+11:25:41 a whole-tree `ruff format` reformatted the **source** `packages/agent/src/dsa_agent/graph.py` --
+my hand-written `state.status = (... if ... else ...)` ternary was collapsed to one line, since it fits
+the 100-column limit -- and the mirror, written from the pre-format text, was left behind. The commit
+carried both, and the gate caught it exactly as designed.
+
+The part worth keeping is not the ordering but the omission: I had stopped including `sync_vendor --check`
+in my local battery because it is red on this machine for a file that is not mine (`dsa_evaluation`, the
+other session's uncommitted source). A gate I skip because it is confounded is a gate that cannot catch
+my own mistakes, which is the same error as §113.5's too-small format command wearing different clothes.
+Corrected procedure, applied from this section on: run `--check` every time, and compare the *named*
+drift set against the known-foreign one rather than reading a green/red bit; sync as the last step after
+any formatting, then re-check. Recorded as an improvement to make in §128: `--check` currently prints a
+per-package count ("1 file(s) differ") and not the file names, so the diagnosis needed a manual `cmp`
+loop over nine candidates -- a gate that cannot say *which* thing is wrong costs minutes at the moment
+someone is reading it in a hurry.

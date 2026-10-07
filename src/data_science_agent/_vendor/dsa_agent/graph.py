@@ -515,9 +515,7 @@ async def run_analysis(
         not r.passed for r in state.validation_results if r.check in HARD_FAIL_CHECKS
     )
     state.status = (
-        AnalysisStatus.FAILED
-        if (has_hard_fail or report_unpersisted)
-        else AnalysisStatus.COMPLETED
+        AnalysisStatus.FAILED if (has_hard_fail or report_unpersisted) else AnalysisStatus.COMPLETED
     )
     state.touch()
     return state

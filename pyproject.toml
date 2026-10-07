@@ -117,17 +117,22 @@ select = ["E", "F", "I", "B", "UP", "SIM", "S"]
 ignore = ["S101", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
+# §127: every entry below is measured to hide at least one real finding by
+# tests/test_lint_exemption_reachability.py, which deletes the entry, re-runs ruff over the
+# tree with the project's own settings, and requires the rule to fire. 75 declared entries
+# were inert that way -- the rule never occurred in the tree, or lint.ignore already covered
+# it, or the same rule was listed twice -- and are gone rather than carried as decisions.
+# An entry that stops earning its place reddens that test; it is not re-added silently.
 "apps/api/src/dsa_api/routers/*" = ["B008"]
-"tests/**/*" = ["S101", "S108", "B017", "S602", "S603", "S607", "S608", "F841", "I001", "B905", "SIM105", "S110", "F401", "UP042", "UP046", "S311", "SIM102", "SIM103", "SIM110", "SIM222", "B904", "E402", "E702", "B007", "S110"]
-"packages/agent/src/dsa_agent/*" = ["F841", "E402", "SIM102", "S608", "B904", "UP042", "SIM222", "S311", "UP046", "B905"]
-"packages/plugins/**/*" = ["S101", "S112", "S603", "S607", "S608", "F841", "B904", "SIM105", "SIM108", "SIM110", "S110", "F401", "E501"]
-"packages/datasets/**/*" = ["S608", "UP042", "F841", "S311"]
-"packages/evaluation/**/*" = ["S110", "F841", "B905", "SIM105", "S608", "UP042", "S311", "SIM110", "SIM103", "SIM210", "SIM108", "S603", "S607", "S602"]
-"packages/evidence/**/*" = ["F841", "B904", "SIM102", "S608", "B905", "UP042", "E402"]
-"packages/execution/**/*" = ["S110", "S311", "SIM105", "UP042", "UP046", "S608", "B904", "F401", "E402", "E702", "SIM102", "SIM103", "SIM110"]
-"packages/tools/**/*" = ["UP042", "UP046", "SIM102", "SIM103", "SIM110", "SIM222", "F401", "E402", "S608", "B904", "B905", "F841", "S311", "E702", "B007", "SIM103", "UP046"]
-"packages/mcp/**/*" = ["S101", "S603", "S607", "F401", "I001", "B904", "E402"]
-"apps/jupyter/**/*" = ["S101", "S112", "F401", "I001", "E501", "S603", "S607", "F841", "B904", "E402"]
+"tests/**/*" = ["S108", "B017", "S602", "S603", "S607", "F841", "I001", "SIM105", "S110", "F401", "SIM102", "SIM103"]
+"packages/agent/src/dsa_agent/*" = ["SIM102", "S608", "UP042"]
+"packages/plugins/**/*" = ["S112", "F841", "SIM108", "F401"]
+"packages/datasets/**/*" = ["S608", "UP042", "F841"]
+"packages/evaluation/**/*" = ["S110", "F841", "B905", "SIM105", "UP042", "S311", "SIM210", "SIM108", "S603"]
+"packages/evidence/**/*" = ["S608"]
+"packages/execution/**/*" = ["SIM103", "SIM110"]
+"packages/tools/**/*" = ["UP046", "F401", "B904", "B905", "F841"]
+"apps/jupyter/**/*" = ["F401", "I001", "B904"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dsa_api", "dsa_agent", "dsa_tools", "dsa_execution", "dsa_statistics", "dsa_ml", "dsa_viz", "dsa_evidence", "dsa_reports", "dsa_datasets", "dsa_llm", "dsa_mcp", "dsa_evaluation", "dsa_plugins"]
