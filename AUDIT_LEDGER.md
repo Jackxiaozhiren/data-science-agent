@@ -7357,3 +7357,40 @@ that shows it is in this paragraph, which is what makes the claim checkable rath
 **0**) · orphan-reads **0** · claims **0** at **50 scanned / 54 skipped** · `mkdocs build --strict` **0** ·
 `pytest -q --cov` **0** at **82.80%**, **762** cases, `debt.testFunctions` **723 → 731**. §128's push was
 runner-verified in the meantime: CI run 37569066298 on `38d6d69`, `ci` and `web-regression` both success.
+
+## 131. Phase 4 uplift: the target-by-target closing map, and one suppression this session added and removed
+
+**§130.1, first.** Grepping this session's own range for added suppressions -- the check the ledger keeps
+telling me to run rather than assume -- returned three matching lines. Two are prose inside docstrings. The
+third was real: `def walk(node) -> set[str]:  # type: ignore[no-untyped-def]` in
+`tests/test_docs_nav_coverage.py`, written while typing a YAML walker. It is removed and the parameter is
+annotated `object`, which is both the honest type and enough for the recursive `isinstance` narrowing. Two
+reasons it should never have been written: the objective forbids adding suppression directives, and CI's
+`mypy packages apps/api src apps/jupyter` never parses `tests/`, so the marker suppressed an error no gate
+could raise -- an unobservable directive on top of a prohibited one. `debt.suppressionDirectives` reads
+**42**, unchanged, because the collector's shipped roots exclude `tests/`; that is exactly why the counter
+was not the check that caught this, and why the grep is.
+
+**The map.**
+
+| §24 target | Where it closed | What is now true | Runner verification |
+|---|---|---|---|
+| 1 Gate coverage | §113.3, §127, §129, §130 | The claim checker reads 50 files instead of 19 with no exemption gained (`docs/audit/` refused); 75 of 118 lint exemptions deleted and the remaining 43 must each expose a finding; `unwiredCheckers` 0 with a planted-checker falsification; `mkdocs --strict` shown to redden on a broken link, an absent nav target, and nothing else | `ci.yml` runs all four rules; CI 37568472284 (`03ce45c`) and 37569066298 (`38d6d69`) success; 572adba pending at write time |
+| 2 Boundary seams | §116.3 (earlier) | Eight seams landed, with a stated boundary verdict per largest file | CI runs in §114-§116 pushes |
+| 3 Contract unification | §108, §111 (earlier) | One `RUN_SUMMARY_FIELDS` owner, mirrored by SDK/REST/MCP with alias discipline | same |
+| 4 Test architecture | §87-§96 (earlier) | Process-global state isolated by derivation; sentinel tranche adjudicated | earlier runs |
+| 5 Measurement integrity | §121, §124, §127, §130 | Version floors derived from the four declaring files; the config-level exemption surface measured and guarded; the dated-in-code measurement class enumerated to empty (12 literals, none an assertion's input); §117.3 names a command per cell | as above |
+| 6 Developer experience / D-L4-06 | §120, §121 | `scripts/run_gates.sh` runs 17 gates derived from `ci.yml`, pinned two-way by `tests/test_command_surface.py`; six shebang'd scripts made executable, and the two-way rule holds the other eight | CI 37410742583 (`38324ca`) success |
+| 7 Docs information architecture | §124, §130 | `navOrphanPages` 23 → 0 with URLs unchanged; the live/record split encoded in the checker; the Node 22-vs-20 divergence stated where a reader would hit it | CI 37568472284 success |
+| D-L4-07 | §122 | One artefact root for eight sites; four layout-dependent roots and the wheel's interpreter-tree write are gone | CI 37416581317 (`30267cb`) success |
+| D-L4-08 | §125 | A run whose report never reached disk reports `FAILED`, with `error` preserved and the computed report kept in the payload; both graphs fixed | CI 37568472284 (`03ce45c`, which carries the mirror fix) success |
+
+**What remains open, and what it costs.** D-L4-11 closed at §123. Still open by choice, each with the
+reason in its section: **D-L4-12** the dead ternary in `dsa --reproduce`'s path resolution (`cli.py:448-457`,
+both branches of `catalog = args.catalog if <cond> else args.catalog` are the same expression) -- a
+behaviour-preserving cleanup needing its own differential over the flag spellings; **D-L4-13** the release
+announcement copy frozen at v4.2.10 while the shipped version is 4.4.0, five tags deep -- the producer
+pushes, so it is a release action; **D-L4-14** CI proves Node 22 while `docker/Dockerfile.web` ships
+`node:20-alpine` -- the change is one line, and the evidence is a docker build this machine cannot run
+(the daemon is absent), so it is left with the measurement attached; and the α re-freeze, which needs a
+version bump. The npm exemption for `braces` expires 2026-11-07 and the gate will say so.

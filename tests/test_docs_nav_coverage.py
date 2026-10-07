@@ -28,7 +28,7 @@ def _nav_targets(text: str) -> set[str]:
     """Every page path any `nav:` entry resolves to, walking nested sections."""
     nav = yaml.safe_load(text)["nav"]
 
-    def walk(node) -> set[str]:  # type: ignore[no-untyped-def]
+    def walk(node: object) -> set[str]:
         found: set[str] = set()
         if isinstance(node, dict):
             for value in node.values():
