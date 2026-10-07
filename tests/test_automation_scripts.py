@@ -236,11 +236,15 @@ def test_identical_text_is_flagged_only_outside_a_historical_prefix(tmp_path: Pa
     (tmp_path / "README.md").write_text(body, encoding="utf-8")
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "guide.md").write_text(body, encoding="utf-8")
+    (tmp_path / "docs" / "v4_3").mkdir()
+    (tmp_path / "docs" / "v4_3" / "record.md").write_text(body, encoding="utf-8")
 
     scanned, skipped = public_claims.scan_scope(tmp_path)
 
-    assert [p.name for p in scanned] == ["README.md"]
-    assert [p.name for p in skipped] == ["guide.md"]
+    # §130: `docs/` is no longer exempt as a whole, so the live page joins README in the scanned
+    # set and only the dated archive under it is skipped. Same bytes, verdict keyed on path.
+    assert sorted(p.name for p in scanned) == ["README.md", "guide.md"], [p.name for p in scanned]
+    assert [p.name for p in skipped] == ["record.md"]
     # Payload is a naming claim, not a number: the typed "155 tests" rule was retired in
     # §76 precisely because it could only catch numbers somebody had typed once.
     # Byte-identical text, opposite verdicts: the exclusion keys off the path, so
@@ -307,11 +311,11 @@ def test_the_control_an_unreachable_prefix_is_reported_and_a_reachable_one_is_no
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The guard above must key on reachability, not on the shipped list."""
-    (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "guide.md").write_text("x\n", encoding="utf-8")
+    (tmp_path / "docs" / "v4_3").mkdir(parents=True)
+    (tmp_path / "docs" / "v4_3" / "record.md").write_text("x\n", encoding="utf-8")
     monkeypatch.setattr(public_claims, "SCAN_GLOBS", ["README.md", "docs/**/*.md"])
     counts = _reachable_prefix_counts(tmp_path)
-    assert counts.get("docs/") == 1, counts
+    assert counts.get("docs/v4_3/") == 1, counts
     dead = sorted(p for p, n in counts.items() if n == 0)
     assert "research/" in dead, dead
     assert "src/data_science_agent/" in dead, dead
@@ -354,3 +358,74 @@ def test_the_vendored_workspace_tree_is_neither_scanned_nor_counted(tmp_path: Pa
     assert not any(".workspace" in n for n in names), (
         f"a vendored README reached the claim scan: {names}"
     )
+
+
+# --- §130: the claim checker used to skip all of `docs/` ---------------------------
+
+LIVE_DOCS_PAGES = (
+    "docs/getting-started.md",
+    "docs/reproducibility.md",
+    "docs/api.md",
+    "docs/architecture.md",
+    "docs/security.md",
+    "docs/security/VERIFY_RELEASE.md",
+    "docs/tools.md",
+)
+DATED_DOCS_RECORDS = ("docs/v4_3/", "docs/announcements/", "docs/ADR/")
+
+
+def _scanned_names() -> tuple[set[str], set[str]]:
+    scanned, skipped = public_claims.scan_scope(public_claims.ROOT)
+    root = public_claims.ROOT
+    return (
+        {str(p.relative_to(root)) for p in scanned},
+        {str(p.relative_to(root)) for p in skipped},
+    )
+
+
+def test_the_current_docs_pages_are_inside_the_surface_the_checker_reads() -> None:
+    """Target 1's unfinished half: `docs/` sat in `HISTORICAL_PREFIXES` whole.
+
+    47 markdown files under `docs/` matched the checker's own globs, and every one of them was
+    classified as a historical record -- including the pages a user follows to install, reproduce or
+    verify a release. A blanket prefix is how a checker reports "0 issues" while reading a third of
+    its advertised surface, which is §113.3's complaint about two dead prefixes, one level up.
+    """
+    scanned, skipped = _scanned_names()
+    missing = [p for p in LIVE_DOCS_PAGES if p not in scanned]
+    assert not missing, f"still skipped as historical: {missing}"
+    assert "docs/reproducibility.md" not in skipped
+
+
+def test_only_dated_docs_records_are_exempted_and_each_still_matches_something() -> None:
+    """The three exemptions are dated records; and a prefix with no reachable file is §113's defect.
+
+    `docs/audit/` was the tempting fourth -- it is not release prose. Measured, `SCAN_GLOBS` matches
+    zero `.md` under it, so declaring it would have been exactly the dead exemption the reachability
+    test below kills.
+    """
+    prefixes = set(public_claims.HISTORICAL_PREFIXES)
+    assert "docs/" not in prefixes, "the whole docs tree is exempt again"
+    assert set(DATED_DOCS_RECORDS) <= prefixes, sorted(prefixes)
+    counts = _reachable_prefix_counts(public_claims.ROOT)
+    for prefix in DATED_DOCS_RECORDS:
+        assert counts.get(prefix, 0) > 0, f"{prefix} matches no file the checker can reach"
+    assert counts.get("docs/audit/", 0) == 0, (
+        "docs/audit/ is reachable now; revisit the exemption list"
+    )
+    dead = sorted(p for p in prefixes if counts.get(p, 0) == 0)
+    assert not dead, f"historical prefixes that reach nothing: {dead}"
+
+
+def test_the_widened_net_costs_no_suppression_and_no_finding() -> None:
+    """Raising what can fail must not require quieting anything (the §113.3 shape, re-run).
+
+    Before: 19 files scanned, 85 skipped. After: 50 and 54, and all four rules still report zero
+    issues -- so the wider surface is bought without an exemption, a `noqa`, or a tuned-down rule.
+    """
+    scanned, skipped = _scanned_names()
+    assert len(scanned) >= 45, f"only {len(scanned)} files scanned -- the widening was reverted"
+    assert public_claims.check_currency_claims() == []
+    assert public_claims.check_measurement_claims() == []
+    assert public_claims.check_maturity() == []
+    assert public_claims.check_version_consistency() == []

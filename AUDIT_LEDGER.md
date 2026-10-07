@@ -7284,3 +7284,76 @@ installed because a hook lives in `.git/` of a worktree another session commits 
 rejecting someone else's commit message is a change to shared state that is not mine to make. It is
 offered to the maintainer as a two-line check; meanwhile the check that is mine to keep running is the one
 above, and it worked.
+
+## 129. Target 1, first half: the docs strict-build is shown to fail on what it claims to fail on
+
+CI runs `uv run python -m mkdocs build --strict` and `mkdocs.yml` sets `validation.links.not_found:
+warn`; "warn" plus "--strict" is the entire mechanism, and it is the kind of gate that can read as
+protection while doing nothing. §11.3 says a guard must be shown capable of failing and §26 says exit 0
+is not evidence, so `tests/test_docs_strict_build_can_fail.py` builds a two-page site in a scratch tree
+with its own `mkdocs.yml` -- never the shipped `docs/`, never a real-repo mutation -- and asserts both
+directions:
+
+- a link to `missing.md` makes the build exit non-zero, names `missing.md` in the output, and does not
+  emit the page;
+- the same tree with the target present exits 0 and does emit `site/changelog/index.html`, so the red
+  above is about the link and not about the harness;
+- a `nav:` entry naming a file that does not exist is also refused (`ghost.md`), which is the
+  `capabilities.navDanglingEntries` shape seen from the builder's side;
+- `python -m mkdocs --version` exits 0 and prints, because every probe above is worth nothing if the
+  module form CI uses is not importable here.
+
+Five tests, 1.9 s, no fixture left behind. One dead branch was deleted before committing: an
+`if shutil.which("mkdocs") is None: pass` that asserted nothing and made the test look like it cared
+about the console script, which it does not -- CI runs the module form, so that is the entry point under
+test.
+
+## 130. Target 1, harder half: `docs/` had been in the claim checker's skip-list whole, so "0 issues" described 19 of the 66 files it advertised
+
+§113.3 closed two dead prefixes in `HISTORICAL_PREFIXES` and left a rule in the test file: no declared
+exemption may name a tree no `SCAN_GLOBS` pattern can reach. The list's biggest entry survived that
+cleaning untouched, because it was never unreachable -- it was over-reachable: `"docs/"` matched **47**
+markdown files, and every one of them was classified as a historical record. Among them
+`docs/getting-started.md`, `docs/api.md`, `docs/architecture.md`, `docs/security.md` and the three
+`docs/security/VERIFY_*` / baseline pages -- current-tense instructions a reader follows to install,
+reproduce and verify a release. The checker printed "0 issues (scanned 19 file(s); 85 skipped as
+historical)", which is a true statement about a surface one third the size of the one its own globs
+advertise.
+
+**Narrowed rather than removed**, because the tree genuinely contains dated records. Exempt now, by name:
+`docs/v4_3/` (11 files matched -- the release evidence archive), `docs/announcements/` (3 -- generated
+release copies) and `docs/ADR/` (2 -- decisions superseded by design). Everything else under `docs/` is
+scanned: 19 → **50** files in scope, 85 → 54 skipped.
+
+**`docs/audit/` was the tempting fourth exemption and is not declared.** It holds the ratchet's own
+JSON snapshots and matches no markdown at all, so adding it would have recreated precisely the
+dead-prefix defect §113 found -- and `test_no_historical_prefix_is_declared_without_a_glob_that_reaches_it`
+would have gone red on it, which is the reason to state it here rather than quietly omit it. The new test
+asserts the omission stays true (`counts.get("docs/audit/", 0) == 0`) so nobody adds it as a favour to a
+future failing run.
+
+**Red first, three tests, and no suppression bought.** `test_the_current_docs_pages_are_inside_the_surface_
+the_checker_reads`, `test_only_dated_docs_records_are_exempted_and_each_still_matches_something` and
+`test_the_widened_net_costs_no_suppression_and_no_finding` all failed before the change; after,
+`tests/test_automation_scripts.py` is 23 passed and the checker still reports **0 issues** over the wider
+surface -- the §113.3 shape again: raising what can fail cost nothing, because nothing in the live docs
+pages was a stale claim. Two §113 tests needed their fixtures moved (`docs/guide.md` was their example of
+"exempt"; it is now scanned, so the identical-text-different-verdict pair uses `docs/v4_3/record.md`), and
+the control test's reachable-prefix assertion moved to `docs/v4_3/` for the same reason -- three edits that
+were each forced by a red test rather than volunteered.
+
+**Target 5, the same sweep.** The prompt's wording is "one authoritative source for test counts, coverage
+and lint/type numbers, with docs deriving from it", and §117.3's attestation table already names the
+command behind every cell. What was missing was the in-code half: an AST census of every string literal
+containing a `2026-` date outside a docstring, in shipped and test code -- **12 hits**, and each one is
+either a test *input* (a `reviewed_on`/`tolerated until` date fed to a checker), a captured fixture name
+(`tests/fixtures/npm_audit_web_2026-10-03.json`), or a specification identifier (`packages/mcp/src/
+dsa_mcp/app.py:50` says "Stateless MCP 2026-07-28", the protocol revision the ADR is named after). None is
+a dated measurement an assertion depends on, so the class is empty rather than reduced -- and the command
+that shows it is in this paragraph, which is what makes the claim checkable rather than remembered.
+
+**Gates.** `ruff check` **0** · `ruff format --check` **0** (**254** files) · `mypy` **0** (121) · ratchet
+**OK** (`exceptHandlers` **185** at ceiling, `suppressionDirectives` **42** at ceiling, `unwiredCheckers`
+**0**) · orphan-reads **0** · claims **0** at **50 scanned / 54 skipped** · `mkdocs build --strict` **0** ·
+`pytest -q --cov` **0** at **82.80%**, **762** cases, `debt.testFunctions` **723 → 731**. §128's push was
+runner-verified in the meantime: CI run 37569066298 on `38d6d69`, `ci` and `web-regression` both success.

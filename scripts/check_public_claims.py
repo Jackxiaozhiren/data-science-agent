@@ -47,8 +47,22 @@ NOISE_SUBSTRINGS = [
 # prose -- it tells a reader what a PR must not regress today -- and tests/test_automation_scripts.py
 # now fails if an entry here names a tree no SCAN_GLOBS pattern can reach, which is exactly how
 # `benchmarks/` and `research/` sat here while the checker never opened either.
+#
+# §130 applied that same reasoning to `docs/`, which was the list's biggest entry by reach: 47
+# markdown files under `docs/` matched SCAN_GLOBS and every one was classified as a historical record,
+# including `getting-started.md`, `api.md`, `security.md` and `security/VERIFY_RELEASE.md` -- the pages
+# a user follows to install, reproduce and verify a release today. Exempting the whole tree is the
+# lesser error only if the checker says so: "0 issues" described 19 files while SCAN_GLOBS advertised
+# 66. What is genuinely a dated record is now exempted by name -- the v4.3 evidence archive, the
+# generated release announcements, and the ADRs, each superseded-by-design rather than stale -- and
+# each of those three is asserted to still match a file the checker can reach. `docs/audit/` was the
+# tempting fourth exemption and is deliberately absent: it matches no markdown at all, so declaring it
+# would have recreated the dead-prefix defect §113 found. The widened net cost no suppression: 50
+# files scanned, 54 skipped, and all four rules still report zero findings.
 HISTORICAL_PREFIXES = [
-    "docs/",
+    "docs/v4_3/",
+    "docs/announcements/",
+    "docs/ADR/",
     "research/",
     "plugins/",
     "apps/jupyter/",

@@ -329,7 +329,28 @@ shadowing + missing greenlet concurrency).
   ends with the check I had skipped because it was red for someone else's file, which is the third time this
   run a skipped or narrowed gate cost a wrong green (§128, following §127.1).
 
+- `scripts/check_public_claims.py` advertised a surface it did not read: `HISTORICAL_PREFIXES` contained
+  `docs/` whole, so all 47 markdown files under `docs/` -- including `getting-started.md`, `api.md`,
+  `architecture.md`, `security.md` and the release-verification guides -- were classified as historical
+  records and skipped, while the tool printed "0 issues (scanned 19 file(s); 85 skipped as historical)".
+  The exemption is now by name and only where the content is genuinely dated: `docs/v4_3/` (11 files),
+  `docs/announcements/` (3) and `docs/ADR/` (2), leaving 50 files scanned from 19 and **0 issues** on the
+  wider net -- the widening cost no suppression, no `noqa` and no rule tuning
+  (`AUDIT_LEDGER.md` §130, Phase 4 target 1). `docs/audit/` is deliberately *not* exempted: it matches no
+  markdown, so declaring it would have recreated the dead-prefix defect §113 removed, and a test now
+  asserts that stays true.
+
 ### Added (unreleased, non-breaking)
+
+- `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch
+  two-page site with the project's own `validation.links` settings and requires a link to a nonexistent
+  page to exit non-zero and name the file, the same tree with the page present to exit 0, and a `nav:`
+  entry pointing at nothing to be refused too -- §11.3's "show the guard capable of failing" applied to
+  `mkdocs build --strict`, which CI runs and nothing had ever challenged (§129).
+- `tests/test_automation_scripts.py` gains three scope tests: current docs pages are inside what the claim
+  checker reads; every declared historical prefix reaches at least one file; and the widened surface
+  produces zero findings from all four rules with a `len(scanned) >= 45` floor so the assertion cannot pass
+  on a narrowed reader (§130).
 
 - `tests/test_lint_exemption_reachability.py` now requires every remaining lint exemption to earn its
   place: it rebuilds the project's own `[tool.ruff]` settings with one entry removed at a time and demands
