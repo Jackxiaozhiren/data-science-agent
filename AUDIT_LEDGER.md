@@ -7086,3 +7086,69 @@ ceiling, `navOrphanPages` **0**) · orphan-reads **0** · claims **0** · `mkdoc
 `pytest -q --cov` **0**, coverage **82.80%**, `debt.testFunctions` **714 → 715**. Vendor mirrors for the
 two changed agent files repaired with `sync_vendor --file`, one at a time. `docs/reproducibility.md` now
 states the rule the code enforces: the verdict follows the write.
+
+### 118.1 addendum (2026-10-07): the mistake recurred a third time, and this time the commit was replaced
+
+`472ad02` (§125) opened with `feat(gates): §121 one command runs the whole CI gate surface...` -- the
+subject of a commit pushed a day earlier, pasted as line 1 of a heredoc whose body then *explained* that
+this was not the content. The check prescribed above (`git log -1 --format=%s`) ran, printed exactly that
+wrong line, and I read it and carried on. So the procedure was never the missing thing; reading its output
+was.
+
+Third occurrence, first time corrected: the commit was local and unpushed, so `git reset --soft HEAD~1`
+back to `e443c6a` and a fresh commit with the intended subject as the literal first line. Verified rather
+than trusted -- `HEAD^{tree}` before the reset and after the re-commit is the same object,
+`02e47b9bc4db2ea45e2aa5ad23c0ee7460db3196`, so no byte of content moved and no other session's file was
+touched, and nothing had been published. `dbbfc87` (§118) and `cf5546d` (§120) stay as they are, for the
+reasons above: those are pushed, and rewriting pushed history is not mine to do. Procedure amended: after
+any commit, `git log -1 --format=%s` is read *before* the next command is typed, and a mismatch on an
+unpushed commit is corrected by soft-reset and re-commit with the tree hash compared -- not carried into
+the remote, and not defended as cosmetic.
+
+## 126. A new advisory landed under the npm gate while §124 was in review, and this one had a fix
+
+**What the runner said.** CI run 37566233007 on `e443c6a` -- §124, a docs-and-nav-only change -- failed
+`ci: failure` at `uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json`, with
+`web-regression: success`. The step is independent of the commit's content, so the reading was: the
+dependency graph moved under the gate between the last green run and this push, which is §119's situation
+repeating.
+
+**Reproduced locally before touching anything**, the two commands CI runs in order, exit codes read from
+the commands: `npm --prefix apps/web audit --json` -> 1 (advisories exist, as it always does now, since
+the exempted `braces` entry is still open), then the checker -> 1 with the line
+`FAIL sharp: high advisory GHSA-wq5f-xc86-pv6w (sharp) has no exemption -- fix it, or add a dated entry`.
+
+**The advisory, from the audit payload rather than the headline.** `sharp` `< 0.35.5`, title "sharp :
+Vulnerability in librsvg dependency CVE-2026-96889", CWE-416 and CWE-1395, `fixAvailable:
+{name: sharp, version: 0.35.5, isSemVerMajor: false}`, and `isDirect: true` -- it is not transitive:
+`5df7aff` ("patch Next.js and Sharp security vulnerabilities") pinned `sharp` at exactly `0.35.4` in
+`apps/web/package.json:24` so the project controls that version itself instead of inheriting one from
+`next`. The pin's whole purpose was to make this bump possible on its own, and a published fix means the
+§119 rule refuses the alternative: an exemption entry requires `first_patched` to be null, so
+`docs/audit/npm-advisory-exceptions.json` was not touched -- it still carries five bounded `braces`
+tolerances and nothing more.
+
+**Change and its measured shape.** `npm --prefix apps/web install sharp@0.35.5 --save-exact` keeps the
+exact-pin style, and `npm install --package-lock-only` refreshed the root workspace lock. Parsed both locks
+against `HEAD` rather than eyeballing the diff: **28 package entries changed, 0 added, 0 removed**, and the
+changed set is `sharp`, its `@img/sharp-*` platform packages and its `@img/sharp-libvips-*` binaries; the
+only edit in the lock's own root entry is the `sharp: "0.35.4" -> "0.35.5"` spec string. So no unrelated
+dependency drifted -- the check that matters for a lockfile whose diff is 286 lines wide.
+
+**Verified against the shipped surfaces, in CI's order.** `check_npm_advisories.py` -> **0** ("clean, with
+5 bounded exemption(s) carried above") · `check_npm_workspace_lock.py` -> **0** · `npm --prefix apps/web
+ci` -> **0**, 256 packages, and the installed `node_modules/sharp/package.json` reports **0.35.5** (the
+lock is installable, not just self-consistent) · `npm --prefix apps/web run build` -> **0**.
+
+**Exposure, stated honestly rather than exaggerated.** `grep` for `next/image` across `apps/web` returns
+one file, `next-env.d.ts`, which is a generated module listing and not an import -- so the dashboard does
+not request optimised images today, and the route that loads sharp is unused. That is context, not a
+reason to exempt: the gate keys on the dependency graph, and a production `next start` behind an image
+route would take the vulnerable path the moment anyone adds one. `sharp@0.35.5` declares
+`engines.node >= 20.9.0`; CI's Node 22 satisfies it, and `docker/Dockerfile.web` floats on
+`node:20-alpine`, which is D-L4-14's unpinned-runtime point rather than a new one.
+
+**Gates at this tree** (with §125's change also in the push): `ruff check` **0** · `ruff format --check`
+**0** (252) · `mypy` **0** (121) · ratchet **OK** (`exceptHandlers` 185, `suppressionDirectives` 42,
+`navOrphanPages` 0) · orphan-reads **0** · claims **0** · `mkdocs build --strict` **0** ·
+`pytest -q --cov` **0** at **82.80%**, 746 cases.

@@ -297,6 +297,19 @@ shadowing + missing greenlet concurrency).
   (`AUDIT_LEDGER.md` §125, closing D-L4-08). Benchmark blast radius measured: 50 v2 tasks still
   `Task success rate: 1.0` with 0 of 50 rows carrying an `error`.
 
+- `sharp` 0.35.4 -> 0.35.5 for GHSA-wq5f-xc86-pv6w ("Vulnerability in librsvg dependency
+  CVE-2026-96889", CWE-416 use-after-free), affected range `< 0.35.5`, high. `sharp` is a *direct*
+  pinned dependency of `apps/web` -- pinned by `5df7aff` precisely so this project controls that version
+  instead of inheriting one from `next` -- and the advisory arrived with a published non-major fix, so
+  the §119 rule applies: bump, do not exempt. `docs/audit/npm-advisory-exceptions.json` is unchanged.
+  Lockfile delta parsed against HEAD rather than eyeballed: 28 entries changed, 0 added, 0 removed, all
+  of them `sharp`, its `@img/sharp-*` platform packages and its `@img/sharp-libvips-*` binaries, in both
+  the workspace-root and `apps/web` locks. Verified the way CI does it: `check_npm_advisories.py` 0,
+  `check_npm_workspace_lock.py` 0, `npm ci` 0 (256 packages, `node_modules/sharp` reads 0.35.5),
+  `npm run build` 0. Exposure for the record: `apps/web` imports `next/image` nowhere (the single grep hit
+  is the generated `next-env.d.ts`), so the image-optimisation route that loads sharp is unused today
+  (`AUDIT_LEDGER.md` §126).
+
 ### Added (unreleased, non-breaking)
 
 - `scripts/run_gates.sh` runs the whole gate set in one command: 17 literal CI gate invocations, in CI's
