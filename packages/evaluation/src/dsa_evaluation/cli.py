@@ -11,6 +11,11 @@ from dsa_evaluation.runner import run_benchmark
 
 _DEFAULT_CATALOG = Path("benchmarks/ds-agent-benchmark/catalog.json")
 _DEFAULT_DATASETS = Path("benchmarks/ds-agent-benchmark/datasets")
+_DEFAULT_RESULTS = Path("benchmarks/ds-agent-benchmark/results")
+_V2_CATALOG = Path("benchmarks/v2/catalog.json")
+_V2_DATASETS = Path("benchmarks/v2/datasets")
+_REPRO_DIR_V2 = Path("reproduction/v2")
+_REPRO_DIR_BENCHMARK = Path("reproduction/benchmark")
 
 
 def _resolve_datasets_dir(catalog: Path | None, datasets: Path | None) -> Path:
@@ -114,11 +119,9 @@ def main() -> None:
     p_mcp.add_argument("--json", action="store_true", help="JSON output")
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
-    ap.add_argument(
-        "--catalog", type=Path, default=Path("benchmarks/ds-agent-benchmark/catalog.json")
-    )
-    ap.add_argument("--datasets", type=Path, default=Path("benchmarks/ds-agent-benchmark/datasets"))
-    ap.add_argument("--out", type=Path, default=Path("benchmarks/ds-agent-benchmark/results"))
+    ap.add_argument("--catalog", type=Path, default=_DEFAULT_CATALOG)
+    ap.add_argument("--datasets", type=Path, default=_DEFAULT_DATASETS)
+    ap.add_argument("--out", type=Path, default=_DEFAULT_RESULTS)
     ap.add_argument("--limit", type=int, default=None, help="Limit number of tasks for quick run")
     ap.add_argument(
         "--task", action="append", dest="tasks", default=None, help="Filter to task id(s)"
@@ -267,11 +270,9 @@ def main() -> None:
         print(json.dumps(prof, ensure_ascii=False) if args.json else str(prof))
         return
     if args.cmd == "benchmark":
-        cat = args.catalog or Path("benchmarks/ds-agent-benchmark/catalog.json")
+        cat = args.catalog or _DEFAULT_CATALOG
         ds = _resolve_datasets_dir(args.catalog, args.datasets)
-        payload = run_benchmark(
-            cat, ds, Path("benchmarks/ds-agent-benchmark/results"), limit=args.limit
-        )
+        payload = run_benchmark(cat, ds, _DEFAULT_RESULTS, limit=args.limit)
         print(
             json.dumps(
                 {"n_tasks": payload.get("n_tasks"), "aggregate": payload.get("aggregate")},
@@ -438,40 +439,33 @@ def main() -> None:
         from dsa_mcp.adapter import list_tools as mcp_list
 
         tools = mcp_list()
-        print(json.dumps([t if isinstance(t, dict) else t for t in tools], ensure_ascii=False))
+        print(json.dumps(list(tools), ensure_ascii=False))
         return
 
     if args.reproduce is not None:
+        # §132 (D-L4-12). This block used to open with two conditional expressions whose branches
+        # were the same expression, so they decided nothing; the target chain underneath re-assigned
+        # catalog and datasets unconditionally, which silently discarded an explicit `--catalog` or
+        # `--datasets` -- the opposite of what the spelled subcommand form below does, and of what
+        # docs/reproducibility.md tells readers. The rule now: a v2-ish target selects the v2 family,
+        # and an explicit flag overrides its own slot.
+        #
+        # The top-level flags carry argparse defaults rather than None, so a value equal to its
+        # default counts as omitted -- the same convention _resolve_datasets_dir documents. Out is
+        # keyed on the target alone: the catalog's path string used to be scanned for "v2" and then
+        # the `benchmark` branch rewrote `out == default_out` back to reproduction/benchmark, so the
+        # two halves cancelled each other for every target this block recognises.
         target = (args.reproduce or "benchmark").lower()
-        # Default out is reproduction/, not benchmark results — per §18
-        default_out = (
-            Path("reproduction/v2")
-            if ("v2" in target or "v2" in str(args.catalog))
-            else Path("reproduction/benchmark")
-        )
-        catalog = (
-            args.catalog
-            if str(args.catalog) != "benchmarks/ds-agent-benchmark/catalog.json" or "v2" in target
-            else args.catalog
-        )
-        datasets = (
-            args.datasets
-            if str(args.datasets) != "benchmarks/ds-agent-benchmark/datasets" or "v2" in target
-            else args.datasets
-        )
-        # When user runs `dsa --reproduce --limit 50` without explicit out, use reproduction/ default, not benchmark results path
-        out = default_out if args.out == Path("benchmarks/ds-agent-benchmark/results") else args.out
-        if target in ("v2", "benchmark-v2", "v2.0"):
-            catalog = Path("benchmarks/v2/catalog.json")
-            datasets = Path("benchmarks/v2/datasets")
-            out = Path("reproduction/v2") if out == default_out else out
-        elif "v2" in target:
-            catalog = Path("benchmarks/v2/catalog.json")
-            datasets = Path("benchmarks/v2/datasets")
-        elif target == "benchmark":
-            catalog = Path("benchmarks/ds-agent-benchmark/catalog.json")
-            datasets = Path("benchmarks/ds-agent-benchmark/datasets")
-            out = Path("reproduction/benchmark") if out == default_out else out
+        is_v2 = "v2" in target
+        catalog = _V2_CATALOG if is_v2 else _DEFAULT_CATALOG
+        datasets = _V2_DATASETS if is_v2 else _DEFAULT_DATASETS
+        out = _REPRO_DIR_V2 if is_v2 else _REPRO_DIR_BENCHMARK
+        if args.catalog != _DEFAULT_CATALOG:
+            catalog = args.catalog
+        if args.datasets != _DEFAULT_DATASETS:
+            datasets = args.datasets
+        if args.out != _DEFAULT_RESULTS:
+            out = args.out
         reproduce_benchmark(catalog, datasets, out)
         return
 
@@ -481,13 +475,9 @@ def main() -> None:
     if args.cmd == "reproduce":
         bench = (args.repro_benchmark or "v2").lower()
         is_v2 = "v2" in bench
-        catalog = args.repro_catalog or Path(
-            "benchmarks/v2/catalog.json" if is_v2 else "benchmarks/ds-agent-benchmark/catalog.json"
-        )
-        datasets = args.repro_datasets or Path(
-            "benchmarks/v2/datasets" if is_v2 else "benchmarks/ds-agent-benchmark/datasets"
-        )
-        out = args.repro_out or Path("reproduction/v2" if is_v2 else "reproduction/benchmark")
+        catalog = args.repro_catalog or (_V2_CATALOG if is_v2 else _DEFAULT_CATALOG)
+        datasets = args.repro_datasets or (_V2_DATASETS if is_v2 else _DEFAULT_DATASETS)
+        out = args.repro_out or (_REPRO_DIR_V2 if is_v2 else _REPRO_DIR_BENCHMARK)
         reproduce_benchmark(catalog, datasets, out)
         return
 

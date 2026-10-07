@@ -7399,3 +7399,115 @@ version bump. The npm exemption for `braces` expires 2026-11-07 and the gate wil
 37570134387 `success`, `ci` and `web-regression` both `success`, alongside Secret Scan and CodeQL. The
 commit carrying this map is pushed next and gets its own run, which is the rule §127.1 amended rather than
 a courtesy.
+
+## 132. Phase 4 uplift: D-L4-12 closed, and the differential §131 asked for
+
+**What §131 said, and what measurement said instead.** §131 recorded D-L4-12 as "a behaviour-preserving
+cleanup needing its own differential over the `--reproduce` spellings". Two parts of that premise did not
+survive the differential. It is not behaviour-preserving in the dimension that matters: the intent the dead
+ternary was reaching for is "an explicit `--catalog` wins", and expressing that intent changes what the
+command does for a caller who passes the flag. And the out-dir half it left alone turned out to be
+self-cancelling: `default_out` keyed on `"v2" in str(args.catalog)`, then the `elif target == "benchmark"`
+branch rewrote `out == default_out` back to `reproduction/benchmark`, so the two halves annulled each other
+for every target the block recognises. Probed before the edit, on the workspace copy:
+
+| invocation | harness received (before) | harness receives (after) |
+|---|---|---|
+| `--reproduce` | `ds-agent-benchmark/{catalog.json,datasets}` + `reproduction/benchmark` | unchanged |
+| `--reproduce v2` (also `benchmark-v2`, `v2.0`, `V2`) | `v2/{catalog.json,datasets}` + `reproduction/v2` | unchanged |
+| `--reproduce v9` | v1 paths + `reproduction/benchmark` | unchanged |
+| `--reproduce v2 --catalog mine.json` | **bundled v2 catalog** -- the reader's file discarded | `mine.json` |
+| `--reproduce v2 --datasets myds` | **bundled v2 datasets** | `myds` |
+| `--reproduce --catalog benchmarks/v2/catalog.json` | **v1 catalog** + `reproduction/benchmark` | that catalog + `reproduction/benchmark` |
+| `--reproduce v9 --catalog benchmarks/v2x/cat.json` | v2 catalog + `reproduction/v2` (the annulment left open) | v2 catalog + `reproduction/benchmark` |
+| `--reproduce v2 --out my/runs` | `my/runs` | unchanged |
+| `--reproduce --out benchmarks/ds-agent-benchmark/results` | `reproduction/benchmark` | unchanged |
+| `reproduce` / `reproduce --benchmark v2 --catalog mine.json` | v2 paths / `mine.json` | unchanged |
+
+Seven of ten rows are unchanged, which is what makes the three that moved defensible rather than lucky: the
+rule is now one sentence -- *a target containing `v2` selects the v2 family; `--catalog`, `--datasets` and
+`--out` each override their own slot; a value equal to its argparse default counts as omitted*, the same
+convention `_resolve_datasets_dir` has documented since the 2026-09-08 fix. `dsa reproduce`'s subcommand form
+already obeyed it, so the two spellings now agree; before this section they disagreed on whether a flag means
+anything, which is how a dead ternary survives a suite.
+
+**A premise of mine that the probe refuted mid-section.** I first wrote the sixth row expecting
+`reproduction/v2` -- reasoning that writing a v2 catalog's run into the v1 output dir is wrong. The pre-edit
+probe returned `reproduction/benchmark`, because of the annulment above. I had asserted a preservation claim
+about behaviour I had not measured, and the test would have shipped a silent change dressed as a pin. The case
+now states the measured reading, and the last-but-one row is the one place the rewrite is visible.
+
+**The guard found a second one.** `test_the_reproduce_dispatch_has_no_conditional_that_decides_nothing` walks
+the AST for any `ast.IfExp` whose two arms print identically. Against the pre-fix file it returned three line
+numbers -- **453, 458, 441**. The first two are D-L4-12's pair. The third is unrelated to reproduce:
+`json.dumps([t if isinstance(t, dict) else t for t in tools])` in the `dsa mcp` branch, an identity map
+written as a conditional. It becomes `list(tools)`, which is the same list. Deleting only what the finding
+named would have left a guard red on arrival, and a red guard is a dead guard, so the file-wide rule stands
+and both sites go.
+
+**Owner counts, replayed against `git show HEAD:`.** Each default path is now written once in `cli.py`.
+Measured by collecting `ast.Constant` strings, not by substring -- the first version of the guard counted
+`source.count(literal)` and went red on this section's own comments about `reproduction/benchmark`, which is
+a gate failing on prose. Replay of both revisions:
+
+| literal | HEAD (pre-fix) | this revision |
+|---|---|---|
+| `benchmarks/ds-agent-benchmark/catalog.json` | 6 | 1 |
+| `benchmarks/ds-agent-benchmark/datasets` | 5 | 1 |
+| `benchmarks/ds-agent-benchmark/results` | 3 | 1 |
+| `benchmarks/v2/catalog.json` | 3 | 1 |
+| `benchmarks/v2/datasets` | 3 | 1 |
+| `reproduction/v2` | 3 | 1 |
+| `reproduction/benchmark` | 3 | 1 |
+
+**Red first.** `tests/evals/test_reproduce_path_resolution.py`, 16 test functions / 25 collected cases:
+**11 failed, 13 passed** on the pre-fix tree. The three behaviour cases failed with the dispatch tuples
+quoted above; the structural guards failed at 6/5/3/3/3/3/3 owners and three no-op conditionals. The
+negative control for the detector is a case of its own -- it fires on `a.foo if a.bar != "z" or q else a.foo`
+and stays silent on `Path("reproduction/v2") if "v2" in target else x`, so the guard is keyed on the defect's
+shape and not on this file's contents.
+
+**Which copy the console script runs.** `dsa` is `data_science_agent.cli:main`, and with that import first,
+`dsa_evaluation.cli` resolves to `src/data_science_agent/_vendor/dsa_evaluation/cli.py`; a bare import
+resolves to the workspace source. Which one a test process gets is environment-dependent, so no case asserts
+a path. `test_the_two_cli_copies_are_identical` pins the premise instead -- byte equality of the two -- which
+is red between the source edit and `sync_vendor --file`, and green afterwards; `sync_vendor --check` holds it
+in CI. Source mirrored with `--file packages/evaluation/src/dsa_evaluation/cli.py`; the only drift left in the
+working tree is `dsa_evaluation/external_validation.py`, which is another session's uncommitted file and was
+not touched.
+
+**A false red this section nearly misattributed.** Two §123 contract cases went red the first time they ran
+next to the new file. `run_dsa_in` spawns `uv run dsa` with `cwd=tmp_path`, and launching pytest as
+`.venv/bin/python -m pytest` leaves `VIRTUAL_ENV` unset, so `uv run` has no project to find and dies with
+`Failed to spawn: 'dsa'` before Python starts. Re-run under `uv run --frozen python -m pytest`: **42 passed**
+for the two files together. The instrument was the problem, not the code -- but only after re-running it, not
+after reasoning about it.
+
+**Gates.** Each cell names its command; the working tree carries another session's two uncommitted
+`dsa_evaluation` files, so local figures are labelled as such and CI's own numbers supersede them.
+
+| gate | result | command |
+|---|---|---|
+| lint | 0 findings | `uv run --frozen ruff check packages apps/api tests src apps/jupyter scripts` |
+| format | 0 / **255** files | `uv run --frozen ruff format --check <same six roots>` |
+| types | 0 / **121** files | `uv run --frozen mypy packages apps/api src apps/jupyter --ignore-missing-imports` |
+| ratchet | OK, no ceiling moved | `uv run --frozen python scripts/audit_facts.py --check` |
+| orphan reads | **14** keys, each declared with its source | `uv run --frozen python scripts/find_orphan_reads.py --check` |
+| public claims | **0** issues, 50 scanned / 54 skipped | `uv run --frozen python scripts/check_public_claims.py --require-released-tags` |
+| docs | exit 0 | `uv run --frozen mkdocs build --strict` |
+| suite + coverage (working tree) | exit 0, **83.17%** (`fail_under = 79`) | `uv run --frozen python -m pytest -q --cov` |
+| suite case count (working tree, `addopts` cleared) | **787 passed**, 1 warning, 156 s | `uv run --frozen python -m pytest -o addopts="" -q` |
+
+`debt.testFunctions` **731 → 747** (+16, exactly the functions this section adds); `debt.exceptHandlers`
+**185** and `debt.suppressionDirectives` **42** both unchanged and still at ceiling -- no handler, marker or
+directive was added, and nothing was excluded. `capabilities.sourceFiles` **201**,
+`capabilities.navOrphanPages` still empty, `debt.auditApparatusLines` **1128** untouched (the prompt document
+did not grow), `debt.ledgerLines` **7401** before this section and ungated by design.
+
+**§131 erratum, appended here rather than editing that section.** Its "What remains open" paragraph still
+lists D-L4-12 as open and calls it behaviour-preserving. It closed in this section, and the closing changed
+three of the ten dispatch readings above. The other three items in that list -- **D-L4-13** (announcement copy
+frozen at v4.2.10; a release action, so the producer's), **D-L4-14** (CI proves Node 22 while
+`docker/Dockerfile.web` ships `node:20-alpine`; needs a docker build this machine cannot run, the daemon being
+absent) and the α re-freeze (needs a version bump) -- remain exactly as priced there, and the `braces` npm
+exemption still expires 2026-11-07.

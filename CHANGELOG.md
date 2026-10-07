@@ -340,6 +340,18 @@ shadowing + missing greenlet concurrency).
   markdown, so declaring it would have recreated the dead-prefix defect §113 removed, and a test now
   asserts that stays true.
 
+- `dsa --reproduce` discarded the flags it documents. Its path resolution opened with two conditional
+  expressions whose two branches were the same expression (`catalog = args.catalog if <cond> else
+  args.catalog`), so they decided nothing, and the target chain below them re-assigned `catalog` and
+  `datasets` unconditionally: `dsa --reproduce v2 --catalog mine.json` ran the bundled v2 catalog and
+  never mentioned the reader's file. The spelled subcommand already honoured the same flags, which is
+  what the dead ternary was reaching for. Explicit `--catalog`, `--datasets` and `--out` now override
+  their own slot in both spellings, the target alone selects the v2 family, and each default path is
+  written once instead of 6/5/3 times (`AUDIT_LEDGER.md` §132, closing D-L4-12). One more no-op of the
+  same class, `t if isinstance(t, dict) else t` in `dsa mcp`, was deleted by the same guard. Bare
+  `dsa reproduce` still defaults to v2 while bare `dsa --reproduce` still means the `benchmark` target;
+  that asymmetry is documented rather than changed.
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch

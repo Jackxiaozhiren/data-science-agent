@@ -11,11 +11,21 @@ Developer Run → Archive → Fresh Environment → Fresh Clone → Fresh Instal
 Commands:
 
 ```bash
-dsa reproduce                                     # full benchmark, fresh twice, compared
-uv run dsa --reproduce v2 --out reproduction/v2    # the spelling that takes arguments
+dsa reproduce                                      # the subcommand spelling (defaults to the v2 family)
+uv run dsa --reproduce v2 --out reproduction/v2    # the flag spelling, same arguments (§123)
 ```
 
 Output: `reproduction/{manifest.json, environment.json, results.json, comparison.json, logs/}`.
+
+Both spellings resolve paths the same way (§132): the target picks the family — a target containing
+`v2` means `benchmarks/v2/catalog.json` and `benchmarks/v2/datasets` written to `reproduction/v2`,
+anything else means the bundled ds-agent-benchmark catalog written to `reproduction/benchmark` — and
+`--catalog`, `--datasets` and `--out` each override their own slot. Until §132 the flag spelling
+silently discarded an explicit `--catalog` or `--datasets`: its resolution opened with two conditional
+expressions whose branches were the same expression, so they decided nothing, and the target chain
+underneath re-assigned both paths unconditionally (D-L4-12, `AUDIT_LEDGER.md` §132). The subcommand
+spelling already honoured them. One asymmetry is deliberate and unchanged: bare `dsa reproduce`
+defaults to `--benchmark v2`, while bare `dsa --reproduce` defaults to the `benchmark` target.
 
 `dsa reproduce` takes `--benchmark v2|ds-agent-benchmark`, `--catalog`, `--datasets` and `--out`. It
 does not take `--json`: the reproduction run prints text and writes its comparison to
