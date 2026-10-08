@@ -23,7 +23,7 @@ npm --prefix apps/web audit --json > /tmp/npm-audit-web.json
 uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
 node apps/web/scripts/regression.mjs             # boots `next start`, tours every static route
-uv run python scripts/generate_sbom.py && test -f release/sbom.json   # §47 SBOM
+uv run python scripts/generate_sbom.py --check   # §47 SBOM: compares, writes nothing
 docker compose config
 uv run python -m mkdocs build --strict
 ```

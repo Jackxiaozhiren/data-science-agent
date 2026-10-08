@@ -7854,3 +7854,47 @@ release '4.4.0' match this revision`, `facts ratchet: OK` with `debt.testFunctio
 only reason the ceiling survived a refactor of a file that had four of them), `ruff check` clean, `mypy` 0 /
 121 files, claims 0 issues at **47 scanned / 54 skipped**, orphan reads 14, npm lock consistency, coverage
 **83.17%**, web regression **24/24**, `mkdocs --strict` 0.
+
+## 140. §139 left `main` red, and the number in this ledger that was read from an earlier grep
+
+**What happened.** Run 37763153129 on `20e0553` concluded **failure**: step 20
+(`uv run pytest -q --cov --cov-report=term-missing`) was `failure` and steps 21-31 -- including §139's own
+`generate_sbom.py --check` -- were `skipped` behind it. `main` was red from that run until the fix pushed
+below lands its own green.
+
+**The defect was real and it was mine: half a change.** §139 edited a gate line in `.github/workflows/ci.yml`
+and never propagated it to the two contributor guides that quote the gate list.
+`tests/test_ci_gate_integrity.py::test_contributing_guides_mirror_the_ci_gates` compares them token by token
+and said so, in both places, in words:
+
+```
+CONTRIBUTING.md: sbom differs from ci.yml -- missing ['--check'], extra ['&&', '-f', 'release/sbom.json', 'test']
+docs/contributing.md: sbom differs from ci.yml -- missing ['--check'], extra ['&&', '-f', 'release/sbom.json', 'test']
+```
+
+So §120/§121's pinning did exactly what it was built to do -- a gate changed in one vantage is a discrepancy,
+and a discrepancy is a finding -- and it caught the first incomplete edit I have made to that surface.
+
+**Why the ledger said the battery was green when it was not.** §139's Gates paragraph asserts "17 gates,
+1 failed", naming only `sync_vendor`. The runner had printed **2 failed** -- `sync_vendor --check` and
+`uv run pytest -q --cov` -- in the summary I had fetched minutes earlier. I wrote the number off a grep I had
+already run for the §137 battery, where the count genuinely was 1, instead of off the §139 output in front of
+me. The stale value was in my head, not in the tool: the same command, run again, printed the truth. This is
+§117.3's rule about both sides of a delta coming from one vantage, applied to prose about a run rather than to
+a number in a table, and it is the second time this session a claim about *my own* just-written evidence was
+wrong in a way only re-reading the artifact could catch (the first was §132's `reproduction/v2` premise, which
+at least got caught before it was written down; this one was not).
+
+**The fix.** `CONTRIBUTING.md:26` and `docs/contributing.md:37` now carry the `--check` invocation, and both
+are annotated so a reader who arrives at the line with §139's question -- "why does the gate write nothing?"
+-- gets the answer where the command is.
+
+**Verification before pushing this time, not after.** The full suite was run as CI runs it and came back
+**806 passed**, exit 0, coverage **83.17%** (`uv run --frozen python -m pytest -q --cov`);
+`test_ci_gate_integrity.py` + `test_command_surface.py` **19 passed**; `mkdocs build --strict` 0; claims 0
+issues at 47/54; `audit_facts --check` OK. The remaining local red is `sync_vendor --check` on
+`dsa_evaluation/external_validation.py`, another session's uncommitted file, which is clean at HEAD.
+
+**What §139 still has to prove.** Its CI evidence does not exist yet: the `--check` step has never executed,
+because the only run that contained it died at the step in front of it. The next run has to show step 21
+`success` with `SBOM CHECK OK: 192 components …` in its log, and this section is where that gets recorded.
