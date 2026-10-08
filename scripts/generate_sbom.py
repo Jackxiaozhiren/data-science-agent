@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -68,7 +69,83 @@ def parse_uv_lock() -> list[dict[str, str]]:
     return packages
 
 
-def main() -> None:
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Generate or verify the release SBOM (§47)")
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="write both SBOM files into DIR instead of release/ (keeps a check run off the tracked copy)",
+    )
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="verify release/sbom.json still matches the dependency set, and write nothing",
+    )
+    args = ap.parse_args()
+    sbom, sbom_simple = build_sboms()
+
+    if args.check:
+        return _verify(sbom_simple)
+
+    out_dir = args.out or OUT.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    simple_path = out_dir / "sbom.json"
+    simple_path.write_text(json.dumps(sbom_simple, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Also write full cyclonedx
+    (out_dir / "sbom.cyclonedx.json").write_text(
+        json.dumps(sbom, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    print(f"SBOM: {len(sbom_simple['components'])} components → {simple_path} (plus cyclonedx)")
+    return 0
+
+
+#: The fields a check compares. `generated` is a wall-clock stamp and `license` is a lookup against
+#: PyPI that improves between runs, so neither is a claim about what this revision depends on;
+#: (package, version) is, and that is the claim a published SBOM makes.
+def _pairs(sbom: dict) -> set[tuple[str, str]]:
+    return {(c["package"], c["version"]) for c in sbom["components"]}
+
+
+def _verify(sbom_simple: dict) -> int:
+    committed_path = ROOT / "release" / "sbom.json"
+    if not committed_path.is_file():
+        print(f"SBOM CHECK FAIL: {committed_path} does not exist", file=sys.stderr)
+        return 1
+    committed = json.loads(committed_path.read_text(encoding="utf-8"))
+    derived, on_disk = _pairs(sbom_simple), _pairs(committed)
+    missing = sorted(f"{p}@{v}" for p, v in derived - on_disk)
+    stale = sorted(f"{p}@{v}" for p, v in on_disk - derived)
+    if missing or stale:
+        print(
+            f"SBOM CHECK FAIL: {len(derived)} components derived from this revision, "
+            f"{len(on_disk)} on disk",
+            file=sys.stderr,
+        )
+        if missing:
+            print(f"  not in the committed SBOM: {', '.join(missing)}", file=sys.stderr)
+        if stale:
+            print(
+                f"  in the committed SBOM but not in this revision: {', '.join(stale)}",
+                file=sys.stderr,
+            )
+        return 1
+    if committed.get("version") != sbom_simple.get("version"):
+        print(
+            f"SBOM CHECK FAIL: committed SBOM declares release {committed.get('version')!r}, "
+            f"this revision declares {sbom_simple.get('version')!r}",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"SBOM CHECK OK: {len(derived)} components and release "
+        f"{sbom_simple.get('version')!r} match this revision (license fields and the generated stamp "
+        "are not compared)"
+    )
+    return 0
+
+
+def build_sboms() -> tuple[dict, dict]:
     # collect workspace packages
     workspace_pkgs: list[dict[str, str]] = []
     # root version
@@ -181,14 +258,8 @@ def main() -> None:
             for c in sbom["components"]
         ],
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(sbom_simple, indent=2, ensure_ascii=False), encoding="utf-8")
-    # Also write full cyclonedx
-    (ROOT / "release" / "sbom.cyclonedx.json").write_text(
-        json.dumps(sbom, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    print(f"SBOM: {len(sbom_simple['components'])} components → {OUT} (plus cyclonedx)")
+    return sbom, sbom_simple
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

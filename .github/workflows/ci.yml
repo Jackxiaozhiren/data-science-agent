@@ -106,7 +106,7 @@ jobs:
       - run: uv run ruff format --check packages apps/api tests src apps/jupyter scripts
       - run: uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
       - run: uv run pytest -q --cov --cov-report=term-missing
-      - run: uv run python scripts/generate_sbom.py && test -f release/sbom.json  # §47 SBOM
+      - run: uv run python scripts/generate_sbom.py --check  # §47 SBOM, §139: verify without rewriting the committed copy
       - run: set -o pipefail; uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets 2>&1 | tail -n 20
       - name: Build wheel and sdist
         shell: bash

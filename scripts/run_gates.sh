@@ -35,7 +35,7 @@ GATES=(
   "npm --prefix apps/web run build"
   "node apps/web/scripts/regression.mjs"
   "uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json"
-  "uv run python scripts/generate_sbom.py && test -f release/sbom.json"
+  "uv run python scripts/generate_sbom.py --check"
   "docker compose config"
   "uv run python -m mkdocs build --strict"
 )

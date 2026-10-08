@@ -390,6 +390,20 @@ shadowing + missing greenlet concurrency).
   asking it (`AUDIT_LEDGER.md` §137). `Dockerfile.api` was checked in the same pass and already agreed
   (`python:3.12-slim` against CI's `3.12`).
 
+- The SBOM step checked that a file existed while overwriting it. `ci.yml` ran
+  `generate_sbom.py && test -f release/sbom.json`, and the generator's only output path was the two tracked
+  `release/sbom*.json` artifacts -- so running the documented gate runner rewrote 457 lines of committed
+  supply-chain output (it did, this session), and the assertion never compared the SBOM to anything. A
+  dependency could change and the committed SBOM could keep naming the old set with the step still exiting 0.
+  The generator now separates derive from deliver: `--out DIR` writes elsewhere, `--check` compares
+  `(package, version)` plus the release version against the committed copy and writes nothing, and both
+  `ci.yml` and `scripts/run_gates.sh` use `--check` (a guard requires every invocation in either file to
+  carry it). `generated` and `license` are deliberately not compared -- one is a wall clock, the other a PyPI
+  lookup that improves between runs, and the drift measured here was 57 license fields with the 192-component
+  set unchanged -- and that omission is pinned by a test so it cannot be "fixed" into a gate that gets muted.
+  The drifted copy was restored to HEAD byte-for-byte rather than committed, since SBOM refreshes ride release
+  commits (`AUDIT_LEDGER.md` §139).
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch

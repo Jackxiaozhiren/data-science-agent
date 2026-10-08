@@ -7764,3 +7764,93 @@ section touched is vendored). Everything else green: `facts ratchet: OK`, `ruff 
 `mypy` 0 / 121 files, `check_public_claims` 0 issues at **47 scanned / 54 skipped**, `find_orphan_reads` 14
 keys, `check_npm_workspace_lock` matching, `mkdocs build --strict` 0, coverage **83.17%**, and the web
 regression suite **24/24**.
+
+## 138. Runner confirmation for §135, §136 and §137, with the docker evidence §137 turned on
+
+Three pushes, three completed runs, each read from the job's own log through
+`gh api repos/.../actions/jobs/<id>/logs` (`gh run view --log` still dies against
+`results-receiver.actions.githubusercontent.com` from this network; the API route works, and the
+revision-filtered `gh run list --commit <sha>` returned nothing while the SHA was in the list, so the
+listing is by `-L 25` filtered in code rather than by the flag).
+
+| commit | CI run | jobs | the lines that matter |
+|---|---|---|---|
+| `87696df` (§135) | 37737953119 `success` | `ci` + `web-regression` both `success` | announcement copy landed; 0 findings against it |
+| `21e5557` (§136) | 37738837688 `success` | `ci` 35 steps, `web-regression` 13, both `success` | `No stale claims detected -- 0 issues (scanned 47 file(s); 54 skipped as historical)` · `facts ratchet: OK` · `OK: vendored dsa_* is in sync` · `orphan reads: 14 key(s)` · coverage **83.11%** |
+| `6d4a483` (§137) | 37750601585 `success` | `ci` 35 steps, `web-regression` 13, both `success` | step 28 `docker build -f docker/Dockerfile.web` **success**, on `FROM docker.io/library/node:22-alpine@sha256:0a7108bf6c7b…`, with `✓ Compiled successfully in 9.1s` inside the builder stage · step 30 `docker compose config` success · steps 25-26 (the API image, unchanged) success |
+
+**§137's evidence is the runner building the image, which is the point of the section.** The two non-success
+steps across all three runs are `Verify v4.3.0 release candidate` (a conditional that has never been true in
+this run's history) and `Upload regression screenshots` (`if: failure()`), both predating this range.
+
+**A corroborating signal from outside this session.** Within minutes of §137 landing, Dependabot opened a
+`chore(deps): bump node from 22-alpine to …` PR for the `docker/` directory (branch commit `616be702`, whose
+own CI run 37750850640 is `success`). It no longer proposes 20-alpine → 22, because the file is no longer at
+20. Not evidence in itself -- it is the same change seen from the other side -- but it is what a dependency
+robot does when the pin sits on the supported line rather than behind it.
+
+**Open items after §138, and their new shape.** D-L4-12 (§132), D-L4-13 (§135 content, §136 gate) and
+D-L4-14 (§137) are closed. What remains is genuinely outside a push: the `publish.yml` step-20 fix of
+2026-09-11 is still unexercised because proving it needs a tag push, and the α re-freeze needs a version
+bump; both are the producer's, and §136's gate now speaks up within one push if the announcement copy goes
+missing again. The `braces` npm exemption still expires 2026-11-07 with the gate scheduled to say so.
+
+## 139. The SBOM step checked that a file existed, while rewriting it
+
+**How it surfaced.** By running the documented command. §128's lesson was "run `scripts/run_gates.sh`
+rather than a hand-picked subset of gates", so this session ran it, and `git status` came back showing
+`release/sbom.json` and `release/sbom.cyclonedx.json` modified -- **457 lines** across the two committed
+supply-chain artifacts, produced by the act of checking the repository, not by any change to it.
+
+**What the step actually was.** `ci.yml:109`: `uv run python scripts/generate_sbom.py && test -f release/sbom.json`.
+The generator had one output path -- the tracked files -- so "run the generator" and "overwrite the SBOM"
+were the same instruction, and the assertion attached to it asked only that the file exist afterwards. Two
+separate defects in one line:
+
+- a gate that mutates tracked output is a trap for whoever runs it locally (and the reflex fix, `git add -A`,
+  is exactly what this repository's rules forbid);
+- the gate never compared anything. The SBOM states which packages this release depends on; the step derived
+  that set from `uv.lock` and the workspace manifests and then wrote it over the previous answer. A dependency
+  could change and the committed SBOM could keep naming the old one, and the step that touches the SBOM on
+  every push would still exit 0.
+
+**Measured before deciding what to do with the drifted copy.** The regenerated component set is identical to
+the committed one -- 192 derived, 192 on disk, zero added, zero removed -- and the release version matches.
+What differed was 57 `license` fields (e.g. `asttokens` `Unknown` → `Apache 2.0`), which is the generator
+getting better PyPI metadata than it had on 2026-09-10, and the `generated` stamp. So the committed SBOM was
+not stale in the way that matters, and refreshing it is a release-commit act (`git log -- release/sbom.json`
+shows it has been refreshed at every release commit since 4.3.0, last at `8306904`), not something to slip in
+through a fix session. The two files were restored to HEAD's bytes -- written back from
+`git show HEAD:<path>` and re-read to confirm byte equality, which is how §139's own diff ends up empty for
+`release/` -- and the finding became the gate, not the artifact.
+
+**The change.** `scripts/generate_sbom.py` splits into `build_sboms()` and two consumers: `--out DIR` writes
+wherever it is told, and `--check` compares and writes nothing. `ci.yml:109` and the runner's gate string
+both move to `--check` (they are pinned to each other by `tests/test_command_surface.py`, which still passes,
+so no gate silently changed shape on one side only). `_verify` compares `(package, version)` pairs plus the
+release version, and deliberately ignores `generated` and `license` -- the first is a wall clock, the second a
+network lookup that improves between runs, and a gate that fires on those gets muted rather than read. That
+omission is a decision written down, not an oversight: `test_a_license_correction_alone_does_not_fail_the_check`
+pins it so the next person cannot "fix" the check by making it compare the volatile field and then be forced
+to quiet it.
+
+**Red-first, and what is falsified.** The check is a pure function over the committed text and the derived
+text, so five cases plant the states the old gate could not see: a component the revision dropped, a
+dependency missing from the committed file, the same package at a different version (a name-only comparison
+would wave that through), a release-version mismatch, and a missing committed file (which must fail rather
+than compare against nothing). Two run through the real entry point: `--check` exits 0 and leaves the tracked
+bytes identical, and `--out` reproduces the committed component set without touching it.
+`test_the_control_deriving_the_sbom_at_all_is_not_a_no_op` keeps the last of those honest -- over 100
+components, and `numpy`/`fastapi` among them -- because a generator that emitted an empty list would satisfy
+every comparison above. There is also a guard on the gate shape itself: every `generate_sbom.py` invocation
+in `ci.yml` or `scripts/run_gates.sh` must carry `--check`, which is the line that would otherwise rot back
+into the mutation.
+
+**Gates after the change**, from `scripts/run_gates.sh` (17 gates, and this time the tree came back clean):
+1 failed -- `sync_vendor --check`, naming `dsa_evaluation: 1 file(s) differ [external_validation.py]`,
+another session's uncommitted source, clean at HEAD. The rest green: `SBOM CHECK OK: 192 components and
+release '4.4.0' match this revision`, `facts ratchet: OK` with `debt.testFunctions` **755 → 766** and
+`exceptHandlers` **185** / `suppressionDirectives` **42** unmoved (the new code adds no `try`, which is the
+only reason the ceiling survived a refactor of a file that had four of them), `ruff check` clean, `mypy` 0 /
+121 files, claims 0 issues at **47 scanned / 54 skipped**, orphan reads 14, npm lock consistency, coverage
+**83.17%**, web regression **24/24**, `mkdocs --strict` 0.
