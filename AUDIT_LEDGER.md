@@ -7561,3 +7561,36 @@ the same vantage defect and reads 46 for the files a commit contains.
 `testFunctions` **747 → 749**, `exceptHandlers` **185** and `suppressionDirectives` **42** unmoved ·
 `find_orphan_reads --check` 14 keys · `check_public_claims --require-released-tags` 0 issues at 46/54 ·
 `mkdocs build --strict` 0 · `pytest -o addopts="" -q` all green (counts in the §133 runner confirmation).
+
+## 134. Runner confirmation for §132 and §133
+
+Both sections were pushed and each got its own completed run. Neither figure below is typed from memory:
+each is the line the runner printed, read out of the job log through
+`gh api repos/.../actions/jobs/<id>/logs` (the `gh run view --log` route died with an EOF against
+`results-receiver.actions.githubusercontent.com`, so the API was used instead -- a vantage note, not a
+substitution of evidence).
+
+| commit | CI run | jobs | what the runner said |
+|---|---|---|---|
+| `4c9a220` (§132) | 37588044276 `success` | `ci` 35 steps, `web-regression` 13 steps, each `success`; the only non-success steps were `Verify v4.3.0 release candidate` and `Upload regression screenshots`, both conditional skips that predate this section | `facts ratchet: OK` · `OK: vendored dsa_* is in sync` · `orphan reads: 14 key(s)` · `Required test coverage of 79.0% reached. Total coverage: 83.11%` |
+| `fd960f6` (§133) | 37727424396 `success` | same two jobs, same two conditional skips | `facts ratchet: OK` · `OK: vendored dsa_* is in sync` · `No stale claims detected -- 0 issues (scanned 46 file(s); 54 skipped as historical)` · `orphan reads: 14 key(s)` · coverage **83.11%** |
+
+**The two vantages now agree on the number §133 was about.** §132's run printed `scanned 46` while the
+working tree said 50 -- that mismatch is what §133 is. §133's run printed `scanned 46` and the same
+command here prints **46**, so the divergence is closed from both sides rather than reconciled in prose.
+
+**Which tests the runner actually ran.** `pyproject.toml` sets `testpaths = ["tests", "apps/api/tests"]`
+with no ignore path, and both new files are in `git ls-tree -r HEAD` (`tests/evals/test_reproduce_path_resolution.py`,
+`tests/test_claims_gate_scope_is_shipped_files.py`), so CI's `uv run python pytest -q --cov` collects them;
+their passing is what the `success` conclusion covers. The runner's log does not name them -- `-q --cov`
+collapses the progress output to one character per test -- so the local counts are the ones to read, with
+their vantage attached: **787 passed** before §133's two tests, **789 passed** after
+(`uv run --frozen python -m pytest -o addopts="" -q`), coverage 83.17% locally against 83.11% on
+`ubuntu-latest` at the same `fail_under = 79`, the gap being platform-gated branches rather than a
+difference in what ran.
+
+**Ceilings.** `debt.exceptHandlers` **185** and `debt.suppressionDirectives` **42** were already at their
+ceilings and neither moved across both sections -- no handler, no marker, no `noqa`, no exclusion added to
+reach green. The only new ceiling-adjacent readings are `debt.testFunctions` **731 → 747 → 749** (a floor
+key, so rising is the expected direction) and `capabilities.sourceFiles` **201** unchanged.
+`debt.auditApparatusLines` is still **1128**: the prompt document did not grow for either section.
