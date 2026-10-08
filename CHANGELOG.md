@@ -372,6 +372,15 @@ shadowing + missing greenlet concurrency).
   pushed -- that verification still needs a release (`AUDIT_LEDGER.md` §135, closing D-L4-13 on the
   repository side).
 
+- `scripts/check_public_claims.py` could not see the page that carries the claim it exists to catch.
+  `docs/announcements/` was exempted by directory, so `latest.md` -- the page naming the release readers
+  install -- was classified as a historical record, and the `CURRENCY_ASSERTIONS` table listed `README.md`
+  and `ROADMAP.md` but never it. The exemption is now by kind (`v*` dated copies and the incident README stay
+  exempt, `latest.md` is live: **47 scanned / 54 skipped**, up from 46/55, with no suppression added), and the
+  table grew an announcement entry keyed to the **newest release tag** rather than the declared version, so a
+  pending version bump cannot make a truthful copy look stale. Replayed over `a0ce1cb`'s `latest.md` the rule
+  fires: `cites '4.2.10' … but the newest release tag is '4.4.0'` (`AUDIT_LEDGER.md` §136).
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch

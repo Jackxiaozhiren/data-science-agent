@@ -53,20 +53,23 @@ NOISE_SUBSTRINGS = [
 # now fails if an entry here names a tree no SCAN_GLOBS pattern can reach, which is exactly how
 # `benchmarks/` and `research/` sat here while the checker never opened either.
 #
-# §130 applied that same reasoning to `docs/`, which was the list's biggest entry by reach: 47
-# markdown files under `docs/` matched SCAN_GLOBS and every one was classified as a historical record,
-# including `getting-started.md`, `api.md`, `security.md` and `security/VERIFY_RELEASE.md` -- the pages
-# a user follows to install, reproduce and verify a release today. Exempting the whole tree is the
-# lesser error only if the checker says so: "0 issues" described 19 files while SCAN_GLOBS advertised
-# 66. What is genuinely a dated record is now exempted by name -- the v4.3 evidence archive, the
-# generated release announcements, and the ADRs, each superseded-by-design rather than stale -- and
-# each of those three is asserted to still match a file the checker can reach. `docs/audit/` was the
-# tempting fourth exemption and is deliberately absent: it matches no markdown at all, so declaring it
-# would have recreated the dead-prefix defect §113 found. The widened net cost no suppression: 50
-# files scanned, 54 skipped, and all four rules still report zero findings.
+# §130 applied that same reasoning to `docs/`, which was the list's biggest entry by reach: every
+# markdown file under it matched SCAN_GLOBS and all were classified as historical records, including
+# `getting-started.md`, `api.md`, `security.md` and `security/VERIFY_RELEASE.md` -- the pages a user
+# follows to install, reproduce and verify a release today. Exempting the whole tree is the lesser
+# error only if the checker says so, and the counts it prints are the saying: `scan_scope()` reports
+# them, and §133 showed why no figure belongs in this comment either (a typed 50 turned out to include
+# four build artefacts the runner never sees).
+#
+# §136 split `docs/announcements/`, which had been exempted by directory. `v*.md` are the immutable
+# per-tag copies, superseded by design. `README.md` is the incident record whose whole purpose is to
+# name superseded releases. `latest.md` is neither: it is current-tense product prose telling readers
+# which release to install, and it sat naming v4.2.10 across five published releases without any tool
+# noticing, because the one rule built for exactly that drift class could not see it.
 HISTORICAL_PREFIXES = [
     "docs/v4_3/",
-    "docs/announcements/",
+    "docs/announcements/v",
+    "docs/announcements/README.md",
     "docs/ADR/",
     "research/",
     "plugins/",
@@ -148,22 +151,45 @@ def current_version(root: Path = ROOT) -> str:
     return match.group(1) if match else ""
 
 
-# file, pattern with a `version` group, the claim it makes, and whether answering it needs the
-# tag set (an "already released?" question does; "is this the current one?" does not).
+#: `file · pattern with a `version` group · the claim it makes · whether answering it needs the tag
+#: set · the reference the cited version is measured against. `current` is the declared package
+#: version; `newest` is the newest release tag in refs, which is what a *published* surface must
+#: track -- the declared version outruns the last release between a bump and its publish, so keying
+#: an announcement to `current` would call a truthful copy stale exactly when a release is pending.
 CURRENCY_ASSERTIONS = [
     (
         "README.md",
         re.compile(r"\[\*\*v(?P<version>\d+\.\d+\.\d+)\*\*\]"),
         "advertised as the current release",
         False,
+        "current",
     ),
     (
         "ROADMAP.md",
         re.compile(r"next (?:minor |major )?release through \[v(?P<version>\d+\.\d+\.\d+)"),
         "named as the next release",
         True,
+        "current",
+    ),
+    (
+        "docs/announcements/latest.md",
+        re.compile(r"^# Data Science Agent v(?P<version>\d+\.\d+\.\d+)$"),
+        "the copy generated for the newest published release",
+        True,
+        "newest",
     ),
 ]
+
+
+def _newest_release(released: set[str]) -> str:
+    """Highest plain semver among the refs, or "" when none is comparable."""
+    candidates: list[tuple[int, int, int]] = []
+    for version in released:
+        parts = version.split(".")
+        if len(parts) != 3 or not all(part.isdigit() for part in parts):
+            continue
+        candidates.append((int(parts[0]), int(parts[1]), int(parts[2])))
+    return ".".join(str(n) for n in max(candidates)) if candidates else ""
 
 
 def currency_degradations(root: Path = ROOT) -> list[str]:
@@ -172,7 +198,9 @@ def currency_degradations(root: Path = ROOT) -> list[str]:
         return []
     if not released_versions(root):
         skipped = [
-            f"{rel} ({claim})" for rel, _p, claim, needs_tags in CURRENCY_ASSERTIONS if needs_tags
+            f"{rel} ({claim})"
+            for rel, _p, claim, needs_tags, _reference in CURRENCY_ASSERTIONS
+            if needs_tags
         ]
         return [f"no tags in this checkout: cannot test {', '.join(skipped)}"]
     return []
@@ -203,8 +231,11 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
         # With no current version there is nothing to compare against at all: report that rather
         # than returning an empty list, which a caller cannot tell apart from "found nothing".
         return [f"currency check disabled: no current version resolved under {root}"]
-    for rel_path, pattern, claim, needs_tags in CURRENCY_ASSERTIONS:
+    for rel_path, pattern, claim, needs_tags, reference in CURRENCY_ASSERTIONS:
         if needs_tags and not released:
+            continue
+        expected = _newest_release(released) if reference == "newest" else current
+        if not expected:
             continue
         path = root / rel_path
         if not path.is_file():
@@ -212,7 +243,13 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for match in pattern.finditer(line):
                 version = match.group("version")
-                if version == current:
+                if version == expected:
+                    continue
+                if reference == "newest":
+                    issues.append(
+                        f"{rel_path}:{lineno} cites {version!r}, {claim}, but the newest release "
+                        f"tag is {expected!r} (declared {current})"
+                    )
                     continue
                 if needs_tags:
                     if version not in released:

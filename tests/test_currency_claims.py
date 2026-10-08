@@ -237,3 +237,97 @@ def test_the_real_repository_carries_a_release_line() -> None:
     gate = getattr(module, "require_released_tags", None)
     assert gate is not None, "the requirement helper is missing"
     assert gate() is None, "this checkout would fail its own CI flag"
+
+
+# --- §136: the announcement copy is a currency surface ---------------------------------------
+#
+# `docs/announcements/` was exempted from the checker by directory, which put `latest.md` -- the page
+# that tells readers which release to install -- outside the one rule built for stale-release claims.
+# It named v4.2.10 across five published releases and nothing said anything. These cases run the whole
+# surface off fixtures, because the shipped tree can only ever show the passing side.
+
+
+def _announcement(version: str) -> str:
+    return (
+        f"# Data Science Agent v{version}\n\n"
+        "> Released 2026-09-11 - Evidence-grounded autonomous data science.\n"
+    )
+
+
+def test_an_announcement_naming_an_older_release_is_flagged(tmp_path: Path) -> None:
+    """The D-L4-13 state: latest.md said 4.2.10 while 4.4.0 was published."""
+    root = _scratch(
+        tmp_path,
+        tags=["v4.2.10", "v4.3.0", "v4.4.0"],
+        current="4.4.0",
+        files={"docs/announcements/latest.md": _announcement("4.2.10")},
+    )
+    found = _issues(root)
+    assert any("latest.md" in issue for issue in found), found
+    assert any("4.2.10" in issue and "4.4.0" in issue for issue in found), found
+
+
+def test_an_announcement_naming_the_newest_release_is_clean(tmp_path: Path) -> None:
+    root = _scratch(
+        tmp_path,
+        tags=["v4.2.10", "v4.3.0", "v4.4.0"],
+        current="4.4.0",
+        files={"docs/announcements/latest.md": _announcement("4.4.0")},
+    )
+    assert _issues(root) == []
+
+
+def test_the_announcement_tracks_the_newest_release_not_the_declared_version(
+    tmp_path: Path,
+) -> None:
+    """Why the reference is `newest`, which is what separates this rule from the README badge's.
+
+    Between a version bump and its publish, `__version__` says 4.5.0 while the newest release is still
+    4.4.0. Keying the copy to the declared version would call a truthful announcement stale at exactly
+    the moment a release is pending, and a gate that fires on honest content gets quieted rather than
+    read -- so the pending bump must stay clean here.
+    """
+    root = _scratch(
+        tmp_path,
+        tags=["v4.3.0", "v4.4.0"],
+        current="4.5.0",
+        files={"docs/announcements/latest.md": _announcement("4.4.0")},
+    )
+    assert _issues(root) == [], "a pending version bump made a truthful copy look stale"
+
+
+def test_the_newest_release_helper_orders_numerically_and_skips_suffixes(tmp_path: Path) -> None:
+    """A lexical max picks 4.9.0 over 4.10.0, and an rc ref is not a release line."""
+    module = _load(_scratch(tmp_path, tags=["v4.4.0"], current="4.4.0", files={}))
+    assert module._newest_release({"4.9.0", "4.10.0"}) == "4.10.0"
+    assert module._newest_release({"4.4.0", "4.4.0-rc1"}) == "4.4.0"
+    assert module._newest_release({"4.4.0", "nightly"}) == "4.4.0"
+    assert module._newest_release(set()) == ""
+
+
+def test_the_announcement_rule_reports_itself_undecidable_without_refs(tmp_path: Path) -> None:
+    """No refs is not a pass: the rule names what it could not answer, and the CI flag refuses it."""
+    root = _scratch(
+        tmp_path,
+        tags=[],
+        current="4.4.0",
+        files={"docs/announcements/latest.md": _announcement("4.4.0")},
+    )
+    degraded = _degradations(root)
+    assert any("docs/announcements/latest.md" in line for line in degraded), degraded
+    gate = _load(root).require_released_tags(root)
+    assert gate is not None and "docs/announcements/latest.md" in gate, gate
+
+
+def test_the_announcement_copy_is_no_longer_skipped_as_historical() -> None:
+    """The exemption that hid it: a directory prefix, applied to a current-tense page."""
+    module = _load(Path.cwd())
+    scanned, skipped = module.scan_scope(Path.cwd())
+    names = {str(p.relative_to(Path.cwd())) for p in scanned}
+    skipped_names = {str(p.relative_to(Path.cwd())) for p in skipped}
+
+    assert "docs/announcements/latest.md" in names, sorted(skipped_names)
+    assert "docs/announcements/latest.md" not in skipped_names
+    # The dated copies stay exempt, and the rule must still reach them or it is §113's dead prefix.
+    assert "docs/announcements/v4.4.0.md" in skipped_names
+    assert "docs/announcements/v" in module.HISTORICAL_PREFIXES

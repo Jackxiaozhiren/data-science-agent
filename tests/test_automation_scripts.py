@@ -370,8 +370,16 @@ LIVE_DOCS_PAGES = (
     "docs/security.md",
     "docs/security/VERIFY_RELEASE.md",
     "docs/tools.md",
+    # §136: the announcement copy tells readers which release to install, so it is a live surface,
+    # not a record -- five published releases went by with it naming v4.2.10 and nothing saw it.
+    "docs/announcements/latest.md",
 )
-DATED_DOCS_RECORDS = ("docs/v4_3/", "docs/announcements/", "docs/ADR/")
+DATED_DOCS_RECORDS = (
+    "docs/v4_3/",
+    "docs/announcements/v",
+    "docs/announcements/README.md",
+    "docs/ADR/",
+)
 
 
 def _scanned_names() -> tuple[set[str], set[str]]:
@@ -398,7 +406,7 @@ def test_the_current_docs_pages_are_inside_the_surface_the_checker_reads() -> No
 
 
 def test_only_dated_docs_records_are_exempted_and_each_still_matches_something() -> None:
-    """The three exemptions are dated records; and a prefix with no reachable file is §113's defect.
+    """Each exemption is a dated record; and a prefix with no reachable file is §113's defect.
 
     `docs/audit/` was the tempting fourth -- it is not release prose. Measured, `SCAN_GLOBS` matches
     zero `.md` under it, so declaring it would have been exactly the dead exemption the reachability

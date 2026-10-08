@@ -7643,3 +7643,69 @@ exempted from the claims checker by directory prefix, so `latest.md` -- a curren
 release readers are told to install -- is invisible to the one tool whose §16 remit is exactly currency
 claims. Five releases of drift passed it without a signal. §136 narrows that exemption and gives the file a
 rule that can fail.
+
+## 136. The currency gate regains the page it could not see, and the rule that keys it to a release
+
+**The half of D-L4-13 that was a gate problem.** §135 wrote the missing copy; this section makes sure a
+missing copy cannot hide for five releases again. Two defects, both in `scripts/check_public_claims.py`:
+`docs/announcements/` was exempted **by directory**, which classified `latest.md` -- the page that tells a
+reader which release to install -- as a historical record; and `CURRENCY_ASSERTIONS`, the table whose §16
+remit is precisely "a document asserts which release is current", named `README.md` and `ROADMAP.md` and
+never the announcement copy. A new currency surface has to be added to that table to be checked at all --
+the checker's own documented cost of having no false positives -- and nobody added this one.
+
+**Measured, not argued.** Replayed with the new rule over `git show a0ce1cb:docs/announcements/latest.md`
+(pinned to that revision deliberately: a committed check keyed to HEAD certifies nothing, since CI's HEAD
+is the change under test):
+
+```
+b) a0ce1cb title: # Data Science Agent v4.2.10
+b) rule over that copy: ["docs/announcements/latest.md:1 cites '4.2.10', the copy generated for the
+   newest published release, but the newest release tag is '4.4.0' (declared 4.4.0)"]
+c) old announcements prefixes: ['docs/announcements/']
+   latest.md skipped under the old list: True
+   new list: scanned 47 / skipped 54
+```
+
+So the rule fires on the state that actually shipped, and the old prefix really did skip the page. The
+committed falsifiers are fixtures, not replays: `test_an_announcement_naming_an_older_release_is_flagged`
+builds a scratch tree with refs `v4.2.10/v4.3.0/v4.4.0` and a `latest.md` naming 4.2.10, and
+`test_the_announcement_copy_is_no_longer_skipped_as_historical` requires the live `scan_scope()` to put
+`latest.md` on the scanned side while `v4.4.0.md` stays exempt.
+
+**The reference is the newest release, not the declared version -- and that choice needed its own case.**
+`README.md`'s badge is measured against `__version__`, because a badge claims *this is what you should use
+now*. An announcement copy claims something different: *this is the newest published release*. Between a
+version bump and its publish those diverge -- `__version__` says 4.5.0, the newest tag is still 4.4.0 -- and
+a rule keyed to the declared version would call a truthful announcement stale at exactly the moment a
+release is pending. Gates that fire on honest content get quieted rather than read, so
+`CURRENCY_ASSERTIONS` grew a fifth field (`current` / `newest`) and the announcement entry uses `newest`,
+whose pending-bump case is pinned by `test_the_announcement_tracks_the_newest_release_not_the_declared_version`.
+Answering "newest" needs refs, so the entry carries `needs_tags=True` and inherits the existing degradation
+path: with no tags, `currency_degradations()` names this file and `--require-released-tags` refuses the run,
+which is the §D-L1-05 shape -- a gate that prints a pass while its strongest assertion never ran.
+
+**`_newest_release()` is a semver max, not a string max.** `max({"4.9.0", "4.10.0"})` returns `4.9.0`, so
+the helper sorts numerically and drops refs that are not a plain three-part version; the case asserts
+`4.10.0` over `4.9.0`, `4.4.0` over `4.4.0-rc1`, `4.4.0` over a `nightly` ref, and `""` for an empty set (an
+empty result disables the rule through the degradation path rather than inventing a version).
+
+**What stayed exempt, and why.** `docs/announcements/README.md` is now exempted by name instead of by
+directory. It exists to record which releases went missing -- it cites v4.2.10 in the past tense on purpose.
+The alternative was rephrasing that sentence so the regex would not see it, which is dodging a gate, not
+reasoning with it. §113's liveness rule still applies: every prefix in the list must reach a file the
+checker can open, so `docs/announcements/v` is only allowed to sit there because it matches the two dated
+copies.
+
+**Gates.** `ruff check` 0 · `ruff format --check` 0 / 256 files · `mypy` 0 / 121 files ·
+`audit_facts --check` OK with `testFunctions` **749 → 755**, `exceptHandlers` **185** and
+`suppressionDirectives` **42** at ceiling and unmoved, `navOrphanPages` `[]` · `find_orphan_reads --check`
+14 keys · `check_public_claims --require-released-tags` 0 issues at **47 scanned / 54 skipped** (was
+46/55: `latest.md` moved from the exempt side to the scanned side, and the widened net again cost no
+suppression) · `mkdocs build --strict` 0 · `pytest -q --cov` 0 at **83.17%** · `pytest -o addopts="" -q`
+**795 passed**.
+
+**Not closed here, and what deferring it costs.** The `publish.yml` step-20 fix of 2026-09-11 is still
+unexercised: proving it takes a tag push, which is the producer's action. If it fails again, the next
+release's announcement copy will be missing again -- but within one push the gate says so out loud instead
+of after five releases.
