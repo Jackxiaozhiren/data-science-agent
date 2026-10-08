@@ -4,12 +4,15 @@
 someone's screen: nothing connected them to `pyproject.toml`, `.github/workflows/ci.yml` or
 `docker/Dockerfile.web`, which are the four places that actually decide which runtimes this project
 supports, tests, and ships. Reading them side by side is itself the finding recorded as D-L4-14 -- CI
-installs Node **22** while the web image is `node:20-alpine`, so the container ships a runtime the
-dashboard build has never been proven on. The doc now states all of it, and this file keeps the doc
-honest by re-deriving it from the same sources.
+installs Node **22** while the web image was `node:20-alpine`, so the container shipped a runtime the
+dashboard build had never been proven on. §124 could only make the page state that; §137 moves the rule
+from "disclose the divergence" to "the image must match what CI proves", which is the form target 5 asks
+for, and the image now matches. The doc still states every figure, and this file keeps it honest by
+re-deriving each one from the same sources.
 
 The rule is a pure function over four texts, so the falsification half is not theoretical: each
-mismatch is planted in a fixture and must be reported.
+mismatch is planted in a fixture and must be reported, including the node-base divergence the repository
+no longer contains.
 """
 
 from __future__ import annotations
@@ -75,11 +78,11 @@ def runtime_version_issues(*, doc: str, pyproject: str, ci: str, dockerfile: str
     if node_image is not None and f"`node:{node_image}-alpine`" not in doc:
         issues.append(f"{DOC}: never names the web image's Node ({node_image}-alpine)")
     if node_ci is not None and node_image is not None and node_ci != node_image:
-        if "has never been proven" not in doc:
-            issues.append(
-                f"{DOC}: CI tests Node {node_ci} but the image runs {node_image}; "
-                "the page must state that divergence"
-            )
+        issues.append(
+            f"docker/Dockerfile.web ships node:{node_image}-alpine while CI proves Node {node_ci}: "
+            "the container must run the runtime the dashboard build is tested on (§137 closes "
+            "D-L4-14; stating the divergence was the interim, not the fix)"
+        )
     return issues
 
 
@@ -138,12 +141,23 @@ def test_every_mismatch_is_reported_and_a_matching_page_is_not() -> None:
     assert any("CI runs 3.13" in i for i in untested_claim), untested_claim
 
     silent_image = runtime_version_issues(
-        doc=_read(DOC).replace("`node:20-alpine`", "an older Node image"),
+        doc=_read(DOC).replace("`node:22-alpine`", "an older Node image"),
         pyproject=_read("pyproject.toml"),
         ci=_read(".github/workflows/ci.yml"),
         dockerfile=_read("docker/Dockerfile.web"),
     )
-    assert any("20-alpine" in i for i in silent_image), silent_image
+    assert any("22-alpine" in i for i in silent_image), silent_image
+
+    # §137: the divergence itself, planted in the image text. The repository no longer contains it, so
+    # this is the only way the rule can be shown to fire -- and a guard whose triggering state exists
+    # only in history is exactly the kind §133 had to name for the claims checker.
+    drifted_image = runtime_version_issues(
+        doc=_read(DOC),
+        pyproject=_read("pyproject.toml"),
+        ci=_read(".github/workflows/ci.yml"),
+        dockerfile=_read("docker/Dockerfile.web").replace("node:22-alpine", "node:20-alpine"),
+    )
+    assert any("node:20-alpine while CI proves Node 22" in i for i in drifted_image), drifted_image
 
     # ... and the four probes still have to fire on an empty page, not just on edited ones.
     blank = runtime_version_issues(
@@ -152,4 +166,7 @@ def test_every_mismatch_is_reported_and_a_matching_page_is_not() -> None:
         ci=_read(".github/workflows/ci.yml"),
         dockerfile=_read("docker/Dockerfile.web"),
     )
-    assert len(blank) >= 4, blank
+    assert len(blank) == 3, blank
+    assert any("does not state the declared floor" in i for i in blank), blank
+    assert any("never names the Node CI" in i for i in blank), blank
+    assert any("never names the web image" in i for i in blank), blank

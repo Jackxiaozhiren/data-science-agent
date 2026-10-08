@@ -7,9 +7,12 @@ Three steps: install → run your first analysis → use the SDK, API, or dashbo
 - **Python ≥ 3.12** — the floor `pyproject.toml` declares (`requires-python = ">=3.12"`), and the only
   version CI runs (`python-version: "3.12"`). No older interpreter is tested anywhere.
 - **uv** — recommended for contributors and repository development
-- **Node 20 or newer** — only needed for the web dashboard. Note which one is proven: CI installs and
-  builds the dashboard on Node **22**, while `docker/Dockerfile.web` runs `node:20-alpine`. The
-  container therefore ships a runtime the dashboard build has never been proven on.
+- **Node 20 or newer** — only needed for the web dashboard. The version everything is aligned on is the
+  one CI proves: it installs and builds the dashboard on Node **22**, and `docker/Dockerfile.web` runs
+  `node:22-alpine` for both its builder and its runtime stage. That pairing is checked, not remembered —
+  `tests/test_runtime_version_claims.py` compares the image's base major against `ci.yml` and fails if they
+  diverge. (Until §137 the image shipped `node:20-alpine` while CI proved only 22, and the page's job was
+  to state the gap rather than close it.)
 
 ## 1. Install
 

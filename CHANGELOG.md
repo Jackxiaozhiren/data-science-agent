@@ -381,6 +381,15 @@ shadowing + missing greenlet concurrency).
   pending version bump cannot make a truthful copy look stale. Replayed over `a0ce1cb`'s `latest.md` the rule
   fires: `cites '4.2.10' … but the newest release tag is '4.4.0'` (`AUDIT_LEDGER.md` §136).
 
+- `docker/Dockerfile.web` shipped `node:20-alpine` while CI builds and tests the dashboard on Node **22**
+  (D-L4-14, filed at §124). Both stages now use `node:22-alpine`, and the guard that had been satisfied by
+  *documenting* the gap now forbids it: `tests/test_runtime_version_claims.py` derives the image's base major
+  from the Dockerfile and the proven major from `ci.yml` and fails when they differ, with the divergence
+  planted in a fixture because the repository no longer contains it. The proof was never a local docker build
+  -- `ci.yml:181` already runs `docker build -f docker/Dockerfile.web` on every push; what was missing was
+  asking it (`AUDIT_LEDGER.md` §137). `Dockerfile.api` was checked in the same pass and already agreed
+  (`python:3.12-slim` against CI's `3.12`).
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch

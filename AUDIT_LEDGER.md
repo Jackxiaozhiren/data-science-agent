@@ -7709,3 +7709,58 @@ suppression) · `mkdocs build --strict` 0 · `pytest -q --cov` 0 at **83.17%** �
 unexercised: proving it takes a tag push, which is the producer's action. If it fails again, the next
 release's announcement copy will be missing again -- but within one push the gate says so out loud instead
 of after five releases.
+
+## 137. D-L4-14 closed: the claim that needed "a docker build this machine cannot run" was looking in the wrong place
+
+**What §124 and §131 both recorded, and why both were wrong about it.** §124 filed D-L4-14 as
+CI proving Node 22 while `docker/Dockerfile.web` ships `node:20-alpine`; §131 left it open with the reason
+"the evidence is a docker build this machine cannot run (the daemon is absent)". The daemon *is* absent --
+`docker info` exits 1 against client 29.8.0, verified again while writing this -- but the proof was never
+the missing ingredient. `ci.yml:181` is `- run: docker build -f docker/Dockerfile.web -t dsa-web:ci .`,
+inside the `ci` job, and `ci.yml:140` builds the API image the same way, with `docker compose config` at
+:183. The repository already builds the web image on every push. What was missing was not a runner, it was
+the question: the finding had been written as a comparison between `ci.yml:27` and the Dockerfile, and the
+file that answers it had been executing the whole time. Attributing an open item to an unavailable tool is
+a decision, and it had been made once and then inherited by the next section -- my own, in §131.
+
+**The change.** `docker/Dockerfile.web:1` and `:13` move from `node:20-alpine` to `node:22-alpine`: the
+builder stage that runs `npm ci && npm run build` and the runtime stage that runs `next start`, which is
+the pair the finding named. `Dockerfile.api:1` was checked in the same pass and already agrees --
+`python:3.12-slim` against `ci.yml:75`'s `python-version: "3.12"` -- so no change there, and stating that
+is cheaper than leaving a reader to wonder whether the other image had the same defect.
+
+**The rule went from disclosure to prohibition.** §124's guard could only require the page to *say* that
+CI and the image disagreed:
+
+```python
+if node_ci is not None and node_image is not None and node_ci != node_image:
+    if "has never been proven" not in doc:          # was: disclose it and that's enough
+```
+
+Now the divergence itself is the issue, with the Dockerfile as one of the four derived texts. Red first,
+measured before the image was touched: `test_the_stated_runtimes_match_the_files_that_decide_them` and
+`test_every_mismatch_is_reported_and_a_matching_page_is_not` both failed on
+`docker/Dockerfile.web ships node:20-alpine while CI proves Node 22`, and the third case
+(`test_the_derivations_are_not_reading_nothing`) stayed green, which is the control that the two reds came
+from the rule and not from a dead probe.
+
+**And the new state needs its own falsification.** Once the image matches, the repository no longer
+contains the condition the guard exists to catch, so a case plants it: `drifted_image` rewrites the Dockerfile
+text back to `node:20-alpine` and requires the message. Without that case the guard's triggering state would
+live only in git history -- the §133 problem in a different file. Two more assertions came out of the same
+reasoning: `silent_image` had been patching the *old* literal, so after the flip it silently stopped
+selecting anything, and the blank-page case moved from `>= 4` issues to `== 3` with each kind named -- a
+falling count that keeps its slack would have masked that the fourth issue had simply become unreachable.
+
+**Docs.** `docs/getting-started.md`'s prerequisites now state the aligned version and point at the test
+that holds it, keeping the history in one parenthetical rather than deleting it. The `node:20-alpine`
+mentions in `CHANGELOG.md:278` and `AUDIT_LEDGER.md` are dated records and were left alone; the second clone
+under `data-science-agent/` has its own `docker/Dockerfile.web` and is not this repository's file.
+
+**Gates.** `scripts/run_gates.sh` -- the CI-derived runner, all 17 gates: **17 run, 1 failed**, the failure
+being `sync_vendor --check` on `dsa_evaluation: 1 file(s) differ [external_validation.py]`, which is another
+session's uncommitted source and is clean at HEAD (§132's export proved the same line, and nothing this
+section touched is vendored). Everything else green: `facts ratchet: OK`, `ruff check` "All checks passed!",
+`mypy` 0 / 121 files, `check_public_claims` 0 issues at **47 scanned / 54 skipped**, `find_orphan_reads` 14
+keys, `check_npm_workspace_lock` matching, `mkdocs build --strict` 0, coverage **83.17%**, and the web
+regression suite **24/24**.
