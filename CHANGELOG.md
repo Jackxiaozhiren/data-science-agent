@@ -361,6 +361,17 @@ shadowing + missing greenlet concurrency).
   path component, and a test requires the stronger invariant: every file the gate opens is a file `git`
   tracks (`AUDIT_LEDGER.md` §133). Local and CI both read 46 scanned / 54 skipped afterwards.
 
+- `docs/announcements/latest.md` told readers the latest release was v4.2.10 while v4.3.0-v4.4.0 had been
+  published (v4.4.0 on 2026-09-11, `immutable: true`). The copy had not been written because every `Publish`
+  run since then reached PyPI and then failed at *Attach distributions to GitHub Release safely* -- step 20 --
+  skipping *Generate release announcement* behind it (runs 34450634789, 34185742010, 33939186182). The
+  workflow's own `render()` was run against the published release (a read, not a publish) to write
+  `docs/announcements/v4.4.0.md` and `latest.md`; the pair is byte-equal, as the generator keeps it, and its
+  content comparison means a future run for the same tag will report "already up to date" rather than churn.
+  The workflow-side cause was already patched on 2026-09-11 and has never executed, since no tag has been
+  pushed -- that verification still needs a release (`AUDIT_LEDGER.md` §135, closing D-L4-13 on the
+  repository side).
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch

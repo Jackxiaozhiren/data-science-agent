@@ -49,6 +49,7 @@ nav:
       - Release Readiness v4.3: release-readiness-v4.3.md
       - Announcements index: announcements/README.md
       - Announcement copy: announcements/latest.md
+      - v4.4.0 announcement: announcements/v4.4.0.md
       - v4.2.10 announcement: announcements/v4.2.10.md
   - V4.3 record:
       - Early Adopter Guide: v4_3/EARLY_ADOPTER_GUIDE.md

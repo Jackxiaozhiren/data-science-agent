@@ -7594,3 +7594,52 @@ ceilings and neither moved across both sections -- no handler, no marker, no `no
 reach green. The only new ceiling-adjacent readings are `debt.testFunctions` **731 → 747 → 749** (a floor
 key, so rising is the expected direction) and `capabilities.sourceFiles` **201** unchanged.
 `debt.auditApparatusLines` is still **1128**: the prompt document did not grow for either section.
+
+## 135. D-L4-13 closed on the repository side, and the reason it had been called a release action
+
+**The recorded premise was wrong about who owns the second half.** §124 filed D-L4-13 as "the release
+announcement copy frozen at v4.2.10 while the shipped version is 4.4.0, five tags deep -- the producer
+pushes, so it is a release action". Measured now: tags `v4.3.0 … v4.4.0` all exist, and `gh release view
+v4.4.0` reports `publishedAt 2026-09-11T11:09:56Z`, `isDraft false`, `immutable true`. The release is
+published; only its *announcement copy* is missing, and that copy is ordinary repository content. Publishing
+is the producer's act; committing documentation the pipeline already had the data to write is not.
+
+**Why the copy stopped arriving.** `Publish` runs 34450634789 (v4.4.0), 34185742010 (v4.3.3), 33939186182
+(v4.3.2) all end `failure`, and the step map is the same for each: 1-19 `success` through
+*Publish to PyPI (Trusted Publishing)* and *Verify published version on PyPI*, then **20 `failure`**
+(*Attach distributions to GitHub Release safely*) and **21 `skipped`** (*Generate release announcement*).
+The runner's only output from step 20 is `release not found` then `##[error]Process completed with exit
+code 1`. So every release since 4.2.10 reached PyPI and lost its announcement to a step behind it, which is
+a dependency-shape defect in the workflow rather than a publishing failure -- the artefacts, the attestations
+and the PyPI state were all fine.
+
+**Already repaired, never exercised.** `publish.yml:151-159` carries a 2026-09-11 note: `gh api` prints the
+404 body to stdout, so a missing release looked non-empty and the old test skipped creation and died at
+upload "for v4.3.2-v4.4.0" -- the same three runs above. The gate now keys on `.tag_name`. No tag has been
+pushed since, so that fix has never run in the pipeline: **its correctness is unverified by construction**,
+and verifying it needs a release, which is the producer's action and was not taken. What can be said from
+the evidence is that the immutable branch (`publish.yml:173-177`) exits 0, so for a release that is already
+published the announcement step is reachable.
+
+**What this section does instead.** It produces the copy from the data that already exists, with the
+repository's own renderer rather than a paraphrase of it: `generate_release_announcement.render()` called on
+the `gh api …/releases/tags/v4.4.0` payload (a read), written to `docs/announcements/v4.4.0.md` and
+`docs/announcements/latest.md`. Both are 1,776 characters and byte-equal to each other, which is the shape
+the generator itself maintains -- `latest.md` and `docs/announcements/v4.2.10.md` were byte-identical before
+this section (`cmp` reported no difference), so the pair is the pipeline's convention, not an invention.
+Re-running `render()` reproduces the same text, and the workflow's `upsert` compares existing content before
+writing (`generate_release_announcement.py:103-107`), so a future run for the same tag prints "already up to
+date" instead of churning the file. `mkdocs.yml` gained the dated page beside the copy, so
+`capabilities.navOrphanPages` is still `[]`, and `docs/announcements/README.md` now states the cause in the
+past tense with the run ids attached.
+
+**Gates after the content change.** `audit_facts --check` OK · `mkdocs build --strict` 0 ·
+`check_public_claims --require-released-tags` 0 issues at **46 scanned / 55 skipped** (the 55th is the new
+dated copy) · `test_docs_nav_coverage.py`, `test_runtime_version_claims.py`, `test_automation_scripts.py`,
+`test_docs_strict_build_can_fail.py` **35 passed**.
+
+**Still open after this section, and it is a gate problem, not a content problem.** `docs/announcements/` is
+exempted from the claims checker by directory prefix, so `latest.md` -- a current-tense surface naming the
+release readers are told to install -- is invisible to the one tool whose §16 remit is exactly currency
+claims. Five releases of drift passed it without a signal. §136 narrows that exemption and gives the file a
+rule that can fail.
