@@ -352,6 +352,15 @@ shadowing + missing greenlet concurrency).
   `dsa reproduce` still defaults to v2 while bare `dsa --reproduce` still means the `benchmark` target;
   that asymmetry is documented rather than changed.
 
+- `scripts/check_public_claims.py` opened four files that no commit contains. Its own log said `scanned 46
+  file(s)` on the runner and `50` in a working tree where `next build` had run, the difference being four
+  `apps/web/.next/**/package.json` build artefacts matched by `apps/**/package.json`. They carry only
+  `{"type": "module"}` today, so no finding came from them, but the gate's denominator depended on whether a
+  build had happened on the machine reading it, and a generated manifest that ever carried a `version` would
+  move the verdict between two vantages of one commit. `.next/` is now in `NOISE_SUBSTRINGS`, matched as a
+  path component, and a test requires the stronger invariant: every file the gate opens is a file `git`
+  tracks (`AUDIT_LEDGER.md` §133). Local and CI both read 46 scanned / 54 skipped afterwards.
+
 ### Added (unreleased, non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch

@@ -7511,3 +7511,53 @@ frozen at v4.2.10; a release action, so the producer's), **D-L4-14** (CI proves 
 `docker/Dockerfile.web` ships `node:20-alpine`; needs a docker build this machine cannot run, the daemon being
 absent) and the α re-freeze (needs a version bump) -- remain exactly as priced there, and the `braces` npm
 exemption still expires 2026-11-07.
+
+## 133. The claims gate read four files that no commit contains
+
+**How it surfaced.** Not by inspecting the checker: by honouring the rule that a runner's own words beat
+my local re-run. §132's CI log (run 37588044276) printed `0 issues (scanned 46 file(s); 54 skipped as
+historical)`; the same command in this working tree printed **50**. Both numbers describe the same commit.
+
+**The four.** `apps/web/.next/package.json`, `apps/web/.next/build/package.json`,
+`apps/web/.next/dev/package.json`, `apps/web/.next/dev/build/package.json` -- Next.js build output,
+matched by `apps/**/package.json`. Measured, not inferred: `git ls-files` contains zero paths matching
+`.next/`, and the `ci` job runs the gate at `.github/workflows/ci.yml:85`, before the wheel-build and
+API-smoke steps and in a job that never builds the web app, so the runner's checkout cannot have them.
+What each contains: `{"type": "module"}` and nothing else, which is why the widened net still reported
+0 issues. So the concrete cost today was only a denominator that varied with whether someone had run
+`next build` on the machine reading the gate -- and the latent cost is that a generated manifest which
+ever carries a `version` would move the gate's *verdict* between two vantages of one commit.
+
+**Same class, third member.** §113 caught `HISTORICAL_PREFIXES` entries no glob could reach; §130 caught
+the opposite -- an entry so wide it swallowed the live surface. This is the third shape: an exclusion list
+whose reach is assumed. `NOISE_SUBSTRINGS` already named `node_modules`, `site`, `dist`, `.venv`,
+`.workspace`; the generated tree that was missing from it was the one this repository builds most often.
+The generalised invariant beats another hand-maintained marker: every file the gate opens must be a file
+`git` tracks. That holds from either vantage, because CI's surface *is* the tracked set.
+
+**Tests** (`tests/test_claims_gate_scope_is_shipped_files.py`, 2 functions, red first at 2 failed):
+- `test_the_gates_surface_is_a_subset_of_the_tracked_tree` -- reads the live tree, compares against
+  `git ls-files`. Falsified by replaying the guard's own logic over the pre-fix script (`git show HEAD:`
+  via a `git archive` export): the HEAD script reports `scanned=50` with exactly those four paths named
+  as untracked-in-surface, the fixed script reports `scanned=46` and none. My first red for this case came
+  from a typo (`out.splitlines()` on a `CompletedProcess`) rather than from the guard detecting anything --
+  which is why the replay, not the red, is the evidence here.
+- `test_a_generated_build_manifest_is_not_part_of_the_surface` -- a scratch tree carrying a real
+  `apps/web/package.json` beside `apps/web/.next/dev/package.json` with a version in it, requiring the
+  second to stay outside the surface. Deliberately a fixture: on a clean checkout the glob matches nothing,
+  so a premise asserted against this disk would pass here and go red on the runner, which is §103's trap
+  as §113's existing test already words it.
+
+**The fix** is `.next/` in `NOISE_SUBSTRINGS`, matched as a path component rather than a bare `.next` so a
+document named, say, `guide.next-steps.md` could never be exempted by accident. Nothing else narrowed:
+`docs/**`, `benchmarks/**/README.md` and the four root files are untouched, and the skipped-historical count
+stays 54. Local now prints **46 scanned / 54 skipped**, the same figure the runner prints.
+
+**Erratum on §132's table.** Its claims-gate row quotes the working-tree 50. The shipped surface is 46, and
+that row's conclusion -- 0 issues, no suppression added -- is unchanged. §130's "50 files scanned" carries
+the same vantage defect and reads 46 for the files a commit contains.
+
+**Gates.** `ruff check` 0 · `ruff format --check` 0 · `mypy` 0 / 121 files · `audit_facts --check` OK with
+`testFunctions` **747 → 749**, `exceptHandlers` **185** and `suppressionDirectives` **42** unmoved ·
+`find_orphan_reads --check` 14 keys · `check_public_claims --require-released-tags` 0 issues at 46/54 ·
+`mkdocs build --strict` 0 · `pytest -o addopts="" -q` all green (counts in the §133 runner confirmation).

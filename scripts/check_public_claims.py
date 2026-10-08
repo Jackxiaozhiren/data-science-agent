@@ -23,6 +23,10 @@ EXPECTED = {
 # Build/dependency trees that never carry a public claim. `.workspace` is the vendored DataSciBench
 # clone (with its own venv and MetaGPT checkout: 6,590 files under benchmarks/ alone, of which 16
 # are upstream READMEs), so it belongs with node_modules rather than with this repository's prose.
+# `.next/` joined in §133 for the reason the others should have been read: the gate counted 50 files
+# here and 46 in CI, the difference being four `apps/web/.next/**/package.json` build artefacts that
+# `apps/**/package.json` matches and `git ls-files` does not contain. A test now requires the whole
+# surface to be tracked, so a generated tree cannot re-enter it unnoticed.
 NOISE_SUBSTRINGS = [
     ".venv",
     "node_modules",
@@ -32,6 +36,7 @@ NOISE_SUBSTRINGS = [
     ".mypy_cache",
     ".ruff_cache",
     ".workspace",
+    ".next/",
 ]
 
 # Paths whose whole purpose is to quote superseded numbers: migration guides, release-integrity
