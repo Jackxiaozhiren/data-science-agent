@@ -1,0 +1,70 @@
+{
+    "version": "4.5.0",
+    "tag": "v4.5.0",
+    "commit": "PENDING-RELEASE-COMMIT",
+    "python": "3.12.14",
+    "node": "v24.15.0",
+    "docker": "Docker version 29.8.0, build 88096ef (client only: no daemon on the authoring machine)",
+    "package": "jack-data-science-agent 4.5.0",
+    "benchmark_version": "0.3.0",
+    "dataset_version": "v2 0.3.0 (30 datasets)",
+    "evaluator_version": "evaluator_v2 (10 dims)",
+    "environment": {
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "arch": "arm64",
+        "python": "3.12.14",
+        "node": "v24.15.0",
+        "docker": "Docker version 29.8.0, build 88096ef"
+    },
+    "timestamp": "2026-10-09T08:40:22+00:00",
+    "gates": {
+        "pytest": "815 passed, 83.24% coverage (working tree at the release commit); the one open finding while the tag is pending is version_consistency's tag-base check, which clears as soon as v4.5.0 exists",
+        "mypy": "0 issues, 121 files (packages apps/api src apps/jupyter)",
+        "ruff": "All checks passed + 258 files formatted",
+        "npm": "web build PASS; vscode compile PASS; advisory gate clean with 5 bounded exemptions (braces review_by 2026-11-07)",
+        "docker": "compose config valid; both images built by CI (`docker build -f docker/Dockerfile.web`, node:22-alpine@sha256:0a7108bf6c7b)",
+        "mkdocs_strict": "PASS",
+        "verify_release": "PENDING at tagging time (v4.4.0 recorded 17/17; the v4.5.0 run is post-publish)",
+        "internal_benchmark": "50/50 @ 1.0 (v1), re-frozen 2026-10-09 at 4259e8f101ed",
+        "external_benchmark": "NOT RE-RUN for 4.5.0; the 4.4.0 DataSciBench GT-lane figures in release/v4.4.0/manifest.json stand and are not restated here as current",
+        "check_public_claims": "0 issues once the tag exists (47 scanned / 58 skipped as historical)",
+        "sync_vendor": "in sync at HEAD; local red is another session's uncommitted dsa_evaluation/external_validation.py",
+        "uv_lock": "relocked (4.5.0, one line: the root package entry)",
+        "baseline_integrity": "tests/test_baseline_readme_integrity.py + tests/regression: 18 passed"
+    },
+    "supply_chain": {
+        "trusted_publishing": "OIDC on version tags (publish.yml environment: pypi, id-token: write; tag/version match gate + ancestor check)",
+        "wheel": "0 dsa-* Requires-Dist; dsa console script included; self-contained _vendor/",
+        "sbom": "release/sbom.json (192 components, 4.5.0)",
+        "sbom_sha256": "d8b8efcb89c95e5902e6ab0913b8f2f8f413bf2df7563cdbce5add8196f8b9a8",
+        "sbom_cyclonedx_sha256": "377b27af2c8e12b267235acf110e22a3ce5b8e6134f7758b71f03045c692926f",
+        "attestations": "PyPI PEP 740 path documented in docs/security/VERIFY_PYPI_RELEASE.md; GitHub build provenance wired (attest-build-provenance@v2)",
+        "verify_release_doc": "docs/security/VERIFY_RELEASE.md + docs/security/VERIFY_PYPI_RELEASE.md",
+        "osps_baseline": "docs/security/OSPS_BASELINE.md"
+    },
+    "artifacts": {
+        "wheel": "dist/jack_data_science_agent-4.5.0-py3-none-any.whl",
+        "sdist": "dist/jack_data_science_agent-4.5.0.tar.gz",
+        "sbom": "release/sbom.json",
+        "sbom_cyclonedx": "release/sbom.cyclonedx.json"
+    },
+    "release_workflow": ".github/workflows/publish.yml (OIDC, pinned actions, build only umbrella)",
+    "citation": "CITATION.cff 4.5.0",
+    "since_4_4_0": [
+        "one artefact root ($DSA_ARTIFACT_ROOT else <cwd>/artifacts) for eight writer/reader sites; the wheel no longer writes into the interpreter tree (§122)",
+        "an unpersisted report now flips the run's terminal status to FAILED in both graphs, with the computed report still in the payload (§125)",
+        "`dsa reproduce` accepts the flags --help advertises; `dsa --reproduce` no longer discards an explicit --catalog/--datasets (§123, §132)",
+        "debt ratchet: 75 of 118 lint exemptions deleted and each survivor must expose a finding; unwired-checker and docs-strict-build guards proven able to fail (§127, §129-§130)",
+        "the claims gate reads only files the repository ships, and the SBOM step now verifies the dependency claim instead of overwriting it (§133, §139)",
+        "v4.4.0 and v4.3.x release announcement copies regenerated; the announcement currency rule keyed to what a checkout can know, and publish.yml verifies its own copy (§135, §136, §146)",
+        "web image runs node:22-alpine, the major CI proves (§137)",
+        "run manifests name the commit they ran from; the baseline was re-frozen with that provenance (§143, §145)"
+    ],
+    "notes": [
+        "V4.5 MINOR release -- quality-gate and reproducibility work; no breaking public SDK/CLI change.",
+        "mean_latency_ms is a machine reading: three runs of the same command on the same code measured 126.86, 77.16 and 142.90 ms (benchmarks/baseline/README.md).",
+        "unsupported_claim_rate 0.06 -> 0.0 in the re-freeze is an unattributed improvement; the README says so rather than presenting it as a new truth.",
+        "commit field is filled by the follow-up manifest commit pinning the release commit (v4.3.x pattern).",
+        "external benchmark lanes were not re-run for this release; they are not restated as current."
+    ]
+}

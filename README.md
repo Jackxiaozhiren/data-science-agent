@@ -13,7 +13,7 @@ Ask questions about CSV files and databases in natural language. DSA runs SQL, s
 [**Case studies**](case-studies/) ·
 [**Evaluation**](docs/evaluation.md) ·
 [**Docs**](docs/getting-started.md) ·
-[**v4.4.0**](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.4.0)
+[**v4.5.0**](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.5.0)
 
 [![PyPI](https://img.shields.io/pypi/v/jack-data-science-agent?logo=pypi&logoColor=white)](https://pypi.org/project/jack-data-science-agent/)
 [![Latest release](https://img.shields.io/github/v/release/Jackxiaozhiren/data-science-agent?logo=github&label=release)](https://github.com/Jackxiaozhiren/data-science-agent/releases/latest)
