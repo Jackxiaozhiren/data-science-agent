@@ -1116,3 +1116,20 @@ Patch bump: no breaking public API change.
   whenever distribution metadata was unavailable -- a provenance artifact stamping a version nobody declared,
   rotted on every bump and unreachable from the tests as written. Both fallbacks now import their owners, and
   a new case forces the lookup to fail so those lines are covered (§144).
+
+### Changed (unreleased, v4.5.0 line) — baseline re-freeze
+
+- `benchmarks/baseline/` re-frozen on 2026-10-09 at `4259e8f`, on the commit that carries the v4.5.0 bump, so
+  the immutability rule in `docs/reproducibility.md` was satisfied rather than waived. Against the 2026-08-16
+  snapshot 22 of 24 summary fields are unchanged; `unsupported_claim_rate` moves 0.06 → 0.0 (an improvement
+  that remains unattributed between §99 and §107, and the freeze README says so instead of presenting it as a
+  new truth) and `mean_latency_ms` 47.92 → 142.9, which is a machine reading: three runs of the same command on
+  the same code within one hour measured 126.86, 77.16 and 142.90. The field stays because deleting a
+  published field is a larger claim change than re-freezing one; removing it or replacing it with a spread is
+  left as a maintainer decision and recorded as such in the README.
+- The freeze finally carries its own provenance: `run_manifest.json` (new to the directory) records
+  `git_commit: 4259e8f101ed`, `llm_mode: stub`, `call_count: 0`, and `results.json` now contains the run's
+  `execution` block -- replacing §113's sentence that nothing recorded which mode produced the stored numbers.
+  The README's aggregate line and file tree are re-derived from the artifacts by
+  `tests/test_baseline_readme_integrity.py`, so the prose cannot drift from them
+  (`AUDIT_LEDGER.md` §145).

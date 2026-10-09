@@ -2,6 +2,30 @@
   "catalog": "benchmarks/ds-agent-benchmark/catalog.json",
   "datasets_dir": "benchmarks/ds-agent-benchmark/datasets",
   "n_tasks": 50,
+  "execution": {
+    "llm_mode": "stub",
+    "provider": "stub",
+    "model": "heuristic",
+    "fallback": "error",
+    "git_commit": "4259e8f101ed",
+    "evaluation_variant": "dsa",
+    "evidence_critic_enabled": true,
+    "evidence_critic_setting": "on",
+    "call_count": 0,
+    "model_latency_ms": 0,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "pricing": {
+      "input_cost_per_million": null,
+      "output_cost_per_million": null,
+      "source": null
+    },
+    "cost_usd": null,
+    "llm_calls": []
+  },
   "aggregate": {
     "n": 50,
     "task_success_rate": 1.0,
@@ -9,8 +33,8 @@
     "sql_accuracy": 1.0,
     "code_execution_success": 1.0,
     "evidence_coverage": 1.0,
-    "unsupported_claim_rate": 0.06,
-    "mean_latency_ms": 47.92,
+    "unsupported_claim_rate": 0.0,
+    "mean_latency_ms": 142.9,
     "by_category": {
       "EDA": {
         "n": 8,
@@ -58,12 +82,106 @@
         "sql_accuracy": null,
         "code_execution_success": true,
         "evidence_coverage": true,
-        "unsupported_claim": true,
-        "latency_ms": 1258
+        "unsupported_claim": false,
+        "latency_ms": 1961
       },
       "details": {
-        "evidence_count": 6,
-        "unsupported_claim_check": "Causal language detected without causal evidence; rewrite as association."
+        "evidence_count": 5,
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 1961,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -79,10 +197,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 42
+        "latency_ms": 93
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 93,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -98,11 +307,102 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 35
+        "latency_ms": 83
       },
       "details": {
         "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 83,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -118,10 +418,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 39
+        "latency_ms": 94
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": true,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 94,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "causal_check",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -137,10 +529,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 49
+        "latency_ms": 412
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 412,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -156,10 +640,103 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 43
+        "latency_ms": 86
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-06",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 86,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -175,10 +752,100 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 43
+        "latency_ms": 86
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-07",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 86,
+            "tool_names": [
+              "profile_dataset",
+              "create_chart",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -194,10 +861,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 46
+        "latency_ms": 90
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "eda-08",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 90,
+            "tool_names": [
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -213,14 +972,108 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 16
+        "latency_ms": 35
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
         "sql_contains": [
           "GROUP BY",
           "SUM"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 35,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -236,7 +1089,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 12
+        "latency_ms": 26
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -244,7 +1097,99 @@
           "GROUP BY",
           "ORDER BY",
           "LIMIT"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 26,
+            "tool_names": [
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -259,15 +1204,109 @@
         "sql_accuracy": true,
         "code_execution_success": true,
         "evidence_coverage": null,
-        "unsupported_claim": true,
-        "latency_ms": 17
+        "unsupported_claim": false,
+        "latency_ms": 215
       },
       "details": {
-        "unsupported_claim_check": "Causal language detected without causal evidence; rewrite as association.",
+        "unsupported_claim_check": "No unsupported causal claims detected",
         "sql_contains": [
           "AVG",
           "GROUP BY"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 215,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -283,14 +1322,108 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 16
+        "latency_ms": 35
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
         "sql_contains": [
           "ORDER BY",
           "LIMIT"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 35,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -306,7 +1439,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 12
+        "latency_ms": 24
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -314,7 +1447,99 @@
           "COUNT",
           "GROUP BY",
           "HAVING"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 24,
+            "tool_names": [
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -330,7 +1555,7 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 16
+        "latency_ms": 32
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
@@ -338,7 +1563,101 @@
           "GROUP BY",
           "AVG",
           "sex"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-06",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 32,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -354,14 +1673,107 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 11
+        "latency_ms": 25
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
         "sql_contains": [
           "AVG",
           "WHERE"
-        ]
+        ],
+        "statistical_eval": {
+          "task_id": "sql-07",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 25,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -377,13 +1789,110 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 81
       },
       "details": {
         "evidence_count": 3,
         "unsupported_claim_check": "No unsupported causal claims detected",
         "found_value": 0.8043094251074718,
-        "expected_value": 0.8
+        "expected_value": 0.8,
+        "statistical_eval": {
+          "task_id": "stats-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": 1.0,
+              "passed": true,
+              "reason": "used stats tool",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 0.0,
+              "passed": false,
+              "reason": "missing assumption check",
+              "error_codes": [
+                "S02"
+              ]
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [
+            "S02"
+          ],
+          "overall": 0.9,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 81,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 0.9,
+        "statistical_error_codes": [
+          "S02"
+        ]
       },
       "error": null
     },
@@ -399,11 +1908,121 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 13
+        "latency_ms": 26
       },
       "details": {
         "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": 0.0,
+              "passed": false,
+              "reason": "no statistical tool",
+              "error_codes": [
+                "S01"
+              ]
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 0.0,
+              "passed": false,
+              "reason": "missing assumption check",
+              "error_codes": [
+                "S02"
+              ]
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 0.0,
+              "passed": false,
+              "reason": "no parameter estimate",
+              "error_codes": [
+                "S03"
+              ]
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 0.0,
+              "passed": false,
+              "reason": "no effect size",
+              "error_codes": [
+                "S06"
+              ]
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [
+            "S01",
+            "S02",
+            "S03",
+            "S06"
+          ],
+          "overall": 0.5,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 26,
+            "tool_names": [
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 0.5,
+        "statistical_error_codes": [
+          "S01",
+          "S02",
+          "S03",
+          "S06"
+        ]
       },
       "error": null
     },
@@ -419,11 +2038,102 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 8
+        "latency_ms": 19
       },
       "details": {
-        "evidence_count": 2,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "evidence_count": 3,
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": 1.0,
+              "passed": true,
+              "reason": "used stats tool",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "assumption evidence present",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 19,
+            "tool_names": [
+              "hypothesis_test",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -439,11 +2149,104 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 12
+        "latency_ms": 26
       },
       "details": {
-        "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "evidence_count": 4,
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 26,
+            "tool_names": [
+              "correlation_analysis",
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -459,11 +2262,102 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 41
+        "latency_ms": 78
       },
       "details": {
         "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 78,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -479,10 +2373,107 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 37
+        "latency_ms": 91
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-06",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": 1.0,
+              "passed": true,
+              "reason": "used stats tool",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 0.0,
+              "passed": false,
+              "reason": "missing assumption check",
+              "error_codes": [
+                "S02"
+              ]
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [
+            "S02"
+          ],
+          "overall": 0.9,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 91,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 0.9,
+        "statistical_error_codes": [
+          "S02"
+        ]
       },
       "error": null
     },
@@ -498,10 +2489,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 96
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-07",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 96,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -517,11 +2599,102 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 21
       },
       "details": {
         "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "stats-08",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": true,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 21,
+            "tool_names": [
+              "profile_dataset",
+              "causal_check",
+              "create_chart",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -537,11 +2710,110 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 11
+        "latency_ms": 276
       },
       "details": {
-        "evidence_count": 4,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "evidence_count": 5,
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "reg-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": 1.0,
+              "passed": true,
+              "reason": "used stats tool",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 0.0,
+              "passed": false,
+              "reason": "missing assumption check",
+              "error_codes": [
+                "S02"
+              ]
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [
+            "S02"
+          ],
+          "overall": 0.9,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 276,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "regression_analysis",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 0.9,
+        "statistical_error_codes": [
+          "S02"
+        ]
       },
       "error": null
     },
@@ -557,10 +2829,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 6
+        "latency_ms": 13
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "reg-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 13,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -576,10 +2940,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 37
+        "latency_ms": 81
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "reg-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 81,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -595,10 +3050,104 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 14
+        "latency_ms": 274
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "reg-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 274,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "forecast",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -614,10 +3163,103 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 15
+        "latency_ms": 237
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "reg-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 237,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "regression_analysis",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -633,10 +3275,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 17
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "reg-06",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 17,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -652,11 +3385,103 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 10
+        "latency_ms": 23
       },
       "details": {
-        "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "evidence_count": 4,
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "clf-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 23,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -672,10 +3497,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 66
+        "latency_ms": 364
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "clf-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 364,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -691,10 +3608,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 6
+        "latency_ms": 14
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "clf-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 14,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -710,10 +3719,103 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 100
+        "latency_ms": 463
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "clf-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 463,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "feature_importance",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -729,10 +3831,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 9
+        "latency_ms": 25
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "clf-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 25,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -748,10 +3942,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 10
+        "latency_ms": 21
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "clf-06",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 21,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -767,10 +4053,104 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 75
+        "latency_ms": 180
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "ts-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 180,
+            "tool_names": [
+              "run_sql",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "forecast",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -786,11 +4166,103 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 79
+        "latency_ms": 194
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
-        "has_chart": true
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "ts-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 194,
+            "tool_names": [
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "forecast",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -806,10 +4278,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 70
+        "latency_ms": 176
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "ts-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 176,
+            "tool_names": [
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -825,10 +4388,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 6
+        "latency_ms": 268
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "ts-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 268,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -844,11 +4499,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 6
+        "latency_ms": 16
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
-        "has_chart": true
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "ts-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 16,
+            "tool_names": [
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -863,12 +4609,104 @@
         "sql_accuracy": null,
         "code_execution_success": true,
         "evidence_coverage": null,
-        "unsupported_claim": true,
-        "latency_ms": 10
+        "unsupported_claim": false,
+        "latency_ms": 30
       },
       "details": {
-        "unsupported_claim_check": "Causal language detected without causal evidence; rewrite as association.",
-        "has_chart": true
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "viz-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 30,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -884,11 +4722,103 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 12
+        "latency_ms": 35
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
-        "has_chart": true
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "viz-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 35,
+            "tool_names": [
+              "run_sql",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -904,11 +4834,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 21
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
-        "has_chart": true
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "viz-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 21,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -924,11 +4945,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 22
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
-        "has_chart": true
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "viz-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 22,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -944,11 +5056,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 7
+        "latency_ms": 22
       },
       "details": {
         "unsupported_claim_check": "No unsupported causal claims detected",
-        "has_chart": true
+        "has_chart": true,
+        "statistical_eval": {
+          "task_id": "viz-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 22,
+            "tool_names": [
+              "profile_dataset",
+              "create_chart",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -964,11 +5166,102 @@
         "code_execution_success": true,
         "evidence_coverage": true,
         "unsupported_claim": false,
-        "latency_ms": 5
+        "latency_ms": 18
       },
       "details": {
         "evidence_count": 3,
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "dq-01",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 18,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -984,10 +5277,101 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 6
+        "latency_ms": 19
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "dq-02",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 19,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -1003,10 +5387,103 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 9
+        "latency_ms": 548
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "dq-03",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": true,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 548,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "profile_dataset",
+              "train_model",
+              "causal_check",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -1022,10 +5499,102 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 10
+        "latency_ms": 32
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "dq-04",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "params present",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "p in [0,1]",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ci valid",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "effect present",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 32,
+            "tool_names": [
+              "correlation_analysis",
+              "create_chart",
+              "create_chart",
+              "profile_dataset",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     },
@@ -1041,10 +5610,100 @@
         "code_execution_success": true,
         "evidence_coverage": null,
         "unsupported_claim": false,
-        "latency_ms": 9
+        "latency_ms": 21
       },
       "details": {
-        "unsupported_claim_check": "No unsupported causal claims detected"
+        "unsupported_claim_check": "No unsupported causal claims detected",
+        "statistical_eval": {
+          "task_id": "dq-05",
+          "dimensions": {
+            "method_selection": {
+              "dimension": "method_selection",
+              "score": null,
+              "passed": null,
+              "reason": "not applicable for this task",
+              "error_codes": []
+            },
+            "assumption_validation": {
+              "dimension": "assumption_validation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "missing assumption check",
+              "error_codes": []
+            },
+            "test_execution": {
+              "dimension": "test_execution",
+              "score": 1.0,
+              "passed": true,
+              "reason": "ok",
+              "error_codes": []
+            },
+            "parameter_estimation": {
+              "dimension": "parameter_estimation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no parameter estimate",
+              "error_codes": []
+            },
+            "p_value_correctness": {
+              "dimension": "p_value_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no p_value",
+              "error_codes": []
+            },
+            "ci_correctness": {
+              "dimension": "ci_correctness",
+              "score": null,
+              "passed": null,
+              "reason": "no CI emitted",
+              "error_codes": []
+            },
+            "effect_size": {
+              "dimension": "effect_size",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no effect size",
+              "error_codes": []
+            },
+            "interpretation": {
+              "dimension": "interpretation",
+              "score": 1.0,
+              "passed": true,
+              "reason": "No unsupported causal claims detected",
+              "error_codes": []
+            },
+            "causal_language": {
+              "dimension": "causal_language",
+              "score": 1.0,
+              "passed": true,
+              "reason": "no overclaim",
+              "error_codes": []
+            },
+            "uncertainty_communication": {
+              "dimension": "uncertainty_communication",
+              "score": 1.0,
+              "passed": true,
+              "reason": "uncertainty present",
+              "error_codes": []
+            }
+          },
+          "error_codes": [],
+          "overall": 1.0,
+          "causal_flag": false,
+          "uncertainty_flag": true,
+          "details": {
+            "elapsed_ms": 21,
+            "tool_names": [
+              "profile_dataset",
+              "create_chart",
+              "export_artifact"
+            ]
+          }
+        },
+        "evaluator_version": "evaluator_v2",
+        "statistical_overall": 1.0,
+        "statistical_error_codes": []
       },
       "error": null
     }

@@ -8140,3 +8140,50 @@ real release date, not a forecast.
 `check_public_claims --require-released-tags` 0 issues at 47/54 · `mkdocs build --strict` 0. The local ref is a
 simulation of the CI context, not proof of it: the PR run is the evidence, and it has not been opened because
 pushing a branch and opening a PR are shared-state actions this session asks about first.
+
+## 145. The baseline re-frozen on the v4.5.0 line, with the provenance the freeze never had
+
+**Order matters and was deliberate.** The freeze run happens *after* the bump commit `4259e8f`, so
+`run_manifest.json` names a revision that contains the freeze rather than its parent -- the self-reference
+that made §113's "re-measured at `9f6ab35`" line a claim about a file that did not contain it. Measured after
+the run: `git_commit: 4259e8f101ed`, equal to `git rev-parse HEAD`, `llm_mode: stub`, `call_count: 0`, and
+`results.json` carries the run's own `execution` block.
+
+**What moved against the 2026-08-16 snapshot.** 22 of 24 summary fields are byte-equal in value; two differ.
+
+| field | stored (2026-08-16) | this freeze (2026-10-09, `4259e8f`) | reading |
+|---|---|---|---|
+| `task_success_rate`, `statistical_accuracy`, `sql_accuracy`, `code_execution_success`, `evidence_coverage`, all 8 `by_category` entries | 1.0 | 1.0 | reproduces exactly, as §113's four runs did |
+| `unsupported_claim_rate` | 0.06 | **0.0** | an improvement, and still unattributed between §99 and §107 -- §113 said so then, nothing settled it since, so the freeze now carries an unattributed delta as its baseline and the README says that in those words rather than presenting 0.0 as the new truth |
+| `mean_latency_ms` | 47.92 | **142.9** | a machine reading, not a product change |
+
+**The latency evidence got stronger while I was measuring it.** §113's note was that the same command on one
+commit had read 162.3 / 73.04 / 89.56 within minutes. This session produced three more readings of the same
+command on the same code inside one hour: **126.86, 77.16, 142.90** -- a 1.85x spread with nothing moved. The
+stored value therefore encodes the machine and the moment, not the software. I kept the field: deleting a
+published field is a larger claim change than re-freezing one, and §144 already showed what happens when a
+number that cannot be reproduced is treated as a contract. Removing it, or replacing the point value with a
+spread, stays the maintainer's call and is written into the README as such. The gate that actually bounds
+anything remains `tests/regression/test_regression_matrix.py::test_baseline_contract`, which reads this
+stored file and never a fresh run.
+
+**The prose moved only where the artifact lets it.** `benchmarks/baseline/README.md` now (a) names
+`run_manifest.json` in the tree block, which `test_every_file_named_in_the_tree_block_is_present_or_annotated`
+requires to exist -- and that test was written because the block used to name an uncommitted `raw_runs.json`
+without saying so; (b) quotes the new aggregate, which `test_the_aggregate_line_quotes_summary_json_exactly`
+reads out of `summary.json` itself, so the sentence cannot drift from the file; (c) replaces the §113
+sentence "nothing here records which mode produced these numbers" with the state that makes it false, keeping
+the mode declaration the reproduce-section guard insists on; (d) adds a dated 2026-10-09 block rather than
+editing §113's dated bullets; and (e) updates the re-freeze policy bullet to record that the rule was
+* satisfied* -- the freeze rides a commit that carries the bump -- rather than waived.
+
+**Gates after the freeze**, on `release/v4.5.0-rc1` with `GITHUB_HEAD_REF` set to the branch name to mirror
+the PR context: `pytest -q --cov` 0 at **83.24%** · `tests/test_baseline_readme_integrity.py` +
+`tests/regression` **18 passed** · `check_public_claims --require-released-tags` 0 issues at 47/54
+(`benchmarks/baseline/README.md` is inside the scanned surface, so these edits are checked as prose, not
+trusted) · `ruff check` 0 · `ruff format --check` 0 / 258 files · `audit_facts --check` OK.
+
+**Where this stands.** Both commits exist only on the local branch, which was the point of §144's finding:
+this repository has one green landing for a pending bump -- a PR from a branch named `release/v<version>-rcN`
+-- and pushing straight to `main` reports `git tag mismatch: … base v4.4.0 != v4.5.0` by design. Pushing the
+branch and opening that PR are shared-state actions, so they wait for a word, and the tag itself stays yours.
