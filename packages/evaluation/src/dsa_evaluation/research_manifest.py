@@ -24,7 +24,15 @@ class ExperimentManifest(BaseModel):
     configuration: dict[str, Any] = Field(default_factory=dict)
 
 
-def _git_commit(root: Path | None = None) -> str | None:
+def resolve_git_commit(root: Path | None = None) -> str | None:
+    """The 12-character HEAD of the checkout this module is loaded from, or None if there is none.
+
+    Walks up from the given root (default: the module's own location, so an installed wheel resolves to
+    "no repository" rather than to whatever directory the process happened to be started in).
+    `dsa_evaluation.runner._execution_metadata` calls this when no CI environment names the revision, which
+    is what lets a benchmark run's `run_manifest.json` record the commit it measured -- the field
+    `benchmarks/baseline/README.md` says the stored freeze never carried (§143).
+    """
     try:
         r = root or Path(__file__).parents[3]
         # Walk up to .git
@@ -66,7 +74,7 @@ def build_manifest(
             pass
     return ExperimentManifest(
         experiment_id=experiment_id,
-        git_commit=_git_commit(root),
+        git_commit=resolve_git_commit(root),
         benchmark_version=bv,
         dataset_version=dataset_version,
         model=model,

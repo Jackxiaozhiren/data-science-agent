@@ -17,6 +17,7 @@ from dsa_evaluation.metrics import (
     attach_statistical_eval,
     evaluate_task,
 )
+from dsa_evaluation.research_manifest import resolve_git_commit
 
 _BASELINE_VARIANTS = {"llm-only", "llm-tools"}
 
@@ -100,7 +101,9 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
         "provider": provider,
         "model": model,
         "fallback": os.getenv("DSA_LLM_FALLBACK", "error"),
-        "git_commit": os.getenv("DSA_GIT_COMMIT") or os.getenv("GITHUB_SHA"),
+        "git_commit": os.getenv("DSA_GIT_COMMIT")
+        or os.getenv("GITHUB_SHA")
+        or resolve_git_commit(),
         "evaluation_variant": variant,
         "evidence_critic_enabled": critic_enabled,
         "evidence_critic_setting": critic_setting,

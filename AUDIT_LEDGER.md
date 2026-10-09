@@ -7967,3 +7967,74 @@ as if pending work.
 closed in Phases 1-3 by earlier sections and were not re-verified here; this session's re-measurement covered
 only the ids in the table above plus whatever a given gate happened to touch. A green `pytest`/`audit_facts`
 run is evidence about the tree, not evidence that those older dispositions still hold.
+
+## 143. The run manifest now names the commit it ran from -- and the re-freeze that followed stopped at a policy line
+
+**The defect.** `_execution_metadata` resolved the revision from the environment only:
+`runner.py:103` read `DSA_GIT_COMMIT` or `GITHUB_SHA` and nothing else, so every run outside CI wrote
+`"git_commit": null` into its `run_manifest.json`. Measured directly: the 50-task probe run produced
+`execution: {..., "git_commit": null, ...}`. This matters beyond one null field because
+`benchmarks/baseline/README.md:28-32` states the freeze's provenance gap in exactly these terms --
+"nothing here records which mode produced *these* numbers ... no `run_manifest.json` was ever committed" --
+so a manifest that cannot name a revision does not close the claim, it only moves it.
+
+**The fix reuses the resolver that already exists rather than adding a second one.**
+`research_manifest._git_commit` was already walking up to a `.git` and running `git rev-parse HEAD`,
+truncating to 12; it is now public as `resolve_git_commit()`, its single internal caller updated, and
+`_execution_metadata` uses it as the third term: env `DSA_GIT_COMMIT` → env `GITHUB_SHA` → the checkout.
+CI keeps authority (both existing env tests still pass unchanged), a run inside a checkout gets a real
+revision, and a run where no repository is above the loaded module gets `None` -- honest, not a guess.
+No new `subprocess` site and no new handler, which is why `debt.exceptHandlers` stayed at **185** and
+`suppressionDirectives` at **42**: the `# noqa: S603` moved with the function it was already on, it was not
+added.
+
+**Probed before borrowing, because the two copies sit at different depths.** The vendored module's
+`Path(__file__).parents[3]` is `/Users/jackson/Data agent/src`, not the repo root, so the walk-up loop is
+what makes it work -- verified from both load sites rather than reasoned about: source copy resolves
+`ebe4a6f31b8d`, vendored copy resolves `ebe4a6f31b8d`, and `git rev-parse HEAD` is `ebe4a6f31b8d`. A test
+pins the agreement between the two bindings (`test_the_resolver_agrees_whichever_copy_of_the_module_is_loaded`)
+because the shipped `dsa` imports the vendored one, so a source-only edit would be invisible to the command
+that produces the freeze.
+
+**Red first.** `tests/test_benchmark_provenance.py`: **4 failed, 6 passed** before the change -- the unit
+case, both resolver cases, and the end-to-end case that runs the real console script on one stub task and
+reads the manifest it wrote (`assert None is not None` was its actual failure). After the fix:
+**10 passed**, and the same 50-task run now writes `git_commit: ebe4a6f31b8d`.
+
+**Then the re-freeze stopped at a rule, not at a bug.** The candidate was produced and installed, and the
+diff against the stored freeze measured: identical on 22 of 24 summary fields, differing only in
+`unsupported_claim_rate` 0.06 → 0.0 and `mean_latency_ms` 47.92 → 77.16 -- where a second 50-task run
+minutes earlier had read **126.86** on the same code, which is the README's "not comparable in either
+direction" point confirmed inside one machine, let alone across trees. Before committing it, two files said
+stop: `docs/reproducibility.md:84` ("Immutable baselines (e.g. `benchmarks/baseline/`) are pinned; changes
+require a version bump") and the freeze's own README:82-84, which holds re-freezing as a release decision
+rather than fix-commit material -- the same rule that made §113's table record "α re-freeze (release-gated)"
+and §131 price it as needing a version bump. Version bumps are the maintainer's action in this session's
+constraints, and the bump is not cosmetic: six sites carry the version
+(`pyproject.toml:3`, `CITATION.cff:9`, `__init__.py:1`, `sdk.py:305`, `release/sbom.json`, and
+`scripts/check_public_claims.py:20` `EXPECTED`), with `check_version_consistency()` enforcing agreement across
+the first five and the tag line reading the last.
+
+So the candidate is parked, not discarded: `output/freeze-candidate-2026-10-09/` (ignored at
+`.gitignore:38`) holds `summary.json`, `results.json`, `run_manifest.json` and the uncommitted
+`raw_runs.json`, and `benchmarks/baseline/` was restored to HEAD's bytes (each file re-read against
+`git show HEAD:<path>` for equality, the untracked manifest deleted), so nothing in the tree depends on
+`/tmp` surviving and nothing was half-applied. The hygiene checks ran before any of that: the new
+`results.json` grows 30 KB → 179 KB entirely inside per-task `details` (`statistical_eval` dimension blocks,
+`evaluator_version`, `statistical_error_codes` -- record keys otherwise identical to the stored ones), the
+largest record is 2.3 KB with no binary payloads, no `/Users/…` path appears in any candidate file, and the
+only `token` string is `token_usage: {input_tokens: 0, …}`.
+
+**Gates.** `ruff check` 0 · `ruff format --check` 0 / 257 files · `mypy` 0 / 121 files · `audit_facts --check`
+OK with `debt.testFunctions` **766 → 771**, `exceptHandlers` **185**, `suppressionDirectives` **42**,
+`swallowedExceptionSites` **8** · `check_public_claims --require-released-tags` 0 issues at 47/54 ·
+`find_orphan_reads --check` 14 keys · `mkdocs build --strict` 0 · `pytest -q --cov` 0 at **83.17%** ·
+`pytest -o addopts="" -q` **811 passed**. `scripts/sync_vendor.py --check` is not in that list as green: it
+still names `dsa_evaluation: 1 file(s) differ [external_validation.py]`, another session's file, while both
+files this section changed were mirrored with `--file` after formatting.
+
+**Decision requested.** Either (a) you bump to 4.5.0 yourself and the candidate can be committed against a
+version that authorises it, or (b) you authorise me to make the six-site bump in one commit -- the tag, the
+release and the PyPI publish stay yours in both cases. What is *not* on the table is folding a re-freeze into
+a fix commit, because that is the one act the freeze document forbids in writing, and a baseline that moves
+without a version is exactly the drift class §113 was filed for.

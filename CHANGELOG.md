@@ -390,6 +390,18 @@ shadowing + missing greenlet concurrency).
   asking it (`AUDIT_LEDGER.md` §137). `Dockerfile.api` was checked in the same pass and already agreed
   (`python:3.12-slim` against CI's `3.12`).
 
+- A benchmark run wrote `"git_commit": null` into its `run_manifest.json`: `_execution_metadata` resolved the
+  revision from `DSA_GIT_COMMIT`/`GITHUB_SHA` only, so nothing outside CI recorded which commit produced the
+  numbers -- leaving `benchmarks/baseline/` unable to cite a provenance even once a manifest is committed.
+  `research_manifest`'s existing walk-up resolver is now public as `resolve_git_commit()` and is the third
+  term (env `DSA_GIT_COMMIT` → env `GITHUB_SHA` → checkout → `None` when no repository sits above the loaded
+  module), so CI keeps authority while a local run names a revision. No new `subprocess` call and no new
+  handler; a test pins that both module copies -- the workspace one and the vendored one the shipped `dsa`
+  actually imports -- resolve the same HEAD (`AUDIT_LEDGER.md` §143). The 50-task re-freeze this enables was
+  deliberately **not** committed: `docs/reproducibility.md:84` and the freeze's own README require a version
+  bump for any change under `benchmarks/baseline/`, so the candidate is parked in the ignored
+  `output/freeze-candidate-2026-10-09/` and the pinned directory is byte-identical to what it was.
+
 - The SBOM step checked that a file existed while overwriting it. `ci.yml` ran
   `generate_sbom.py && test -f release/sbom.json`, and the generator's only output path was the two tracked
   `release/sbom*.json` artifacts -- so running the documented gate runner rewrote 457 lines of committed
