@@ -47,11 +47,14 @@ def collect_notebook_metadata(
             except importlib.metadata.PackageNotFoundError:
                 sdk_version = importlib.metadata.version("dsa-jupyter")
     except Exception:
-        sdk_version = "4.4.0"
+        # A literal here was a version claim baked into shipped code: §31 metadata is what a reader
+        # uses to date a notebook, so the fallback has to come from the same owner the package itself
+        # reports, never from a number someone typed. §144 caught it by refusing to edit these tests.
+        from data_science_agent import __version__ as sdk_version
     try:
         agent_version = importlib.metadata.version("dsa-agent")
     except Exception:
-        agent_version = "0.1.0"
+        from dsa_agent import __version__ as agent_version
     # prompt_version = hash of task
     prompt_version = hashlib.sha256(task.encode()).hexdigest()[:12] if task else None
     # tool_version — hash of tool registry? use dsa-tools version if available

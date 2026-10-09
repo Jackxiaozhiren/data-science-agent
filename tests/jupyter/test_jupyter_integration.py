@@ -72,7 +72,7 @@ def test_jupyter_cell_magic_task_from_cell() -> None:
     assert res is None or isinstance(res, Analysis)
 
 
-def test_jupyter_direct_sdk_await_and_display() -> None:
+def test_jupyter_direct_sdk_await_and_display(declared_version: str) -> None:
     """§28: from data_science_agent import Agent; await agent.analyze(...); result displays."""
     import asyncio
 
@@ -96,7 +96,7 @@ def test_jupyter_direct_sdk_await_and_display() -> None:
             "benchmarks/v2/datasets/sales.csv", "Analyze revenue", r.run_id
         )
         assert meta["dataset_hash"] is not None
-        assert meta["sdk_version"] == "4.4.0"
+        assert meta["sdk_version"] == declared_version
         assert meta["experiment_id"] == r.run_id
         assert meta["prompt_version"] is not None
         # display_analysis should not raise
@@ -131,7 +131,7 @@ def test_jupyter_artifact_integration_chart_table() -> None:
     assert r.report_markdown is not None
 
 
-def test_jupyter_reproducibility_metadata_all_fields() -> None:
+def test_jupyter_reproducibility_metadata_all_fields(declared_version: str) -> None:
     """§31 Notebook metadata: dataset_hash, agent_version, sdk_version, prompt_version, tool_version, experiment_id."""
     from dsa_jupyter.metadata import collect_notebook_metadata, dataset_hash
 
@@ -142,7 +142,7 @@ def test_jupyter_reproducibility_metadata_all_fields() -> None:
     )
     assert meta["dataset_hash"] == h
     assert meta["agent_version"] is not None
-    assert meta["sdk_version"] == "4.4.0"
+    assert meta["sdk_version"] == declared_version
     assert meta["prompt_version"] is not None and len(meta["prompt_version"]) == 12
     assert meta["tool_version"] is not None
     assert meta["experiment_id"] == "run-abc123"
@@ -198,3 +198,32 @@ def test_jupyter_error_handling_graceful() -> None:
     res2 = ip.run_line_magic("dsa", "analyze nonexistent.csv --task test")
     # Our magic catches and returns None on failure
     assert res2 is None or hasattr(res2, "status")
+
+
+def test_jupyter_metadata_falls_back_to_the_declared_versions(
+    tmp_path, monkeypatch: pytest.MonkeyPatch, declared_version: str
+) -> None:
+    """§144: with no dist metadata the notebook must still tell the truth about its version.
+
+    Both fallbacks used to be typed literals -- `sdk_version = "4.4.0"`, `agent_version = "0.1.0"` -- so a
+    notebook produced by a source checkout stamped itself with a version that rotted on the next bump,
+    inside the artifact whose whole purpose is provenance. Forcing the lookup to fail is the only way to
+    reach those lines, which is why the two version assertions above never noticed.
+    """
+    import importlib.metadata as md
+
+    from dsa_agent import __version__ as agent_declared
+
+    from dsa_jupyter.metadata import collect_notebook_metadata
+
+    def explode(*_args: object, **_kwargs: object) -> str:
+        raise RuntimeError("no distribution metadata in this environment")
+
+    monkeypatch.setattr(md, "version", explode)
+    dataset = tmp_path / "sales.csv"
+    dataset.write_text("region,revenue\nEMEA,10\nAPAC,5\n", encoding="utf-8")
+
+    meta = collect_notebook_metadata(str(dataset), "Analyze revenue", "run-fallback")
+
+    assert meta["sdk_version"] == declared_version, meta
+    assert meta["agent_version"] == agent_declared, meta

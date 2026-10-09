@@ -2,13 +2,13 @@ from data_science_agent import Agent, Benchmark, Dataset, Reproduction
 from data_science_agent.sdk import API_STABILITY
 
 
-def test_sdk_stable_exports():
+def test_sdk_stable_exports(declared_version: str):
     assert API_STABILITY["Agent"] == "Stable"
     assert callable(Agent)
     assert callable(Benchmark)
     assert callable(Reproduction)
     a = Agent()
-    assert a.version == "4.4.0"
+    assert a.version == declared_version
     ds = Dataset.from_path("sales.csv")
     assert ds.dataset_id == "sales"
 

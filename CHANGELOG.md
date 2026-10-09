@@ -1089,3 +1089,30 @@ Patch bump: no breaking public API change.
 
 ## 0.1.0 — Phase 1 scaffold
 - Monorepo, datasets/evidence/tool/benchmark/mcp/docs.
+
+### Changed (unreleased, v4.5.0 line)
+
+- Version bumped to **4.5.0** across its eight sites: `pyproject.toml`, `src/data_science_agent/__init__.py`,
+  `src/data_science_agent/sdk.py`, `CITATION.cff` (the citation version and the `references:` entry that
+  calls itself "current release used in this work"), `scripts/check_public_claims.py`'s `EXPECTED`,
+  `release/sbom.json` + `sbom.cyclonedx.json` (regenerated, not typed), and `uv.lock` -- whose root entry the
+  bump had to move too, because `uv lock --check` is the first gate CI runs. The README release badge and
+  `docs/announcements/latest.md` deliberately still name **v4.4.0**, the newest published release.
+- A pending version bump can now land green, and only in the lane the repository already defines: a branch
+  named `release/v<expected>-rc[N]`, which `_is_release_candidate_ref` accepts and which `ci.yml` runs on a
+  PR. Landing the bump on `main` before the tag exists reports exactly one finding, `git tag mismatch: …
+  base v4.4.0 != v4.5.0` -- the gate is right to refuse, since no v4.5.0 tag exists yet
+  (`AUDIT_LEDGER.md` §144).
+- The README currency rule no longer asks for a link to a release that does not exist. Measured on a
+  simulated tree (declared 4.5.0, newest tag 4.4.0) it reported `cites '4.4.0', advertised as the current
+  release, which it is not`, demanding `releases/tag/v4.5.0` -- a 404 and a false PyPI claim. The entry now
+  reads `newest-or-current`: refs govern where they exist, and with none it answers from the declared version
+  so §121's tagless-checkout guarantee stays lit. The announcement copy keeps strict `newest` and reports
+  itself undecidable without refs.
+- Five test assertions that hard-coded the version now derive it from `pyproject.toml` through a session
+  fixture, so a bump edits no tests and each assertion checks agreement between two files instead of copying
+  one number. Proving that required planting divergences, and the plants found a shipped defect:
+  `dsa_jupyter/metadata.py` fell back to typed literals `sdk_version = "4.4.0"` and `agent_version = "0.1.0"`
+  whenever distribution metadata was unavailable -- a provenance artifact stamping a version nobody declared,
+  rotted on every bump and unreachable from the tests as written. Both fallbacks now import their owners, and
+  a new case forces the lookup to fail so those lines are covered (§144).

@@ -1,6 +1,6 @@
 {
-  "version": "4.4.0",
-  "generated": "2026-09-10T07:32:20.082334+00:00",
+  "version": "4.5.0",
+  "generated": "2026-10-09T05:34:51.282547+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -68,7 +68,7 @@
     {
       "package": "asttokens",
       "version": "3.0.2",
-      "license": "Unknown",
+      "license": "Apache 2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/asttokens@3.0.2"
     },
@@ -89,7 +89,7 @@
     {
       "package": "babel",
       "version": "2.18.0",
-      "license": "Unknown",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/babel@2.18.0"
     },
@@ -117,7 +117,7 @@
     {
       "package": "certifi",
       "version": "2026.7.22",
-      "license": "Unknown",
+      "license": "MPL-2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/certifi@2026.7.22"
     },
@@ -131,7 +131,7 @@
     {
       "package": "charset-normalizer",
       "version": "3.5.1",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/charset-normalizer@3.5.1"
     },
@@ -152,35 +152,35 @@
     {
       "package": "comm",
       "version": "0.2.3",
-      "license": "Unknown",
+      "license": "BSD 3-Clause License\n\nCopyright (c) 2022, Jupyter\nAll rights reserved.\n\nRedistri...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/comm@0.2.3"
     },
     {
       "package": "contourpy",
       "version": "1.3.3",
-      "license": "Unknown",
+      "license": "BSD 3-Clause License\n\n Copyright (c) 2021-2025, ContourPy Developers.\n All right...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/contourpy@1.3.3"
     },
     {
       "package": "coverage",
       "version": "7.15.4",
-      "license": "Unknown",
+      "license": "Apache-2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/coverage@7.15.4"
     },
     {
       "package": "cycler",
       "version": "0.12.1",
-      "license": "Unknown",
+      "license": "Copyright (c) 2015, matplotlib project\nAll rights reserved.\n\nRedistribution and ...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/cycler@0.12.1"
     },
     {
       "package": "debugpy",
       "version": "1.8.21",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/debugpy@1.8.21"
     },
@@ -194,7 +194,7 @@
     {
       "package": "distro",
       "version": "1.9.0",
-      "license": "Unknown",
+      "license": "Apache License, Version 2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/distro@1.9.0"
     },
@@ -313,14 +313,14 @@
     {
       "package": "et-xmlfile",
       "version": "2.0.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/et-xmlfile@2.0.0"
     },
     {
       "package": "executing",
       "version": "2.2.1",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/executing@2.2.1"
     },
@@ -341,7 +341,7 @@
     {
       "package": "fonttools",
       "version": "4.63.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/fonttools@4.63.0"
     },
@@ -355,7 +355,7 @@
     {
       "package": "ghp-import",
       "version": "2.1.0",
-      "license": "Unknown",
+      "license": "Apache Software License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/ghp-import@2.1.0"
     },
@@ -369,7 +369,7 @@
     {
       "package": "h11",
       "version": "0.16.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/h11@0.16.0"
     },
@@ -390,7 +390,7 @@
     {
       "package": "httpx",
       "version": "0.28.1",
-      "license": "Unknown",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/httpx@0.28.1"
     },
@@ -438,15 +438,15 @@
     },
     {
       "package": "jack-data-science-agent",
-      "version": "4.4.0",
+      "version": "4.5.0",
       "license": "MIT",
       "source": "local:pyproject.toml",
-      "purl": "pkg:local/jack-data-science-agent@4.4.0"
+      "purl": "pkg:local/jack-data-science-agent@4.5.0"
     },
     {
       "package": "jedi",
       "version": "0.20.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/jedi@0.20.0"
     },
@@ -474,14 +474,14 @@
     {
       "package": "jsonpatch",
       "version": "1.33",
-      "license": "Unknown",
+      "license": "Modified BSD License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/jsonpatch@1.33"
     },
     {
       "package": "jsonpointer",
       "version": "3.1.1",
-      "license": "Unknown",
+      "license": "Modified BSD License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/jsonpointer@3.1.1"
     },
@@ -509,7 +509,7 @@
     {
       "package": "jupyter-client",
       "version": "8.9.1",
-      "license": "Unknown",
+      "license": "BSD 3-Clause License\n\n- Copyright (c) 2001-2015, IPython Development Team\n- Copy...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/jupyter-client@8.9.1"
     },
@@ -572,21 +572,21 @@
     {
       "package": "kiwisolver",
       "version": "1.5.0",
-      "license": "Unknown",
+      "license": "=========================\n The Kiwi licensing terms\n=========================\nKi...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/kiwisolver@1.5.0"
     },
     {
       "package": "langchain-core",
       "version": "1.5.5",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/langchain-core@1.5.5"
     },
     {
       "package": "langchain-protocol",
       "version": "0.0.18",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/langchain-protocol@0.0.18"
     },
@@ -621,7 +621,7 @@
     {
       "package": "langsmith",
       "version": "0.11.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/langsmith@0.11.0"
     },
@@ -656,7 +656,7 @@
     {
       "package": "matplotlib",
       "version": "3.11.1",
-      "license": "Unknown",
+      "license": "License agreement for matplotlib versions 1.3.0 and later\n =====================...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/matplotlib@3.11.1"
     },
@@ -670,7 +670,7 @@
     {
       "package": "mergedeep",
       "version": "1.3.4",
-      "license": "Unknown",
+      "license": "UNKNOWN",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/mergedeep@1.3.4"
     },
@@ -754,14 +754,14 @@
     {
       "package": "nest-asyncio",
       "version": "1.6.0",
-      "license": "Unknown",
+      "license": "BSD",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/nest-asyncio@1.6.0"
     },
     {
       "package": "nest-asyncio2",
       "version": "1.7.2",
-      "license": "Unknown",
+      "license": "BSD",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/nest-asyncio2@1.7.2"
     },
@@ -782,7 +782,7 @@
     {
       "package": "openpyxl",
       "version": "3.1.5",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/openpyxl@3.1.5"
     },
@@ -810,7 +810,7 @@
     {
       "package": "paginate",
       "version": "0.5.7",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/paginate@0.5.7"
     },
@@ -831,7 +831,7 @@
     {
       "package": "parso",
       "version": "0.8.7",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/parso@0.8.7"
     },
@@ -852,7 +852,7 @@
     {
       "package": "pexpect",
       "version": "4.9.0",
-      "license": "Unknown",
+      "license": "ISC license",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/pexpect@4.9.0"
     },
@@ -873,21 +873,21 @@
     {
       "package": "pluggy",
       "version": "1.6.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/pluggy@1.6.0"
     },
     {
       "package": "polars",
       "version": "1.43.2",
-      "license": "Unknown",
+      "license": "Copyright (c) 2025 Ritchie Vink\nCopyright (c) 2024 (Some portions) NVIDIA CORPOR...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/polars@1.43.2"
     },
     {
       "package": "polars-runtime-32",
       "version": "1.43.2",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/polars-runtime-32@1.43.2"
     },
@@ -908,21 +908,21 @@
     {
       "package": "psutil",
       "version": "7.2.2",
-      "license": "Unknown",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/psutil@7.2.2"
     },
     {
       "package": "ptyprocess",
       "version": "0.7.0",
-      "license": "Unknown",
+      "license": "UNKNOWN",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/ptyprocess@0.7.0"
     },
     {
       "package": "pure-eval",
       "version": "0.2.3",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/pure-eval@0.2.3"
     },
@@ -1006,14 +1006,14 @@
     {
       "package": "python-dateutil",
       "version": "2.9.0.post0",
-      "license": "Unknown",
+      "license": "Dual License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/python-dateutil@2.9.0.post0"
     },
     {
       "package": "python-dotenv",
       "version": "1.2.2",
-      "license": "Unknown",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/python-dotenv@1.2.2"
     },
@@ -1041,7 +1041,7 @@
     {
       "package": "pyyaml",
       "version": "6.0.3",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/pyyaml@6.0.3"
     },
@@ -1069,14 +1069,14 @@
     {
       "package": "requests",
       "version": "2.34.2",
-      "license": "Unknown",
+      "license": "Apache-2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/requests@2.34.2"
     },
     {
       "package": "requests-toolbelt",
       "version": "1.0.0",
-      "license": "Unknown",
+      "license": "Apache 2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/requests-toolbelt@1.0.0"
     },
@@ -1125,7 +1125,7 @@
     {
       "package": "scipy",
       "version": "1.18.0",
-      "license": "Unknown",
+      "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.\n All rights rese...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/scipy@1.18.0"
     },
@@ -1139,14 +1139,14 @@
     {
       "package": "six",
       "version": "1.17.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/six@1.17.0"
     },
     {
       "package": "sniffio",
       "version": "1.3.1",
-      "license": "Unknown",
+      "license": "MIT OR Apache-2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/sniffio@1.3.1"
     },
@@ -1160,14 +1160,14 @@
     {
       "package": "sqlalchemy",
       "version": "2.0.52",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/sqlalchemy@2.0.52"
     },
     {
       "package": "stack-data",
       "version": "0.6.3",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/stack-data@0.6.3"
     },
@@ -1188,7 +1188,7 @@
     {
       "package": "tenacity",
       "version": "9.1.4",
-      "license": "Unknown",
+      "license": "Apache 2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/tenacity@9.1.4"
     },
@@ -1202,7 +1202,7 @@
     {
       "package": "threadpoolctl",
       "version": "3.6.0",
-      "license": "Unknown",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/threadpoolctl@3.6.0"
     },
@@ -1216,14 +1216,14 @@
     {
       "package": "tornado",
       "version": "6.5.8",
-      "license": "Unknown",
+      "license": "Apache-2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/tornado@6.5.8"
     },
     {
       "package": "traitlets",
       "version": "5.16.1",
-      "license": "Unknown",
+      "license": "BSD 3-Clause License\n\n- Copyright (c) 2001-, IPython Development Team\n\nAll right...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/traitlets@5.16.1"
     },
@@ -1279,21 +1279,21 @@
     {
       "package": "uvloop",
       "version": "0.22.1",
-      "license": "Unknown",
+      "license": "MIT License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/uvloop@0.22.1"
     },
     {
       "package": "watchdog",
       "version": "6.0.0",
-      "license": "Unknown",
+      "license": "Apache-2.0",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/watchdog@6.0.0"
     },
     {
       "package": "watchfiles",
       "version": "1.2.0",
-      "license": "Unknown",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/watchfiles@1.2.0"
     },
@@ -1328,14 +1328,14 @@
     {
       "package": "websockets",
       "version": "15.0.1",
-      "license": "Unknown",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/websockets@15.0.1"
     },
     {
       "package": "xxhash",
       "version": "4.0.0",
-      "license": "Unknown",
+      "license": "BSD-2-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/xxhash@4.0.0"
     },

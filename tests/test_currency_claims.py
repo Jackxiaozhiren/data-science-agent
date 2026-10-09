@@ -331,3 +331,59 @@ def test_the_announcement_copy_is_no_longer_skipped_as_historical() -> None:
     # The dated copies stay exempt, and the rule must still reach them or it is §113's dead prefix.
     assert "docs/announcements/v4.4.0.md" in skipped_names
     assert "docs/announcements/v" in module.HISTORICAL_PREFIXES
+
+
+# --- §144: the README badge is a claim about the newest *release*, not about the declared version ---
+
+
+def _badge_root(tmp_path: Path, *, tags: list[str], current: str, badge: str) -> Path:
+    return _scratch(
+        tmp_path,
+        tags=tags,
+        current=current,
+        files={"README.md": f"Docs at [**v{badge}**](https://x.example/releases/tag/v{badge})\n"},
+    )
+
+
+def test_a_pending_bump_does_not_make_the_release_badge_look_stale(tmp_path: Path) -> None:
+    """RED before §144: bumping `__init__.py` ahead of the tag demanded a link to a release that does not exist.
+
+    Measured on a simulated tree (declared 4.5.0, newest tag 4.4.0, badge 4.4.0) the rule returned
+    `README.md:1 cites '4.4.0', advertised as the current release, which it is not`. The badge was the
+    truthful artefact there -- it names the release readers get from PyPI today -- and the gate was asking
+    for a broken link to a tag no one has pushed. A bump could not land green without writing a false
+    claim, which is the §16 drift class pointed at its own author.
+    """
+    root = _badge_root(
+        tmp_path, tags=["v4.2.10", "v4.3.3", "v4.4.0"], current="4.5.0", badge="4.4.0"
+    )
+
+    assert _issues(root) == [], _issues(root)
+
+
+def test_the_badge_must_still_track_the_newest_release(tmp_path: Path) -> None:
+    """The bound on that relaxation: once a release exists, the badge has to name it."""
+    root = _badge_root(
+        tmp_path, tags=["v4.2.10", "v4.3.3", "v4.4.0"], current="4.4.0", badge="4.3.3"
+    )
+
+    found = _issues(root)
+    assert any("README.md" in issue and "4.3.3" in issue for issue in found), found
+
+
+def test_the_badge_still_answers_from_the_declared_version_with_no_refs(tmp_path: Path) -> None:
+    """§121's guarantee kept through §144's relaxation, and the residual it leaves.
+
+    With no refs the badge compares against the declared version, so a stale badge is still caught in a
+    default-depth checkout. The cost is exact and accepted: a tagless checkout *during* a pending bump
+    demands the newer number. CI cannot sit in that state -- `--require-released-tags` refuses a run with
+    no refs -- and every real checkout of this repository has tags, so the residual is local-only and loud
+    rather than silent.
+    """
+    root = _badge_root(tmp_path, tags=[], current="4.5.0", badge="4.4.0")
+
+    found = _issues(root)
+    assert any("README.md" in issue and "4.4.0" in issue for issue in found), found
+    assert not any("README.md" in line for line in _degradations(root)), (
+        "the badge went dark instead of answering from the declared version"
+    )

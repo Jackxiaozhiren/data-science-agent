@@ -8038,3 +8038,105 @@ version that authorises it, or (b) you authorise me to make the six-site bump in
 release and the PyPI publish stay yours in both cases. What is *not* on the table is folding a re-freeze into
 a fix commit, because that is the one act the freeze document forbids in writing, and a baseline that moves
 without a version is exactly the drift class §113 was filed for.
+
+## 144. The authorized version bump, and the four things it surfaced on the way
+
+Asked for the bump (six sites, on this session's authorization; the tag stays the maintainer's), I made it
+on a branch named for the lane the repository already provides -- `release/v4.5.0-rc1` -- and the work turned
+out to be mostly about gates rather than about editing numbers. Every claim below is measured, in order.
+
+**1. A pending bump could not land green, and the escape hatch was already in the code.** `check_version_consistency()`
+compares `git describe --tags --always`'s base against `v{EXPECTED}`, so with the manifest ahead of the last
+tag the only finding is `git tag mismatch: v4.4.0-222-g58d6f53 base v4.4.0 != v4.5.0`. The narrow exception
+next to it -- `_is_release_candidate_ref` accepting exactly `release/v<expected>-rc\d*` from `GITHUB_HEAD_REF`
+or `GITHUB_REF_NAME`, ported during the 4.3.2 lineage merge -- is the designed answer. Verified both ways:
+with that ref the run reports 0 issues; without it, the tag line is the *only* issue. Since `ci.yml` runs on
+`push: branches: [main]` and `pull_request` only, a bump has exactly one green landing: a PR from an rc-named
+branch. Pushing it straight to main would have redden main by design, which is the §140 mistake this session
+already paid for once.
+
+**2. The README badge rule demanded a link to a release that does not exist.** Simulated tree -- declared
+4.5.0, newest tag 4.4.0, badge honestly pointing at v4.4.0 -- returned:
+
+```
+README.md:1 cites '4.4.0', advertised as the current release, which it is not (current 4.5.0)
+```
+
+The gate was asking for `releases/tag/v4.5.0`, a 404, and for a claim that PyPI serves 4.5.0 when it does
+not. So the badge entry moved from `reference="current"` to a third kind, `newest-or-current`: refs govern
+where they exist, and with none it answers from the declared version. That keeps §121's guarantee --
+`test_a_tagless_checkout_still_catches_a_stale_current_release`, whose first revision of this fix broke, and
+which is the reason the fallback exists rather than a plain switch to `newest` -- and accepts one named
+residual: a *tagless* checkout *during* a pending bump asks for the newer number. CI cannot be in that state,
+because `--require-released-tags` refuses a run with no refs; every real checkout of this repository has
+tags. The announcement rule added in §136 keeps strict `newest` and degrades loudly, which is right for a
+surface whose subject is the last published release: after this bump it still names v4.4.0 and stays green.
+
+**3. My own new test was shadowing an existing one.** `ruff check` returned `F811 Redefinition of unused
+test_the_announcement_rule_reports_itself_undecidable_without_refs` -- I had added a second function with the
+same name as a §136 case, Python kept the last definition, and pytest reported 43 passed while one §136
+assertion never ran. Removed the duplicate. A count that stays the same after deleting a test is the tell that
+the test was decorative.
+
+**4. `uv.lock` is an eighth version site, and the CI gate for it is the first gate in the list.** After
+editing the six declared sites, `uv lock --check` (runner gate #1) fails: the lock's own root entry still
+said `version = "4.4.0"`. `uv lock` fixed it with a one-line diff (192 packages resolved, root moved
+4.4.0 → 4.5.0, nothing else touched). Neither `sync_vendor` nor `check_public_claims` would have noticed;
+the fast gates I ran before the suite did not either -- it was `pytest` that surfaced the first three items
+here, and the lock that surfaced this one.
+
+**5. §139's new check caught my own sequencing error before it could be committed.** I regenerated the SBOM
+*before* refreshing the lock, so the derived set and the on-disk copy disagreed and `--check` said exactly how:
+
+```
+SBOM CHECK FAIL: 192 components derived from this revision, 193 on disk
+  in the committed SBOM but not in this revision: jack-data-science-agent@4.4.0
+```
+
+The root package was listed twice, at two versions, because the workspace manifest and `uv.lock` are deduped
+by `(name, version)` and they disagreed at that moment. Regenerating after `uv lock` yields 192 with no
+duplicate and `SBOM CHECK OK: 192 components and release '4.5.0' match this revision`. The gate built to
+catch a stale published claim caught an in-flight authoring error instead -- which is the same instrument doing
+its job, not a different one.
+
+**6. Two stale version literals in shipped code, found by refusing to edit a test.** Five assertions
+hard-coded `"4.4.0"` (`tests/sdk/test_sdk_contract.py:25,154`,
+`tests/api/compatibility/test_sdk_compat.py:11`, `tests/jupyter/test_jupyter_integration.py:99,145`). Rather
+than typing the new number, they now use a session fixture `declared_version` reading `pyproject.toml` --
+which turns each into a cross-file agreement check instead of a copy. Proving that required planting a
+divergence, and the plants are what found the defect: `__version__ = "9.9.9"` reddened
+`test_sdk_public_surface_exports` ✔, `sdk.py` at 9.9.9 reddened `test_agent_version_stable` and
+`test_sdk_stable_exports` ✔ -- but the two jupyter assertions stayed green under both. Tracing why landed on
+`apps/jupyter/src/dsa_jupyter/metadata.py:50,54`: when distribution metadata is unavailable the §31 notebook
+metadata fell back to typed literals, `sdk_version = "4.4.0"` and `agent_version = "0.1.0"`. A provenance
+artifact that stamps a version nobody declared, rotted by construction on every bump, and unreachable from
+the tests as written. Both fallbacks now import the owners (`data_science_agent.__version__`,
+`dsa_agent.__version__`) inside the existing handlers -- no new `try`, which is why
+`debt.exceptHandlers` is still **185** -- and `test_jupyter_metadata_falls_back_to_the_declared_versions`
+forces `importlib.metadata.version` to raise so those lines are finally covered, with `PackageNotFoundError`
+and a hard `RuntimeError` both routed to the honest value.
+
+**Incident, mine.** While adding the fixture to `conftest.py` my edit anchor swallowed the following
+`@pytest.fixture(autouse=True)` line, silently un-decorating `isolate_process_global_state` -- §87's
+per-test isolation would have stopped running while the suite stayed green. Caught by reading the file back
+immediately after the edit rather than trusting the tool's success message; repaired and verified through
+`pytest --fixtures`, which now lists both `declared_version [session scope]` and
+`isolate_process_global_state`.
+
+**The bump itself, as eight edits with one owner each.** `pyproject.toml:3`, `src/data_science_agent/__init__.py:1`,
+`src/data_science_agent/sdk.py:305`, `CITATION.cff:9` (the citation version) and `:32` (the
+`references:` entry whose own title is "current release used in this work" -- a live claim of the same fact,
+so it moves too; the `4.2.0` reference and `cff-version: 1.2.0` are dated metadata and stay),
+`scripts/check_public_claims.py:20` `EXPECTED`, `release/sbom.json` + `release/sbom.cyclonedx.json` by
+regeneration rather than editing, and `uv.lock`. Not bumped, deliberately: `README.md:16`'s badge and
+`docs/announcements/latest.md`, both of which describe the newest *published* release (4.4.0) and will be
+pulled forward by the gate once v4.5.0 exists; `CITATION.cff`'s `date-released: 2026-09-10`, which is the last
+real release date, not a forecast.
+
+**Gates on this branch, with `GITHUB_HEAD_REF=release/v4.5.0-rc1` to mirror what a PR run will see.** `uv lock --check`
+0 · `pytest -q --cov` 0 at **83.24%**, **815 passed** · `ruff check` 0 · `ruff format --check` 0 / 257 files ·
+`mypy` 0 / 121 files · `audit_facts --check` OK, `debt.testFunctions` **771 → 775**, `exceptHandlers` **185**,
+`suppressionDirectives` **42**, `swallowedExceptionSites` **8** -- all unchanged, no exclusion added ·
+`check_public_claims --require-released-tags` 0 issues at 47/54 · `mkdocs build --strict` 0. The local ref is a
+simulation of the CI context, not proof of it: the PR run is the evidence, and it has not been opened because
+pushing a branch and opening a PR are shared-state actions this session asks about first.
