@@ -7898,3 +7898,31 @@ issues at 47/54; `audit_facts --check` OK. The remaining local red is `sync_vend
 **What §139 still has to prove.** Its CI evidence does not exist yet: the `--check` step has never executed,
 because the only run that contained it died at the step in front of it. The next run has to show step 21
 `success` with `SBOM CHECK OK: 192 components …` in its log, and this section is where that gets recorded.
+
+## 141. Runner confirmation for §139 and §140: the `--check` step has now executed
+
+`c2a9da1` (§140, the guide propagation) → CI run **37766073297 `success`**, `ci` 35 steps and
+`web-regression` 13 steps, both `success`, with the same two pre-existing conditional skips
+(`Verify v4.3.0 release candidate`, `Upload regression screenshots`). The steps §139 and §140 were about:
+
+- **step 20** `uv run pytest -q --cov` -- `success`, the step that was `failure` on `20e0553`. The runner's
+  own line: `Required test coverage of 79.0% reached. Total coverage: 83.11%`.
+- **step 21** `uv run python scripts/generate_sbom.py --check` -- `success`, printing in the runner's words:
+  `SBOM CHECK OK: 192 components and release '4.4.0' match this revision (license fields and the generated
+  stamp are not compared)`. This is the evidence §140 said did not exist yet: the check has now run on the
+  pipeline it guards, and it ran *after* pytest rather than behind it.
+- **step 28** `docker build -f docker/Dockerfile.web` -- `success` again, on
+  `FROM docker.io/library/node:22-alpine@sha256:0a7108bf6c7b…`, which keeps §137's D-L4-14 proof true on a
+  second, later commit rather than resting on one run.
+
+`main` was red for the span between run 37763153129 (`20e0553`, §139 pushed without the guide update) and
+37766073297 (`c2a9da1`). Duration measured from the two runs' timestamps: roughly 1 h 18 min at the time of
+writing. That is the cost of the half-change, and it is why §140's verification list is now part of the push
+procedure rather than a note after it: run the pytest gate as CI runs it, read *this* run's summary, then
+push.
+
+**Session state after §141.** D-L4-12 (§132), D-L4-13 (§135 content, §136 gate), D-L4-14 (§137) and the new
+D-INFRA findings (§133 gate surface, §139 SBOM check, §140 propagation) are closed and runner-verified. Still
+open, each needing something a push cannot provide: the `publish.yml` step-20 fix of 2026-09-11 remains
+unexercised because proving it takes a tag publish; the α re-freeze needs a version bump; the `braces` npm
+exemption expires 2026-11-07 and the gate will raise it then.
