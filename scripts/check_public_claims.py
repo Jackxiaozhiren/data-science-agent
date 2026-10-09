@@ -176,25 +176,112 @@ CURRENCY_ASSERTIONS = [
         True,
         "current",
     ),
-    (
-        "docs/announcements/latest.md",
-        re.compile(r"^# Data Science Agent v(?P<version>\d+\.\d+\.\d+)$"),
-        "the copy generated for the newest published release",
-        True,
-        "newest",
-    ),
 ]
+
+
+def _as_version(version: str) -> tuple[int, int, int] | None:
+    """A plain three-part release number, or None -- one parser for every version comparison here."""
+    parts = version.split(".")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return None
+    return int(parts[0]), int(parts[1]), int(parts[2])
 
 
 def _newest_release(released: set[str]) -> str:
     """Highest plain semver among the refs, or "" when none is comparable."""
-    candidates: list[tuple[int, int, int]] = []
-    for version in released:
-        parts = version.split(".")
-        if len(parts) != 3 or not all(part.isdigit() for part in parts):
-            continue
-        candidates.append((int(parts[0]), int(parts[1]), int(parts[2])))
+    candidates = [v for v in (_as_version(x) for x in released) if v is not None]
     return ".".join(str(n) for n in max(candidates)) if candidates else ""
+
+
+#: The first release whose announcement copy the pipeline is expected to produce. `publish.yml` learned to
+#: write announcements in the 4.2.10 Trusted-Publishing line, so demanding a copy for older tags would
+#: assert a history the repository never had. Floor owned here, with its reason, rather than inferred
+#: from whichever files happen to exist.
+ANNOUNCEMENT_FLOOR = "4.3.0"
+
+
+def _dated_copies(root: Path = ROOT) -> dict[str, str]:
+    """version -> filename, for every `docs/announcements/v<X.Y.Z>.md`."""
+    copies: dict[str, str] = {}
+    directory = root / "docs" / "announcements"
+    for path in sorted(directory.glob("v*.md")) if directory.is_dir() else []:
+        version = _as_version(path.stem[1:])
+        if version is not None:
+            copies[path.stem[1:]] = path.name
+    return copies
+
+
+def _title_version(path: Path) -> str | None:
+    """The release a copy announces: the version in its `# Data Science Agent v…` title."""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"# Data Science Agent v(\d+\.\d+\.\d+)\s*$", line)
+        if match:
+            return match.group(1)
+    return None
+
+
+def announcement_currency_issues(root: Path = ROOT) -> list[str]:
+    """`latest.md` is the copy of a release that exists, and no released tag may lack its copy.
+
+    This replaces §136's rule, which compared `latest.md` to the newest *tag* and deadlocked the release:
+    the copy for a version can only be written after that release is published -- `generate_release_announcement.py`
+    renders it from the release body and publish date -- and `publish.yml` runs the test suite *before*
+    publishing. So a tag-only assertion demands a document that cannot honestly exist yet, which is what
+    stopped v4.5.0 shipping (§146). The pair is checked offline instead: the workflow writes `v<X>.md` and
+    `latest.md` together, so a copy that never landed shows up as a released tag with no file, and a
+    hand-moved `latest.md` shows up as a version no tag names. `publish.yml` adds the release-time check
+    that the tag has its copy, which is where the failure belongs.
+    """
+    issues: list[str] = []
+    released = {v for v in released_versions(root) if _as_version(v) is not None}
+    if not released:
+        return [
+            "docs/announcements/: no release tags readable in this checkout, so neither the copy "
+            "coverage nor the newest release can be tested"
+        ]
+    copies = _dated_copies(root)
+    floor = _as_version(ANNOUNCEMENT_FLOOR)
+    assert floor is not None  # a typo in the constant must be loud, not a silently wider rule
+
+    missing = sorted(
+        v
+        for v in released
+        # The newest tag is excluded on purpose: between cutting a tag and publishing it the copy
+        # legitimately does not exist, and demanding it is what deadlocked v4.5.0. `publish.yml`'s
+        # post-announcement step covers that window, and as soon as a later release lands this check
+        # catches the gap anyway -- a skipped copy is a lag of one release, not a permanent blind spot.
+        if _as_version(v) >= floor and v not in copies and v != _newest_release(released)
+    )
+    for version in missing:
+        issues.append(
+            f"docs/announcements/v{version}.md is missing: v{version} is a release tag, so the "
+            "announcement step never ran for it"
+        )
+    ahead = sorted(v for v in copies if v not in released)
+    for version in ahead:
+        issues.append(
+            f"docs/announcements/{copies[version]} names v{version}, which no release tag exists for"
+        )
+
+    latest = root / "docs/announcements/latest.md"
+    if not latest.is_file():
+        issues.append("docs/announcements/latest.md is absent; the index names it as a live page")
+        return issues
+    titled = _title_version(latest)
+    if titled is None:
+        issues.append("docs/announcements/latest.md carries no `# Data Science Agent v…` title")
+        return issues
+    newest_copy = max(copies, key=lambda v: _as_version(v) or (0, 0, 0)) if copies else None
+    if newest_copy is not None and titled != newest_copy:
+        issues.append(
+            f"docs/announcements/latest.md names v{titled} but the newest dated copy is "
+            f"v{newest_copy} ({copies[newest_copy]}); the two are written together"
+        )
+    if _as_version(titled) not in [_as_version(v) for v in released]:
+        issues.append(
+            f"docs/announcements/latest.md names v{titled} as the latest release, which no tag carries"
+        )
+    return issues
 
 
 def currency_degradations(root: Path = ROOT) -> list[str]:
@@ -556,6 +643,9 @@ def main(argv: list[str] | None = None) -> int:
 
     for iss in check_currency_claims():
         all_findings.append(("currency_claims", iss, ""))
+
+    for iss in announcement_currency_issues():
+        all_findings.append(("announcement_currency", iss, ""))
 
     for iss in check_measurement_claims():
         all_findings.append(("measurement_claims", iss, ""))

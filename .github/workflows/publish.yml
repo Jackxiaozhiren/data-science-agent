@@ -191,3 +191,28 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: python scripts/generate_release_announcement.py
+      - name: Verify the announcement copy names this release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Event-derived values are validated, not trusted: the tag pattern here mirrors `on.push.tags`,
+          # and the branch name comes back from the API rather than from the event payload.
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unexpected release ref name '${GITHUB_REF_NAME}'; refusing to compare it against anything."
+            exit 1
+          fi
+          branch="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .default_branch)"
+          if [[ ! "${branch}" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::Default branch name from the API is not a plain ref: ${branch}"
+            exit 1
+          fi
+          title="$(gh api "repos/${GITHUB_REPOSITORY}/contents/docs/announcements/latest.md?ref=${branch}" \
+            --jq '.content' | base64 -d | sed -n '1p')"
+          if [[ "${title}" != "# Data Science Agent ${GITHUB_REF_NAME}" ]]; then
+            echo "::error::${branch} still opens its announcement with '${title}' after the generator step ran for ${GITHUB_REF_NAME}. That step writes the copy from the published release, so a mismatch means it did not land: check its own step output, and note docs/announcements/README.md documents this failure mode."
+            exit 1
+          fi
+          echo "Announcement copy on ${branch} is: ${title}"

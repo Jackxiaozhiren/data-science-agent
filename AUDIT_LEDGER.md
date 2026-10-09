@@ -8187,3 +8187,101 @@ trusted) · `ruff check` 0 · `ruff format --check` 0 / 258 files · `audit_fact
 this repository has one green landing for a pending bump -- a PR from a branch named `release/v<version>-rcN`
 -- and pushing straight to `main` reports `git tag mismatch: … base v4.4.0 != v4.5.0` by design. Pushing the
 branch and opening that PR are shared-state actions, so they wait for a word, and the tag itself stays yours.
+
+## 146. §136's announcement rule deadlocked the release it was meant to police, and was replaced
+
+**What broke.** v4.5.0 was merged to `main` as `6c4f3a5` and tagged. Publish run 37810273356 then failed at
+**step 11** -- `uv run pytest -q --cov` -- so steps 12-21 were skipped: nothing built, nothing attested,
+**nothing published**, and no GitHub Release exists (`gh release view v4.5.0` → `release not found`;
+`gh release list` still shows v4.4.0 as Latest). `main`'s own `ci` run 37813069103 was `failure` for the
+same reason. The two findings the gate produced:
+
+```
+README.md:16 cites '4.4.0', advertised as the current release, but the newest release tag is '4.5.0' (declared 4.5.0)
+docs/announcements/latest.md:1 cites '4.4.0', the copy generated for the newest published release, but the newest release tag is '4.5.0' (declared 4.5.0)
+```
+
+**Which half was my defect.** The README line is the release pointer moving with the tag, and it was simply
+not done yet -- an action item. The `latest.md` line is unsatisfiable in that position: the copy is rendered
+by `generate_release_announcement.py` **from the published release** (its body and `published_at`), and that
+step sits *behind* the test suite in `publish.yml`. So the rule demanded a document that could not honestly
+be written until the run it was blocking succeeded. §136 shipped that rule an hour earlier; its fixtures
+covered "pending version bump" and never "tagged but unpublished", which is the state every release passes
+through. Ordering cannot rescue it either -- re-cutting the tag later hits the same step 11 -- so the premise
+("a release tag implies a published release") was what had to go.
+
+**The replacement, and what it can and cannot see.** `announcement_currency_issues()` replaces the tag
+comparison with two offline-decidable invariants over the pair the workflow writes together: every release
+tag from `ANNOUNCEMENT_FLOOR` upward must have a dated copy `docs/announcements/v<X>.md` -- **excluding the
+newest tag**, whose copy is legitimately still in the future -- and `latest.md` must equal the newest dated
+copy present and must not name a version no tag carries. So a copy that never landed is a tag with no file
+(caught on the next release, i.e. a lag of one rather than five), and a hand-advanced `latest.md` is a
+version ahead of refs (caught immediately). What `main` can no longer see is "the newest tag's copy is
+missing", because that is exactly the window it must not police -- and that gap is closed where it can be
+seen: `publish.yml` gained a step after the generator that reads the default branch's `latest.md` back
+through the API and fails the release unless it opens with the tag being cut. The event-derived values it
+compares against are validated first (`GITHUB_REF_NAME` against the same pattern as `on.push.tags`, and the
+API's `default_branch` as a plain ref), on the hook's reminder as much as the repo's own practice.
+
+**Backfill, because a new rule must not be born exempting the past.** v4.3.0, v4.3.1, v4.3.2 and v4.3.3 had
+no copies -- the same gap D-L4-13 was filed for, one release deeper than §135 fixed. All four releases exist
+and are published and immutable (`gh api …/releases/tags/v4.3.x`), so the copies came from the repository's
+own `render()` on each release payload, not from prose: 2736/961/2232/1118 bytes. v4.3.1's release body is
+empty, and its copy therefore carries the renderer's own `_No release notes supplied._` placeholder -- the
+truthful artefact of what the release says, not an invented summary.
+
+**And the backfill immediately earned its keep by failing a test.** Adding four pages under `docs/` made them
+nav orphans, and
+`tests/test_docs_nav_coverage.py::test_the_collector_and_this_test_share_one_definition_of_orphan` went red
+-- the collector reads disk, its counterpart lists tracked files, and my new files were neither in `nav:` nor
+committed. That test exists to keep one number with one owner; it did. Fixed by entering the four pages in
+`mkdocs.yml` under Releases (newest first, beside the v4.4.0 entry), which returns
+`capabilities.navOrphanPages` to `[]` rather than trading the ratchet's 0 for its 23 ceiling.
+
+**Retired coverage is named, not silently dropped.** §136's three announcement cases came out of
+`tests/test_currency_claims.py`, with a comment at their old location saying which direction of each now
+lives in `tests/test_announcement_currency.py` (missing copy for a released tag / copy ahead of tags / the
+newest-tag window), plus a case for the pair disagreeing, one for "no readable refs is reported rather than
+passing", a live-tree assertion, a floor assertion that refuses a silent widening, and two wiring assertions
+on `publish.yml` including a planted-gut control. `_newest_release()` survives for the badge rule and grew a
+shared `_as_version()` parser, so version ordering has one owner. `currency_degradations` no longer names
+`latest.md` -- it has no tag-keyed rule left to degrade -- and the new function states its own
+undecidable-without-refs line instead.
+
+## 147. The orphan tag was deleted, and what the remaining red on main actually means
+
+**Done under the authorization to delete.** `git tag -d v4.5.0` and `git push origin :refs/tags/v4.5.0`
+removed the tag that pointed at a commit whose release could not proceed, leaving `main` at `6c4f3a5` with
+the declared version ahead of the newest tag (`v4.4.0`, verified via `git ls-remote --tags`: zero v4.5.0
+matches). Nothing was published by that tag, so no release, artifact or PyPI state was touched -- the
+evidence being `gh release view v4.5.0` → `release not found` before and after.
+
+**What `main` looks like now, stated rather than smoothed.** With §146 landed and the badge advanced in the
+release commit, the suite has exactly one failing test,
+`tests/test_automation_scripts.py::test_the_widened_net_costs_no_suppression_and_no_finding`, because it
+asserts all four claims rules report nothing and `check_version_consistency()` refuses a declared version
+ahead of its tag: `git tag mismatch: v4.4.0-225-g6c4f3a5 base v4.4.0 != v4.5.0`. That is the repository's
+own release semantics, the same rule §144 documented from the other side: a pending version belongs on a
+`release/v4.5.0-rcN` branch or on a commit that is about to be tagged. It is not a defect to fix by editing
+the gate, and the gate was not touched for it.
+
+**Proved green the way this can be proved without a release.** Tagging the release commit *locally* (never
+pushed) puts the working tree in exactly the state Publish will evaluate: `git describe --tags` resolves to
+`v4.5.0`, and `check_public_claims --require-released-tags` then reports **0 issues** at 47 scanned / 58
+skipped as historical, with the badge and the announcement both consistent. The local tag was deleted again
+immediately after the measurement, and `git ls-remote --tags origin | grep -c v4.5.0` still returns zero --
+the remote is untouched, and the tag remains the maintainer's act.
+
+**The handoff, in the order that lets the gate pass on its own terms.** `release/v4.5.0/manifest.json` is
+authored from measured values -- SBOM digests computed from the files (`d8b8efcb89c95e59…` /
+`377b27af2c8e12b2…`), `evaluator_v2 (10 dims)` derived from the frozen results' own per-task details rather
+than copied from v4.4.0, node `v24.15.0`, docker reported as client-only **with that limitation written into
+the field** because the daemon is absent here -- and its `commit` field is the documented
+`PENDING-RELEASE-COMMIT`, filled by the follow-up pin commit in the v4.3.x pattern §144's research recorded.
+So: tag the pin commit, Publish runs the suite on a commit where every rule is satisfiable, and the release
+lands. Until then this section is the current state: one expected red, named.
+
+**Not claimed.** The external benchmark lanes are marked `NOT RE-RUN` in the manifest rather than restating
+v4.4.0's DataSciBench figures as current, and `verify_release` is `PENDING at tagging time` rather than a
+number I have not measured for 4.5.0. The v4.4.0 manifest carries 17/17 for its own release; 4.5.0's comes
+from running `dsa verify-release v4.5.0` after the publish, which is a post-release step by nature.

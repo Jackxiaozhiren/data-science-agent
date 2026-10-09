@@ -9,6 +9,79 @@ before), `pytest 395 passed` (was 345), coverage **80.04%** with
 `fail_under = 79` ratchet (was 0% — source misconfigured + `_vendor`
 shadowing + missing greenlet concurrency).
 
+### Fixed (unreleased, v4.5.0 line) — release gating
+
+- The announcement currency rule added at §136 could not be satisfied at release time and blocked v4.5.0. It
+  compared `docs/announcements/latest.md` to the newest release *tag*, but the copy is rendered from the
+  published release's body and date by a `publish.yml` step sitting behind the test suite, so a tag ahead of
+  its release demanded a document that could not honestly exist yet. Publish run 37810273356 failed at its
+  pytest step -- nothing built, attested or published, and `gh release view v4.5.0` returned
+  `release not found` -- as did `main`'s own `ci` run. Replaced by two invariants a checkout can decide
+  offline: every release tag from `ANNOUNCEMENT_FLOOR` (4.3.0) up has a dated copy except the newest, whose
+  release may still be pending, and `latest.md` equals the newest copy present while naming a tagged version.
+  The window that leaves uncovered is closed where it can be seen: `publish.yml` now reads the default
+  branch's copy back after generating it and fails the release unless it opens with the tag being cut, with
+  both event-derived values validated before use (`AUDIT_LEDGER.md` §146).
+- Four missing announcement copies backfilled from the releases themselves -- `v4.3.0.md`, `v4.3.1.md`,
+  `v4.3.2.md`, `v4.3.3.md`, each produced by the pipeline's own `render()`. v4.3.1's release body is empty, so
+  its copy carries the renderer's `_No release notes supplied._` placeholder instead of an invented summary.
+  Adding them made the pages nav orphans, which
+  `test_the_collector_and_this_test_share_one_definition_of_orphan` caught; they are now in `mkdocs.yml`, so
+  `capabilities.navOrphanPages` is empty again.
+- `release/v4.5.0/manifest.json` authored from measured values (SBOM digests computed from the files,
+  `evaluator_v2 (10 dims)` derived from the frozen results' per-task details), with `commit` left
+  `PENDING-RELEASE-COMMIT` for the follow-up pin commit that carries the tag. Fields that could not be
+  measured here say so rather than inheriting v4.4.0's numbers: `verify_release` pending, external benchmark
+  lanes marked not re-run, docker recorded as client-only because no daemon is present.
+- The orphan tag was deleted (`§147`), which is the only reason `main` now carries a single failing test:
+  `check_version_consistency()` refuses a declared version ahead of its tag, so
+  `git tag mismatch: … base v4.4.0 != v4.5.0` stands until v4.5.0 is cut. Verified green with the tag created
+  locally and never pushed (`0 issues`, 47 scanned / 58 skipped), and the local tag was removed again.
+
+### Changed (unreleased, v4.5.0 line)
+
+- Version bumped to **4.5.0** across its eight sites: `pyproject.toml`, `src/data_science_agent/__init__.py`,
+  `src/data_science_agent/sdk.py`, `CITATION.cff` (the citation version and the `references:` entry that
+  calls itself "current release used in this work"), `scripts/check_public_claims.py`'s `EXPECTED`,
+  `release/sbom.json` + `sbom.cyclonedx.json` (regenerated, not typed), and `uv.lock` -- whose root entry the
+  bump had to move too, because `uv lock --check` is the first gate CI runs. The README release badge and
+  `docs/announcements/latest.md` deliberately still name **v4.4.0**, the newest published release.
+- A pending version bump can now land green, and only in the lane the repository already defines: a branch
+  named `release/v<expected>-rc[N]`, which `_is_release_candidate_ref` accepts and which `ci.yml` runs on a
+  PR. Landing the bump on `main` before the tag exists reports exactly one finding, `git tag mismatch: …
+  base v4.4.0 != v4.5.0` -- the gate is right to refuse, since no v4.5.0 tag exists yet
+  (`AUDIT_LEDGER.md` §144).
+- The README currency rule no longer asks for a link to a release that does not exist. Measured on a
+  simulated tree (declared 4.5.0, newest tag 4.4.0) it reported `cites '4.4.0', advertised as the current
+  release, which it is not`, demanding `releases/tag/v4.5.0` -- a 404 and a false PyPI claim. The entry now
+  reads `newest-or-current`: refs govern where they exist, and with none it answers from the declared version
+  so §121's tagless-checkout guarantee stays lit. The announcement copy keeps strict `newest` and reports
+  itself undecidable without refs.
+- Five test assertions that hard-coded the version now derive it from `pyproject.toml` through a session
+  fixture, so a bump edits no tests and each assertion checks agreement between two files instead of copying
+  one number. Proving that required planting divergences, and the plants found a shipped defect:
+  `dsa_jupyter/metadata.py` fell back to typed literals `sdk_version = "4.4.0"` and `agent_version = "0.1.0"`
+  whenever distribution metadata was unavailable -- a provenance artifact stamping a version nobody declared,
+  rotted on every bump and unreachable from the tests as written. Both fallbacks now import their owners, and
+  a new case forces the lookup to fail so those lines are covered (§144).
+
+### Changed (unreleased, v4.5.0 line) — baseline re-freeze
+
+- `benchmarks/baseline/` re-frozen on 2026-10-09 at `4259e8f`, on the commit that carries the v4.5.0 bump, so
+  the immutability rule in `docs/reproducibility.md` was satisfied rather than waived. Against the 2026-08-16
+  snapshot 22 of 24 summary fields are unchanged; `unsupported_claim_rate` moves 0.06 → 0.0 (an improvement
+  that remains unattributed between §99 and §107, and the freeze README says so instead of presenting it as a
+  new truth) and `mean_latency_ms` 47.92 → 142.9, which is a machine reading: three runs of the same command on
+  the same code within one hour measured 126.86, 77.16 and 142.90. The field stays because deleting a
+  published field is a larger claim change than re-freezing one; removing it or replacing it with a spread is
+  left as a maintainer decision and recorded as such in the README.
+- The freeze finally carries its own provenance: `run_manifest.json` (new to the directory) records
+  `git_commit: 4259e8f101ed`, `llm_mode: stub`, `call_count: 0`, and `results.json` now contains the run's
+  `execution` block -- replacing §113's sentence that nothing recorded which mode produced the stored numbers.
+  The README's aggregate line and file tree are re-derived from the artifacts by
+  `tests/test_baseline_readme_integrity.py`, so the prose cannot drift from them
+  (`AUDIT_LEDGER.md` §145).
+
 ### Fixed
 
 - `mypy .` now passes: `explicit_package_bases`, non-shipped excludes,
@@ -1089,47 +1162,3 @@ Patch bump: no breaking public API change.
 
 ## 0.1.0 — Phase 1 scaffold
 - Monorepo, datasets/evidence/tool/benchmark/mcp/docs.
-
-### Changed (unreleased, v4.5.0 line)
-
-- Version bumped to **4.5.0** across its eight sites: `pyproject.toml`, `src/data_science_agent/__init__.py`,
-  `src/data_science_agent/sdk.py`, `CITATION.cff` (the citation version and the `references:` entry that
-  calls itself "current release used in this work"), `scripts/check_public_claims.py`'s `EXPECTED`,
-  `release/sbom.json` + `sbom.cyclonedx.json` (regenerated, not typed), and `uv.lock` -- whose root entry the
-  bump had to move too, because `uv lock --check` is the first gate CI runs. The README release badge and
-  `docs/announcements/latest.md` deliberately still name **v4.4.0**, the newest published release.
-- A pending version bump can now land green, and only in the lane the repository already defines: a branch
-  named `release/v<expected>-rc[N]`, which `_is_release_candidate_ref` accepts and which `ci.yml` runs on a
-  PR. Landing the bump on `main` before the tag exists reports exactly one finding, `git tag mismatch: …
-  base v4.4.0 != v4.5.0` -- the gate is right to refuse, since no v4.5.0 tag exists yet
-  (`AUDIT_LEDGER.md` §144).
-- The README currency rule no longer asks for a link to a release that does not exist. Measured on a
-  simulated tree (declared 4.5.0, newest tag 4.4.0) it reported `cites '4.4.0', advertised as the current
-  release, which it is not`, demanding `releases/tag/v4.5.0` -- a 404 and a false PyPI claim. The entry now
-  reads `newest-or-current`: refs govern where they exist, and with none it answers from the declared version
-  so §121's tagless-checkout guarantee stays lit. The announcement copy keeps strict `newest` and reports
-  itself undecidable without refs.
-- Five test assertions that hard-coded the version now derive it from `pyproject.toml` through a session
-  fixture, so a bump edits no tests and each assertion checks agreement between two files instead of copying
-  one number. Proving that required planting divergences, and the plants found a shipped defect:
-  `dsa_jupyter/metadata.py` fell back to typed literals `sdk_version = "4.4.0"` and `agent_version = "0.1.0"`
-  whenever distribution metadata was unavailable -- a provenance artifact stamping a version nobody declared,
-  rotted on every bump and unreachable from the tests as written. Both fallbacks now import their owners, and
-  a new case forces the lookup to fail so those lines are covered (§144).
-
-### Changed (unreleased, v4.5.0 line) — baseline re-freeze
-
-- `benchmarks/baseline/` re-frozen on 2026-10-09 at `4259e8f`, on the commit that carries the v4.5.0 bump, so
-  the immutability rule in `docs/reproducibility.md` was satisfied rather than waived. Against the 2026-08-16
-  snapshot 22 of 24 summary fields are unchanged; `unsupported_claim_rate` moves 0.06 → 0.0 (an improvement
-  that remains unattributed between §99 and §107, and the freeze README says so instead of presenting it as a
-  new truth) and `mean_latency_ms` 47.92 → 142.9, which is a machine reading: three runs of the same command on
-  the same code within one hour measured 126.86, 77.16 and 142.90. The field stays because deleting a
-  published field is a larger claim change than re-freezing one; removing it or replacing it with a spread is
-  left as a maintainer decision and recorded as such in the README.
-- The freeze finally carries its own provenance: `run_manifest.json` (new to the directory) records
-  `git_commit: 4259e8f101ed`, `llm_mode: stub`, `call_count: 0`, and `results.json` now contains the run's
-  `execution` block -- replacing §113's sentence that nothing recorded which mode produced the stored numbers.
-  The README's aggregate line and file tree are re-derived from the artifacts by
-  `tests/test_baseline_readme_integrity.py`, so the prose cannot drift from them
-  (`AUDIT_LEDGER.md` §145).
