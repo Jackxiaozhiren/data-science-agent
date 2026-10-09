@@ -17,7 +17,7 @@ ROOT = Path(__file__).parents[1]
 # the patterns below hard-code their own literals instead -- so listing them read
 # as live expectations while nothing compared against them.
 EXPECTED = {
-    "version": "4.4.0",
+    "version": "4.5.0",
 }
 
 # Build/dependency trees that never carry a public claim. `.workspace` is the vendored DataSciBench
@@ -156,13 +156,18 @@ def current_version(root: Path = ROOT) -> str:
 #: version; `newest` is the newest release tag in refs, which is what a *published* surface must
 #: track -- the declared version outruns the last release between a bump and its publish, so keying
 #: an announcement to `current` would call a truthful copy stale exactly when a release is pending.
+#: §144 moved the README badge to `newest` for the same reason, measured rather than argued: with
+#: `__init__.py` at 4.5.0 and no tag yet, the rule demanded the badge link to
+#: `releases/tag/v4.5.0`, a release that does not exist -- a gate that can only pass by writing a
+#: false claim. Both release-facing surfaces now track refs; `ROADMAP.md`, which is the one surface
+#: whose whole subject is the *unreleased* next version, keeps `current`.
 CURRENCY_ASSERTIONS = [
     (
         "README.md",
         re.compile(r"\[\*\*v(?P<version>\d+\.\d+\.\d+)\*\*\]"),
         "advertised as the current release",
         False,
-        "current",
+        "newest-or-current",
     ),
     (
         "ROADMAP.md",
@@ -232,9 +237,18 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
         # than returning an empty list, which a caller cannot tell apart from "found nothing".
         return [f"currency check disabled: no current version resolved under {root}"]
     for rel_path, pattern, claim, needs_tags, reference in CURRENCY_ASSERTIONS:
-        if needs_tags and not released:
-            continue
-        expected = _newest_release(released) if reference == "newest" else current
+        if reference == "newest":
+            if not released:
+                continue
+            expected = _newest_release(released)
+        elif reference == "newest-or-current":
+            # Refs govern where they exist; with none the declared version is still an answer, which is
+            # §121's guarantee that the badge check never goes dark in a default-depth checkout.
+            expected = _newest_release(released) or current
+        else:
+            if needs_tags and not released:
+                continue
+            expected = current
         if not expected:
             continue
         path = root / rel_path
@@ -245,7 +259,7 @@ def check_currency_claims(root: Path = ROOT) -> list[str]:
                 version = match.group("version")
                 if version == expected:
                     continue
-                if reference == "newest":
+                if reference in ("newest", "newest-or-current"):
                     issues.append(
                         f"{rel_path}:{lineno} cites {version!r}, {claim}, but the newest release "
                         f"tag is {expected!r} (declared {current})"

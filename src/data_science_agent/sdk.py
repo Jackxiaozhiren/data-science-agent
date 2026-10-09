@@ -302,7 +302,7 @@ class Agent:
     """
 
     def __init__(self) -> None:
-        self._version = "4.4.0"
+        self._version = "4.5.0"
 
     async def analyze(
         self,

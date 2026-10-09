@@ -1,5 +1,6 @@
 import importlib
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -84,6 +85,19 @@ def _restore(obj: object, saved: object) -> None:
         obj.update(saved)
     else:
         raise TypeError(f"snapshot/type mismatch: {type(obj).__name__} vs {type(saved).__name__}")
+
+
+@pytest.fixture(scope="session")
+def declared_version() -> str:
+    """The version `pyproject.toml` declares -- the one owner for tests that cite a release line.
+
+    Five assertions used to hard-code the number, so every bump had to edit them and a test that restates
+    a literal certifies only the copy. Comparing against the manifest instead checks the property that
+    matters: the shipped module, the SDK surface and the notebook metadata all agree with the build.
+    """
+    return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"][
+        "version"
+    ]
 
 
 @pytest.fixture(autouse=True)

@@ -19,10 +19,10 @@ from data_science_agent.sdk import (
 
 
 # §14 Public surface — must match spec
-def test_sdk_public_surface_exports() -> None:
+def test_sdk_public_surface_exports(declared_version: str) -> None:
     from data_science_agent import __version__
 
-    assert __version__ == "4.4.0"
+    assert __version__ == declared_version
     # Required §14 exports
     for name in (
         "Agent",
@@ -150,8 +150,8 @@ def test_agent_analyze_sync_separate() -> None:
     assert len(r_sync.evidence) >= 1
 
 
-def test_agent_version_stable() -> None:
-    assert Agent().version == "4.4.0"
+def test_agent_version_stable(declared_version: str) -> None:
+    assert Agent().version == declared_version
     assert API_STABILITY["Agent"] == "Stable"
 
 

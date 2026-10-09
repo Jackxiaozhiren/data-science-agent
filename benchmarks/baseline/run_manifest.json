@@ -1,0 +1,29 @@
+{
+  "catalog": "benchmarks/ds-agent-benchmark/catalog.json",
+  "datasets_dir": "benchmarks/ds-agent-benchmark/datasets",
+  "n_tasks": 50,
+  "execution": {
+    "llm_mode": "stub",
+    "provider": "stub",
+    "model": "heuristic",
+    "fallback": "error",
+    "git_commit": "4259e8f101ed",
+    "evaluation_variant": "dsa",
+    "evidence_critic_enabled": true,
+    "evidence_critic_setting": "on",
+    "call_count": 0,
+    "model_latency_ms": 0,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "pricing": {
+      "input_cost_per_million": null,
+      "output_cost_per_million": null,
+      "source": null
+    },
+    "cost_usd": null,
+    "llm_calls": []
+  }
+}
