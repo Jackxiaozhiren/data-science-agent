@@ -7926,3 +7926,44 @@ D-INFRA findings (§133 gate surface, §139 SBOM check, §140 propagation) are c
 open, each needing something a push cannot provide: the `publish.yml` step-20 fix of 2026-09-11 remains
 unexercised because proving it takes a tag publish; the α re-freeze needs a version bump; the `braces` npm
 exemption expires 2026-11-07 and the gate will raise it then.
+
+## 142. Close-out inventory for this session's range, and two ids that are not open items
+
+Asked whether anything is left, the honest answer is an inventory rather than a adjective, so this section
+enumerates from primary artifacts.
+
+**Every id this session touched, and where it closed.**
+
+| id | closed at | what the code now says | runner verification |
+|---|---|---|---|
+| D-L4-07 | §122 | one artefact root, eight wired call sites | CI 37416581317 |
+| D-L4-08 | §125 | an unpersisted report flips the terminal status to `FAILED` | CI 37568472284 |
+| D-L4-09 | §122 | same seam as D-L4-07 (the duplicate root logic) | same |
+| D-L4-11 | §123 | `dsa reproduce` accepts the flags its `--help` advertises | CI 37425022841 |
+| D-L4-12 | §132 | `no-op conditionals in cli.py: []` (AST re-counted after the push), explicit flags win in both spellings | CI 37588044276 |
+| D-L4-13 | §135 + §136 | `docs/announcements/latest.md` titles v4.4.0; the currency table has an entry for it; the page is on the scanned side | CI 37737953119, 37738837688 |
+| D-L4-14 | §137 | `FROM node:22-alpine` x2, and the guard forbids rather than discloses the divergence | CI 37750601585, re-proved on 37766073297 |
+| gate-surface (new) | §133 | `.next/` in `NOISE_SUBSTRINGS`; the gate's surface is a subset of `git ls-files` | CI 37738837688 |
+| sbom gate (new) | §139 | `generate_sbom.py --check`, mirrored in `ci.yml`, `run_gates.sh`, `CONTRIBUTING.md`, `docs/contributing.md` | CI 37766073297, 37879104221 |
+| §140 | self-recorded | the half-change and the reused count, with the red span priced at ~1 h 18 min | the same run that ends it |
+
+**Two ids a reader can mistake for open items.**
+
+- **D-L4-10 does not exist.** `grep -c "D-L4-10" AUDIT_LEDGER.md REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md`
+  returns zero for both files: the sequence in this repository skips it (a gap in issuance, not a finding
+  left unclosed). Anything that lists the L4 set as "01-14 minus 10" is describing it correctly.
+- **PR #78 is merged.** §99-era prose at line 4192 records it as "open and now redundant, still not my call"
+  -- which was true when written and is not true now: `gh pr view 78 --json state` returns `MERGED`. That line
+  is a dated record and stays; this paragraph is where the correction lives, so a future session does not go
+  looking for a stale PR to close.
+
+**The three items that genuinely remain, none of which a push can discharge.** The `publish.yml` step-20 fix
+of 2026-09-11 is still unexercised -- proving it takes a tag publish (the PyPI environment plus a release
+action), which is the producer's. The α re-freeze needs a version bump. The `braces` npm exemption has its
+review date of 2026-11-07 and the gate raises it then. Each is priced in its own section rather than queued
+as if pending work.
+
+**Lanes this session did not run, stated as an omission.** The L1, L2, L3, L5, L7 and L8 finding ids were
+closed in Phases 1-3 by earlier sections and were not re-verified here; this session's re-measurement covered
+only the ids in the table above plus whatever a given gate happened to touch. A green `pytest`/`audit_facts`
+run is evidence about the tree, not evidence that those older dispositions still hold.
