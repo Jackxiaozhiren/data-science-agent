@@ -8285,3 +8285,41 @@ lands. Until then this section is the current state: one expected red, named.
 v4.4.0's DataSciBench figures as current, and `verify_release` is `PENDING at tagging time` rather than a
 number I have not measured for 4.5.0. The v4.4.0 manifest carries 17/17 for its own release; 4.5.0's comes
 from running `dsa verify-release v4.5.0` after the publish, which is a post-release step by nature.
+
+## 148. What the pending tag really costs on `main`, measured rather than reasoned
+
+§147 said main carries "exactly one failing test" while the version leads its tag. That was reasoned from
+the local suite and it understates the effect. Measured on the push of `39fe318`: CI run **37913590449
+`failure`**, where the failing step is `Run uv run python scripts/check_public_claims.py
+--require-released-tags` itself, and **21 later steps are `skipped`** behind it -- including the pytest gate,
+`sync_vendor`, the SBOM check, both docker builds and `mkdocs --strict`. `web-regression` was `success`
+independently (13 steps, the one `if: failure()` upload skipped).
+
+So the correct statement of the cost is: a main commit whose declared version has no tag does not merely
+fail a test, it stops the rest of the pipeline from running at all. Two consequences worth writing down, both
+unfavourable to me and both measured: (a) the local `pytest` run that showed a single failing test was
+reading the wrong boundary -- the gate's exit code, not the suite, is what CI acts on; that is §133's lesson
+("a gate's denominator is environment-specific") re-earned on my own sentence three sections later; and (b)
+because `publish.yml`'s announcement step commits with `[skip ci]`, the post-publish state needs one
+ordinary commit on main before the branch's status flips back to green. The next ledger entry after the
+release does double duty as that commit, and it is not a workaround: the pipeline should be re-run over
+the released tree anyway.
+
+**Handoff state.** `origin/main` = `39fe318` (`release: v4.5.0 manifest pinned to de5d6b1…`), no v4.5.0 tag
+in the namespace (`git ls-remote --tags origin | grep -c v4.5.0` → 0), `release/v4.5.0/manifest.json`
+pointing at release commit `de5d6b1`, README badge at v4.5.0, and the tagged state verified locally with a
+tag created and deleted here (never pushed): `0 issues (scanned 47 / 58 skipped)`, `pytest` exit 0 at
+**83.24%**, `facts ratchet: OK`. One command turns this into a release:
+
+```
+git fetch origin
+git tag v4.5.0 39fe318
+git push origin v4.5.0
+```
+
+It satisfies `publish.yml`'s own two checks on the tagged commit -- tag name equal to `pyproject.toml`'s
+version, and the commit reachable from `origin/main` -- and it is the first execution of the step-20
+create/upload path that §142 recorded as unexercised since 2026-09-11. Then read the run at step level:
+step 11 (pytest) must be `success`, step 20 `success`, step 21 printing
+`Published announcement for v4.5.0`, and §146's new step printing
+`Announcement copy on main is: # Data Science Agent v4.5.0`.
