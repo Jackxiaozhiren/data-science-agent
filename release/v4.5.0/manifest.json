@@ -1,7 +1,7 @@
 {
     "version": "4.5.0",
     "tag": "v4.5.0",
-    "commit": "PENDING-RELEASE-COMMIT",
+    "commit": "de5d6b13b752a4773138243f8713ec1e7b224cc8",
     "python": "3.12.14",
     "node": "v24.15.0",
     "docker": "Docker version 29.8.0, build 88096ef (client only: no daemon on the authoring machine)",
