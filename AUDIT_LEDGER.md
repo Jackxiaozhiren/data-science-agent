@@ -8396,3 +8396,64 @@ collector over a `git archive HEAD` export prints `facts ratchet: OK`, rc 0. The
 name pattern (`^[A-Z][A-Z_]*_(PROMPT|SPEC)\.md$`) rather than on the debt its own label describes, so the moment
 that file is committed, main's ratchet reddens over a product PRD the audit series never rewrites. Fixed as §150,
 in its own commit, without touching the foreign file.
+
+**Answered by the push that carried this section's predecessor.** §149 asked whether the missing `ci` run for
+`166e609` was a one-off. It was: pushing `24dee34` created **run 38110602913**, event `push`, branch `main`, and
+both jobs are `success` -- `ci` with 35 steps of which exactly one is `skipped` (`Verify v4.3.0 release
+candidate`, a release-candidate-only step) and `web-regression`. `pytest` ran and passed inside it. Main is green
+again, so §148's "one ordinary commit does the double duty" was right about the need and wrong to assume the run
+would exist; it now does.
+
+## 150. `auditApparatusLines` was counting prompt-shaped *names*, and a re-seed would have made that permanent
+
+The red §149 left open: `debt.auditApparatusLines` read **1659**, then **1690**, against a ceiling of **1128**.
+1128 is `REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md` measured on its own, and the difference is
+`WEB_PRODUCT_MASTER_PROMPT.md` -- **531** lines when the battery ran, **562** when this was written, untracked and
+belonging to another session. The collector globbed every root markdown matching
+`^[A-Z][A-Z_]*_(PROMPT|SPEC)\.md$`, so the ceiling on the audit series' own prose budget was being moved by
+writing nobody in the audit controls, and it moved twice while I looked at it.
+
+Two consequences made me fix the gate instead of explaining the red away:
+
+1. **A re-seed would have laundered it.** `--seed` writes the current reading as the ceiling, so the next person
+   who ran it -- or who was told "re-seed after the collector change" -- would have written 1690 and the gate
+   would thereafter police 562 lines of foreign PRD as though they were audit apparatus, with the real budget
+   buried inside. Measured after the fix: seeding from a temp limits path yields
+   `auditApparatusLines` **1128** and `unclassifiedApparatusDocs` **0**, and the only ceiling a fresh seed moves
+   anywhere is `capabilities.navOrphanPages` **23 → 0** -- a fall, which is what a ratchet is for.
+2. **The pattern had already been worked around by naming.** `AUDIT_LEDGER.md:3263` records an earlier section
+   reasoning that a new document was safe "because `^[A-Z][A-Z_]*_(?:PROMPT|SPEC)\.md$` does not match its name".
+   A gate whose safety depends on what you call your file is not measuring the debt it names.
+
+**The change, and the hole it could have opened.** `scripts/audit_facts.py` now counts
+`AUDIT_APPARATUS_DOCS = ("REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md",)` by declared name. Naming a subject also
+narrows it, and a narrowed metric is how a gate stops firing -- so the same commit adds
+`debt.unclassifiedApparatusDocs`, a ceiling seeded at **0**, listing every root document that matches the old
+pattern and is in neither register. The exemption register (`NON_APPARATUS_DOCS`, with a reason string per name)
+is therefore policed rather than trusted: adding a second audit document without declaring it, or dropping an
+undeclared prompt-shaped file at root, reddens the ratchet by name. `auditApparatusLines` itself stayed at 1128 --
+no ceiling moved, nothing re-seeded upward -- and `REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md` was not edited, so
+the cap it describes is still satisfied by the document it caps.
+
+**Red first, then green, then falsified.** The reasons are recorded rather than remembered: replayed against the
+pre-fix collector in a `git archive HEAD` export with only the new test file copied in, the four new tests fail
+`AttributeError: module 'audit_facts' has no attribute '_apparatus_lines'` (twice), the same for
+`_unclassified_apparatus`, and `KeyError: 'debt.unclassifiedApparatusDocs'` -- `4 failed, 14 passed` there, while
+in the working tree the same four plus the pre-existing `test_the_ratchet_is_currently_satisfied` read
+`5 failed, 13 passed`, the fifth being `assert 1690 == 1128`. After: `18 passed`, and
+`audit_facts.py --check` prints `facts ratchet: OK` **with the foreign 562-line file still in the
+tree** -- that is the whole point of the fix, and the negative control proves the new key can still fire:
+planting `ZZ_NEGATIVE_CONTROL_PROMPT.md` at root gives `ceiling debt.unclassifiedApparatusDocs: actual=1
+(debt_grew)`, `1 violation(s)`, rc 1; removing it restores rc 0 and `ls` confirms the file is gone. The grow-by-one
+line control asserts a document at `committed + 1` trips `debt_grew`, so scoping did not defuse the ceiling. Cost
+went down, not up: the old `_volume(PROMPT_DOC_RE)` measured 1.4 ms, the new pair measures 0.6 ms.
+
+**Gates on this tree** (2026-10-11, after the change): `scripts/run_gates.sh` → **17 gate(s) run, 1 failed**, the
+failure still `sync_vendor.py --check` on `dsa_evaluation: 1 file(s) differ [external_validation.py]` -- another
+session's uncommitted source, left alone. The ratchet, `ruff check`, `ruff format --check`, mypy (121 files),
+`check_public_claims --require-released-tags` (`0 issues`, 47 scanned / 59 skipped), `find_orphan_reads`
+(14 keys), `dsa --limit 5`, the web build, `regression: 24/24`, the advisory gate, `SBOM CHECK OK: 192 components
+and release '4.5.0'`, `docker compose config` and `mkdocs build --strict` all passed. A full suite run without the
+doubled `-q` reports **826 passed, 1 warning in 144.46s**, rc 0; the same suite through `-q --cov` reads **83.24%**
+and collects 822, which is why the pass count is quoted from the run that prints it (§148's lesson, re-applied:
+a count must name its noun -- collected is not passed).

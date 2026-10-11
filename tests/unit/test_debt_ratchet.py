@@ -283,3 +283,85 @@ def test_an_unparseable_shipped_file_is_counted_not_skipped_silently(tmp_path: P
     assert (handlers, swallows) == (1, 1), "a file that fails to parse must not zero out the rest"
     unparseable = [p.name for p in collector._unparseable_shipped_files(paths)]
     assert unparseable == ["broken.py"], unparseable
+
+
+AUDIT_DOC = "REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md"
+
+
+def test_the_apparatus_ceiling_counts_the_audit_document_and_nothing_else(tmp_path: Path) -> None:
+    """§150: a prompt-shaped *name* is not the debt the key describes.
+
+    `debt.auditApparatusLines` was collected as the line count of every root markdown whose
+    name matches `^[A-Z][A-Z_]*_(PROMPT|SPEC)\\.md$`. §149 measured what that costs: an
+    unrelated product PRD dropped at root pushed the reading to 1659 against a ceiling of
+    1128, and 1128 is the audit document alone -- so the gate was about to red main over
+    somebody else's writing, and the only ways to silence it were raising a ceiling or
+    deleting a document. Here the subject is the audit series' own prose budget, so the
+    count is by declared document, and a foreign file in the same shape costs nothing.
+    """
+    collector = _collector()
+    (tmp_path / AUDIT_DOC).write_text("a\nb\nc\nd\ne\n", encoding="utf-8")
+    (tmp_path / "SOME_OTHER_MASTER_PROMPT.md").write_text("x\n" * 100, encoding="utf-8")
+    assert collector._apparatus_lines(tmp_path) == 5, (
+        "the apparatus count must be the audit document's own volume, not every prompt-shaped name"
+    )
+
+
+def test_an_undeclared_prompt_document_is_named_rather_than_silently_uncounted(
+    tmp_path: Path,
+) -> None:
+    """Scoping the key down must not open a hole the same size.
+
+    Counting by declared name means a second audit-series document added without being
+    declared would escape the ceiling with no signal at all -- the blind spot an ignore
+    list always grows. So anything at root that matches the old pattern and is in neither
+    register is reported, and `debt.unclassifiedApparatusDocs` keeps that report at zero.
+    A declared name that is absent is not an error: the register outlives the file.
+    """
+    collector = _collector()
+    (tmp_path / AUDIT_DOC).write_text("a\n", encoding="utf-8")
+    (tmp_path / "NEW_AUDIT_PROMPT.md").write_text("b\n", encoding="utf-8")
+    (tmp_path / "WEB_PRODUCT_MASTER_PROMPT.md").write_text("c\n", encoding="utf-8")
+    assert collector._unclassified_apparatus(tmp_path) == ["NEW_AUDIT_PROMPT.md"]
+    assert AUDIT_DOC in collector.AUDIT_APPARATUS_DOCS
+    assert "WEB_PRODUCT_MASTER_PROMPT.md" in collector.NON_APPARATUS_DOCS
+
+
+def test_growing_the_audit_document_still_moves_the_ceiling(tmp_path: Path) -> None:
+    """The scoped key must still be able to fire, or §150 traded a false red for no guard.
+
+    One added line above the committed ceiling is the whole contract of this key: the
+    audit document may only grow by cutting a line elsewhere.
+    """
+    collector = _collector()
+    real = len((ROOT / AUDIT_DOC).read_text(encoding="utf-8").splitlines())
+    committed = json.loads(LIMITS.read_text(encoding="utf-8"))["ceiling"][
+        "debt.auditApparatusLines"
+    ]
+    assert committed == real, f"ceiling {committed} while the document reads {real}"
+    (tmp_path / AUDIT_DOC).write_text("line\n" * (real + 1), encoding="utf-8")
+    grown = collector._apparatus_lines(tmp_path)
+    assert grown == committed + 1, grown
+    report = collector.evaluate_ratchet(
+        {"debt": {"auditApparatusLines": grown}},
+        {"ceiling": {"debt.auditApparatusLines": committed}, "floor": {}},
+    )
+    assert ("debt.auditApparatusLines", "debt_grew") in {
+        (v["key"], v["problem"]) for v in report["violations"]
+    }, "one line over the cap went unnoticed"
+
+
+def test_the_live_tree_reads_the_apparatus_ceiling_exactly(facts: dict[str, Any]) -> None:
+    """No headroom, and no foreign file inside the number -- measured on this tree.
+
+    The working tree may hold another session's untracked `*_PROMPT.md` (it did on
+    2026-10-11); that must not be visible in this key, and nothing the audit series owns
+    may be hidden in it either.
+    """
+    collector = _collector()
+    leaves = collector.numeric_leaves(facts)
+    real = len((ROOT / AUDIT_DOC).read_text(encoding="utf-8").splitlines())
+    assert leaves["debt.auditApparatusLines"] == real
+    assert leaves["debt.unclassifiedApparatusDocs"] == 0, (
+        "a root prompt-shaped document exists that neither register claims"
+    )

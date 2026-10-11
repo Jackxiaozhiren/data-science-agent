@@ -27,6 +27,7 @@
     "capabilities.navOrphanPages": "docs pages referenced by no nav entry",
     "capabilities.packagesWithoutManifest": "package dirs that are not workspace members",
     "debt.auditApparatusLines": "prompt/spec documents an audit series keeps rewriting",
+    "debt.unclassifiedApparatusDocs": "root prompt-shaped documents that neither register claims",
     "debt.exceptHandlers": "exception handlers in shipped code, any shape",
     "debt.governanceFilesMissing": "required policy files absent",
     "debt.pytestSkipXfail": "tests silenced instead of fixed",
@@ -53,6 +54,7 @@
     "debt.suppressionDirectives": 42,
     "debt.swallowedExceptionSites": 8,
     "debt.todoMarkers": 0,
+    "debt.unclassifiedApparatusDocs": 0,
     "debt.unwiredCheckers": 0
   },
   "floor": {

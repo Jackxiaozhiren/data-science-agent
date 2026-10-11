@@ -9,6 +9,19 @@ before), `pytest 395 passed` (was 345), coverage **80.04%** with
 `fail_under = 79` ratchet (was 0% — source misconfigured + `_vendor`
 shadowing + missing greenlet concurrency).
 
+### Fixed (post-4.5.0) — the apparatus ceiling measured the wrong subject
+
+- `debt.auditApparatusLines` collected the line count of *every* root markdown whose name matches
+  `^[A-Z][A-Z_]*_(PROMPT|SPEC)\.md$`, so an unrelated product PRD dropped at root pushed the reading to 1659
+  (and 1690 while this was being written) against a ceiling of 1128 -- a ceiling that is exactly the audit
+  document's own volume. `git archive HEAD` re-ran the collector at rc 0, proving CI was never affected and the
+  red was local, but the same file committed would have reddened main over somebody else's prose, leaving only
+  two silences available: raise a ceiling, or delete a document. The key now counts the declared audit-series
+  documents (`AUDIT_APPARATUS_DOCS`) and a new ceiling, `debt.unclassifiedApparatusDocs` at 0, names any
+  root prompt-shaped document that belongs to neither register -- so scoping the metric down cannot become the
+  blind spot an ignore list always is. No existing ceiling moved; `auditApparatusLines` stays 1128, and the
+  guard's bite is proven by a document grown one line (`AUDIT_LEDGER.md` §150).
+
 ### Fixed (unreleased, v4.5.0 line) — release gating
 
 - The announcement currency rule added at §136 could not be satisfied at release time and blocked v4.5.0. It

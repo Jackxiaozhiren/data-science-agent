@@ -75,6 +75,22 @@ SUPPRESSION_RE = re.compile(r"#\s*(?:noqa|type:\s*ignore)")
 DOC_LINK_RE = re.compile(r":\s*([A-Za-z0-9_./-]+\.md)")
 PROMPT_DOC_RE = re.compile(r"^[A-Z][A-Z_]*_(?:PROMPT|SPEC)\.md$")
 LEDGER_DOC_RE = re.compile(r"^AUDIT_LEDGER\.md$")
+
+#: The documents `debt.auditApparatusLines` measures, by name. Named rather than globbed:
+#: §149 found the ceiling tripped to 1659 -- and 1690 while this was being written -- by an
+#: unrelated product PRD another session dropped at root, against a limit that is exactly the
+#: audit document's own volume. A pattern over *names* cannot tell audit prose from anybody
+#: else's, and the only silences available to the next person were raising a ceiling or
+#: deleting a document. Adding an audit-series document here inherits the ceiling; §150.
+AUDIT_APPARATUS_DOCS: tuple[str, ...] = ("REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md",)
+
+#: Root documents that match `PROMPT_DOC_RE` and are deliberately not audit apparatus, each
+#: with the reason. An absent name is not an error -- the register outlives the file -- and
+#: anything matching the pattern in *neither* register is counted by
+#: `debt.unclassifiedApparatusDocs`, so this list cannot become the blind spot it replaces.
+NON_APPARATUS_DOCS: dict[str, str] = {
+    "WEB_PRODUCT_MASTER_PROMPT.md": "product PRD for the web surfaces; not rewritten by the audit series",
+}
 TEST_DEF_RE = re.compile(r"^\s*(?:async\s+)?def test_", re.M)
 
 #: Keys that may carry a ceiling or floor, with the debt each one guards. Never
@@ -88,6 +104,7 @@ CEILING_KEYS: dict[str, str] = {
     "debt.exceptHandlers": "exception handlers in shipped code, any shape",
     "debt.unwiredCheckers": "checker scripts that no workflow invokes",
     "debt.auditApparatusLines": "prompt/spec documents an audit series keeps rewriting",
+    "debt.unclassifiedApparatusDocs": "root prompt-shaped documents that neither register claims",
     "debt.governanceFilesMissing": "required policy files absent",
     "capabilities.packagesWithoutManifest": "package dirs that are not workspace members",
     "capabilities.memberWithoutArtifactCopy": "source packages shipped by no installed wheel",
@@ -381,6 +398,26 @@ def _volume(pattern: re.Pattern[str]) -> int:
     )
 
 
+def _apparatus_lines(root: Path) -> int:
+    """Line count of the declared audit-series documents under `root`, absent ones as zero."""
+    return sum(len(_read(root / name).splitlines()) for name in AUDIT_APPARATUS_DOCS)
+
+
+def _unclassified_apparatus(root: Path) -> list[str]:
+    """Root prompt-shaped documents that neither register claims.
+
+    The counterweight to naming the apparatus: a document the audit series grows without
+    declaring would otherwise leave the ceiling measuring less than it did before, silently.
+    """
+    return sorted(
+        path.name
+        for path in root.glob("*.md")
+        if PROMPT_DOC_RE.match(path.name)
+        and path.name not in AUDIT_APPARATUS_DOCS
+        and path.name not in NON_APPARATUS_DOCS
+    )
+
+
 def _collect_debt() -> dict[str, Any]:
     shipped_paths = _walk(*SHIPPED, suffixes=PY_SUFFIX)
     shipped = _lines_of(shipped_paths)
@@ -395,7 +432,8 @@ def _collect_debt() -> dict[str, Any]:
         "unparseableShippedFiles": len(unparsed),
         "unwiredCheckers": len(_unwired_checkers()),
         "governanceFilesMissing": len(_missing_governance_files()),
-        "auditApparatusLines": _volume(PROMPT_DOC_RE),
+        "auditApparatusLines": _apparatus_lines(ROOT),
+        "unclassifiedApparatusDocs": len(_unclassified_apparatus(ROOT)),
         "ledgerLines": _volume(LEDGER_DOC_RE),
         "testFunctions": sum(1 for line in tests if TEST_DEF_RE.match(line)),
     }
