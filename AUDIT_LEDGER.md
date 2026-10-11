@@ -8525,11 +8525,17 @@ source".
 `## Unreleased` under `## 4.5.0 — Quality-gate hardening (P0/P1 audit follow-through)`, which also corrects a
 shipped document that still called released work unreleased. Proved as heading-only: five heading lines
 replaced, two blank lines added, 994 → 995 non-blank lines, and the line multiset before/after differs only at
-those lines. A second, unplanned property came out of doing it in a shared tree: `CHANGELOG.md` also held
-another session's uncommitted `### Added (post-4.5.0) — Lane A` section, so this commit ships a crafted index
-blob (that block removed by exact heading slice, its 26 lines printed and verified as the only deletions) and
-their working-tree text untouched -- their prose then landed on top of `## Unreleased`, which is where it
-belongs, and the misplaced released-version intro moved back under `## 4.5.0`.
+those lines; the released-version intro paragraph went back under `## 4.5.0` with them. A second property came
+out of doing it in a shared tree: while the restructure was being built, `CHANGELOG.md` also held another
+session's **uncommitted** `### Added (post-4.5.0) — Lane A` section, so the commit ships a crafted index blob --
+built by exact heading slice, the 26 deleted lines printed and confirmed to be that block and nothing else, and
+no `git add CHANGELOG.md`, which would have committed their prose under my message. What followed is theirs and is
+recorded because the timing matters: their `5c76be0 feat(api,web): Lane A (R-09, R-02)` landed **without** a
+CHANGELOG entry (`git diff --stat 1dcf84a HEAD -- CHANGELOG.md` is empty), and by commit time the Lane A prose
+had also left the working file, so the shipped feature now carries no changelog line. That gap is not mine to
+close -- the prose is not in my tree to restore -- but it is the same class §149 and D-L4-13 keep turning out to
+be about, and had I staged the file a few minutes later the exclusion proof would have had nothing to exclude and
+the accident would have looked like my deletion.
 
 **Gates on this tree** (2026-10-11): `check_public_claims --require-released-tags` → `0 issues (scanned 47
 file(s); 59 skipped as historical)`; `find_orphan_reads --check` → `orphan reads: 14 key(s)`, rc 0; `facts
