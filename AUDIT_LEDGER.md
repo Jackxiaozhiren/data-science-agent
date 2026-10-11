@@ -8457,3 +8457,13 @@ and release '4.5.0'`, `docker compose config` and `mkdocs build --strict` all pa
 doubled `-q` reports **826 passed, 1 warning in 144.46s**, rc 0; the same suite through `-q --cov` reads **83.24%**
 and collects 822, which is why the pass count is quoted from the run that prints it (§148's lesson, re-applied:
 a count must name its noun -- collected is not passed).
+
+**Runner confirmation for §150.** `9c86ab5` ran as **38111829914** (job 114388811279), `completed / success` on
+both jobs after 12 polls of ~30 s. Read at step level, not from the job verdict -- a green job does not prove the
+step it protects executed: `Run uv run python scripts/audit_facts.py --check`,
+`Run uv run pytest -q --cov --cov-report=term-missing`,
+`Run uv run python scripts/check_public_claims.py --require-released-tags` and `find_orphan_reads.py --check` are
+each `success`. Note what that run does *not* show: the runner checks out the commit, so the foreign
+`WEB_PRODUCT_MASTER_PROMPT.md` was absent there and the ratchet step proves nothing about the defect §150 fixes --
+the reading that carries the point is the local one above, `facts ratchet: OK` with the 562-line file still in the
+tree. The runner confirms the other half: the narrower key breaks no gate in a clean checkout.
