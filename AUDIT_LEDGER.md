@@ -8323,3 +8323,76 @@ create/upload path that §142 recorded as unexercised since 2026-09-11. Then rea
 step 11 (pytest) must be `success`, step 20 `success`, step 21 printing
 `Published announcement for v4.5.0`, and §146's new step printing
 `Announcement copy on main is: # Data Science Agent v4.5.0`.
+
+## 149. v4.5.0 is published, and the announcement step turns out to be unreachable by construction
+
+`git tag v4.5.0 39fe318 && git push origin v4.5.0` ran. Measured outcome, from the run and the registries
+rather than from my own expectations:
+
+1. **The release exists.** `Publish` run **37919265633**, headSha `39fe318`, job `build-and-publish`: steps 1-20
+   `success`, the only non-success steps being 21 `failure` and 22 `skipped`. PyPI resolves `latest` to **4.5.0**
+   with both files (`…-py3-none-any.whl`, `….tar.gz`); `gh release view v4.5.0` reports
+   `publishedAt 2026-10-09T10:46:20Z`, `isImmutable: true`, `isPrerelease: false`, four assets (wheel, sdist, two
+   publish attestations). That is §142's unexercised step-20 create/upload path executed green for the first time.
+2. **`dsa verify-release v4.5.0` → `Summary: 17/17 PASS`, exit 0**, run 2026-10-11 on main after the publish. The
+   manifest's `gates.verify_release` now carries that reading instead of `PENDING at tagging time`.
+3. **Step 21 failed for a reason §148 had already described and still did not see.** The generator ran and GitHub
+   refused its commit: `GitHubAPIError: … (409): Could not create file: Required status check "ci" is expected`.
+   Protection, read from the API: `required_status_checks = {ci, strict: true}`. The tag names `39fe318`, and the
+   `ci` run on that SHA -- 37913590449 -- is `completed failure`, red at
+   `Run uv run python scripts/check_public_claims.py --require-released-tags` with two findings:
+   `[version_consistency] 'git tag mismatch: v4.4.0-228-g39fe318 base v4.4.0 != v4.5.0'` and
+   `[currency_claims] README.md:16 cites '4.5.0' … but the newest release tag is '4.4.0'`. It failed at
+   09:48:03Z, the publish run started 10:42:41Z, so the parent was not mid-flight -- it was already recorded red.
+4. **The general rule that falls out, and it is not about this release.** A version tag may only name a commit
+   that declares that version; such a commit is red on the pending-tag assertions until the tag exists; and
+   pushing the tag does not re-trigger `ci` for that SHA, because `ci.yml` triggers on `push: branches: [main]`
+   and `pull_request`, not on tags. So the tagged commit's `ci` is necessarily red, and a workflow that writes
+   the announcement straight to protected `main` can never land it. §146 removed a different circularity (the
+   gate demanding a copy no release had produced); it did not touch this one. Three ways out, all maintainer
+   calls: `pull-requests: write` so step 21 opens a PR whose checks run with the tag present; an admin bypass;
+   or `gh run rerun` of the tagged commit's `ci` before step 21. Until one is chosen, the copies are written by
+   hand from the same `render()`, and the workflow's content comparison then treats them as up to date -- which
+   is also why they have been hand-written since v4.2.10 rather than only this time.
+5. **My own §148 sentence was wrong in its second half.** It claimed the next ledger entry "does double duty" as
+   the post-publish pipeline run. Measured: `origin/main` moved `39fe318 -> 166e609` at 2026-10-09T10:03:26Z
+   (local remote-tracking reflog), yet `GET /actions/workflows/ci.yml/runs?branch=main` lists no run for
+   `166e609` -- the newest main `ci` is still 37913590449 at `39fe318`. So §148's commit did not run the pipeline
+   at all, main's tip carries no `ci` context, and under `strict: true` that is precisely the state that refuses
+   the next direct commit. Why no run was created for that push is not determined from the API surface available
+   here; the §149 push is the test -- if it produces a run, the absence was a one-off, and if it does not, the
+   trigger itself has a defect.
+6. **The manifest `commit` field, measured across every release manifest**, because I found it disagrees with the
+   tag and the disagreement has a shape: v4.2.2-v4.2.10 record the tag's own revision; v4.3.2, v4.3.3, v4.4.0 and
+   v4.5.0 record the tag's **parent** (`git rev-list --count recorded..tag` = 1, and the tagged tree's own copy of
+   the manifest says the same); v4.3.0 records a commit that is not an ancestor of its tag at all (105 between,
+   and no `release/v4.3.0/manifest.json` in that tree). For v4.5.0, `git diff de5d6b1 39fe318` is one line in this
+   one file, so the tree the release built from differs from the recorded commit only in the record itself. A
+   manifest cannot contain its own hash, so the field is stated with that constraint written next to it instead of
+   being quietly read as the build revision.
+7. **What I wrote to close the half the pipeline could not.** `docs/announcements/v4.5.0.md` and
+   `docs/announcements/latest.md`, from `scripts/generate_release_announcement.py`'s own `render()` against the
+   published release (1436 chars, title `# Data Science Agent v4.5.0`, `Released 2026-10-09`, body 503 chars), a
+   `mkdocs.yml` nav entry for the new page, and `docs/announcements/README.md` corrected: it asserted the
+   generator "writes `latest.md` when a release is published", which the 409 falsifies, and it now states the two
+   distinct failure mechanisms and the fact that rendering is not landing.
+
+**Gates measured on this tree** (`scripts/run_gates.sh`, 2026-10-11): **17 gate(s) run, 1 failed**, and the
+failure is `sync_vendor.py --check` reporting `dsa_evaluation: 1 file(s) differ [external_validation.py]` --
+another session's uncommitted source, which its own repair hint (`--package dsa_evaluation`) would copy into
+`_vendor`; untouched here per the file-ownership fence. Ruff, `ruff format --check`, mypy (121 files),
+`audit_facts --check`, npm workspace lock, `dsa --limit 5`, web build, `regression: 24/24`, the npm advisory gate,
+`SBOM CHECK OK: 192 components and release '4.5.0'`, `docker compose config` and `mkdocs build --strict` all
+passed; `check_public_claims --require-released-tags` read `0 issues (scanned 47 file(s); 59 skipped as
+historical)`; the suite collects **822 tests** and coverage is **83.24%**.
+
+**One more red, found after that battery and before this entry could be committed.** The pytest run surfaced
+`tests/unit/test_debt_ratchet.py::test_the_ratchet_is_currently_satisfied` failing with
+`debt.auditApparatusLines ceiling debt_grew actual=1659 limit=1128`. `1128` is
+`REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md` exactly, and the extra `531` is
+`WEB_PRODUCT_MASTER_PROMPT.md` -- an untracked file another session created between the battery and this run
+(`git status --porcelain` → `??`, no commit ever touching that path). Proof that CI is not affected: the same
+collector over a `git archive HEAD` export prints `facts ratchet: OK`, rc 0. The gate is nonetheless keyed on a
+name pattern (`^[A-Z][A-Z_]*_(PROMPT|SPEC)\.md$`) rather than on the debt its own label describes, so the moment
+that file is committed, main's ratchet reddens over a product PRD the audit series never rewrites. Fixed as §150,
+in its own commit, without touching the foreign file.

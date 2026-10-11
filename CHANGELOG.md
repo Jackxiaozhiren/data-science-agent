@@ -29,14 +29,22 @@ shadowing + missing greenlet concurrency).
   `test_the_collector_and_this_test_share_one_definition_of_orphan` caught; they are now in `mkdocs.yml`, so
   `capabilities.navOrphanPages` is empty again.
 - `release/v4.5.0/manifest.json` authored from measured values (SBOM digests computed from the files,
-  `evaluator_v2 (10 dims)` derived from the frozen results' per-task details), with `commit` left
-  `PENDING-RELEASE-COMMIT` for the follow-up pin commit that carries the tag. Fields that could not be
-  measured here say so rather than inheriting v4.4.0's numbers: `verify_release` pending, external benchmark
-  lanes marked not re-run, docker recorded as client-only because no daemon is present.
-- The orphan tag was deleted (`§147`), which is the only reason `main` now carries a single failing test:
-  `check_version_consistency()` refuses a declared version ahead of its tag, so
-  `git tag mismatch: … base v4.4.0 != v4.5.0` stands until v4.5.0 is cut. Verified green with the tag created
-  locally and never pushed (`0 issues`, 47 scanned / 58 skipped), and the local tag was removed again.
+  `evaluator_v2 (10 dims)` derived from the frozen results' per-task details), with `commit` filled by the
+  follow-up pin commit. Fields that could not be measured at authoring time say so rather than inheriting
+  v4.4.0's numbers: external benchmark lanes marked not re-run, docker recorded as client-only because no
+  daemon is present. `verify_release` is now the measured `dsa verify-release v4.5.0` → **17/17 PASS** (2026-10-11),
+  and the notes state what the tag actually names: `39fe318`, the child of the recorded commit, differing from
+  it only in this file's one line.
+- v4.5.0 published 2026-10-09T10:46:20Z (`Publish` run 37919265633, steps 1-20 success; PyPI 4.5.0 wheel + sdist,
+  immutable GitHub Release with four assets). Step 21, *Generate release announcement*, then failed with
+  `409: Required status check "ci" is expected`: main is protected with `ci` required and `strict: true`, and the
+  tagged commit's own `ci` (37913590449) had already finished failure on the two pending-tag assertions
+  (`git tag mismatch … base v4.4.0 != v4.5.0`, and the README badge citing 4.5.0 ahead of its tag). Pushing the
+  tag does not re-trigger `ci` for that SHA, so a workflow that commits the announcement straight to `main` can
+  never land it -- the reason both copies have been hand-written since v4.2.10. `docs/announcements/README.md`
+  now records that mechanism instead of promising the write happens on publish, and the durable options (a PR
+  opened by the workflow, an admin bypass, or a `gh run rerun` before step 21) are handed to the maintainer
+  (`AUDIT_LEDGER.md` §149).
 
 ### Changed (unreleased, v4.5.0 line)
 

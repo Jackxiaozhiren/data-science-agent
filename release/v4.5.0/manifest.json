@@ -18,13 +18,13 @@
     },
     "timestamp": "2026-10-09T08:40:22+00:00",
     "gates": {
-        "pytest": "815 passed, 83.24% coverage (working tree at the release commit); the one open finding while the tag is pending is version_consistency's tag-base check, which clears as soon as v4.5.0 exists",
+        "pytest": "815 passed, 83.24% coverage (working tree at the release commit); the version_consistency tag-base check that was red while the tag was pending (§148) cleared once v4.5.0 existed and is green in the post-publish run recorded below",
         "mypy": "0 issues, 121 files (packages apps/api src apps/jupyter)",
         "ruff": "All checks passed + 258 files formatted",
         "npm": "web build PASS; vscode compile PASS; advisory gate clean with 5 bounded exemptions (braces review_by 2026-11-07)",
         "docker": "compose config valid; both images built by CI (`docker build -f docker/Dockerfile.web`, node:22-alpine@sha256:0a7108bf6c7b)",
         "mkdocs_strict": "PASS",
-        "verify_release": "PENDING at tagging time (v4.4.0 recorded 17/17; the v4.5.0 run is post-publish)",
+        "verify_release": "17/17 PASS (dsa verify-release v4.5.0, run 2026-10-11 after the publish; all 17 gates PASS, exit 0)",
         "internal_benchmark": "50/50 @ 1.0 (v1), re-frozen 2026-10-09 at 4259e8f101ed",
         "external_benchmark": "NOT RE-RUN for 4.5.0; the 4.4.0 DataSciBench GT-lane figures in release/v4.4.0/manifest.json stand and are not restated here as current",
         "check_public_claims": "0 issues once the tag exists (47 scanned / 58 skipped as historical)",
@@ -64,7 +64,9 @@
         "V4.5 MINOR release -- quality-gate and reproducibility work; no breaking public SDK/CLI change.",
         "mean_latency_ms is a machine reading: three runs of the same command on the same code measured 126.86, 77.16 and 142.90 ms (benchmarks/baseline/README.md).",
         "unsupported_claim_rate 0.06 -> 0.0 in the re-freeze is an unattributed improvement; the README says so rather than presenting it as a new truth.",
-        "commit field is filled by the follow-up manifest commit pinning the release commit (v4.3.x pattern).",
-        "external benchmark lanes were not re-run for this release; they are not restated as current."
+        "commit field is filled by the follow-up manifest commit pinning the release commit (v4.3.x pattern). Measured here: the tag names 39fe318c7213, the child of the recorded commit, and `git diff de5d6b1 39fe318` is this file's one line -- so the tree the release built from differs from the recorded commit only in this record.",
+        "external benchmark lanes were not re-run for this release; they are not restated as current.",
+        "published 2026-10-09T10:46:20Z by run 37919265633 at the tagged commit: steps 1-20 success, PyPI 4.5.0 (wheel + sdist), GitHub Release v4.5.0 immutable with 4 assets (wheel, sdist, two attestations).",
+        "step 21 (Generate release announcement) failed on that run: the contents API refused the commit to a protected main (409 'Required status check \"ci\" is expected'), so step 22 was skipped. The two announcement copies were written from the same generator's render() and committed by hand on 2026-10-11 (AUDIT_LEDGER.md §149)."
     ]
 }

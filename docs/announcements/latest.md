@@ -1,6 +1,6 @@
-# Data Science Agent v4.4.0
+# Data Science Agent v4.5.0
 
-> Released 2026-09-11 · Evidence-grounded autonomous data science, from natural-language questions to reproducible analysis.
+> Released 2026-10-09 · Evidence-grounded autonomous data science, from natural-language questions to reproducible analysis.
 
 ## Install or upgrade
 
@@ -10,29 +10,25 @@ pip install -U jack-data-science-agent
 
 ## Highlights
 
-<!-- Release notes generated using configuration in .github/release.yml at v4.4.0 -->
+<!-- Release notes generated using configuration in .github/release.yml at v4.5.0 -->
 
 ## What's Changed
-### 🔐 Security & Dependencies
-* chore(deps): bump next from 16.3.3 to 16.3.4 in /apps/web in the next-security group by @dependabot[bot] in https://github.com/Jackxiaozhiren/data-science-agent/pull/67
-* chore(deps-dev): bump @types/node from 20.19.43 to 26.4.1 in /apps/web by @dependabot[bot] in https://github.com/Jackxiaozhiren/data-science-agent/pull/68
-### Other Changes
-* deploy: make Render health checks lightweight by @Jackxiaozhiren in https://github.com/Jackxiaozhiren/data-science-agent/pull/63
+### 📚 Documentation
+* §79 prove the stale-claims CI gate on the runner by @Jackxiaozhiren in https://github.com/Jackxiaozhiren/data-science-agent/pull/78
+* chore(release): v4.5.0 bump + baseline re-freeze (§144-§145) by @Jackxiaozhiren in https://github.com/Jackxiaozhiren/data-science-agent/pull/83
 
-## New Contributors
-* @dependabot[bot] made their first contribution in https://github.com/Jackxiaozhiren/data-science-agent/pull/67
 
-**Full Changelog**: https://github.com/Jackxiaozhiren/data-science-agent/compare/v4.3.3...v4.4.0
+**Full Changelog**: https://github.com/Jackxiaozhiren/data-science-agent/compare/v4.4.0...v4.5.0
 
 ## Verify the release
 
-- [GitHub Release](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.4.0)
+- [GitHub Release](https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.5.0)
 - [PyPI](https://pypi.org/project/jack-data-science-agent/)
 - Inspect the attached wheel/sdist and publishing attestations on the release page.
 
 ## Share-ready summary
 
-> Data Science Agent v4.4.0 is available: evidence-grounded autonomous data science with reproducible reports, claim-level provenance, benchmarks, and multiple interfaces. Release: https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.4.0
+> Data Science Agent v4.5.0 is available: evidence-grounded autonomous data science with reproducible reports, claim-level provenance, benchmarks, and multiple interfaces. Release: https://github.com/Jackxiaozhiren/data-science-agent/releases/tag/v4.5.0
 
 ---
 
