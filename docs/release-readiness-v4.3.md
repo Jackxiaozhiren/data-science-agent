@@ -62,7 +62,7 @@ This does not affect the integrity or availability of the Python package:
 - GitHub provides source-code archives for the immutable `v4.3.0` tag.
 - No package, tag, or release metadata needs to be rewritten to compensate for the missing duplicate GitHub binary attachments.
 
-The post-release workflow was hardened on `main` so future releases preserve built wheel/sdist files as a retained Actions artifact before publication, pin the publishing toolchain more tightly, and treat attachment to a mutable GitHub Release as best-effort rather than a reason to mark an otherwise successful PyPI publication as failed. The release announcement can therefore continue even when an immutable Release rejects duplicate binary attachments.
+The post-release workflow was hardened on `main` so future releases preserve built wheel/sdist files as a retained Actions artifact before publication, pin the publishing toolchain more tightly, and treat attachment to a mutable GitHub Release as best-effort rather than a reason to mark an otherwise successful PyPI publication as failed. The announcement copy is no longer part of this workflow at all: it is prepared on the release branch and verified against the tree the release builds (`docs/announcements/README.md`, `AUDIT_LEDGER.md` §151) -- an assertion written when the step behind this one was still failing every release.
 
 ## Final gates
 

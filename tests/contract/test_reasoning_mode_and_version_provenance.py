@@ -267,6 +267,31 @@ def test_real_configuration_is_reported_as_the_provider_resolves_it(
     assert payload["reasoning_mode"]["provider"] == "openai", payload["reasoning_mode"]
 
 
+def test_a_typo_in_the_mode_is_reported_as_refused_with_the_provider_own_words(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The third configuration: neither stub nor real.
+
+    Coverage showed this branch unexercised after the first commit, and it is the one a self-hoster hits
+    by typing `DSA_LLM_MODE=heuristc`. The reported sentence must be the one the provider would raise, so
+    the label and the refusal cannot drift apart into two vocabularies.
+    """
+    monkeypatch.setenv("DSA_LLM_MODE", "heuristc")
+    payload = _version_payload()
+    mode = payload["reasoning_mode"]
+    assert mode["provider"] == "unsupported", mode
+    assert mode["stub"] is False, "an unrecognised mode is not a stub -- nothing would plan at all"
+    assert mode["model"] is None, mode
+
+    from dsa_llm.providers import EnvLLMProvider
+
+    with pytest.raises(RuntimeError) as raised:
+        EnvLLMProvider()
+    assert mode["error"] == str(raised.value), (
+        f"the report says {mode['error']!r} while the provider raises {str(raised.value)!r}"
+    )
+
+
 def test_real_mode_without_a_credential_is_not_reported_as_a_working_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

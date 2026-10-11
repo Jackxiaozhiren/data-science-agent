@@ -144,10 +144,16 @@ def released_versions(root: Path = ROOT) -> set[str]:
 
 
 def current_version(root: Path = ROOT) -> str:
-    match = re.search(
-        r'__version__ = "([^"]+)"',
-        (root / "src/data_science_agent/__init__.py").read_text(encoding="utf-8"),
-    )
+    """The version this tree declares, or "" when nothing declares one.
+
+    Returning "" rather than raising is what lets a caller report "no declared version readable"
+    instead of crashing on a partial checkout -- `require_released_tags` turns that reading into a
+    refusal, which is the only honest verdict for the rules that need it.
+    """
+    path = root / "src/data_science_agent/__init__.py"
+    if not path.is_file():
+        return ""
+    match = re.search(r'__version__ = "([^"]+)"', path.read_text(encoding="utf-8"))
     return match.group(1) if match else ""
 
 
@@ -221,16 +227,25 @@ def _title_version(path: Path) -> str | None:
 
 
 def announcement_currency_issues(root: Path = ROOT) -> list[str]:
-    """`latest.md` is the copy of a release that exists, and no released tag may lack its copy.
+    """`latest.md` names a release that exists or is being prepared, and no tag may lack its copy.
 
-    This replaces §136's rule, which compared `latest.md` to the newest *tag* and deadlocked the release:
-    the copy for a version can only be written after that release is published -- `generate_release_announcement.py`
-    renders it from the release body and publish date -- and `publish.yml` runs the test suite *before*
-    publishing. So a tag-only assertion demands a document that cannot honestly exist yet, which is what
-    stopped v4.5.0 shipping (§146). The pair is checked offline instead: the workflow writes `v<X>.md` and
-    `latest.md` together, so a copy that never landed shows up as a released tag with no file, and a
-    hand-moved `latest.md` shows up as a version no tag names. `publish.yml` adds the release-time check
-    that the tag has its copy, which is where the failure belongs.
+    The rule has been re-keyed twice. §136 compared `latest.md` to the newest *tag* and deadlocked
+    v4.5.0: the copy was rendered from the published release by a `publish.yml` step sitting behind the
+    test suite, so a tag ahead of its release demanded a document that could not honestly exist yet.
+    §146 replaced it with offline invariants plus one exemption -- the newest tag's copy was still in
+    the future. §151 removed the future: `generate_release_announcement.py --preview` renders the copy
+    from the CHANGELOG section of the release being prepared, on the release branch, so it is on the
+    default branch before the tag is cut. Three consequences, all enforced here:
+
+    * every tag from `ANNOUNCEMENT_FLOOR` up must have its dated copy, the newest included;
+    * a copy may lead the tags by one version only, the version this tree declares -- a copy two
+      releases ahead is still a claim about something that was never prepared;
+    * `latest.md` must equal the newest copy present and name either a tagged release or the declared
+      one.
+
+    What the checkout still cannot see is whether a copy is *accurate*, and `publish.yml` no longer
+    supplies that either: it reads the tree it checked out and refuses to publish a tag whose copy is
+    missing or opens with another release.
     """
     issues: list[str] = []
     released = {v for v in released_versions(root) if _as_version(v) is not None}
@@ -242,25 +257,20 @@ def announcement_currency_issues(root: Path = ROOT) -> list[str]:
     copies = _dated_copies(root)
     floor = _as_version(ANNOUNCEMENT_FLOOR)
     assert floor is not None  # a typo in the constant must be loud, not a silently wider rule
+    # The version this tree declares is the release in flight: its copy is written before its tag is.
+    declared = current_version(root)
 
-    missing = sorted(
-        v
-        for v in released
-        # The newest tag is excluded on purpose: between cutting a tag and publishing it the copy
-        # legitimately does not exist, and demanding it is what deadlocked v4.5.0. `publish.yml`'s
-        # post-announcement step covers that window, and as soon as a later release lands this check
-        # catches the gap anyway -- a skipped copy is a lag of one release, not a permanent blind spot.
-        if _as_version(v) >= floor and v not in copies and v != _newest_release(released)
-    )
+    missing = sorted(v for v in released if _as_version(v) >= floor and v not in copies)
     for version in missing:
         issues.append(
             f"docs/announcements/v{version}.md is missing: v{version} is a release tag, so the "
-            "announcement step never ran for it"
+            "release PR shipped without its announcement copy"
         )
-    ahead = sorted(v for v in copies if v not in released)
+    ahead = sorted(v for v in copies if v not in released and v != declared)
     for version in ahead:
         issues.append(
-            f"docs/announcements/{copies[version]} names v{version}, which no release tag exists for"
+            f"docs/announcements/{copies[version]} names v{version}, which no release tag exists for "
+            f"and is not the version this tree declares ({declared or 'unreadable'})"
         )
 
     latest = root / "docs/announcements/latest.md"
@@ -277,9 +287,10 @@ def announcement_currency_issues(root: Path = ROOT) -> list[str]:
             f"docs/announcements/latest.md names v{titled} but the newest dated copy is "
             f"v{newest_copy} ({copies[newest_copy]}); the two are written together"
         )
-    if _as_version(titled) not in [_as_version(v) for v in released]:
+    if titled not in released and titled != declared:
         issues.append(
-            f"docs/announcements/latest.md names v{titled} as the latest release, which no tag carries"
+            f"docs/announcements/latest.md names v{titled} as the latest release, which no tag "
+            f"carries and is not the version this tree declares ({declared or 'unreadable'})"
         )
     return issues
 

@@ -1,19 +1,20 @@
-"""§146: the announcement copy is checked against what a checkout can actually know.
+"""§146's currency rule, re-keyed by §151 for a copy that is written before its tag exists.
 
 §136 put `docs/announcements/latest.md` in `CURRENCY_ASSERTIONS` keyed to the newest release **tag**.
-That was wrong in a way only a real release could show: the copy is generated *from a published release*
-(`generate_release_announcement.py` renders the release body and `published_at`), and `publish.yml` runs
-the test suite before it publishes anything. So the moment a tag exists ahead of its release, the gate
-demands a document that cannot honestly be written yet -- and v4.5.0 stopped at exactly that step, with
-both the release run and `main` red on `latest.md:1 cites '4.4.0' … newest release tag is '4.5.0'`.
+That was wrong in a way only a real release could show: the copy was generated *from a published release*
+(`generate_release_announcement.py` rendered the release body and `published_at`), and `publish.yml` runs
+the test suite before it publishes anything. So the moment a tag existed ahead of its release, the gate
+demanded a document that could not honestly be written yet -- and v4.5.0 stopped at exactly that step.
 
-The replacement keeps both halves of the original finding without that deadlock. The workflow writes
-`v<X>.md` and `latest.md` together, so a copy that never landed is a released tag with no file, and a
-handed-forward `latest.md` is a version no tag names. The one window the checker cannot see is the newest
-tag, whose copy is legitimately still in the future -- and that window is closed at the only point where
-it can be: `publish.yml` verifies, right after the generator step, that the default branch's copy opens
-with the tag being released. A skipped copy is then a red *release*, not a quiet gap discovered months
-later the way D-L4-13 was.
+§146 replaced that with two offline invariants and one deliberate exemption: every released tag has its
+dated copy *except the newest*, because that copy was still in the future. §151 removes the reason for
+the exemption. The copy is now rendered by `--preview` from the CHANGELOG section of the release being
+prepared, committed on the release branch, and merged before the tag is cut -- so it is on the default
+branch while the tag is still pending. The rules therefore move the other way:
+
+* a tag without its dated copy is a defect (the exemption is gone);
+* a copy may lead the tags by exactly one version -- the one this tree declares;
+* `publish.yml` reads the tree it checked out and never asks the API for main's state.
 """
 
 from __future__ import annotations
@@ -43,7 +44,14 @@ def _load() -> Any:
 COPY = "# Data Science Agent v{v}\n\n> Released 2026-01-02 · notes\n"
 
 
-def _tree(tmp_path: Path, *, tags: list[str], copies: list[str], latest: str | None) -> Path:
+def _tree(
+    tmp_path: Path,
+    *,
+    tags: list[str],
+    copies: list[str],
+    latest: str | None,
+    declared: str | None = None,
+) -> Path:
     (tmp_path / "scripts").mkdir(parents=True)
     (tmp_path / "scripts" / "check_public_claims.py").write_bytes(SCRIPT.read_bytes())
     git = tmp_path / ".git"
@@ -51,6 +59,10 @@ def _tree(tmp_path: Path, *, tags: list[str], copies: list[str], latest: str | N
     (git / "packed-refs").write_text(
         "".join("0" * 40 + " refs/tags/" + t + "\n" for t in tags), encoding="utf-8"
     )
+    if declared is not None:
+        package = tmp_path / "src" / "data_science_agent"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text(f'__version__ = "{declared}"\n', encoding="utf-8")
     ann = tmp_path / "docs" / "announcements"
     ann.mkdir(parents=True)
     for version in copies:
@@ -77,8 +89,8 @@ def test_a_released_tag_whose_copy_never_landed_is_reported(tmp_path: Path) -> N
     assert any("v4.3.0.md is missing" in i for i in found), found
 
 
-def test_a_copy_naming_an_untagged_version_is_reported(tmp_path: Path) -> None:
-    """The copy is generated from a release, so one ahead of the tags is a written-up claim."""
+def test_a_copy_ahead_of_the_tags_with_no_declared_version_is_reported(tmp_path: Path) -> None:
+    """The allowance in §151 hangs off the version this tree declares; with none, nothing is allowed."""
     root = _tree(
         tmp_path,
         tags=["v4.2.10", "v4.4.0"],
@@ -90,8 +102,41 @@ def test_a_copy_naming_an_untagged_version_is_reported(tmp_path: Path) -> None:
     assert any("v4.5.0, which no release tag exists for" in i for i in found), found
 
 
+def test_a_copy_for_the_version_being_released_may_lead_the_tags(tmp_path: Path) -> None:
+    """§151: the copy is prepared on the release branch, so it exists before its tag does.
+
+    §146 had to exempt this state because only a *published* release could supply the copy. Now the
+    tree supplies it, so a copy naming the declared version is the release being prepared, not a
+    written-up claim.
+    """
+    root = _tree(
+        tmp_path,
+        tags=["v4.2.10", "v4.4.0"],
+        copies=["4.2.10", "4.4.0", "4.5.0"],
+        latest="4.5.0",
+        declared="4.5.0",
+    )
+
+    assert _issues(root) == []
+
+
+def test_a_copy_beyond_the_declared_version_is_reported(tmp_path: Path) -> None:
+    """The allowance is bounded by the declared version, not by goodwill."""
+    root = _tree(
+        tmp_path,
+        tags=["v4.2.10", "v4.4.0"],
+        copies=["4.2.10", "4.4.0", "4.7.0"],
+        latest="4.7.0",
+        declared="4.5.0",
+    )
+
+    found = _issues(root)
+    assert any("v4.7.0, which no release tag exists for" in i for i in found), found
+    assert any("names v4.7.0 as the latest release" in i for i in found), found
+
+
 def test_the_copy_and_its_dated_file_must_agree(tmp_path: Path) -> None:
-    """The generator writes both at once, so a hand-edited latest.md is the pair coming apart."""
+    """The copy is written as a pair, so a hand-edited latest.md is the pair coming apart."""
     root = _tree(
         tmp_path,
         tags=["v4.3.0", "v4.4.0"],
@@ -114,21 +159,23 @@ def test_a_coherent_history_is_clean(tmp_path: Path) -> None:
     assert _issues(root) == []
 
 
-def test_the_newest_tag_without_a_copy_is_the_one_window_left_open(tmp_path: Path) -> None:
-    """Pinned as a decision, not a gap in the test: tag exists, release does not yet.
+def test_the_newest_tag_without_its_copy_is_now_a_defect(tmp_path: Path) -> None:
+    """§146's one deliberate exemption is closed by §151, and this assertion is the flip.
 
-    Demanding the copy here is what deadlocked v4.5.0 -- the generator cannot render a release that has
-    not been created, and `publish.yml` runs the suite before creating it. `publish.yml`'s own
-    verification step closes the window at the moment the release is cut.
+    A tag whose copy never landed used to be indistinguishable from a release still in flight, because
+    demanding the copy deadlocked the release (§146). With the copy riding the release PR there is no
+    such window left: tag without dated file means the PR shipped without it.
     """
     root = _tree(
         tmp_path,
         tags=["v4.2.10", "v4.3.0", "v4.4.0", "v4.5.0"],
         copies=["4.2.10", "4.3.0", "4.4.0"],
         latest="4.4.0",
+        declared="4.5.0",
     )
 
-    assert _issues(root) == []
+    found = _issues(root)
+    assert any("v4.5.0.md is missing" in i for i in found), found
 
 
 def test_no_readable_refs_is_reported_rather_than_passing(tmp_path: Path) -> None:
@@ -159,45 +206,45 @@ def test_the_floor_names_the_era_the_pipeline_started_in() -> None:
 # --- the release-time half ------------------------------------------------------------------
 
 
-def test_publish_verifies_the_copy_lands_on_the_release_being_cut() -> None:
-    """The checker cannot see this window; the workflow that produces the copy can."""
+def test_publish_verifies_the_copy_that_ships_with_the_tag() -> None:
+    """§151: the release reads its own tree instead of trying to write a protected branch."""
     text = PUBLISH.read_text(encoding="utf-8")
 
-    assert "Verify the announcement copy names this release" in text, (
-        "the release no longer verifies its own announcement copy, so a skipped generation is silent"
+    assert "Verify the announcement copy ships with this release" in text, (
+        "the release no longer verifies its own announcement copy, so a copy that never rode the "
+        "release PR is silent"
     )
-    generate = text.index("name: Generate release announcement")
-    verify = text.index("name: Verify the announcement copy names this release")
-    assert generate < verify, "the verification has to run after the step whose output it checks"
-    tail = text[verify:]
-    assert re.search(r"contents/docs/announcements/latest\.md\?ref=\$\{branch\}", tail), tail[:400]
-    assert "# Data Science Agent ${GITHUB_REF_NAME}" in tail, (
-        "the step must compare against the tag being released, not a version someone typed"
+    step = text[text.index("name: Verify the announcement copy ships") :]
+    assert '"docs/announcements/${GITHUB_REF_NAME}.md"' in step, step[:600]
+    assert 'expected="# Data Science Agent ${GITHUB_REF_NAME}"' in step, step[:600]
+    assert "generate_release_announcement.py --preview" in step, (
+        "the failure must name the command that fixes it"
+    )
+    assert "gh api" not in step, (
+        "the step must read the tree this run checked out, not ask the API what main holds"
+    )
+    assert "contents/" not in text, (
+        "a contents-API path is back: the write that step performed is what §149 proved impossible"
     )
 
 
-def test_the_release_step_validates_event_derived_values_before_use() -> None:
-    """`GITHUB_REF_NAME` and the API's default branch reach a shell: both are checked first."""
-    tail = PUBLISH.read_text(encoding="utf-8")
-    step = tail[tail.index("name: Verify the announcement copy") :]
+def test_the_release_step_validates_the_event_derived_tag_before_use() -> None:
+    """`GITHUB_REF_NAME` reaches a shell and a filename: it is pattern-checked first."""
+    step = PUBLISH.read_text(encoding="utf-8")
+    step = step[step.index("name: Verify the announcement copy ships") :]
 
     assert '"${GITHUB_REF_NAME}" =~ ^v[0-9]' in step, step[:600]
-    assert '"${branch}" =~ ^[A-Za-z0-9._/-]+$' in step, step[:600]
 
 
 def test_the_control_a_step_that_compares_nothing_is_caught(tmp_path: Path) -> None:
     """The wiring guard above must be able to fail on a gutted workflow."""
     text = PUBLISH.read_text(encoding="utf-8")
-    gutted = re.sub(
-        r"# Data Science Agent \$\{GITHUB_REF_NAME}",
-        "something else entirely",
-        text,
-    )
+    gutted = text.replace('expected="# Data Science Agent ${GITHUB_REF_NAME}"', 'expected=""')
     scratch = tmp_path / "publish.yml"
     scratch.write_text(gutted, encoding="utf-8")
-    assert scratch.read_text(encoding="utf-8") != text, "the planted edit did not land"
+    assert gutted != text, "the planted edit did not land"
 
-    assert (
-        "# Data Science Agent ${GITHUB_REF_NAME}"
-        not in gutted[gutted.index("Verify the announcement") :]
+    tail = gutted[gutted.index("Verify the announcement copy ships") :]
+    assert "# Data Science Agent ${GITHUB_REF_NAME}" not in tail, (
+        "the plant left the comparison in place, so the guard above proves nothing"
     )

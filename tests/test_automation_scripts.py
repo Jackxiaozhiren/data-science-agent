@@ -89,57 +89,11 @@ def test_release_render_uses_canonical_release_data() -> None:
     assert "https://github.com/owner/repo/releases/tag/v9.9.9" in rendered
 
 
-def test_release_upsert_retries_conflict_and_preserves_sha(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    put_payloads: list[dict[str, Any]] = []
-    put_attempts = 0
-    encoded_old = base64.b64encode(b"old").decode("ascii")
-
-    monkeypatch.setattr(announcements.time, "sleep", lambda _seconds: None)
-
-    def fake_request(
-        method: str,
-        path: str,
-        payload: dict[str, Any] | None = None,
-    ) -> Any:
-        nonlocal put_attempts
-        if method == "GET":
-            return {"sha": "existing-sha", "content": encoded_old}
-        if method == "PUT":
-            assert payload is not None
-            put_payloads.append(payload)
-            put_attempts += 1
-            if put_attempts == 1:
-                raise announcements.GitHubAPIError(422, "sha changed")
-            return {}
-        raise AssertionError(f"unexpected method: {method}")
-
-    monkeypatch.setattr(announcements, "request_json", fake_request)
-    announcements.upsert("owner/repo", "main", "docs/announcements/latest.md", "new", "v9.9.9")
-
-    assert put_attempts == 2
-    assert all(payload["sha"] == "existing-sha" for payload in put_payloads)
-
-
-def test_release_upsert_skips_unchanged_content(monkeypatch: pytest.MonkeyPatch) -> None:
-    content = "unchanged"
-    encoded = base64.b64encode(content.encode()).decode("ascii")
-    calls: list[str] = []
-
-    def fake_request(
-        method: str,
-        path: str,
-        payload: dict[str, Any] | None = None,
-    ) -> Any:
-        calls.append(method)
-        assert payload is None
-        return {"sha": "sha", "content": encoded}
-
-    monkeypatch.setattr(announcements, "request_json", fake_request)
-    announcements.upsert("owner/repo", "main", "docs/announcements/latest.md", content, "v1.0.0")
-
-    assert calls == ["GET"]
+# §151 deleted `generate_release_announcement.upsert()` -- the contents-API write to the default
+# branch it performed is what §149 proved a protected `main` refuses -- and with it these two tests,
+# which pinned retry-on-conflict and skip-if-unchanged for that write. The replacements are
+# `tests/test_release_announcement_preview.py`: `write_copies` is idempotent, and where "unchanged"
+# used to mean "no remote write needed", the pointer now refuses a backwards write outright.
 
 
 def _entry(**overrides: Any) -> dict[str, Any]:

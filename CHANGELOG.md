@@ -1,13 +1,33 @@
 # Changelog
 
-## Unreleased — Quality-gate hardening (P0/P1 audit follow-through)
+## Unreleased
 
-No public API breakage except documented REST contract corrections below.
-Measured on 2026-09-24: `ruff check` clean (was 54 errors), `ruff format`
-clean, `mypy .` clean on 114 files (was duplicate-module crash; scoped-only
-before), `pytest 395 passed` (was 345), coverage **80.04%** with
-`fail_under = 79` ratchet (was 0% — source misconfigured + `_vendor`
-shadowing + missing greenlet concurrency).
+### Changed (post-4.5.0) — the announcement copy is prepared before the tag
+
+- `scripts/generate_release_announcement.py` no longer writes to a remote branch, and `publish.yml` no longer asks it
+  to. The workflow used to commit both copies to `main` through the contents API; that write is refused while `main`
+  requires a green `ci` on its parent with `strict: true`, and the commit a tag may name is exactly the commit whose
+  `ci` ran while the tag was still missing (§149, measured: run 37919265633 -> `409 … Required status check "ci" is
+  expected`). Opening a PR from the workflow instead was rejected on measured grounds too -- GitHub documents that
+  events created with `GITHUB_TOKEN` start no workflow run, so a bot-opened PR carries no `ci` and could only merge
+  by admin override. The copy therefore moved upstream: `--preview v4.6.0 --repository owner/repo` renders it from
+  the `## 4.6.0` section of `CHANGELOG.md`, the release PR carries it, and `publish.yml` verifies the tree it checked
+  out (21 steps -> 20, and the verification names the command that fixes a failure). A pre-tag copy asserts no
+  publication date, because there is none to observe; `--from-release` remains for backfilling a published release.
+- Two consequences tightened rather than loosened: the §146 exemption is gone -- **every** tag from the floor up must
+  carry its dated copy, the newest included -- and a copy may lead the tags by one version only, the one the tree
+  declares. `current_version()` now returns `""` for an absent package file instead of raising, because the rule
+  needs that reading and a checker that crashes on a partial checkout reports nothing.
+- `CHANGELOG.md`'s top block was restructured, which `--preview` depends on: the 4.5.0 entries moved out of
+  `## Unreleased` under `## 4.5.0 — Quality-gate hardening (P0/P1 audit follow-through)`, so a released version has
+  the section its copy is rendered from. Proved heading-only: five heading lines replaced, two blank lines added,
+  994 -> 995 non-blank lines, no content line lost by multiset.
+- Found and fixed while testing the new renderer: previewing v4.5.0 from its own CHANGELOG section produced
+  **58,971 characters**, because nothing bounded the highlights. They are now cut at a line boundary under 1,800
+  characters with the source named (the v4.5.0 copy renders at 2,878).
+- `docs/announcements/README.md` documents the flow and keeps §149's measured account of why the old one could not
+  work; `docs/release-readiness-v4.3.md`'s claim that "the release announcement can therefore continue" was
+  corrected -- it described a step that has since been removed.
 
 ### Fixed (post-4.5.0) — the apparatus ceiling measured the wrong subject
 
@@ -22,7 +42,16 @@ shadowing + missing greenlet concurrency).
   blind spot an ignore list always is. No existing ceiling moved; `auditApparatusLines` stays 1128, and the
   guard's bite is proven by a document grown one line (`AUDIT_LEDGER.md` §150).
 
-### Fixed (unreleased, v4.5.0 line) — release gating
+## 4.5.0 — Quality-gate hardening (P0/P1 audit follow-through)
+
+No public API breakage except documented REST contract corrections below.
+Measured on 2026-09-24: `ruff check` clean (was 54 errors), `ruff format`
+clean, `mypy .` clean on 114 files (was duplicate-module crash; scoped-only
+before), `pytest 395 passed` (was 345), coverage **80.04%** with
+`fail_under = 79` ratchet (was 0% — source misconfigured + `_vendor`
+shadowing + missing greenlet concurrency).
+
+### Fixed — release gating
 
 - The announcement currency rule added at §136 could not be satisfied at release time and blocked v4.5.0. It
   compared `docs/announcements/latest.md` to the newest release *tag*, but the copy is rendered from the
@@ -59,7 +88,7 @@ shadowing + missing greenlet concurrency).
   opened by the workflow, an admin bypass, or a `gh run rerun` before step 21) are handed to the maintainer
   (`AUDIT_LEDGER.md` §149).
 
-### Changed (unreleased, v4.5.0 line)
+### Changed
 
 - Version bumped to **4.5.0** across its eight sites: `pyproject.toml`, `src/data_science_agent/__init__.py`,
   `src/data_science_agent/sdk.py`, `CITATION.cff` (the citation version and the `references:` entry that
@@ -86,7 +115,7 @@ shadowing + missing greenlet concurrency).
   rotted on every bump and unreachable from the tests as written. Both fallbacks now import their owners, and
   a new case forces the lookup to fail so those lines are covered (§144).
 
-### Changed (unreleased, v4.5.0 line) — baseline re-freeze
+### Changed — baseline re-freeze
 
 - `benchmarks/baseline/` re-frozen on 2026-10-09 at `4259e8f`, on the commit that carries the v4.5.0 bump, so
   the immutability rule in `docs/reproducibility.md` was satisfied rather than waived. Against the 2026-08-16
@@ -510,7 +539,7 @@ shadowing + missing greenlet concurrency).
   The drifted copy was restored to HEAD byte-for-byte rather than committed, since SBOM refreshes ride release
   commits (`AUDIT_LEDGER.md` §139).
 
-### Added (unreleased, non-breaking)
+### Added (non-breaking)
 
 - `tests/test_docs_strict_build_can_fail.py` proves the documentation gate can fail: it builds a scratch
   two-page site with the project's own `validation.links` settings and requires a link to a nonexistent

@@ -8467,3 +8467,85 @@ each `success`. Note what that run does *not* show: the runner checks out the co
 `WEB_PRODUCT_MASTER_PROMPT.md` was absent there and the ratchet step proves nothing about the defect §150 fixes --
 the reading that carries the point is the local one above, `facts ratchet: OK` with the 562-line file still in the
 tree. The runner confirms the other half: the narrower key breaks no gate in a clean checkout.
+
+## 151. The announcement copy moved upstream in time, so the release no longer writes to a protected branch
+
+§149 handed over three ways to fix step 21 and the maintainer chose the one none of them contained: stop
+writing after the fact. Measured premises, in the order they were checked:
+
+1. `GET /branches/main/protection` → `required_status_checks = {contexts: ["ci"], strict: true}`,
+   `required_pull_request_reviews: null`, `enforce_admins.enabled: false`.
+2. The write is impossible, not unlucky: the commit a version tag may name must declare that version, such a
+   commit is red on the pending-tag assertions until the tag exists, and a tag push triggers no `ci`
+   (`ci.yml` fires on `push: branches: [main]` and `pull_request`). Recorded with the run ids in §149.
+3. A bot-opened PR was rejected before being built. GitHub documents that
+   *"when you use the repository's GITHUB_TOKEN to perform tasks, events triggered by the GITHUB_TOKEN will
+   not create a new workflow run"* ([docs](https://docs.github.com/en/actions/concepts/security/github_token)),
+   so such a PR carries no `ci` context and with `strict: true` could only land by the admin override that
+   `enforce_admins: false` permits -- the manual step moved, not removed. Relaxing protection was refused for
+   the reason §148 established: the claims gate's exit code decides 21 downstream steps, so the check is the
+   pipeline's shape.
+
+**The flow now.** `python scripts/generate_release_announcement.py --preview v4.6.0 --repository <owner>/<repo>`
+renders `docs/announcements/v4.6.0.md` and `latest.md` from the `## 4.6.0` section of `CHANGELOG.md`; the
+release PR carries them, so they are on the default branch before the tag exists; `publish.yml` dropped step
+*Generate release announcement* (21 steps → 20) and its verification step now reads the checked-out tree and
+names the `--preview` command in its own error text. `--from-release` stays as the backfill path for a release
+that shipped without a copy: it reads the published release, writes files, and never a branch. `upsert()` is
+gone, and with it the two tests that pinned its conflict retry and its skip-if-unchanged -- recorded at
+`tests/test_automation_scripts.py` rather than deleted quietly.
+
+**A pre-tag copy says less, on purpose.** It prints no `Released <date>` line, because a date does not exist
+yet; §136-§149's whole failure sequence came from a gate demanding a document that could not honestly be
+written, so the replacement refuses to write one that is half-invented. The release URL is different in kind:
+`https://github.com/<repo>/releases/tag/<tag>` is derivable from the tag, so linking it asserts nothing about
+the future. `--repository` is a required flag rather than a defaulted `GITHUB_REPOSITORY` read for that
+reason -- and the orphan gate caught the defaulted read the moment it existed:
+`FAIL: unlisted orphan read 'GITHUB_REPOSITORY' at scripts/generate_release_announcement.py:261`, which is the
+`find_orphan_reads` gate earning its keep rather than a nuisance to register away.
+
+**Two rule changes, both tightenings.** `check_public_claims.announcement_currency_issues` drops §146's
+newest-tag exemption -- every tag from the floor up now needs its dated copy -- and the "may lead the tags"
+allowance is bounded by `current_version()`, so a copy naming a version beyond the one the tree declares stays
+red. `test_the_newest_tag_without_its_copy_is_now_a_defect` is the deliberate flip of the case §146 pinned as
+exempt; `test_a_copy_beyond_the_declared_version_is_reported` and
+`test_a_copy_ahead_of_the_tags_with_no_declared_version_is_reported` keep the bound honest.
+`current_version()` returns `""` when the package file is absent instead of raising: the rule needs that
+reading, and a checker that crashes on a partial checkout reports nothing at all.
+
+**A defect the new renderer exposed in my own design.** The first `--preview v4.5.0` against the real
+CHANGELOG produced **58,971 characters** -- the 4.5.0 section runs to ~660 lines, and highlights were
+unbounded. The test I had written to catch exactly this asserted `len(text) > 600`, a lower bound where the
+property is an upper one. Highlights are now cut at a line boundary under 1,800 characters with
+``Full entries: `CHANGELOG.md` and the release notes.`` and a trailing ellipsis so the cut is visible; the same
+render is 2,878 characters, and the assertion reads `< 4000` plus "ends with the ellipsis" plus "names the
+source".
+
+**CHANGELOG restructure, because `--preview` needs a section to read.** The released entries moved out of
+`## Unreleased` under `## 4.5.0 — Quality-gate hardening (P0/P1 audit follow-through)`, which also corrects a
+shipped document that still called released work unreleased. Proved as heading-only: five heading lines
+replaced, two blank lines added, 994 → 995 non-blank lines, and the line multiset before/after differs only at
+those lines. A second, unplanned property came out of doing it in a shared tree: `CHANGELOG.md` also held
+another session's uncommitted `### Added (post-4.5.0) — Lane A` section, so this commit ships a crafted index
+blob (that block removed by exact heading slice, its 26 lines printed and verified as the only deletions) and
+their working-tree text untouched -- their prose then landed on top of `## Unreleased`, which is where it
+belongs, and the misplaced released-version intro moved back under `## 4.5.0`.
+
+**Gates on this tree** (2026-10-11): `check_public_claims --require-released-tags` → `0 issues (scanned 47
+file(s); 59 skipped as historical)`; `find_orphan_reads --check` → `orphan reads: 14 key(s)`, rc 0; `facts
+ratchet: OK`; `ruff check` clean and `ruff format --check` clean on 260 files; the three announcement/automation
+test files → 47 passed. The full battery then reported **17 gate(s) run, 1 failed**, the one failure
+`sync_vendor.py --check` on `dsa_evaluation: 1 file(s) differ [external_validation.py]` -- another session's
+uncommitted source, which its own repair hint would copy into `_vendor`, so it was left alone. pytest exited 0 at
+**83.28%** coverage, `regression: 24/24`, `SBOM CHECK OK: 192 components and release '4.5.0'`,
+`docker compose config`, the npm advisory gate and `mkdocs build --strict` all passed. The workflow step was executed rather than eyeballed: its `run:` block was extracted
+from `publish.yml` with the project's own YAML parser and run verbatim three times -- against the real tree as
+`v4.5.0` (rc 0, both pages verified), as `v9.9.9` whose copy does not exist (rc 1, "is not in v9.9.9" plus the
+`--preview` command), and in a planted tree whose copy opens with another release (rc 1, names the expected
+title). So the step can fail, and it fails with the instruction that fixes it.
+
+**What is not verified.** No release has travelled this path end to end; `v4.5.0` shipped under the old one.
+The next bump is the first execution of `--preview` in anger, of the merged-before-tag ordering, and of the
+verification step on a real tag -- which is the same class of unknown §142 recorded for the create/upload path
+before run 37919265633 closed it. The runbook is unchanged in every other respect: bump on
+`release/vX.Y.Z-rc1`, merge, tag the merge commit, and the release PR now carries the announcement pair as well.
