@@ -8623,3 +8623,10 @@ reads, which is why the annotation cites §145 rather than repeating a value.
 as historical)`; `ruff check` clean over `tests benchmarks`; the full suite → **856 passed, 1 warning in
 44.79s**, rc 0 (the count quoted from the run that prints it, without coverage; `summary.json` and
 `results.json` unchanged, so the re-freeze decision stays open as the release action it is).
+
+**Runner confirmation, appended same day after the push.** `6688901` is `origin/main` (`git rev-list
+--left-right --count origin/main...HEAD` → `0 0`), and the run for it -- 38149129004, created
+2026-10-11T14:55:08Z, completed 2026-10-11T15:00:21Z -- ended `success` on both jobs (`ci`, 13 steps;
+`web-regression`, 35 steps), with that commit's combined status reading `state=success`. The counts above
+are local; the runner's green is what makes them the state of `main`. Neither number is a latency
+measurement, which is exactly the distinction §152 was written to keep.
