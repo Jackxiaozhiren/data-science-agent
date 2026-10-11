@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FlaskConical, Menu, X } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { ApiStatusDot } from "@/app/components/layout/ApiStatusDot";
+import { ProvenanceStatus } from "@/app/components/layout/ProvenanceStatus";
 
 // Sticky top bar: logo + Try DSA primary + Analysis/Evaluation/Research/GitHub + API dot + mobile menu.
 // Structure reference: TailAdmin / next-shadcn-dashboard topbar pattern.
@@ -42,6 +43,7 @@ export function SiteHeader() {
         </div>
         <div className="flex items-center gap-2">
           <ApiStatusDot />
+          <ProvenanceStatus />
           <Link href="/datasets" className="hidden md:inline-flex">
             <Button size="sm">Try DSA</Button>
           </Link>

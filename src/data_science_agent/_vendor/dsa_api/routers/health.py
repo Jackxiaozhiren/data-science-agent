@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import APIRouter
 from sqlalchemy import text
 
-from dsa_api.core.config import settings
+from dsa_api.core.config import DISTRIBUTION, settings
 from dsa_api.core.database import engine
 
 router = APIRouter()
@@ -77,8 +77,23 @@ _STARTED = __import__("time").monotonic()
 
 
 @router.get("/version")
-async def version() -> dict[str, str]:
-    return {"version": settings.version}
+async def version() -> dict[str, Any]:
+    """Which build this process is, and what would do the thinking in it.
+
+    The reasoning mode lives here rather than on ``/health`` because that route promises no database I/O
+    and no optional LLM import, and a hosting probe must not gain a reason to fail. It is not optional
+    information: a visitor reading a result from this instance has to be able to tell a deterministic
+    plan from a model's, so it ships with the identifier of the build that produced it.
+    """
+    # Imported here for the same reason /health/dependencies imports lazily: this module must stay
+    # loadable by an instance that has not pulled the LLM stack in yet.
+    from dsa_llm.providers import resolve_llm_mode
+
+    return {
+        "version": settings.version,
+        "distribution": DISTRIBUTION,
+        "reasoning_mode": resolve_llm_mode().as_dict(),
+    }
 
 
 @router.get("/metrics")

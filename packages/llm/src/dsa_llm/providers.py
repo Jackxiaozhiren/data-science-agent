@@ -6,6 +6,7 @@ import os
 import time
 import uuid
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -29,6 +30,19 @@ from dsa_llm.cost import reset_call_log as reset_call_log
 DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
 _REAL_MODES = {"real", "openai"}
 _STUB_MODES = {"stub", "offline", "heuristic"}
+
+
+def configured_llm_mode() -> str:
+    """The one reading of ``DSA_LLM_MODE``: consumers classify this token, none re-reads the variable."""
+    return os.getenv("DSA_LLM_MODE", "stub").strip().lower()
+
+
+def _unsupported_mode_note(mode: str) -> str:
+    """The refusal sentence for a mode neither set recognises, owned here so the two raisers agree."""
+    return (
+        f"Unsupported DSA_LLM_MODE={mode!r}; use stub/offline/heuristic or real/openai"
+        " (providers: openai, openai-compat, ollama)"
+    )
 
 
 def _strip_json_fence(text: str) -> str:
@@ -374,7 +388,7 @@ class EnvLLMProvider(LLMProvider):
 
     def __init__(self, fallback: LLMProvider | None = None) -> None:
         self.fallback = fallback or StubLLMProvider()
-        self.mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()
+        self.mode = configured_llm_mode()
         self.active_provider = "stub"
         self.active_model: str | None = None
         self.inner: LLMProvider = self.fallback
@@ -382,10 +396,7 @@ class EnvLLMProvider(LLMProvider):
         if self.mode in _STUB_MODES:
             return
         if self.mode not in _REAL_MODES:
-            raise RuntimeError(
-                f"Unsupported DSA_LLM_MODE={self.mode!r}; use stub/offline/heuristic or real/openai"
-                " (providers: openai, openai-compat, ollama)"
-            )
+            raise RuntimeError(_unsupported_mode_note(self.mode))
 
         provider_name = os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower()
         real_provider: Any
@@ -454,3 +465,66 @@ class EnvLLMProvider(LLMProvider):
 
 def auto_provider() -> LLMProvider:
     return EnvLLMProvider(StubLLMProvider())
+
+
+@dataclass(frozen=True)
+class LlmMode:
+    """What would actually produce the next plan, as the provider resolves it."""
+
+    mode: str
+    stub: bool
+    provider: str
+    model: str | None
+    error: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "mode": self.mode,
+            "stub": self.stub,
+            "provider": self.provider,
+            "model": self.model,
+            "error": self.error,
+        }
+
+
+def resolve_llm_mode() -> LlmMode:
+    """The effective reasoning mode, reported without a credential and without a network call.
+
+    Constructing the provider is what makes this the runtime's own resolution rather than a paraphrase
+    of the environment, and its refusals are part of the answer: ``DSA_LLM_MODE=real`` with no key is
+    reported as configured-but-unrunnable, because an interface that copies this value must not claim a
+    model would answer when every call would raise.
+    """
+    mode = configured_llm_mode()
+    if mode in _STUB_MODES:
+        return LlmMode(mode=mode, stub=True, provider="stub", model=None)
+    if mode not in _REAL_MODES:
+        return LlmMode(
+            mode=mode,
+            stub=False,
+            provider="unsupported",
+            model=None,
+            error=_unsupported_mode_note(mode),
+        )
+    provider: EnvLLMProvider | None = None
+    # The construction refusal is the state being reported here, so it is suppressed rather than
+    # propagated -- `EnvLLMProvider` still raises it at the run itself. Suppression rather than a
+    # handler because the repository's ratchet counts every handler in shipped code, and this one
+    # would report a fact rather than hide a bug; the provider's own words stay on /health/dependencies.
+    with contextlib.suppress(RuntimeError):
+        provider = EnvLLMProvider()
+    if provider is None:
+        return LlmMode(
+            mode=mode,
+            stub=False,
+            provider="unconfigured",
+            model=None,
+            error=(
+                "The configured provider cannot be constructed from the current environment -- its "
+                "credential or endpoint is missing -- so a run started here would raise, not answer. "
+                "DSA never silently substitutes a stub."
+            ),
+        )
+    return LlmMode(
+        mode=mode, stub=False, provider=provider.active_provider, model=provider.active_model
+    )

@@ -37,5 +37,5 @@ Conventions:
 | GET | `/health` | `{status, details:{process}, version}` — liveness only: no database I/O and no optional scientific/LLM imports, so a small instance can answer probes immediately |
 | GET | `/ready` | `{status, details:{process,db}, version}` — database readiness; `status` degrades to `degraded` when the DB check fails |
 | GET | `/health/dependencies` | `{status, details:{duckdb,polars,llm}, version}` — deeper optional-dependency diagnostic |
-| GET | `/version` | version |
+| GET | `/version` | `{version, distribution, reasoning_mode}` — which build answers and what would plan a run: `version` is read from the installed distribution's metadata (`unknown` when there is none), `reasoning_mode` is `{mode, stub, provider, model, error}` resolved the same way `EnvLLMProvider` resolves it, so a UI copying it cannot claim a model ran where the runtime would refuse |
 | GET | `/mcp/tools` POST `/mcp/call` POST `/mcp` | MCP (stateless 2026-07-28, see MCP Design) |

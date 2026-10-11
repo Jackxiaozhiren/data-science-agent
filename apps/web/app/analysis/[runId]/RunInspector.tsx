@@ -14,6 +14,7 @@ import { Input } from "@/app/components/ui/input";
 import { Progress, Separator } from "@/app/components/ui/feedback";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
+import { ReasoningModeBadge, ReasoningModeNotice } from "@/app/components/analysis/ReasoningModeBadge";
 import { EmptyState } from "@/app/components/data/States";
 import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
@@ -442,6 +443,7 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
         actions={
           <>
             <StatusBadge status={statusNow} />
+            <ReasoningModeBadge />
             {st?.report_markdown && (
               <a href={reportUrl} target="_blank" rel="noreferrer">
                 <Button variant="secondary" size="sm"><Download className="size-4" aria-hidden /> Download report</Button>
@@ -450,6 +452,8 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
           </>
         }
       />
+
+      <ReasoningModeNotice />
 
       {fromRunId && (
         <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs text-zinc-600 shadow-sm">
