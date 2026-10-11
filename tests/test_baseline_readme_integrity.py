@@ -321,3 +321,74 @@ def test_the_control_a_declared_mode_passes_and_a_moved_default_does_not(tmp_pat
     )
     reason = _undeclared_mode(honest, source=moved)
     assert reason is not None, "prose declaring the old default still passes after it moved"
+
+
+DISCLOSURE_MARKS = ("not comparable", "machine reading")
+
+
+def _names_value(block: str, value: float) -> bool:
+    """Does this block cite the stored figure itself, not a longer number that contains it?
+
+    Substring matching alone is too weak here: the re-freeze block also carries the spread value
+    142.90, which contains 142.9, so a drifted aggregate would still satisfy a plain `in` test.
+    """
+    return re.search(rf"(?<![\d.]){re.escape(str(value))}(?![\d])", block) is not None
+
+
+def _latency_disclosures(text: str) -> list[str]:
+    """Bullet blocks that name `mean_latency_ms` and say what kind of number it is.
+
+    Blocks rather than lines because the caveat's own numbers wrap: a line-level check would be a
+    claim about typography, not about whether the reader is told what the figure means.
+    """
+    return [
+        block
+        for block in text.split("\n- ")
+        if "mean_latency_ms" in block and any(mark in block for mark in DISCLOSURE_MARKS)
+    ]
+
+
+def test_every_era_of_the_latency_figure_ships_with_its_caveat() -> None:
+    """§152: the stored latency is quoted as an aggregate, so the caveat is part of the freeze.
+
+    `mean_latency_ms` stays in `summary.json` -- dropping a published field is a re-freeze decision
+    and a version bump, which is the maintainer's call, not a cleanup -- and the one consumer that
+    can see it, `test_baseline_contract`, compares the stored file to a constant rather than a fresh
+    run. What keeps the number honest is therefore the prose beside it: the dated 2026-10-05
+    readings and the 2026-10-09 re-freeze each have to say the figure is a machine reading, and the
+    re-freeze line has to carry the value the file stores so the two cannot drift apart.
+    """
+    summary = json.loads((BASELINE / "summary.json").read_text(encoding="utf-8"))
+    disclosures = _latency_disclosures(README.read_text(encoding="utf-8"))
+    assert len(disclosures) >= 2, disclosures
+    assert any(_names_value(block, summary["mean_latency_ms"]) for block in disclosures), (
+        f"no disclosure names the stored value {summary['mean_latency_ms']}: the README would be "
+        "caveating a number the artifact no longer holds"
+    )
+    assert any(
+        all(number in block for number in ("126.86", "77.16", "142.90")) for block in disclosures
+    ), "the caveat must cite the spread it is based on, not just assert non-comparability"
+
+
+def test_the_control_a_caveat_stripped_from_the_prose_is_caught() -> None:
+    """The guard above must be able to fail on the deletion it guards against."""
+    text = README.read_text(encoding="utf-8")
+    stripped = text
+    for mark in DISCLOSURE_MARKS:
+        stripped = stripped.replace(mark, "quoted here")
+    assert stripped != text, "the planted edit did not land -- the control below proves nothing"
+    assert len(_latency_disclosures(stripped)) < 2, (
+        "removing every caveat left the guard satisfied, so it never checked for one"
+    )
+
+
+def test_the_control_a_drifted_latency_figure_is_caught() -> None:
+    """The value clause must fire on prose that stops quoting the artifact, not only on a deletion."""
+    text = README.read_text(encoding="utf-8")
+    drifted = text.replace("**142.9**", "**999.0**", 1)
+    assert drifted != text, "the planted edit did not land -- the control below proves nothing"
+    blocks = _latency_disclosures(drifted)
+    assert len(blocks) == 2, "the plant removed a caveat as well as a number"
+    assert not any(_names_value(block, 142.9) for block in blocks), (
+        "142.9 still matched after the figure moved, so the assertion checks nothing"
+    )

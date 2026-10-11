@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Fixed (post-4.5.0) — what the frozen `mean_latency_ms` gate actually guards
+
+- `tests/regression/test_regression_matrix.py::test_baseline_contract` compared the **stored** baseline
+  against `CONTRACT["mean_latency_ms_max"] = 500` under a name that reads like a latency requirement. The
+  field's consumers were then measured: two in this repository -- that assertion, and the README
+  aggregate-line pin in `tests/test_baseline_readme_integrity.py` -- and nothing else (the remaining
+  `mean_latency_ms_max` hits are in the second clone at `data-science-agent/`, which is not this tree).
+  So the check can only ever catch a re-freeze recording a pathological number, while the value it reads
+  is a machine reading: three runs of the identical command on the same commit measured 126.86, 77.16 and
+  142.90 ms. The constant is renamed
+  `mean_latency_ms_refreeze_bound_ms`, commented as what it is, and its failure text now says it compares
+  the file to a constant rather than a fresh run.
+- Deleting the field is a re-freeze, which the project's own immutability policy makes a version-bump
+  decision, so nothing in `summary.json` moved. What was added instead is a guard on the disclosure: the
+  baseline README's caveat is now pinned (`_latency_disclosures` + two controls -- strip the caveats and
+  the count drops to zero; drift the stored figure and the value clause fails), so the number cannot be
+  left standing without its explanation, and cannot be explained by prose quoting a value the artifact no
+  longer holds. Two defects in the first cut of that guard are worth the note: a line-level check demanded
+  the spread numbers share a line with the caveat (prose wraps, so that tests typography, not disclosure),
+  and `"142.9" in block` was satisfied by the spread value `142.90`, so the clause could not see drift --
+  now a digit-boundary match, with the control to prove it.
+- `benchmarks/baseline/README.md`: the dated §113 bullet gained a superseded annotation rather than a
+  rewrite, and the §145 re-freeze bullet names the renamed constant.
+
 ### Changed (post-4.5.0) — the announcement copy is prepared before the tag
 
 - `scripts/generate_release_announcement.py` no longer writes to a remote branch, and `publish.yml` no longer asks it

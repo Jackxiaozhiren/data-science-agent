@@ -8574,3 +8574,52 @@ The next bump is the first execution of `--preview` in anger, of the merged-befo
 verification step on a real tag -- which is the same class of unknown §142 recorded for the create/upload path
 before run 37919265633 closed it. The runbook is unchanged in every other respect: bump on
 `release/vX.Y.Z-rc1`, merge, tag the merge commit, and the release PR now carries the announcement pair as well.
+
+## 152. The frozen latency figure kept its value and lost its pretension
+
+The maintainer delegated the `mean_latency_ms` call, so it is decided here and the reasoning is the record.
+Deleting a field from `benchmarks/baseline/summary.json` is a re-freeze, and `docs/reproducibility.md`
+§"Immutability" makes a re-freeze a version-bump decision -- a release action, not a cleanup -- so the
+artifact did not move. What could be fixed without touching it was the claim the gate around it makes.
+
+**The consumers, enumerated rather than assumed.** `grep` over the repository found exactly two:
+`tests/regression/test_regression_matrix.py:43`, which compares the *stored* file against
+`CONTRACT["mean_latency_ms_max"] = 500`, and `tests/test_baseline_readme_integrity.py:100`, which pins the
+README's aggregate line to `summary.json`. Nothing measures a fresh run against either. (The remaining
+`mean_latency_ms_max` hits live under `data-science-agent/` -- the second clone in this directory, not this
+tree, and not something to edit.) So the name `*_max` advertised a latency requirement that the check
+cannot express: with a 500 ms bound against a stored 142.9 ms, and a machine spread of 77.16-142.90 ms on
+one commit, the only state it can reject is a re-freeze recording something pathological.
+
+**Renamed to what it guards.** `CONTRACT["mean_latency_ms_refreeze_bound_ms"]`, with a comment block saying
+it compares the stored snapshot to a constant and never a fresh run, and a failure message that repeats the
+point -- so neither a future "make this a real latency SLA" nor a citation of it as product performance
+passes unnoticed. The README's re-freeze bullet now names the same constant.
+
+**The disclosure became a guarded property, not a paragraph.** `mean_latency_ms` still appears in the
+aggregate line, so a reader meets the number in the shape of an achievement; what keeps that honest is the
+caveat beside it, and caveats are the kind of prose that gets tidied away. `_latency_disclosures()` returns
+the bullet blocks that name the field *and* say what kind of number it is; the shipped README yields two
+(the dated §113 readings and the §145 re-freeze), one of which must cite the stored value. Two controls,
+both committed: stripping every disclosure phrase drops the count to zero, and drifting the figure
+`**142.9** -> **999.0**` makes the value clause fail while the block count holds.
+
+**Two defects in my own first cut of that guard, both found by probing it rather than by it passing.**
+It asserted the spread numbers (`126.86`, `77.16`) appeared on the *same line* as the caveat -- prose wraps,
+so that is a test of typography; the helper now works on blocks split at `"\n- "`. And it matched the stored
+value with `in`, which the spread value `142.90` satisfies, so the clause could not see a drifted figure at
+all -- `_names_value()` now requires a digit boundary on both sides. Had I stopped at "21 passed", both
+would have shipped as decorative assertions; the drift control above is what keeps the second one honest
+going forward, and it fails the way it must.
+
+**Dated prose handled as dated.** §113's bullet claimed "the 47.92 ms stored here" and the re-freeze made
+that false; the sentence was left intact and annotated `(Superseded below by §145's 2026-10-09 re-freeze,
+which moved the stored figure ...)`, because the readings in it were taken and the paragraph is a record, not
+a current claim -- and because rewriting it would have put the annotation's number in a block the guard
+reads, which is why the annotation cites §145 rather than repeating a value.
+
+**Gates on this tree** (2026-10-11): `tests/test_baseline_readme_integrity.py` + `tests/regression/test_regression_matrix.py`
+→ **21 passed**; `check_public_claims --require-released-tags` → `0 issues (scanned 47 file(s); 59 skipped
+as historical)`; `ruff check` clean over `tests benchmarks`; the full suite → **856 passed, 1 warning in
+44.79s**, rc 0 (the count quoted from the run that prints it, without coverage; `summary.json` and
+`results.json` unchanged, so the re-freeze decision stays open as the release action it is).

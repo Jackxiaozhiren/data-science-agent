@@ -47,7 +47,9 @@ Measured on 2026-10-05 at `9f6ab35`, four runs of the command above (§113):
   machine than about the code, and the 47.92 ms stored here is a 2026-08-16 reading on a different
   tree. The figure that carries weight is the ceiling in
   `tests/regression/test_regression_matrix.py::test_baseline_contract`, which is checked against
-  this stored file and never against a fresh run.
+  this stored file and never against a fresh run. (Superseded below by §145's 2026-10-09 re-freeze,
+  which moved the stored figure; the readings quoted in this bullet are what the snapshot at the
+  time was measured against, and the non-comparability conclusion did not change with it.)
 
 Re-frozen 2026-10-09 at `4259e8f` (§145), on the v4.5.0 line. Against the 2026-08-16 snapshot, 22 of 24
 summary fields are identical; the two that moved are:
@@ -62,7 +64,12 @@ summary fields are identical; the two that moved are:
   spread with no code moving, so the stored value encodes the machine that produced it. The field stays
   because deleting a published field is a bigger claim change than re-freezing one; removing it (or
   replacing it with a spread) is the maintainer's call, and the ceiling that gates anything is still
-  `test_baseline_contract`'s, which reads this file rather than a fresh run.
+  `test_baseline_contract`'s, which reads this file rather than a fresh run. §152 made that explicit in
+  the gate rather than changing the artifact: the constant is now
+  `CONTRACT["mean_latency_ms_refreeze_bound_ms"]`, named for what it can actually catch -- a re-freeze
+  that records a pathological number -- and this bullet's caveat is pinned by
+  `tests/test_baseline_readme_integrity.py`, so the disclosure cannot be deleted or left quoting a stale
+  figure without a test going red.
 
 ## Provenance of the frozen numbers
 

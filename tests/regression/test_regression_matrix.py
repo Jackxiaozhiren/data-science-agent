@@ -10,11 +10,18 @@ CATALOG = pathlib.Path("benchmarks/ds-agent-benchmark/catalog.json")
 DATASETS = pathlib.Path("benchmarks/ds-agent-benchmark/datasets")
 
 # W1 contract — mirrors the frozen v1 baseline.
+#
+# `mean_latency_ms_refreeze_bound_ms` is NOT a latency requirement and cannot become one from this
+# file: `test_baseline_contract` compares the *stored* snapshot against these constants and never a
+# fresh run, so the only thing this bound can catch is a re-freeze recording a pathological number.
+# The stored value is a machine reading -- three runs of the identical command on the same commit
+# measured 126.86, 77.16 and 142.90 ms (benchmarks/baseline/README.md, §145) -- and a product
+# latency claim has to come from a measured run, not from this comparison.
 CONTRACT = {
     "task_success_rate": 1.0,
     "sql_accuracy": 1.0,
     "unsupported_max": 0.10,
-    "mean_latency_ms_max": 500,
+    "mean_latency_ms_refreeze_bound_ms": 500,
     "min_tools": 17,
 }
 
@@ -40,7 +47,11 @@ def test_baseline_contract() -> None:
     assert agg["task_success_rate"] == CONTRACT["task_success_rate"]
     assert agg["sql_accuracy"] == CONTRACT["sql_accuracy"]
     assert agg["unsupported_claim_rate"] <= CONTRACT["unsupported_max"]
-    assert agg["mean_latency_ms"] <= CONTRACT["mean_latency_ms_max"]
+    stored_latency = agg["mean_latency_ms"]
+    assert stored_latency <= CONTRACT["mean_latency_ms_refreeze_bound_ms"], (
+        f"the frozen summary stores {stored_latency} ms, past the re-freeze sanity bound; this "
+        "compares the stored file to a constant, so it says nothing about a fresh run's latency"
+    )
 
 
 def test_tool_registry_contract() -> None:
