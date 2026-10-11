@@ -8537,6 +8537,25 @@ close -- the prose is not in my tree to restore -- but it is the same class §14
 be about, and had I staged the file a few minutes later the exclusion proof would have had nothing to exclude and
 the accident would have looked like my deletion.
 
+**Attribution, recorded because the history misleads.** The other session committed while my eleven §151 paths
+were staged, so `e58fe15 test(contract): Lane A — cover the refused-mode branch CI showed as uncovered` carries
+them -- `git show --pretty=format: --name-only e58fe15` lists `scripts/generate_release_announcement.py`,
+`.github/workflows/publish.yml`, `tests/test_release_announcement_preview.py`, `CHANGELOG.md`, this document and
+the rest -- under a message describing neither. My own `9ea681f` therefore holds only ledger text. Nothing is
+rewritten: history rewriting is the maintainer's action and was not requested, and the content is intact and
+green. A `git log` reader will not find §151 where §151 landed, which is what this paragraph exists to say.
+
+The committed tree was then verified in a detached worktree rather than a `git archive` export, and the
+difference is worth keeping: an export has no `.git`, so `released_versions()` reads no tags,
+`check_public_claims --require-released-tags` refuses with rc 1, and
+`test_the_shipped_announcements_satisfy_the_rule` fails -- all three for the checkout shape, not for §151. In the
+worktree, where refs are reachable: `sync_vendor --check` OK (so the local red on `external_validation.py` is
+uncommitted foreign source, not drift in the commit), `facts ratchet: OK`, `orphan reads: 14 key(s)`, and the
+three announcement/automation files 46 passed with the one ref-reading failure. A linked worktree's `.git` is a
+`gitdir:` file, so the same unreadable-refs path applies there for the strictest reading; CI's plain clone is
+unaffected, which §149's log of the gate naming `the newest release tag is '4.4.0'` on a runner demonstrates. The
+worktree was removed after the run.
+
 **Gates on this tree** (2026-10-11): `check_public_claims --require-released-tags` → `0 issues (scanned 47
 file(s); 59 skipped as historical)`; `find_orphan_reads --check` → `orphan reads: 14 key(s)`, rc 0; `facts
 ratchet: OK`; `ruff check` clean and `ruff format --check` clean on 260 files; the three announcement/automation
