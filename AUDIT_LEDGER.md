@@ -9577,3 +9577,28 @@ lines as the delta. Nothing was lost either way, which is the point of naming th
 **Open after this item.** The deployment itself -- the image has to be rebuilt for the COPY lines to matter,
 and that is the maintainer's action, not a commit. The `Authorization` question §167 left over is still
 unpicked, and `benchmarks/baseline/README.md` still describes the pages as reading the files directly.
+
+## 169. The handoff's register is now closed for Group B, with the runner's own numbers on `2634207`
+
+**Pushed head and its verdict.** `origin/main` is `2634207c67059164cd9f411efe9858266fbdc6df` and its `ci` run
+**38267969373** reports `status = completed`, `conclusion = success`. Steps this item depends on, as the
+runner measured them rather than as I ran them locally: step 9 `sync_vendor.py --check` success (the
+committed tree is in sync -- the local red was only the other session's uncommitted
+`dsa_evaluation/external_validation.py`, and a `git archive HEAD` export re-run said the same, rc 0), step
+20 `pytest -q --cov` success (`TOTAL 8100 1085 2318 414 84%`), step 25 `docker build -f
+docker/Dockerfile.api` success -- which is the image that now carries the two artifact files the endpoints
+read -- and in the `web-regression` job, step 8 `regression.mjs` printed
+`regression: 27/27 checks passed (24 route/viewport + 3 interaction)`. The claim gates read `facts ratchet:
+OK`, `0 issues (scanned 47 file(s))`, `orphan reads: 14 key(s)`, and the 5-task benchmark slice reported
+`Task success rate: 1.0` on `benchmarks/ds-agent-benchmark/catalog.json`.
+
+**Two operational facts worth keeping.** Outbound `github.com:443` flapped for ~25 minutes while
+`api.github.com` answered 200 the whole time, so `gh run list` kept working exactly when `git push` could not
+connect; the fix was a bounded retry loop, not a transport change -- this machine has no SSH key for GitHub
+(`ssh -T git@github.com` => `Permission denied (publickey)`), so switching the remote to SSH is not an option
+anyone should take casually. And `git fetch` succeeding is not evidence that the push will: check the
+divergence and the in-flight runs again immediately before pushing, which is what caught `22e99a8`.
+
+**Register state.** Group B (#3, #4, #5, #6) is executed and green on the runner. Group A stays release-gated
+exactly as §159 worded it -- nothing in this lane bumped a version, tagged, released, or published. Group C
+(#7) remains archived-until-due, reviewed in §161 with 26 days left at the time of writing.
