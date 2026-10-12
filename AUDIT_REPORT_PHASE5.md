@@ -142,6 +142,12 @@ but the raw reports will be lost with `/tmp`.
 
 ## 25.5 Decisions required
 
+> **Delivered 2026-09-29; re-measured 2026-10-12 -- read `AUDIT_LEDGER.md` §157 for the current list.** Of the
+> seven rows below, rows 3 (docs half), 4, 6 and 7 have since closed, row 5 is the still-owed re-freeze, and
+> rows 1 and 2 are **still open** with today's evidence named in §157. This table stays exactly as delivered
+> because it is the record of what was put to the maintainer then; the risk it carries is a reader taking it
+> for the present state.
+
 | # | situation | options | recommendation | cost of deferring |
 |---|---|---|---|---|
 | 1 | `/benchmarks` and `/research` read repo files with `readFileSync` and are prerendered with `initialRevalidateSeconds:false`; `Dockerfile.web` copies only `apps/web` | (a) serve both through the API; (b) COPY them into the web image and accept build-time freezing | **(a)** — matches `docs/hosted-demo.md:14`, and (b) permanently freezes numbers a benchmark gate is supposed to keep honest | deployed UI shows an EmptyState, or frozen metrics presented as current |

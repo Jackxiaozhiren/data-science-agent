@@ -8802,3 +8802,33 @@ exist the browser lane's honest status is *script, not specs*.
 **What changed in the ledger because of it.** Nothing beyond this section: §131's row stays as written
 because it is accurate about what it claims, and the correction belongs where the misreading happened -- in
 this entry, which is what a future session reads when it is asked whether target 4 is done.
+
+## 157. One list of everything still open, because three inventories had already drifted apart
+
+§131's target map, §142's remaining-items list and `AUDIT_REPORT_PHASE5.md` §25.5's decision table each
+claimed a share of what is outstanding, and each was last refreshed at a different time -- which is how §155
+and §156 happened. This is the single list as of 2026-10-12; the three older artifacts stay as dated records,
+and §25.5 now points here. Every row names the command that put it here.
+
+| # | item | trigger / who moves it | why it is not a fix commit | cost of deferring | evidence |
+|---|---|---|---|---|---|
+| 1 | The §151 announcement path has never carried a release | next tag; producer | the proof *is* a release, and version bumps/tags are the maintainer's | `--preview` → merged-before-tag → tree verification is pinned by tests and hand-drilled, not executed end to end | §151, task #13; `publish.yml` step *"Verify the announcement copy ships with this release"* |
+| 2 | `mean_latency_ms`'s fate at the next re-freeze (drop the field, or store a spread) | next version bump; producer | a re-freeze is a version decision per `docs/reproducibility.md` §Immutability | `test_baseline_contract` keeps pinning a stored file to a constant; no fresh run is measured against it | §152, task #14; the README's two disclosures are guarded by `tests/test_baseline_readme_integrity.py` |
+| 3 | `@playwright/test` + real browser specs (§24 target 4, part 3) | maintainer yes/no on a devDependency | §29.6: a fix needing a dependency is `BLOCKED`; §N6 forbids adding one silently | CI never clicks anything: the tour is `goto` + screenshot over 12 routes × 2 viewports, backend-independent | §156, task #16; `grep -c` of interaction verbs in `apps/web/scripts/regression.mjs` → 0; zero `*.spec.*` files |
+| 4 | D-L4-03: wire `langgraph_graph.py` behind a documented switch, or retire it from the coverage `source` | maintainer | wiring changes a public surface; retiring is an exclusion (§N6); deletion is `BLOCKED` under lock L5 | 348 shipped lines stay in the coverage denominator that no user can reach | §155, task #15; `grep -rn --include='*.py' -E 'run_analysis_langgraph\|build_graph' src apps packages --exclude-dir=_vendor` → no shipped site |
+| 5 | §25.5 row 1: `/benchmarks` and `/research` read repo files the web image does not ship | maintainer | (a) serving through the API changes a data contract across surfaces; (b) `COPY`ing them freezes benchmark numbers at build time | the deployed UI shows EmptyState, or presents frozen metrics as current | re-measured: `apps/web/app/benchmarks/page.tsx:26,36` still `readFileSync`; `docker/Dockerfile.web:3-5` still copies only `apps/web` |
+| 6 | §25.5 row 2: every non-2xx renders as "no data" while the docs recommend token auth | maintainer | it changes user-visible status semantics, which sit on settled L2 vocabulary | an operator who sets `DSA_AUTH_TOKEN` per `docs/api.md:13` gets a UI that says nothing exists, with no error surfaced | re-measured: `apps/web/app/research/page.tsx:19` `if (!res.ok) return [];`; no `Authorization` anywhere in `apps/web/app` or `apps/web/lib` |
+| 7 | `braces` npm advisory exemption | 2026-11-07, and the gate raises it itself | the two remaining shapes (upgrade / scope the gate to prod) were put to the user in §89 and not taken | a stale exemption becomes the declared-but-unreachable skip §113.3 warns about | `docs/audit/npm-advisory-exceptions.json` `review_by 2026-11-07`; `scripts/check_npm_advisories.py` fails on expiry |
+
+**§25.5's seven rows, re-measured today.** Closed: row 4 (`apps/web/app/lib/analysisStatus.ts` now owns
+`IN_FLIGHT_STATUSES`, and its header comment states that names the backend never emits are deliberately
+absent), row 6 (`ci.yml:85` runs the claims checker; the snapshot reads `unwiredCheckers: 0`), row 3's
+documentation half (`git grep -l MemorySaver` over tracked files returns the ledger, CHANGELOG, the module
+itself and four tests -- no doc or paper claim remains), and row 7 in the opposite direction from the one
+filed: the `navOrphanPages` ceiling is 23 and §124 recorded the measured value at 0, though the exact live
+figure was not re-measured for this list -- `audit_facts --check` passing today proves only `measured ≤ 23`.
+Row 5 is item 2 above; rows 1-2 are items 5-6 above and are still open.
+
+**Not on this list, so it does not read as one.** The §153 sweep's `sync_vendor` red (another session's
+uncommitted `dsa_evaluation` source, proven not-the-tree's from both a HEAD export and the runner), the
+foreign `README.md` edit, and the four `项目经历-DSA-*.md` documents: all owned elsewhere, nothing owed of me.
