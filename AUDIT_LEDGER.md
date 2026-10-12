@@ -7961,7 +7961,9 @@ enumerates from primary artifacts.
   is a dated record and stays; this paragraph is where the correction lives, so a future session does not go
   looking for a stale PR to close.
 
-**The three items that genuinely remain, none of which a push can discharge.** The `publish.yml` step-20 fix
+**The three items that genuinely remain, none of which a push can discharge.** *(Annotated 2026-10-12: this
+list was one short, and its first item has since been discharged -- §155 carries both, with the probe. The
+paragraph stays as written because the pricing in it was measured then.)* The `publish.yml` step-20 fix
 of 2026-09-11 is still unexercised -- proving it takes a tag publish (the PyPI environment plus a release
 action), which is the producer's. The α re-freeze needs a version bump. The `braces` npm exemption has its
 review date of 2026-11-07 and the gate raises it then. Each is priced in its own section rather than queued
@@ -8733,3 +8735,33 @@ lines of the defective bullet. `HEAD` moved under this edit: `21ea797` (another 
 `docs(hosted-demo)` commit) is now `origin/main`, and it cancelled my `fdfd1dd` run -- CI **38196696549**
 reads `completed/cancelled`, which is evidence about the queue, not about that tree. The checks re-run above
 are against the moved HEAD.
+## 155. §142's close-out inventory was one item short, and the missing one is a live product decision
+
+**What surfaced it.** Asked whether the prompt's work was complete, I answered from §131's target map and
+§142's remaining-items list and said every D-L4 id was closed. Checking that sentence instead of repeating
+it found §59/§60 recording **D-L4-03** with an explicit open half -- "wiring-or-retiring remains a release
+decision rather than an audit-time edit" -- and §142's "three items that genuinely remain" does not name it.
+The answer was wrong in one respect, and the ledger's own close-out is the reason.
+
+**The premise is still live, re-probed rather than quoted.** `grep -rn --include='*.py' -E
+'run_analysis_langgraph|build_graph' src apps packages --exclude-dir=_vendor`, with the module's own file
+excluded from the results, finds **no shipped call site**; on the import side
+`grep -rn --include='*.py' langgraph_graph src apps packages tests --exclude-dir=_vendor` resolves to
+`tests/unit/test_langgraph.py:12,30`, `tests/unit/test_imports.py:20`,
+`tests/unit/test_tool_evidence_seam.py:18` and `tests/unit/test_langgraph_engine_guard.py:30` -- tests only.
+The file is 348 lines since §115's seam (was 524) and is still a coverage `source`, so §59's "dead to users,
+alive in the metric" describes this tree with a corrected line count.
+
+**Why it stays a decision rather than becoming a fix here.** Each of §59's two answers needs something the
+audit may not do alone: wiring it behind a documented switch changes a public surface, and retiring it from
+the coverage `source` list is an exclusion, prohibited by §N6. Deletion was already `BLOCKED` under lock L5
+(coupled workspace/coverage/exclusion edits). Priced, per §25.5: until someone answers, the coverage
+denominator carries 348 lines that only tests execute, and no shipped entry point can select that engine.
+
+**Item 1 of §142's list, discharged in the meantime.** The `publish.yml` step whose proof "takes a tag
+publish" executed on 2026-10-11 as run **37919265633** (§149), and §151 then removed the post-publish write
+that made the step unreachable. What is left of that item is the §151 path's own first real release, not the
+old proof.
+
+**Not done here, deliberately.** No code, no exclusion, no ceiling, no wiring. §142's paragraph was
+annotated with a pointer rather than rewritten, because its pricing was measured when written.
