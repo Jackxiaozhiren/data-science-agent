@@ -8840,6 +8840,16 @@ paragraph. Neither file is inside `check_public_claims.py`'s `SCAN_GLOBS` -- ver
 count staying at 47 after the handoff was added -- so what keeps either list honest is not a gate but the
 per-row commands and the tests named against each item, which is why every row above cites one.
 
+**Pointer, added 2026-10-12 later the same day (audit §164 picked the options, §158 re-measured them).** Two
+rows of the table above carry numbers that a re-run contradicted, and they are corrected in §158 rather than
+rewritten here: row 4's "348 shipped lines stay in the coverage denominator that no user can reach" is now
+173 statements at **82%** with a `295-348` unreachable tail -- roughly a fifth of the stated cost -- and the
+companion handoff's claim that "only four unit tests import it" is 8 files by name, 7 by the dotted path.
+Row 4's decision also changed shape: retiring the module from the coverage `source` cannot be expressed,
+because `pyproject.toml:187` lists `source` by package name, so the only remaining readings are wire-it or
+keep-it-and-record, and the maintainer picked keep-and-record. Rows 3, 5 and 6 are no longer merely open
+items: §160 priced them, §164 records the picks, and §165, §167 report what has since executed.
+
 ## 158. §0 and §4 of the companion handoff, re-run at `3397c10`: all six probes agree, two prose claims in §3 do not
 
 **Baseline.** `git fetch origin` rc 0. `git rev-parse HEAD` = `git rev-parse origin/main` =
