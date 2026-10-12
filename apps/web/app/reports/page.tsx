@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -9,30 +9,45 @@ import { ReportsTable } from "@/app/reports/ReportsTable";
 
 type RunItem = { id: string; dataset_id: string; status: string; user_query: string; created_at: string | null };
 
-async function fetchRuns(): Promise<{ runs: RunItem[]; unreachable: boolean }> {
+// Inherits the shared wording, and keeps this page's own line for the transport case: the report list
+// below really is a fallback rendering, not a statement about stored reports.
+const REPORTS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
+  ...FAILURE_PRESENTATION,
+  transport: "Could not reach the DSA API — showing an empty report list instead of a blank page.",
+};
+
+async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
-    if (!res.ok) return { runs: [], unreachable: false };
+    const failure = classifyResponse(res);
+    if (failure) return { runs: [], failure };
     const d = (await res.json()) as { analyses: RunItem[] };
-    return { runs: d.analyses, unreachable: false };
+    return { runs: d.analyses, failure: null };
   } catch {
-    return { runs: [], unreachable: true };
+    return { runs: [], failure: "transport" };
   }
 }
 
-async function fetchDatasetNames(): Promise<Map<string, string>> {
+async function fetchDatasetNames(): Promise<{ names: Map<string, string>; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" });
-    if (!res.ok) return new Map();
+    const failure = classifyResponse(res);
+    if (failure) return { names: new Map(), failure };
     const d = (await res.json()) as { datasets: { id: string; filename: string }[] };
-    return new Map(d.datasets.map((x) => [x.id, x.filename]));
+    return { names: new Map(d.datasets.map((x) => [x.id, x.filename])), failure: null };
   } catch {
-    return new Map();
+    return { names: new Map(), failure: "transport" };
   }
 }
 
 export default async function ReportsPage() {
-  const [{ runs, unreachable }, names] = await Promise.all([fetchRuns(), fetchDatasetNames()]);
+  const [{ runs, failure: runsFailure }, { names, failure: namesFailure }] = await Promise.all([
+    fetchRuns(),
+    fetchDatasetNames(),
+  ]);
+  // The dataset names only label the groups; a failure there is still a failed request, so it is told
+  // with the run list's own outcome instead of leaving every group on a fallback id.
+  const failure = runsFailure ?? namesFailure;
   const groups = new Map<string, RunItem[]>();
   for (const r of runs) {
     const key = r.dataset_id || "unknown";
@@ -50,18 +65,18 @@ export default async function ReportsPage() {
           <Link href="/analysis"><Button size="sm">New analysis →</Button></Link>
         }
       />
-      {unreachable && (
-        <ErrorState message="Could not reach the DSA API — showing an empty report list instead of a blank page." />
-      )}
+      {failure && <ErrorState message={REPORTS_FAILURE_MESSAGE[failure]} />}
       <Card>
         <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
           {runs.length === 0 ? (
-            <EmptyState
-              icon={<FileText className="size-5 text-zinc-400" aria-hidden />}
-              title="No reports yet"
-              description="Reports appear here once an analysis run completes."
-              action={<Link href="/analysis"><Button size="sm">Start your first analysis →</Button></Link>}
-            />
+            runsFailure === null && (
+              <EmptyState
+                icon={<FileText className="size-5 text-zinc-400" aria-hidden />}
+                title="No reports yet"
+                description="Reports appear here once an analysis run completes."
+                action={<Link href="/analysis"><Button size="sm">Start your first analysis →</Button></Link>}
+              />
+            )
           ) : (
             <div className="space-y-2">
               {[...groups.entries()].map(([dsId, items], gi) => (

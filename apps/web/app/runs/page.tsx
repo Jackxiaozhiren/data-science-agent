@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { History } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -9,19 +9,28 @@ import { RunsTable } from "@/app/runs/RunsTable";
 
 type RunItem = { id: string; status: string; user_query: string; created_at: string | null };
 
-async function fetchRuns(): Promise<{ runs: RunItem[]; unreachable: boolean }> {
+// Inherits the shared wording, and keeps this page's own line for the case it already handled: the
+// transport failure is what readers hit on the hosted demo, and "an empty list instead of a blank
+// page" is the sentence that tells them a fallback is in play.
+const RUNS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
+  ...FAILURE_PRESENTATION,
+  transport: "Could not reach the DSA API — showing an empty run list instead of a blank page.",
+};
+
+async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
-    if (!res.ok) return { runs: [], unreachable: false };
+    const failure = classifyResponse(res);
+    if (failure) return { runs: [], failure };
     const d = (await res.json()) as { analyses: RunItem[] };
-    return { runs: d.analyses, unreachable: false };
+    return { runs: d.analyses, failure: null };
   } catch {
-    return { runs: [], unreachable: true };
+    return { runs: [], failure: "transport" };
   }
 }
 
 export default async function RunsPage() {
-  const { runs, unreachable } = await fetchRuns();
+  const { runs, failure } = await fetchRuns();
   return (
     <div className="space-y-4">
       <PageHeader
@@ -32,18 +41,18 @@ export default async function RunsPage() {
           <Link href="/analysis"><Button size="sm">New run →</Button></Link>
         }
       />
-      {unreachable && (
-        <ErrorState message="Could not reach the DSA API — showing an empty run list instead of a blank page." />
-      )}
+      {failure && <ErrorState message={RUNS_FAILURE_MESSAGE[failure]} />}
       <Card>
         <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
           {runs.length === 0 ? (
-            <EmptyState
-              icon={<History className="size-5 text-zinc-400" aria-hidden />}
-              title="No runs yet"
-              description="Start an analysis to produce the first inspectable trace."
-              action={<Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>}
-            />
+            failure === null && (
+              <EmptyState
+                icon={<History className="size-5 text-zinc-400" aria-hidden />}
+                title="No runs yet"
+                description="Start an analysis to produce the first inspectable trace."
+                action={<Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>}
+              />
+            )
           ) : (
             <RunsTable runs={runs} />
           )}

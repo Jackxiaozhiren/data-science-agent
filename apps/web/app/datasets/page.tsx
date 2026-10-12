@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FileUp, Database, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { API_BASE_URL, apiUrl } from "@/lib/api";
+import { API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Progress } from "@/app/components/ui/feedback";
@@ -59,8 +59,9 @@ export default function DatasetsPage() {
     setErr(null);
     try {
       const res = await fetch(apiUrl("/api/v1/datasets/"));
-      if (!res.ok) {
-        setErr(await errorMessage(res));
+      const failure = classifyResponse(res);
+      if (failure) {
+        setErr(`${FAILURE_PRESENTATION[failure]} Check API diagnostics below.`);
         return;
       }
       const data = (await res.json()) as { datasets: Dataset[] };

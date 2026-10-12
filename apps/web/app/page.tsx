@@ -1,24 +1,25 @@
 import Link from "next/link";
 import { BarChart3, MessageCircleQuestion, ShieldCheck, ArrowRight, Github } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatCard } from "@/app/components/data/StatCard";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
-import { EmptyState } from "@/app/components/data/States";
+import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { HeroVisual } from "@/app/components/data/HeroVisual";
 
 type AnalysisSummary = { id: string; status: string; user_query: string; created_at: string | null };
 
-async function fetchRecent(): Promise<AnalysisSummary[]> {
+async function fetchRecent(): Promise<{ recent: AnalysisSummary[]; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
-    if (!res.ok) return [];
+    const failure = classifyResponse(res);
+    if (failure) return { recent: [], failure };
     const data = (await res.json()) as { analyses: AnalysisSummary[] };
-    return data.analyses.slice(0, 6);
+    return { recent: data.analyses.slice(0, 6), failure: null };
   } catch {
-    return [];
+    return { recent: [], failure: "transport" };
   }
 }
 
@@ -45,7 +46,7 @@ const steps = [
 ];
 
 export default async function Home() {
-  const [recent, counts] = await Promise.all([fetchRecent(), fetchCounts()]);
+  const [{ recent, failure }, counts] = await Promise.all([fetchRecent(), fetchCounts()]);
 
   return (
     <div className="space-y-6">
@@ -131,7 +132,9 @@ export default async function Home() {
         />
         <Card className="mt-3">
           <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
-            {recent.length === 0 ? (
+            {failure ? (
+              <ErrorState message={FAILURE_PRESENTATION[failure]} />
+            ) : recent.length === 0 ? (
               <EmptyState
                 title="No analysis runs yet in this environment"
                 description="Upload a dataset and create the first run to see the evidence chain in action."

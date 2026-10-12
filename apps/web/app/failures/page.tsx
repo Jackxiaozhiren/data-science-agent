@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -16,16 +16,26 @@ const groups = [
 
 type ToolCall = { call_id: string; tool: string; status: string; error?: string | null };
 
-async function fetchFailureStats(): Promise<{
-  unreachable: boolean;
+type FailureStats = {
+  failure: ApiFailure | null;
   runsScanned: number;
   failedCalls: number;
   byTool: { tool: string; count: number; runs: number; sample: string }[];
-}> {
-  const empty = { unreachable: false, runsScanned: 0, failedCalls: 0, byTool: [] };
+};
+
+// Inherits the shared wording, and keeps this page's own line for the transport case: the taxonomy
+// cards below are static, so "reference only" is what a reader is actually left with.
+const FAILURES_FAILURE_MESSAGE: Record<ApiFailure, string> = {
+  ...FAILURE_PRESENTATION,
+  transport: "Could not reach the DSA API — showing taxonomy reference only.",
+};
+
+async function fetchFailureStats(): Promise<FailureStats> {
+  const empty: FailureStats = { failure: null, runsScanned: 0, failedCalls: 0, byTool: [] };
   try {
     const listRes = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
-    if (!listRes.ok) return empty;
+    const listFailure = classifyResponse(listRes);
+    if (listFailure) return { ...empty, failure: listFailure };
     const ids = ((await listRes.json()) as { analyses: { id: string }[] }).analyses.map((a) => a.id);
     const agg = new Map<string, { count: number; runs: Set<string>; sample: string }>();
     let failedCalls = 0;
@@ -55,9 +65,9 @@ async function fetchFailureStats(): Promise<{
       .map(([tool, v]) => ({ tool, count: v.count, runs: v.runs.size, sample: v.sample || "—" }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
-    return { unreachable: false, runsScanned: ids.length, failedCalls, byTool };
+    return { failure: null, runsScanned: ids.length, failedCalls, byTool };
   } catch {
-    return { ...empty, unreachable: true };
+    return { ...empty, failure: "transport" };
   }
 }
 
@@ -73,9 +83,7 @@ export default async function FailuresPage() {
           <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
         }
       />
-      {stats.unreachable && (
-        <ErrorState message="Could not reach the DSA API — showing taxonomy reference only." />
-      )}
+      {stats.failure && <ErrorState message={FAILURES_FAILURE_MESSAGE[stats.failure]} />}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Runs scanned" value={String(stats.runsScanned)} />
         <StatCard label="Failed tool calls" value={String(stats.failedCalls)} accent={stats.failedCalls > 0 ? "red" : "emerald"} />
@@ -98,11 +106,13 @@ export default async function FailuresPage() {
         </CardHeader>
         <CardContent>
           {stats.byTool.length === 0 ? (
-            <EmptyState
-              title="No failures logged in this environment"
-              description="When runs fail, they will be classified F01–F15 here with recovery rates. Meanwhile, inspect a live trace."
-              action={<Link href="/runs"><Button size="sm">View runs →</Button></Link>}
-            />
+            stats.failure === null && (
+              <EmptyState
+                title="No failures logged in this environment"
+                description="When runs fail, they will be classified F01–F15 here with recovery rates. Meanwhile, inspect a live trace."
+                action={<Link href="/runs"><Button size="sm">View runs →</Button></Link>}
+              />
+            )
           ) : (
             <ul className="divide-y divide-zinc-100">
               {stats.byTool.map((t, i) => (

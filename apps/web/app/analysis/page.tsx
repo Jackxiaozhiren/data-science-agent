@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Play, ShieldCheck, Repeat2, Zap } from "lucide-react";
-import { API_BASE_URL, apiUrl } from "@/lib/api";
+import { API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Select, Textarea } from "@/app/components/ui/input";
@@ -15,6 +15,13 @@ import { ErrorState, CardsSkeleton } from "@/app/components/data/States";
 type Ds = { id: string; filename: string };
 
 const DEFAULT_QUERY = "Which factors explain the outcome, and are the effects statistically significant?";
+
+// Inherits the shared wording, and keeps this page's own line for the transport case: which base URL
+// was unreachable is the diagnostic a reader needs here.
+const ANALYSIS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
+  ...FAILURE_PRESENTATION,
+  transport: `Could not reach the DSA API at ${API_BASE_URL}.`,
+};
 
 const staticExamples = [
   "What is driving the target, and which effects are statistically significant?",
@@ -42,7 +49,10 @@ function AnalysisWorkspace() {
   const router = useRouter();
   const initialDs = sp.get("dataset") || "";
   const initialQ = sp.get("q") || DEFAULT_QUERY;
-  const [datasets, setDatasets] = useState<Ds[]>([]);
+  const [datasets, setDatasets] = useState<{ items: Ds[]; failure: ApiFailure | null }>({
+    items: [],
+    failure: null,
+  });
   const [datasetId, setDatasetId] = useState(initialDs);
   const [query, setQuery] = useState(initialQ);
   const [columns, setColumns] = useState<string[]>([]);
@@ -53,11 +63,19 @@ function AnalysisWorkspace() {
   useEffect(() => {
     fetch(apiUrl("/api/v1/datasets/"))
       .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<{ datasets: Ds[] }>;
+        const failure = classifyResponse(r);
+        if (failure) {
+          setDatasets({ items: [], failure });
+          setErr(ANALYSIS_FAILURE_MESSAGE[failure]);
+          return;
+        }
+        const d = (await r.json()) as { datasets: Ds[] };
+        setDatasets({ items: d.datasets, failure: null });
       })
-      .then((d) => setDatasets(d.datasets))
-      .catch((e) => setErr(`Could not reach the DSA API at ${API_BASE_URL}. ${String(e)}`));
+      .catch(() => {
+        setDatasets({ items: [], failure: "transport" });
+        setErr(ANALYSIS_FAILURE_MESSAGE.transport);
+      });
   }, []);
 
   // Dynamic suggestion chips from the selected dataset's real columns.
@@ -81,7 +99,7 @@ function AnalysisWorkspace() {
     };
   }, [datasetId]);
 
-  const datasetName = datasets.find((d) => d.id === datasetId)?.filename ?? datasetId.slice(0, 12);
+  const datasetName = datasets.items.find((d) => d.id === datasetId)?.filename ?? datasetId.slice(0, 12);
   const examples = columnChips(columns);
 
   async function run() {
@@ -137,11 +155,11 @@ function AnalysisWorkspace() {
               <label htmlFor="dataset" className="block text-sm font-medium">Dataset</label>
               <Select id="dataset" value={datasetId} onChange={(e) => setDatasetId(e.target.value)} className="mt-1.5" aria-label="Select dataset">
                 <option value="">— select —</option>
-                {datasets.map((d) => (
+                {datasets.items.map((d) => (
                   <option key={d.id} value={d.id}>{d.filename} ({d.id.slice(0, 8)})</option>
                 ))}
               </Select>
-              {datasets.length === 0 && (
+              {datasets.items.length === 0 && !datasets.failure && (
                 <p className="mt-1.5 text-xs text-zinc-500">
                   No datasets loaded. <Link href="/datasets" className="font-medium underline">Upload one in Step 1 →</Link>
                 </p>

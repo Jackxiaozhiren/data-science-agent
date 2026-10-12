@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -19,19 +19,33 @@ type RunSummary = {
   } | null;
 };
 
-async function fetchRun(id: string): Promise<RunSummary | null> {
+async function fetchRun(id: string): Promise<{ record: RunSummary | null; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl(`/api/v1/analysis/${id}`), { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as RunSummary;
+    const failure = classifyResponse(res);
+    if (failure) return { record: null, failure };
+    return { record: (await res.json()) as RunSummary, failure: null };
   } catch {
-    return null;
+    return { record: null, failure: "transport" };
   }
 }
 
 export default async function RunDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const run = await fetchRun(id);
+  const { record: run, failure } = await fetchRun(id);
+  // A 404 is this page's own not-found answer; every other outcome is a request that failed and must
+  // not be reported as an absent run.
+  if (failure && failure !== "notFound") {
+    return (
+      <div className="space-y-4">
+        <PageHeader eyebrow="Step 3 · Trace run" title={`Run ${id.slice(0, 12)}`} description="This run could not be loaded." />
+        <ErrorState
+          message={FAILURE_PRESENTATION[failure]}
+          diagnostics={<Link href="/runs"><Button variant="secondary" size="sm">Back to Runs</Button></Link>}
+        />
+      </div>
+    );
+  }
   if (!run) {
     return (
       <div className="space-y-4">

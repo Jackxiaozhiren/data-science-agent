@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plug2 } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -15,19 +15,27 @@ const endpoints = [
   { m: "POST", p: "/mcp", b: "JSON-RPC tools/list and tools/call." },
 ];
 
-async function fetchTools(): Promise<{ tools: McpTool[]; unreachable: boolean }> {
+// Inherits the shared wording, and keeps this page's own line for the transport case: the static
+// endpoint reference below is what a reader gets when no response could be read at all.
+const MCP_FAILURE_MESSAGE: Record<ApiFailure, string> = {
+  ...FAILURE_PRESENTATION,
+  transport: "Could not reach the MCP endpoint — showing the static reference below instead of a blank page.",
+};
+
+async function fetchTools(): Promise<{ tools: McpTool[]; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl("/mcp/tools"), { cache: "no-store" });
-    if (!res.ok) return { tools: [], unreachable: false };
+    const failure = classifyResponse(res);
+    if (failure) return { tools: [], failure };
     const d = (await res.json()) as { tools: McpTool[] };
-    return { tools: d.tools ?? [], unreachable: false };
+    return { tools: d.tools ?? [], failure: null };
   } catch {
-    return { tools: [], unreachable: true };
+    return { tools: [], failure: "transport" };
   }
 }
 
 export default async function MCPPage() {
-  const { tools, unreachable } = await fetchTools();
+  const { tools, failure } = await fetchTools();
   const byClass = new Map<string, number>();
   for (const t of tools) byClass.set(t.tool_class, (byClass.get(t.tool_class) ?? 0) + 1);
 
@@ -41,9 +49,7 @@ export default async function MCPPage() {
           <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
         }
       />
-      {unreachable && (
-        <ErrorState message="Could not reach the MCP endpoint — showing the static reference below instead of a blank page." />
-      )}
+      {failure && <ErrorState message={MCP_FAILURE_MESSAGE[failure]} />}
       {tools.length > 0 ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -58,7 +64,7 @@ export default async function MCPPage() {
           </Card>
         </>
       ) : (
-        !unreachable && (
+        failure === null && (
           <Card>
             <CardContent className="p-4 pt-4 text-sm text-zinc-500">The MCP endpoint returned no tools.</CardContent>
           </Card>

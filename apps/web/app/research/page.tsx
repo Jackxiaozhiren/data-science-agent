@@ -6,21 +6,22 @@ import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatCard } from "@/app/components/data/StatCard";
-import { EmptyState } from "@/app/components/data/States";
+import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { ExperimentsTable } from "@/app/research/ExperimentsTable";
 import { TrackedExperimentsTable } from "@/app/research/TrackedExperimentsTable";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 
 type Tracked = { id: string; name: string; run_id: string; created_at: string | null };
 
-async function fetchTracked(): Promise<Tracked[]> {
+async function fetchTracked(): Promise<{ rows: Tracked[]; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl("/api/v1/experiments/?limit=20"), { cache: "no-store" });
-    if (!res.ok) return [];
+    const failure = classifyResponse(res);
+    if (failure) return { rows: [], failure };
     const d = (await res.json()) as { experiments: Tracked[] };
-    return Array.isArray(d.experiments) ? d.experiments : [];
+    return { rows: Array.isArray(d.experiments) ? d.experiments : [], failure: null };
   } catch {
-    return [];
+    return { rows: [], failure: "transport" };
   }
 }
 
@@ -41,7 +42,7 @@ const RUNNER = "uv run python research/experiments/run_ablation.py --limit 20 --
 
 export default async function ResearchPage() {
   const exps = experiments();
-  const tracked = await fetchTracked();
+  const { rows: tracked, failure: trackedFailure } = await fetchTracked();
   return (
     <div className="space-y-4">
       <PageHeader
@@ -76,10 +77,12 @@ export default async function ResearchPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">API-tracked experiments ({tracked.length})</CardTitle>
-          <CardDescription className="text-xs">Named runs recorded via POST /api/v1/experiments/ (SDK/scripts). Empty when the API is unreachable or no runs were tracked.</CardDescription>
+          <CardDescription className="text-xs">Named runs recorded via POST /api/v1/experiments/ (SDK/scripts). A failed request is reported as an error, not as no runs.</CardDescription>
         </CardHeader>
         <CardContent>
-          {tracked.length ? (
+          {trackedFailure ? (
+            <ErrorState message={FAILURE_PRESENTATION[trackedFailure]} />
+          ) : tracked.length ? (
             <TrackedExperimentsTable rows={tracked} />
           ) : (
             <EmptyState

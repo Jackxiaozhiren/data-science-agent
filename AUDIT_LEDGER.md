@@ -9389,3 +9389,68 @@ likewise outside this lane's commit fence. Worth naming: §164's fence had alrea
 three files (`apps/web/app/analysis/[runId]/page.tsx`, `RunInspector.tsx`,
 `apps/api/src/dsa_api/routers/analysis.py`) as "dirty, do not touch — concurrent session", which is the same
 situation seen from the other side; neither session swept the other's work.
+
+## 167. Item 6 executed as picked: a failed request is no longer a page that claims there is nothing
+
+§164's sequencing put item 6 ahead of item 5, because routing the benchmark artifacts through the API moves
+those pages onto the same fetch path that currently answered a 401 with "no data". This section is that fix,
+option (i) -- extend the shape, share the vocabulary, keep each page's own local structure. Option (ii)'s
+centralised fetch wrapper was deferred, and this is not one: `apps/web/lib/api.ts` owns the *words*, and the
+pages still make their own calls.
+
+**The vocabulary.** `apps/web/lib/api.ts` gains five kinds (`unauthorized`, `notFound`, `serverError`,
+`clientError`, `transport`), `classifyResponse(res)` which returns `null` for a 2xx so success can never read
+as a failure, and `FAILURE_PRESENTATION` keyed on `ApiFailure` -- one reader-facing line each, no status code
+dumped at a person, no response body carried through. `ErrorState` (`States.tsx:35`, already imported by 13
+files) is reused; nothing new renders this. Pages that had already modelled `{ data, unreachable }` --
+`failures`, `mcp`, `runs`, `reports` -- now carry `{ data, failure }`, and each keeps its own contextual
+sentence for the transport case by spreading the shared map and overriding one key.
+
+**verify_before.** §158's probe 6 (`apps/web/app/research/page.tsx:19` reading `if (!res.ok) return [];`) and
+§160's count of **15** `!res.ok` sites across **11** files. **verify_after.** `grep -rnE '!\s*\w+\.ok'
+apps/web/app --include='*.tsx' --include='*.ts'` → **9** lines, and the composition matters more than the
+number: 4 are the detail/inspector reads in `apps/web/app/analysis/[runId]/page.tsx` and
+`.../RunInspector.tsx`, which are lane C's active files (§164's fence; their `9147b7e` commit landed while
+this was in progress and did not touch these semantics), 4 are declared non-collapses inside converted pages
+(a POST's own error branch at `analysis/page.tsx:120` and `datasets/page.tsx:86`, a best-effort secondary
+request at `failures/page.tsx:46` and `analysis/page.tsx:90`), and 1 is `datasets/compare/page.tsx:65`, which
+`throw`s rather than claiming absence. Ten pages converted, no new component, no dependency, no CI or gate
+change, no coverage `source` touched.
+
+**Proved at the HTTP level, in both directions.** A throwaway `http.server` on `127.0.0.1:8123` answering
+401 for `/api/v1/experiments/`, with `next start` booted against it: `/research` rendered 35,993 bytes
+containing the `unauthorized` line once, `role="alert"` once, and `No tracked runs` **zero** times. Same
+page, same server, stub switched to 200 with an empty list: 35,907 bytes with `No tracked runs` **once**,
+the `unauthorized` line **zero**, and no alert. So the branch is not always-on and the honest empty state
+survives. The stub and the copied script were deleted; `lsof` confirms both test ports released.
+
+**`tests/contract/test_web_fetch_outcome_vocabulary.py` is the durable half.** It pins the vocabulary
+three ways (the list, the literals `classifyResponse` can return, and the keys of `FAILURE_PRESENTATION`
+must be one set), pins the collapse inventory *by normalised source line and by owning page* rather than by
+line number -- which is what makes it survive a rename without going decorative -- and fails on any new
+collapse outside the declared set, including in a page not yet converted. Converting a pending page means
+deleting it from `PENDING_SITES` in the same commit, and the test then proves the page holds no collapse of
+its own. It also refuses a classified page that hand-copies names instead of importing `@/lib/api`, and a
+negative control proves the inventory walk can fail: it injects a collapse into a copy of an converted page,
+shows the allowance goes unaccounted, and shows the unmutated page passes its own allowance -- so the
+control is not green because the guard is blind.
+
+**One thing the new test caught was my own draft, not the code.** My first version asserted
+`classifyResponse` emits all five kinds and went red: `transport` is not a response classification -- it is
+what a `catch` returns when no `Response` ever arrived. The claim was rewritten to the real invariant (four
+status-derived kinds from the classifier, `transport` reachable from callers, with a measured floor of nine
+pages that can produce it), and the floor is quoted as measured here rather than remembered.
+
+**Gates on this tree.** `npm --prefix apps/web run build` → rc 0; `npx tsc --noEmit` in `apps/web` → rc 0;
+`uv run --frozen python -m pytest -o addopts="" -q tests/contract/test_web_fetch_outcome_vocabulary.py` →
+**8 passed**, rc 0 (again after `9147b7e` landed, so the inventory is not stale against the pushed head);
+`ruff check` and `ruff format --check` on the new test → clean; `node apps/web/scripts/regression.mjs` →
+**27/27**, rc 0, which also confirms item 3's three interaction checks survive these page edits. The
+`net::ERR_FAILED` console errors §165 recorded are gone because the `:8000` listener was withdrawn -- their
+own §166 says that listener was lane C's, which is the corroboration §165 asked a reader to take on faith.
+
+**What item 6 still owes.** The four collapse sites in lane C's two `[runId]` files, and a decision that
+`§160` flagged and the menu deliberately did not ask: whether the web client should send
+`Authorization` at all. `docs/hosted-demo.md:164` forbids putting credentials in `NEXT_PUBLIC_*`, so that
+needs its own non-public variable and a second pick. Item 5 is now free to proceed on its own terms, since
+its prerequisite landed here.
