@@ -9390,6 +9390,35 @@ three files (`apps/web/app/analysis/[runId]/page.tsx`, `RunInspector.tsx`,
 `apps/api/src/dsa_api/routers/analysis.py`) as "dirty, do not touch — concurrent session", which is the same
 situation seen from the other side; neither session swept the other's work.
 
+**Addendum, same day: the hosted pair was redeployed by the maintainer and R-06 is live.** The §166 entry
+above recorded the demo as pre-R-06 on the evidence of its own OpenAPI census; that premise is now retired,
+so it is corrected here rather than left to rot. Both services were deployed from `fac06f7` (which carries
+`9147b7e` as an ancestor -- `git merge-base --is-ancestor 9147b7e origin/main` proves it, and the same commit
+contains the web link and the API's `EXPORT_MODES` check). The census re-run after the deploy:
+
+```
+GET https://data-science-agent-api-h43i.onrender.com/openapi.json
+  /api/v1/analysis/{run_id}/report  ->  path/run_id: string
+                                        query/format: json|markdown|html
+                                        query/mode:    "Which rendering of this run to return..."
+GET .../version -> {"version":"4.5.0","distribution":"jack-data-science-agent",
+                    "reasoning_mode":{"mode":"heuristic","stub":true,"provider":"stub",...}}
+```
+
+`CI` is green on both `9147b7e` and `fac06f7`. Two things this does **not** establish, stated so the next
+session does not over-read them: the browser-level acceptance of the two download buttons on the hosted demo
+still needs one real hosted run (a write to a shared service, so it was not done unprompted), and the Vercel
+deployment page reports three error-level build-log lines against a `Ready` production build -- unreadable
+without the maintainer's session, and not corroborated locally, where the identical `next build` step passes
+in CI.
+
+**Why the local bundle check was dropped rather than reported as negative.** Two attempts to prove the
+deployed web bundle contains the new label by its content hash both failed for the wrong reason: the first
+scanned the 12 chunks referenced by `/analysis/run-none` and missed the pre-existing `Download report` string
+too (that component is in a lazily-loaded route chunk, so absence proved nothing), and the second compared a
+local `.next/static/chunks/<hash>.js` path against the deployed `/_next/static/immutable/chunks/` layout,
+which is a different layout, not a missing file. A probe whose control also fails is not evidence.
+
 ## 167. Item 6 executed as picked: a failed request is no longer a page that claims there is nothing
 
 §164's sequencing put item 6 ahead of item 5, because routing the benchmark artifacts through the API moves
