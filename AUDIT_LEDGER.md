@@ -8839,3 +8839,310 @@ front of them. It is a copy; this section is the authority, and the file says so
 paragraph. Neither file is inside `check_public_claims.py`'s `SCAN_GLOBS` -- verified by the scanned-file
 count staying at 47 after the handoff was added -- so what keeps either list honest is not a gate but the
 per-row commands and the tests named against each item, which is why every row above cites one.
+
+## 158. §0 and §4 of the companion handoff, re-run at `3397c10`: all six probes agree, two prose claims in §3 do not
+
+**Baseline.** `git fetch origin` rc 0. `git rev-parse HEAD` = `git rev-parse origin/main` =
+`3397c108fe43c3bd154854316580f605da083ae7`; `git rev-list --left-right --count origin/main...HEAD` →
+`0 0`, rc 0. `git log -1 --format='%H %s'` → `3397c10 docs: re-verify the handoff's probes one branch-head
+later`. The handoff was captured at `71a30d4`, so its own §0 caveat is what applies rather than its numbers:
+two documentation commits landed after it, one of which re-measured the same probes.
+
+`uv run --frozen python scripts/audit_facts.py --check` → **rc 0**, `facts ratchet: OK`.
+
+`bash scripts/run_gates.sh` → **rc 1**, its own last lines `17 gate(s) run, 1 failed.` Every gate in the
+derived list executed, so nothing below is inferred from a step that was skipped. The one red is
+`uv run python scripts/sync_vendor.py --check` → rc 1, `DRIFT: vendored dsa_* differs from its sources
+(nothing was written)`, naming `dsa_evaluation: 1 file(s) differ [external_validation.py]` -- the other
+session's uncommitted edit, already listed in §1 of the handoff and in §153. Proved not the tree's by the
+same instrument on a clean tree: the same check inside a `git archive HEAD` export → **rc 0**, `OK: vendored
+dsa_* is in sync`. Nothing was repaired; `--package dsa_evaluation` would copy their source into `_vendor`,
+which is their commit to make, and a bare `--all` is refused for exactly that reason.
+
+**The other sixteen, each quoted from this run's own output.** `uv lock --check` rc 0; `facts ratchet: OK`;
+`check_npm_workspace_lock.py` rc 0; `ruff check` → `All checks passed!`; `ruff format --check` → `261 files
+already formatted`; `mypy` → `Success: no issues found in 121 source files`; `pytest -q --cov` → `Required
+test coverage of 79.0% reached. Total coverage: 83.33%` with `TOTAL 7933 1071 2248 416 83%`;
+`check_public_claims --require-released-tags` → `0 issues (scanned 47 file(s); 59 skipped as historical)`;
+`find_orphan_reads --check` → `orphan reads: 14 key(s), each declared with its external source`;
+`dsa --limit 5` on the frozen catalog → `Tasks: 5`, `Task success rate: 1.0`, `By category: {'EDA': {'n':
+5, 'task_success': 1.0}}`; `npm --prefix apps/web run build` → `Compiled successfully in 43s`,
+`Generating static pages using 9 workers (15/15)`; `node apps/web/scripts/regression.mjs` → `regression:
+24/24 checks passed`; `check_npm_advisories.py` → `npm advisory gate: clean, with 5 bounded exemption(s)
+carried above.`; `generate_sbom.py --check` → `SBOM CHECK OK: 192 components and release '4.5.0' match this
+revision`; `docker compose config` rc 0; `mkdocs build --strict` rc 0.
+
+**What the sweep could not see, because the tree moved during it.** The pytest gate prints no pass count, so
+the count comes from the invocation that prints it --
+`uv run --frozen python -m pytest -o addopts="--asyncio-mode=auto" -q` → **858 passed, 10 failed**, rc 1.
+That run began ~100 s after the sweep's own pytest gate had finished, and `git status --short` at 03:36:46Z
+carried two paths absent at 03:30:19Z: `packages/agent/src/dsa_agent/report_export.py` and
+`tests/contract/test_report_export_pair.py`, both untracked, both the other session's. Nine of the ten
+failures are inside that new file. The tenth is
+`tests/test_ci_gate_integrity.py::test_no_executed_code_hardcodes_a_developer_home_path`, whose only
+offender line is `tests/contract/test_report_export_pair.py:44: ABSOLUTE_PATH =
+"/home/priya/work/output/datasets/9bdfe7ad_sales.csv"`.
+
+Two controls, because "it is theirs" is a claim about code I did not write and must not quietly fix:
+
+- the suite re-run with `--ignore=tests/contract/test_report_export_pair.py` → **858 passed, 1 failed**,
+  rc 1: the same home-path gate still red, because it walks `tests/` and `scripts/` on the filesystem
+  instead of collecting tests, so excluding the file from collection does not remove it from the scan;
+- that one gate run inside the `git archive HEAD` export, where their file does not exist → **1 passed**,
+  rc 0.
+
+So the committed tree at `3397c10` is implicated in neither red, and the §0 baseline stands as measured.
+`git log --oneline ef38f94..HEAD -- tests/` returns exactly one commit (`71a30d4`), which accounts for the
+count moving from §153's 856 to 858; the two added tests were not individually re-derived here.
+
+**The six §4 probes, run verbatim.** Each cell is this session's output, not the file's.
+
+| # | what the handoff states | measured at `3397c10` | command, as written in §4 |
+|---|---|---|---|
+| 1 | zero `*.spec.*` files in the tree | `0` | `find . -name "*.spec.*" -not -path "*/node_modules/*" -not -path "./data-science-agent/*" \| wc -l` |
+| 2 | 0 interaction verbs in the tour | `0`, rc 1 -- `grep -c` exits 1 when the count is zero, so the rc is the value, not a broken command | `grep -cE "\.click\(\|\.fill\(\|\.press\(\|\.selectOption\(\|\.tap\(" apps/web/scripts/regression.mjs` |
+| 3 | the Playwright *library*, not `@playwright/test`; scripts `build, dev, start, typecheck` | `['@types/node', '@types/react', 'autoprefixer', 'playwright', 'postcss', 'tailwindcss', 'typescript']`; scripts `['build', 'dev', 'start', 'typecheck']` | `python3 -c` over `apps/web/package.json` |
+| 4 | no shipped call site outside the module | 3 hits, all inside `packages/agent/src/dsa_agent/langgraph_graph.py` at 233, 255, 264 -- i.e. the definition, the coroutine, and its internal call | `grep -rn --include='*.py' -E 'run_analysis_langgraph\|build_graph' src apps packages --exclude-dir=_vendor` |
+| 5 | `readFileSync` still in the benchmarks page; `COPY apps/web` still the only web copy | `readFileSync` at 1 (the import), 26, 36; `^COPY` at 3, 4, 5 -- all under `apps/web` -- plus 16, 17, 18 which copy builder outputs | the two greps of §4 |
+| 6 | `if (!res.ok)` the only non-2xx handling; no `Authorization` under `apps/web` | `apps/web/app/research/page.tsx:19: if (!res.ok) return [];`; `git grep -n Authorization -- apps/web` prints nothing, rc 1 | the two greps of §4 |
+
+**Two claims in §3 do not survive, and both are in item 4.**
+
+- *"only four unit tests import it"*: `grep -rln 'langgraph_graph' tests/ --include='*.py'` → **8 files**,
+  and restricting to the dotted path `dsa_agent.langgraph_graph` → **7**. Neither is four.
+- *"348 shipped lines stay in the coverage denominator that no user can reach"*: the sweep's own coverage
+  table has the row `packages/agent/src/dsa_agent/langgraph_graph.py 173 27 28 6 82% 58->70, 64->70,
+  68-69, 89, 209-210, 225, 252, 295-348`. The file is 348 lines and 173 statements at **82%**, and what
+  never executes is the **`295-348` tail** -- `run_analysis_langgraph` and below -- not the module. §157
+  row 4 and the handoff are both carrying §59's numbers forward (513 lines, 36% covered, `221-395` dead),
+  and the module has since been cut roughly by a third and is now mostly covered. Item 4's *decision*
+  stands -- probe 4 confirms no shipped call site -- but its cost is about a fifth of what the inventory
+  states, so §160 prices it from this coverage row rather than from §59.
+
+**§1's foreign-file list is one round short too.** It names three modified files and five never-stage paths;
+the two `report_export` paths are a sixth and seventh, untracked, and none of this session's commits touches
+them. Recorded so a later session does not read them as this one's work, or repair them to make a gate pass.
+
+## 159. Group A prepared and dry-run, not executed: what the next tag must show, and what a re-freeze must move
+
+Group A cannot be closed by a session -- item 1's proof *is* a release, and item 2's is a version bump. Both
+are the maintainer's. What this session could do is make each one checkable in advance and say exactly what
+would falsify it. No tag, no version bump, no release, no publish was performed here.
+
+**A1 -- the §151 announcement path. What is now proven, and what still is not.** The step at
+`.github/workflows/publish.yml:188-213` was replayed verbatim as shell against this working tree with
+`GITHUB_REF_NAME=v4.5.0`: **rc 0**, printing `verified docs/announcements/v4.5.0.md: # Data Science Agent
+v4.5.0` and `verified docs/announcements/latest.md: # Data Science Agent v4.5.0`. That establishes the
+step is satisfiable by the tree as it stands -- the two files exist and both open with the exact expected
+title -- and nothing more. It is not an end-to-end run: the step has still never executed inside a Publish
+run, because v4.5.0 shipped before §151 moved the copy upstream (§149, §151).
+
+The other half of item 1 is structural, so it can be checked without a release, and it holds:
+`permissions:` at workflow scope is `contents: read` (`publish.yml:8-9`); the job asks `contents: write`
+(`publish.yml:22`) and the only consumer of that is the release object -- `gh api
+"repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}"` at `publish.yml:151` under `GH_TOKEN` at
+`publish.yml:139`. `grep -nE 'git push|contents/|gh api|refs/heads|actions/github-script'` over the whole
+file returns those two lines and no others, and `actions/checkout` runs with `persist-credentials: false`
+(`publish.yml:28`), so no token is left in `.git/config`. A default-branch write is therefore absent by
+construction rather than by luck -- which is precisely the defect §151 removed.
+
+**To close item 1 at the next tag**, in order, each step naming what it reads:
+
+1. Before the tag, on the release branch: `uv run --frozen python scripts/generate_release_announcement.py
+   --preview <tag> --repository <owner/repo>`, and the rendered `docs/announcements/<tag>.md` plus
+   `latest.md` reach `main` through the release PR. The generator refuses to move `latest.md` backwards
+   (`scripts/generate_release_announcement.py:216-233`), so an older tag cannot overwrite a newer pointer.
+2. After the tag push, in the Publish run: the step *"Verify the announcement copy ships with this release"*
+   must be listed **completed with success**, not skipped, and the run log must contain both `verified
+   docs/announcements/<tag>.md:` lines. A green job is not the evidence -- the step itself has to appear.
+   Read it with `gh run view <run-id> --json jobs --jq '.jobs[].steps[] | select(.name=="Verify the
+   announcement copy ships with this release")'`, naming the run id rather than `gh run list`'s `.[0]`.
+3. The same run must show no attempt to write `docs/announcements/` back to `main`. If it does, §151 has
+   regressed and item 1 reopens.
+4. `docs/reproducibility.md` §Immutability and `tests/test_announcement_currency.py` stay green, since the
+   currency rule is what turns "a tag exists whose copy never shipped" into a red gate.
+
+**A2 -- `mean_latency_ms` at the next re-freeze. Measured state, then the recipe.** The stored figure is
+`"mean_latency_ms": 142.9` in `benchmarks/baseline/summary.json` (`n` 50). The bound is
+`CONTRACT["mean_latency_ms_refreeze_bound_ms"] = 500` at `tests/regression/test_regression_matrix.py:24`,
+consumed at `:50` (`stored_latency = agg["mean_latency_ms"]`) -- §152 cites line 43, which has since
+shifted, so the line numbers here are re-read rather than copied. The README carries the number twice: the
+tree listing at `benchmarks/baseline/README.md:9` (`mean_latency 142.9ms`) and the re-freeze bullet at
+`:62-63`, which records the spread (126.86, 77.16, 142.90 ms from three runs of one command on one commit).
+`tests/test_baseline_readme_integrity.py` re-derives the aggregate line from `summary.json` (read at 95-104)
+and fails if a value the file quotes is absent from the line, so the number and its disclosure cannot drift
+apart silently.
+
+If authorised to execute the re-freeze, **one commit must move four things together**, or the integrity pin
+and the contract pin disagree with the artifact:
+
+1. `benchmarks/baseline/summary.json` -- the stored value (or its removal, or a spread, per the choice);
+2. `benchmarks/baseline/README.md` -- the aggregate line at `:9` and the bullet that names the field;
+3. `tests/regression/test_regression_matrix.py` -- the `CONTRACT` key at `:24`, whose name must keep
+   describing what it guards (§152) rather than reverting to `*_max`;
+4. `tests/test_baseline_readme_integrity.py` -- the pin that reads the aggregate line.
+
+Then the three verification commands, in this order: `uv run --frozen python -m pytest -o addopts="" -q
+tests/test_baseline_readme_integrity.py tests/regression/test_regression_matrix.py`, then
+`uv run --frozen python scripts/check_public_claims.py --require-released-tags`, then
+`uv run --frozen python scripts/audit_facts.py --check`. `docs/reproducibility.md` §Immutability makes the
+artifact move itself a version-bump decision, so this stays the maintainer's call.
+
+**The three shapes it can take, and what each costs.** Dropping the field entirely is the honest reading of
+§152 -- the value is machine-relative and no consumer measures a fresh run against it -- and it costs the
+aggregate line plus two pins, with `check_public_claims.py` re-checked because the README is scanned.
+Storing a spread (`min`/`median`/`max` from N runs) is the only version that could ever support a latency
+claim, and it costs a re-measurement plus a schema change that `benchmarks/baseline/README.md`'s tree
+listing has to describe. Keeping the single constant as a re-freeze tripwire is what is shipped today; it
+costs nothing and buys nothing beyond a pathological-value guard, and its defence has to stay in the README
+because the number reads like an achievement. Recommendation: keep for this release, decide the shape at the
+next one, and let A1's tag be the event that carries it, so the four-file move and the announcement copy
+land in the same version.
+
+## 160. Group B: four proposals priced from the tree. Nothing implemented, no dependency added, no gate touched.
+
+Each item below is `BLOCKED` on the maintainer's pick, which is what §157's trigger column asks for. What
+this section adds is the measurement the pick needs: blast radius from a command, cost from the file that
+would have to change, and the first concrete edit if the answer is yes. None of these were executed -- no
+`npm install`, no dependency added, no coverage `source` or `omit` edited, no CI gate list touched.
+
+**Shared blast-radius facts, each from this session's command.**
+
+| surface | measured | command |
+|---|---|---|
+| browser assertion surface | 0 spec files; 0 interaction verbs in the tour; tour = 12 `ROUTES` x 2 `VIEWPORTS` = 24 checks; `next start` **is** booted by the script, the API is not | §4 probes 1-2; `apps/web/scripts/regression.mjs:29-47`, `:56` spawn, and the sweep's `regression: 24/24 checks passed` |
+| npm manifests in play | root `package-lock.json` 165,434 B, `apps/web/package-lock.json` 150,038 B, both dated Oct 7; `package.json` `workspaces` = `['apps/*', 'packages/*']`; `playwright` pinned `^1.55.0` in `apps/web` devDependencies | `ls -l`; `python3 -c` over `package.json` and `apps/web/package.json` |
+| non-2xx handling | **15** `!res.ok` sites across **11** files under `apps/web/app`; **32** `apiUrl(` call sites | `grep -rn '!res.ok' apps/web/app --include='*.tsx' --include='*.ts' \| wc -l`; same for `apiUrl(` |
+| error vocabulary that already exists | `ErrorState` is defined at `apps/web/app/components/data/States.tsx:35` and imported by 13 files; four pages already model `{ data, unreachable }` with `unreachable: true` set **only** in the `catch` -- `failures/page.tsx:20,60`, `mcp/page.tsx:18-25`, `runs/page.tsx:12-19`, `reports/page.tsx:12-17` | `grep -rln 'ErrorState' apps/web/app`; `grep -rn 'unreachable' apps/web/app` |
+| repo files the web image cannot see | `apps/web/app/benchmarks/page.tsx` reads `benchmarks/baseline/summary.json` (:24-26) and `benchmarks/v2/catalog.json` (:34-36); `apps/web/app/research/page.tsx:27-38` additionally `readdirSync`s `research/results` -- a **third** read site in a second page that §157 row 5 and the handoff do not list; `docker/Dockerfile.web` copies only `apps/web` | §4 probe 5, plus `ls -l` / `du -sh`: `summary.json` 772 B, `catalog.json` 143,507 B, `research/results` 12K with 3 `ablation_*` files |
+| what the API can serve today | `apps/api/src/dsa_api/routers/` holds exactly four routers -- `analysis`, `health`, `datasets`, `experiments`; `grep -rn 'summary.json\|benchmarks/baseline\|catalog.json\|/benchmarks\|/research' apps/api/src` returns **nothing** | `ls`, and that grep |
+| coverage treatment of `langgraph_graph.py` | 173 statements, **82%**, uncovered tail `295-348`; coverage `source` is by **package name** (`pyproject.toml:187` lists `dsa_agent`), not per file | the sweep's `pytest -q --cov` table row; `pyproject.toml:184-189` |
+| gate list mirrors | four, and they must move in one commit: `.github/workflows/ci.yml`, `scripts/run_gates.sh`, `CONTRIBUTING.md`, `docs/contributing.md` | `tests/test_command_surface.py:152` pins exactly those two guide paths against the workflow |
+
+### B3 -- real browser specs (§24 target 4, part 3)
+
+| option | what it actually costs, measured | what it buys | needs a dependency? |
+|---|---|---|---|
+| (i) `@playwright/test` + a spec directory + a CI step | new devDependency at `^1.55.0` to match `playwright`; regenerates **both** lockfiles; `scripts/check_npm_workspace_lock.py:54-61` compares the root manifest against the root lock, so a half-regenerated tree reddens that gate; four gate mirrors move in one commit and `tests/test_command_surface.py` is the pin that catches a miss; CI's `web-regression` job **already** runs `npx playwright install --with-deps chromium` with a cache keyed on `package-lock.json` (`ci.yml:31-40`), so the browser is not a new cost -- the marginal step is `npx playwright test` | per-test naming, retries, fixtures, traces on failure, and a real spec surface §24 can point at | yes |
+| (ii) interaction assertions inside the existing `apps/web/scripts/regression.mjs` | no dependency, no lockfile change, no gate-mirror change (the step already runs), no CI edit; the tour already boots `next start` and holds 24 route/viewport checks, so a click pass attaches to a running server | closes the defect *class* the repo keeps being burned by -- event never reaches a handler, form posts nothing, mouse-only affordance axe cannot see -- but it stays a script: one failure aborts the tour, and §24's wording ("specs") is not met | no |
+| (iii) leave it | costs nothing now; §156's finding stands: "Nothing CI runs ever clicks a control" | nothing | no |
+
+Recommendation: **(ii) first, then (i) when a dependency decision is acceptable.** (ii) is the only option
+that removes a real blind spot without the maintainer's consent on a dependency, and its two targets are
+already identified as the only interaction sites in the tree -- `apps/web/app/analysis/[runId]/RunInspector.tsx`
+and `apps/web/app/datasets/page.tsx`. (i) is the right long-term shape, and its cost is lower than §156
+implied because CI installs chromium today.
+**First files on authorisation.** (ii): `apps/web/scripts/regression.mjs` only. (i): `apps/web/package.json`,
+`apps/web/package-lock.json`, `package-lock.json`, a new `apps/web/e2e/` spec directory plus
+`playwright.config.ts`, then in one commit `.github/workflows/ci.yml`, `scripts/run_gates.sh`,
+`CONTRIBUTING.md`, `docs/contributing.md`.
+**Why BLOCKED:** §29.6 and §N6 make an added dependency the maintainer's call. **Unlocked by:** "yes to (i)"
+or "yes to (ii)".
+
+### B4 -- D-L4-03, `langgraph_graph.py`
+
+The decision as filed in §59 and §157 is right; its numbers are not (see §158), and one of its three options
+turns out not to be expressible as written.
+
+| option | measured feasibility and cost | verdict |
+|---|---|---|
+| wire it behind a documented switch | probe 4 confirms zero shipped call sites, so a switch is a **new public entry point**: CLI/config surface, docs, contract tests, and a second engine whose behaviour differs from `graph.py`. The tail that never runs (`295-348`) is exactly the part a switch would exercise, so this is the option that makes those lines real | available, but it is a feature decision, not a cleanup |
+| retire it from the coverage `source` | **not implementable as stated**: `pyproject.toml:187` sets `source` by *package name* (`dsa_agent`), so there is no per-file entry to remove. Expressing it means adding an `omit` entry or a `# pragma: no cover` -- both exclusions, which §N6 prohibits, and both would lower the measured denominator rather than describe the module | rejected on the rules, not on taste |
+| keep it and record the cost | cost is now measured: 173 statements at 82%, with a 54-line unreachable tail -- about a fifth of what §59/§157 carry | recommendation |
+
+Recommendation: **keep, and correct the inventory numbers** -- §157 row 4 and the handoff both cite §59's
+513 lines / 36% / `221-395` dead, which no longer describes a 348-line file at 82%. Deletion stays `BLOCKED`
+under lock L5 regardless of the choice.
+**First files on authorisation:** for "keep and record", only this ledger plus the two inventory artifacts
+(`AUDIT_LEDGER.md` §157 row 4, `HANDOFF-2026-10-12.md` §3 item 4); for "wire", `packages/agent/src/dsa_agent/langgraph_graph.py`,
+its caller in `src/` or `apps/api`, the docs page that names the switch, and a contract test.
+**Unlocked by:** the maintainer answering §60.3's one question -- planned surface, experiment, or neither.
+
+### B5 -- `/benchmarks` and `/research` read files the web image does not ship
+
+Scope is wider than §157 row 5 states: three read sites across two pages (`benchmarks/page.tsx:24-26`,
+`:34-36`, `research/page.tsx:27-38`), not two in one.
+
+| option | measured cost | what it leaves |
+|---|---|---|
+| (a) serve both through the API | the API has **no** such endpoint today -- four routers only, and the artifact-name grep over `apps/api/src` returns nothing -- so this is net-new: two route modules, response models, tests, the `docs/api.md` table, and both pages switching from `fs` to `fetch`. It also means the pages inherit B6: a 401 arriving as "no data" is the same defect one layer up, so **B6's pick is a prerequisite for B5(a)** | correct on both deploy shapes (Docker and the Vercel frontend at `docs/hosted-demo.md:9`) |
+| (b) `COPY` the artifacts into the image | trivially cheap in bytes -- 772 B + 143,507 B + 12K, against a base image that already ships `node_modules` -- and one file changes (`docker/Dockerfile.web`, adding `COPY benchmarks ./benchmarks` and `COPY research/results ./research/results`) | numbers frozen at build time, presented as current; and it does nothing for the Vercel deployment, where the same pages still fall to EmptyState |
+| (c) defer | nothing now | the deployed UI shows EmptyState, or states frozen metrics as live -- §157's cost column, unchanged |
+
+Recommendation: **(a)**, sequenced after B6, because (b) fixes the Docker path only and institutionalises a
+stale number on a page whose whole purpose is a number.
+**First files on authorisation:** (a) `apps/api/src/dsa_api/routers/` (new), the app wiring in
+`apps/api/src/dsa_api`, `apps/web/app/benchmarks/page.tsx`, `apps/web/app/research/page.tsx`, `docs/api.md`,
+plus contract tests; (b) `docker/Dockerfile.web` alone, plus a README note that the figures are build-time.
+**Unlocked by:** a pick between (a) and (b), and for (a) a B6 vocabulary decision first.
+
+### B6 -- every non-2xx renders as "no data", while the docs recommend token auth
+
+The trap is now proven rather than inferred. `docs/api.md:13-15` tells operators to set `DSA_AUTH_TOKEN`,
+which requires `Authorization: Bearer <token>` on all `/api/*` while `/health`, `/ready` and `/version` stay
+public. `apps/web/app/components/layout/ApiStatusDot.tsx:13-18` probes **`/health`** and paints green on
+`r.ok`. `git grep -n Authorization -- apps/web` finds nothing, so no web request carries a token. An operator
+who follows the docs therefore sees "API connected" beside fifteen sites that each turned a 401 into
+"nothing exists". And `docs/hosted-demo.md:175` already promises the opposite: "The frontend deliberately
+reports transport failures separately from normal API `4xx/5xx` responses" -- a claim the 15 sites do not
+keep.
+
+One correction to the framing in §157 row 6: it says the change "sits on the settled vocabulary in
+`apps/web/app/lib/analysisStatus.ts`". That file owns *run* statuses (`ANALYSIS_STATUSES`, the terminal and
+in-flight partitions) and its two-way guard is `tests/contract/test_web_analysis_status_vocabulary.py`; a
+fetch outcome is a different axis. The convention that would actually be extended is the `{ data, unreachable
+}` triple already present in four pages, plus the existing `ErrorState`. So the decision does not reopen
+settled vocabulary -- it names a second, smaller one.
+
+| option | measured cost | semantics |
+|---|---|---|
+| (i) extend the existing per-page triple to carry an outcome (`empty` / `unauthorized` / `serverError` / `transport`) | 15 sites in 11 files; `ErrorState` already exists so no new component; no dependency, no CI change, no coverage change; four pages need only a new field, seven need the shape introduced | keeps today's structure, makes 401 visible |
+| (ii) centralise in `apps/web/lib/api.ts` (32 `apiUrl(` callers) with one wrapper returning a tagged result | largest diff, but removes the duplication that made 15 sites drift in the first place; needs the wrapper's own tests | the better end state; higher short-term risk in a shared tree |
+| (iii) drop the auth recommendation from `docs/api.md` | one doc edit | rejected: the API genuinely enforces the token, so the doc is correct and the client is not |
+
+Recommendation: **(i) now, (ii) as the follow-up once the vocabulary is agreed** -- (i) is the option that
+cannot silently change a public surface, and it is the prerequisite for B5(a).
+**First files on authorisation:** `apps/web/lib/api.ts` (a shared outcome type), then
+`apps/web/app/research/page.tsx:16-25`, `apps/web/app/page.tsx:17`, `apps/web/app/datasets/[id]/page.tsx:45,55`,
+`apps/web/app/analysis/[runId]/page.tsx:11`, `apps/web/app/benchmarks/page.tsx`, and the four pages already
+carrying `unreachable`; plus one contract test pinning that a 401 does not render as empty. If the token is
+to be sent at all, `apps/web/lib/api.ts` gains an Authorization header from a non-`NEXT_PUBLIC_` variable --
+and `docs/hosted-demo.md:164` forbids putting credentials in `NEXT_PUBLIC_*`, which is a second decision.
+**Why BLOCKED:** it changes user-visible status semantics. **Unlocked by:** a pick of (i)/(ii) and the four
+outcome names.
+
+**Citation correction inside this section, found by re-opening what I had cited from recall.** The B3 row
+pointed at `apps/web/scripts/regression.mjs:29-47` with "`:56` spawn"; `grep -n 'const ROUTES\|const
+VIEWPORTS\|const server = spawn'` puts them at 29 (`const ROUTES = [`), 44 (`const VIEWPORTS = [`) and 68
+(`const server = spawn("npx", ["next", "start", ...])`). The claim itself is unchanged -- 12 routes, 2
+viewports, `next start` booted by the script -- and the other anchors re-read as written (`ci.yml:31-40`,
+the four router modules `analysis.py`, `datasets.py`, `experiments.py`, `health.py`). Recorded rather than
+silently rewritten, because the wrong number is already in the paragraph above. One addition worth having
+from the same re-read: `ci.yml:182` runs `npm --prefix apps/web run build` in the `ci` job as well, so a web
+build is not exclusive to `web-regression`.
+
+## 161. Group C archived and untouched: the `braces` exemption is 26 days from its review date
+
+`docs/audit/npm-advisory-exceptions.json` carries one entry, `GHSA-vfj7-8cjw-p6xm` on `braces`, with
+`review_by: 2026-11-07`. Date arithmetic for the record: `python3 -c` over `datetime.date(2026,10,12)` and
+`datetime.date(2026,11,7)` → `days_remaining 26, reached False`. So the instruction "if the date has not
+arrived, archive and do not process" applies, and nothing was processed: no exception edited, no expiry
+renewed, no gate changed.
+
+The deadline is self-raising, which is why archiving it is safe. This session's sweep ran
+`uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json` at rc 0 and its own output was five
+lines of `EXEMPT GHSA-vfj7-8cjw-p6xm on braces (high) tolerated until 2026-11-07; reached from
+{braces, chokidar, fast-glob, micromatch, tailwindcss}` followed by `npm advisory gate: clean, with 5
+bounded exemption(s) carried above.` On 2026-11-08 that tolerance becomes a red gate by itself, and the two
+shapes §89 left on the table are still the only ones: upgrade along the file's `removal_path`
+(`tailwindcss` 3 → 4, which the entry records as measured on 2026-10-03 to drop `braces`, `micromatch`,
+`chokidar` and `fast-glob` entirely -- and which is a devDependency change plus a CSS-first config migration
+with a visual-regression pass attached, so it is a decision rather than a repair), or scope the gate to
+production dependencies (the entry's `exposure` field already records the measurement:
+`npm --prefix apps/web audit --omit=dev --audit-level=high` exits 0). Renewing the exemption quietly is not
+one of the options, and `_purpose` in the exceptions file refuses an entry without a reason and a review
+date.
+
+**Status: archived, not open work for this session.** **Unlocked by:** 2026-11-07, or the run in which the
+gate first goes red, whichever the maintainer sees first -- and at that point the choice belongs to §89's
+two shapes, not to a third.
