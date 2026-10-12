@@ -1,5 +1,3 @@
-import { existsSync, readdirSync } from "fs";
-import { join } from "path";
 import Link from "next/link";
 import { FlaskConical, Sigma, Layers } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
@@ -25,24 +23,27 @@ async function fetchTracked(): Promise<{ rows: Tracked[]; failure: ApiFailure | 
   }
 }
 
-function experiments(): string[] {
+// research/results is a repository path, not something the web image ships, so the list comes from the
+// API that now carries it (audit §168). The cap stays where the page had it.
+async function fetchExperiments(): Promise<{ files: string[]; failure: ApiFailure | null }> {
   try {
-    const roots = [process.cwd(), join(process.cwd(), "..", "..")];
-    for (const r of roots) {
-      const dir = join(r, "research", "results");
-      if (existsSync(dir)) return readdirSync(dir).filter((f) => f.startsWith("ablation_")).slice(0, 10);
-    }
-    return [];
+    const res = await fetch(apiUrl("/api/v1/research/experiments"), { cache: "no-store" });
+    const failure = classifyResponse(res);
+    if (failure) return { files: [], failure };
+    const d = (await res.json()) as { experiments: string[] };
+    return { files: Array.isArray(d.experiments) ? d.experiments : [], failure: null };
   } catch {
-    return [];
+    return { files: [], failure: "transport" };
   }
 }
 
 const RUNNER = "uv run python research/experiments/run_ablation.py --limit 20 --out research/results";
 
 export default async function ResearchPage() {
-  const exps = experiments();
-  const { rows: tracked, failure: trackedFailure } = await fetchTracked();
+  const [experiments, trackedRuns] = await Promise.all([fetchExperiments(), fetchTracked()]);
+  const exps = experiments.files;
+  const expsFailure = experiments.failure;
+  const { rows: tracked, failure: trackedFailure } = trackedRuns;
   return (
     <div className="space-y-4">
       <PageHeader
@@ -61,11 +62,18 @@ export default async function ResearchPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Recent experiments ({exps.length})</CardTitle>
-          <CardDescription className="text-xs">Ablation result files under research/results.</CardDescription>
+          <CardDescription className="text-xs">Ablation result files served from research/results by GET /api/v1/research/experiments.</CardDescription>
         </CardHeader>
         <CardContent>
           {exps.length ? (
             <ExperimentsTable files={exps} />
+          ) : expsFailure === "notFound" ? (
+            <EmptyState
+              title="No results in this deployment"
+              description="The API answered 404: research/results was not shipped with this deployment. The ablation output is not the same as an absence of ablations."
+            />
+          ) : expsFailure ? (
+            <ErrorState message={FAILURE_PRESENTATION[expsFailure]} />
           ) : (
             <EmptyState
               title="No results yet"

@@ -7,6 +7,13 @@ COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY packages ./packages
 COPY apps ./apps
 COPY src ./src
+# The read-only artifact endpoints (dsa_api.routers.artifacts) serve these; the web image deliberately does
+# not carry them, which is why they were being read off a filesystem that is not there (audit §167).
+# Copied file-by-file rather than by directory: `benchmarks/` on disk is 2.8 GB (9 tracked files under
+# benchmarks/external/), while the two artifacts these endpoints read total ~141 KB.
+COPY benchmarks/baseline/summary.json ./benchmarks/baseline/summary.json
+COPY benchmarks/v2/catalog.json ./benchmarks/v2/catalog.json
+COPY research/results ./research/results
 RUN uv sync --no-dev --locked --all-packages \
     && mkdir -p /app/data/datasets \
     && chown -R appuser:appuser /app

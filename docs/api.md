@@ -34,6 +34,9 @@ Conventions:
 | GET | `/api/v1/experiments/` | list + `total` (paginated, optional `?run_id=`) |
 | GET | `/api/v1/experiments/{id}` | one record |
 | POST | `/api/v1/experiments/compare` | rank records by shared metric (`{ids}`) |
+| GET | `/api/v1/benchmarks/baseline` | the frozen aggregate, verbatim from `benchmarks/baseline/summary.json` (read-only) |
+| GET | `/api/v1/benchmarks/catalog` | `{tasks, by_category, datasets, source}` computed from `benchmarks/v2/catalog.json` |
+| GET | `/api/v1/research/experiments` | `{experiments, total}` -- `ablation_*` files under `research/results`, first 10 by name |
 | GET | `/health` | `{status, details:{process}, version}` — liveness only: no database I/O and no optional scientific/LLM imports, so a small instance can answer probes immediately |
 | GET | `/ready` | `{status, details:{process,db}, version}` — database readiness; `status` degrades to `degraded` when the DB check fails |
 | GET | `/health/dependencies` | `{status, details:{duckdb,polars,llm}, version}` — deeper optional-dependency diagnostic |

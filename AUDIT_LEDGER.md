@@ -9493,3 +9493,87 @@ own §166 says that listener was lane C's, which is the corroboration §165 aske
 `Authorization` at all. `docs/hosted-demo.md:164` forbids putting credentials in `NEXT_PUBLIC_*`, so that
 needs its own non-public variable and a second pick. Item 5 is now free to proceed on its own terms, since
 its prerequisite landed here.
+
+## 168. Item 5 executed as picked: the benchmark and research artifacts are served, not read in place
+
+§164's pick was "serve both pages through the API", with item 6 (§167) as its prerequisite because a served
+artifact has to be able to fail visibly. This section records what landed, the two measurements that changed
+my own draft, and the proof that the path expression works in the image rather than only in a checkout.
+
+**Landed.** `apps/api/src/dsa_api/routers/artifacts.py` (83 lines, three read-only GET routes, zero `except`
+handlers so `debt.exceptHandlers` is untouched) wired into `apps/api/src/dsa_api/main.py`; `docs/api.md`
+gained its three rows; `docker/Dockerfile.api` gained the artifact COPY lines;
+`apps/web/app/benchmarks/page.tsx` (45/41) and `apps/web/app/research/page.tsx` (21/13) lost every
+`existsSync` / `readdirSync` / `readFileSync` and now fetch the endpoints through item 6's vocabulary;
+`tests/contract/test_benchmark_artifact_endpoints.py` (271 lines, 15 tests) is the owner; the vendored copies
+under `src/data_science_agent/_vendor/dsa_api/` were refreshed with the scoped
+`sync_vendor.py --package dsa_api`, never `--all`.
+
+**Measurement 1 changed the Dockerfile.** The draft copied `COPY benchmarks ./benchmarks`. `du -sh` says that
+tree is **2.8 GB**, and 9 tracked files under `benchmarks/external/` are most of it, while the two artifacts
+these endpoints actually read are 772 B (`benchmarks/baseline/summary.json`) plus 143,507 B
+(`benchmarks/v2/catalog.json`) and a 12 KB `research/results/`. A directory-wide COPY would have added
+gigabytes to the API layer to serve 153 KB, so the image now copies the two files by name plus the results
+directory. The COPY test derives the expected destinations from the module's own path constants, so a fourth
+endpoint added without its COPY line is reported here instead of 404-ing in production, and the whole-tree
+form is refused by name.
+
+**Measurement 2 proved the image layout instead of assuming it.** `REPO_ROOT = Path(__file__).resolve()
+.parents[5]` is only correct if the installed package still lives under the copied source tree. Measured with
+the Dockerfile's own command in an image-shaped tree (`/tmp/imgprobe`, built by copying exactly what
+`Dockerfile.api` copies): `uv sync --offline --no-dev --locked --all-packages` exited 0 and
+
+```
+dsa_api.__file__   = /private/tmp/imgprobe/apps/api/src/dsa_api/__init__.py   (editable, not site-packages)
+REPO_ROOT          = /private/tmp/imgprobe          == the image's /app
+baseline present True / results dir present True / catalog present True
+```
+
+so the one path expression covers a checkout and the image. `pyproject.toml`'s `[tool.uv.sources]` marks every
+`dsa-*` member `workspace = true`, which is why `--no-dev` still installs it editable.
+
+**Rendered evidence, both arms.** With the artifacts present, the built web bundle served from the real repo
+API renders `Tasks 100`, `Datasets 30`, `EDA 11` on `/benchmarks` and the three
+`ablation_ablation-*.json` rows on `/research`; `node apps/web/scripts/regression.mjs` reported
+`regression: 27/27 checks passed (24 route/viewport + 3 interaction)`. Pointing the same bundle at the probe
+API with its artifact directories moved aside, the three endpoints answered 404 naming each path and the
+pages rendered "The API answered 404: benchmarks/baseline/summary.json is not present in this deployment",
+"…benchmarks/v2/catalog.json…", "No results in this deployment / The API answered 404: research/results was
+not shipped with this deployment." That is the defect inverted: before §164 the same deployment said "no
+benchmark exists".
+
+**A defect this section found in its own first version.** The research page originally branched
+`expsFailure && expsFailure !== "notFound"`, which sent a 404 to the "No results yet — run the ablation
+runner" empty state. That is a wrong remedy: an absent `research/results` directory means the deployment was
+shipped without it, not that nobody has run an ablation. The page now has four arms (200 with an empty list →
+run the runner; 404 → the deployment is missing the directory; any other failure → `ErrorState`; data → the
+table) and `test_the_research_page_keeps_an_absent_results_dir_apart_from_an_empty_one` asserts the branch
+copy, refusing the `!== "notFound"` shape. It was found by rendering the absent case, not by reading the
+code -- which is the reason the simulation exists.
+
+**Verification, with exit codes.** `audit_facts --check` 0 · `find_orphan_reads --check` 0 (14 declared keys,
+none new) · `check_public_claims --require-released-tags` 0 ("0 issues, scanned 47 file(s)") · `ruff check`
+0 · `ruff format --check` 0 (247 files) · `mypy packages apps/api src apps/jupyter` 0 (123 files; it caught
+one `no-any-return` in `_artifact`, now a `cast`, matching `dsa_evaluation/publication.py`) ·
+`pytest tests/contract tests/api tests/test_import_identity.py tests/test_sync_vendor_check.py
+tests/test_lint_exemption_reachability.py tests/test_command_surface.py
+tests/test_process_global_isolation.py` 118 passed · `tsc --noEmit` 0 · `next build` 0.
+`sync_vendor.py --check` is still 1 and still only for `dsa_evaluation/external_validation.py`, the other
+session's uncommitted source -- `dsa_api`'s own drift is repaired and reported gone.
+Not run for this item: the full `pytest tests` (10 failures belong to that same foreign file, per §158's
+attribution), `npm audit`, and the sbom gate.
+
+**Two things worth carrying forward.** The first acceptance script exited `502 Bad Gateway` on
+`/benchmarks` while the tour passed moments later: my readiness loop treated a 200 from `/` as "routes are
+warm", which is false for on-demand-compiled routes in a server bundle that has not rendered them yet. The
+second loop waits on `/benchmarks` itself and both phases were clean. Nothing about the product changed.
+Second, a shared-path commit has to be re-checked against `origin/main` before it is pushed, not after.
+`git commit --only -- AUDIT_LEDGER.md` takes the whole worktree file, so my §168 swept lane C's 29-line §166
+addendum (their R-06 redeploy note) that was still uncommitted here; while my commit sat local, they landed
+the identical 29 lines as `22e99a8`. Rebasing onto it collapsed the duplicate without a conflict and the
+ledger now carries their copy exactly once (`git grep -c` on the sentence returns 1), with only my 82 §168
+lines as the delta. Nothing was lost either way, which is the point of naming the commit.
+
+**Open after this item.** The deployment itself -- the image has to be rebuilt for the COPY lines to matter,
+and that is the maintainer's action, not a commit. The `Authorization` question §167 left over is still
+unpicked, and `benchmarks/baseline/README.md` still describes the pages as reading the files directly.
