@@ -8832,3 +8832,10 @@ Row 5 is item 2 above; rows 1-2 are items 5-6 above and are still open.
 **Not on this list, so it does not read as one.** The §153 sweep's `sync_vendor` red (another session's
 uncommitted `dsa_evaluation` source, proven not-the-tree's from both a HEAD export and the runner), the
 foreign `README.md` edit, and the four `项目经历-DSA-*.md` documents: all owned elsewhere, nothing owed of me.
+
+**Companion for a session that starts blind.** `HANDOFF-2026-10-12.md` at the repository root restates these
+seven items for a fresh context, with the baseline-proof step, the shared-tree rules and the red lines in
+front of them. It is a copy; this section is the authority, and the file says so in its own first
+paragraph. Neither file is inside `check_public_claims.py`'s `SCAN_GLOBS` -- verified by the scanned-file
+count staying at 47 after the handoff was added -- so what keeps either list honest is not a gate but the
+per-row commands and the tests named against each item, which is why every row above cites one.
