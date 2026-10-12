@@ -8630,3 +8630,49 @@ as historical)`; `ruff check` clean over `tests benchmarks`; the full suite → 
 `web-regression`, 35 steps), with that commit's combined status reading `state=success`. The counts above
 are local; the runner's green is what makes them the state of `main`. Neither number is a latency
 measurement, which is exactly the distinction §152 was written to keep.
+
+## 153. Session-end gate sweep: 17 derived gates, one red, and the red is not the committed tree's
+
+§30 asks for the full derived §26 set at session end, reporting only the gates that actually ran.
+`scripts/run_gates.sh` printed **17 gate(s) run, 1 failed**, `GATES_EXIT=1`.
+
+**The red, attributed before anything was done about it.** `uv run python scripts/sync_vendor.py --check`
+→ rc 1, `DRIFT: vendored dsa_* differs from its sources (nothing was written)` naming
+`dsa_evaluation: 1 file(s) differ [external_validation.py]`. That path is another session's uncommitted
+edit (`git status --short` → ` M packages/evaluation/src/dsa_evaluation/external_validation.py`, with its
+test also modified) and it is in none of this session's commits. Measured rather than argued: the same
+check in a `git archive HEAD` export → rc 0, `OK: vendored dsa_* is in sync`. The export has no `.git`, so
+ref-reading gates prove nothing there; this one compares files, so it is a valid instrument for this
+question. `main` at `ef38f94` therefore carries no drift.
+
+**Nothing was repaired, and that is the finding's other half.** `--package dsa_evaluation` would copy their
+uncommitted source into `_vendor` -- precisely what the gate's own message says a bare `--all` does and why
+a bare run is refused. File ownership puts that move in their commit, not mine, so the red stays visible
+here rather than being silenced by an exclusion or by sweeping their work into a mirror.
+
+**What the other sixteen returned**, each read from this run's log: `facts ratchet: OK`; `ruff check` →
+`All checks passed!`; `ruff format --check` clean on the same scoped paths; `mypy` → `Success: no issues
+found in 121 source files`; `uv lock --check`; `check_npm_workspace_lock.py`; the pytest gate → `Required
+test coverage of 79.0% reached. Total coverage: 83.33%`; `check_public_claims --require-released-tags` →
+`0 issues (scanned 47 file(s); 59 skipped as historical)`; `find_orphan_reads --check` → `orphan reads:
+14 key(s), each declared with its external source` rc 0; `dsa --limit 5` on the frozen catalog;
+`npm --prefix apps/web run build`; `node apps/web/scripts/regression.mjs` → `regression: 24/24 checks
+passed`; `check_npm_advisories.py`; `generate_sbom.py --check`; `docker compose config`;
+`mkdocs build --strict`.
+
+**The pass count comes from the invocation that prints it.** The gate's `pytest -q --cov` prints none --
+addopts makes it `-qq`, and a collected count is not a passed count -- so the number is from
+`uv run --frozen python -m pytest -o addopts="--asyncio-mode=auto" -q` → **856 passed, 1 warning in
+53.36s**, rc 0. Same 856 §152 recorded, re-measured after this session's last commit landed.
+
+**§N10 measured as its own predicate, not as a feeling.** The row in §28 defines it as "first commit
+touching `packages/`|`apps/`|`src/` follows a commit touching `AUDIT_LEDGER.md`". Walking the last 30
+commits oldest-first, the first commit touching those directories is `4c9a220` (§132), preceded inside the
+window by three ledger-touching commits, so the predicate holds. What the walk also shows, and what a
+reader should not have to discover: most of this series bundles its ledger section into the same commit as
+its code (sixteen of the last thirty touch both), which satisfies durability-on-disk but is the rule's
+spirit rather than its letter, since a fresh session cannot read the finding before the diff exists.
+
+**Runner confirmation.** `ef38f94` → CI run **38195639144** `completed/success`, both `ci` and
+`web-regression` `success`. The runner's tree is the committed one, which is where the export's sync_vendor
+green above also points.
