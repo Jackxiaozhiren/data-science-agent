@@ -9194,3 +9194,43 @@ reuse in B3 is read from `ci.yml:31-40`, not measured by a runner. The two tests
 movement were attributed to `71a30d4` by `git log --oneline ef38f94..HEAD -- tests/` and not individually
 identified. And §158's pytest result is a count from an invocation this session chose to run; the gate the
 sweep actually executed is `pytest -q --cov`, whose own output is the coverage line, quoted there.
+
+## 163. §162's path census was one too high, and the runner verdict for the commit that says so
+
+**The correction, stated the way §162 should have stated it.** §162 claims `git status --short` listed
+"20 paths belonging to others: 11 modified ... and 9 untracked". The untracked count is **8**, so the total
+is **19**, not 20. The command that yields both numbers directly -- instead of a hand-held tally of the list,
+which is how the off-by-one was made -- is
+`git status --porcelain | awk '{print substr($0,1,2)}' | sort | uniq -c`, and at the time of this commit it
+prints `11  M` and `8 ??`, with `git status --porcelain | wc -l` → `19`. The paths §162 enumerates are
+correct and complete; only the two totals were wrong. Nothing else in §162 changes, and its paragraph stays
+as written because it is the record of what was believed at that minute -- the same treatment §152 gave
+§113's superseded latency line.
+
+**Runner confirmation for `e66ef076445cdb5cd4b4d6bae090a7ae998196a5`**, the commit that carried §162.
+`gh run list --commit <full sha>` named all three workflows: **CI 38207508972**, CodeQL 38207508890, Secret
+Scan 38207508954. CI's own words are `status: completed`, `conclusion: success`,
+`updatedAt 2026-10-12T05:24:37Z`, with `ci` (35 steps) and `web-regression` (13 steps) both `success`, and
+`gh run watch --exit-status` returning rc 0. Step level, the two gates this session's attribution argument
+rests on: step 8 `uv run python scripts/audit_facts.py --check` → completed/success, and step 9
+`uv run python scripts/sync_vendor.py --check` → completed/success. Step 9 is the stronger of the two proofs
+that §158's and §153's `sync_vendor` reds belong to the worktree and not to the tree: the runner checks out
+the revision itself, with no local export and no scratch directory involved.
+
+**The local drift has meanwhile widened, and it is still not the committed tree's.** Re-running
+`uv run --frozen python scripts/sync_vendor.py --check` in the worktree at this head returns rc 1 naming four
+files across three packages: `dsa_agent: 1 file(s) differ [report_export.py]`,
+`dsa_api: 1 file(s) differ [routers/analysis.py]`, `dsa_evaluation: 2 file(s) differ [cli.py,
+external_validation.py]`. Every one of those paths is modified-but-uncommitted or untracked in the
+concurrent session's work -- `packages/agent/src/dsa_agent/report_export.py` did not exist ninety minutes
+ago -- and the runner's step 9 says the same gate over the committed revision passes. The repair belongs in
+their commit, per package, and never through `--all`; this session touched none of it.
+
+**One measurement §160's B6 proposal needed and had not carried.** Whether anything already pins the web
+layer's fetch-error behaviour:
+`grep -rln 'res\.ok\|EmptyState\|ErrorState' tests/ --include='*.py' --include='*.ts' --include='*.tsx'` →
+**0 files**. So the contract test §160 lists under option (i) is net-new rather than an extension of an
+existing pin, and there is no browser-side test tooling to extend -- `apps/web`'s scripts remain
+`build, dev, start, typecheck` (§158 probe 3). The §160 claim that a 401 currently reaches a reader as
+"nothing exists" is therefore unpinned in both directions: safe to change, and easy to regress silently
+again, which is the whole reason it needs the maintainer's vocabulary pick rather than a drive-by fix.
