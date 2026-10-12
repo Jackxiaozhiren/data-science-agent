@@ -9234,3 +9234,30 @@ existing pin, and there is no browser-side test tooling to extend -- `apps/web`'
 `build, dev, start, typecheck` (§158 probe 3). The §160 claim that a 401 currently reaches a reader as
 "nothing exists" is therefore unpinned in both directions: safe to change, and easy to regress silently
 again, which is the whole reason it needs the maintainer's vocabulary pick rather than a drive-by fix.
+
+## 164. The four Group B picks are in: every item took the recommended option, which changes what is authorised
+
+Recorded before any code moves, because §160's status for these four items was `BLOCKED` on a decision and
+the decision has now been given, in answer to a numbered menu of exactly the options §160 priced.
+
+| §157 item | picked | what is now authorised | what stays out of scope |
+|---|---|---|---|
+| 3 -- browser interaction | **(ii)** interaction assertions inside the existing `apps/web/scripts/regression.mjs` | editing that one script; no devDependency, no lockfile regeneration, no gate-mirror change, no CI step (the step already runs) | (i) `@playwright/test` -- explicitly not chosen, so adding it remains forbidden under §N6 |
+| 4 -- D-L4-03 | **keep and record**, with the cost corrected | documentation only: §157 row 4 and the handoff's item 4 move from §59's 513 lines / 36% / `221-395` to this tree's 348 lines / 173 statements / **82%** / dead tail `295-348` | wiring behind a switch (not chosen), any `omit` or `# pragma` (still prohibited), deletion (still `BLOCKED` under L5) |
+| 5 -- `/benchmarks` and `/research` | **(a)** serve both through the API | new route modules under `apps/api/src/dsa_api/routers/`, their app wiring, `docs/api.md`, and the two pages switching from `fs` to `fetch`; the third read site (`research/page.tsx:27-38`'s `readdirSync`) is in scope | `COPY`ing artifacts into `docker/Dockerfile.web` (not chosen) |
+| 6 -- non-2xx collapse | **(i)** extend the existing `{ data, unreachable }` triple with an outcome | `apps/web/lib/api.ts` gains the shared outcome type; the collapse sites stop mapping 4xx/5xx to "empty"; `ErrorState` is reused rather than a new component; a net-new contract test pins that a 401 does not render as empty | (ii) the centralised fetch wrapper (deferred, not rejected); sending a token from the web layer is a **separate** decision §160 flagged and the menu did not ask -- `docs/hosted-demo.md:164` forbids `NEXT_PUBLIC_*` credentials, so it stays open |
+
+**Sequencing that follows from the picks, not from preference.** Item 6 is item 5's prerequisite: routing the
+benchmark artifacts through the API moves those pages onto the same fetch path that currently turns a 401
+into "no data", so landing 5 before 6 would widen the very defect 6 closes. So the order is 3, then 6, then
+5. Item 4 is documentation and can land at any point.
+
+**File-ownership fence for a shared worktree.** Classifying every authorised target with
+`git diff --quiet -- <path>` at the start of this lane: clean -- `apps/web/scripts/regression.mjs`,
+`apps/web/lib/api.ts`, `apps/web/app/{research,benchmarks,page,mcp,runs,runs/[id],reports,failures,datasets,datasets/[id],analysis}.tsx`
+and `apps/web/app/datasets/[id]/page.tsx`; **dirty, do not touch** -- `apps/web/app/analysis/[runId]/page.tsx`,
+`apps/web/app/analysis/[runId]/RunInspector.tsx` and `apps/api/src/dsa_api/routers/analysis.py`, all three
+carrying the concurrent session's uncommitted work. Two consequences, stated rather than discovered later:
+item 6 lands on nine of its fifteen collapse sites and leaves the two `[runId]` ones for that session's
+commit, and item 5 cannot use `routers/analysis.py` as a template to edit, so it gets its own new module.
+A change that would have to edit a dirty path waits instead of being written over their work.
