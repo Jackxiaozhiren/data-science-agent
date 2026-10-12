@@ -9312,3 +9312,80 @@ CI now clicks, presses Enter, and counts chooser events. What the picked option 
 the word *specs*: this is still one script, so §24 target 4's third part stays partly met and option (i)
 (`@playwright/test`, with per-test reporting and traces) remains a separate maintainer decision rather than
 a step this session may take on its own.
+
+## 166. Lane C's R-06 export pair landed, and the `:8000` listener §165 recorded was this lane's own doing
+
+**Scope, stated before the claims.** `WEB_PRODUCT_MASTER_PROMPT.md` §15 Lane C, requirement **R-06 only** —
+the plan caps a session at three majors and R-07 was deliberately not started. Lane A (R-09, R-02) and the
+Study 1 protocol were landed earlier under the same `## Unreleased` heading. HEAD at start `1bb335f`; the
+tree moved to `58e12dd` (another session's §165) during this lane, and this entry sits on top of it.
+
+**What shipped.** `packages/agent/src/dsa_agent/report_export.py` is now the single export owner for a
+finished run and serialises it two ways: `audited` (the stored document — plan, tool trace, evidence records,
+identifiers) and `findings` (the plain one — conclusions, their numbers, derived limitations, no trace
+material). `report.py::build_markdown_report` became a one-line adapter over `export_markdown(state,
+"audited")`, which is the structural reason the stored artifact and the served export cannot become two
+documents with one name; `tests/contract/test_report_export_pair.py` pins that shape by AST, the way
+`tests/agent/test_reporting_seam.py` pins the graph node. Three surfaces consume the owner: the REST report
+route gains `mode=findings|audited` and `format=html`, `dsa-eval analyze --report <mode>` prints the whole
+document instead of a preview, and the run page offers a second download link beside the first. `## Limitations`
+is derived from the run's own records (failed validations, each insight's limitation, the critic's rewrite
+marker, the run's error, one standing floor) where `report.py` shipped two hardcoded sentences. Vendored
+mirrors were synced with `--file`, never `--package`.
+
+**Two defects the guards caught before shipping, both found by measuring rather than reading.**
+1. `_generated()` read `updated_at`. The terminal status write touches that field *after* the report is
+   composed, so the stored audited document and an on-demand findings render of the same run disagreed by
+   **11.109185 seconds** in the first capture. Kit T5's review task is to compare two renders, so a stamp
+   that moves is a defect, not a timestamp. Now reads `created_at` first, with a render-twice test.
+2. The absolute-path identifier rule allowed spaces inside a segment, so it matched a path **and the rest of
+   the sentence around it** — the strip would have deleted a person's own question from their plain
+   document. The pattern now requires a dotted extension and forbids spaces in the final segment, and the
+   test asserts the prose survived the strip, not merely that the id vanished.
+
+**Coverage read as a branch inventory, not a score.** The module's own row after the first draft showed 181
+statements with five shapes never rendered by any test: the critic-rewrite limitation, the recorded-error
+limitation, a failed tool call's error line, an empty-trace run, and the **dict** source the API actually
+passes (`state_json`, not the model). All are exercised now — 181 statements / 80 branches with 0 missed and
+0 partial.
+
+**§165's environmental finding, closed at its cause.** §165 recorded that `lsof -nP -iTCP:8000 -sTCP:LISTEN`
+showed a Python listener during its tour, that a live-but-CORS-rejecting backend costs 39 app errors per
+viewport, and that widening the console filter to absorb it was the prohibited move. **The process was this
+lane's `output/lane-c/capture-r06.sh`.** `uv run` does not forward SIGTERM to the uvicorn child it spawns, so
+killing the backgrounded wrapper's PID left the real listener answering `200` without an
+`access-control-allow-origin` header. The script now kills whoever holds the port and then proves the socket
+is gone before it reports anything; `[teardown OK: 8000 and 3113 free]` printed on the re-run and the tour
+returned `27/27` with no page code changed. The **policy** question §165 left open — whether the tour should
+tolerate a local backend at all — is untouched and still belongs to item 6's neighbourhood, not here.
+
+**Full-lane result, quoted from the run that followed the last edit** (`bash
+output/lane-c/run-lane-c-gates.sh`, log `output/lane-c/lane-c-gates-4.log`, local darwin/arm64, uv env):
+`ruff check` All checks passed · `ruff format --check` 263 files already formatted · `mypy` Success, no
+issues found in 122 source files · `pytest -q --cov` rc=0, **872 tests collected**, TOTAL 8080 stmts / 1084
+miss / 2314 branch / 413 partial, coverage **83.50%** against a 79.0 floor · `audit_facts --check` facts
+ratchet OK (`debt.exceptHandlers` **184**, ceiling 185 — this lane added none, using `contextlib.suppress`
+where Lane A had needed it) · `check_public_claims` 0 issues, scanned 47 file(s), 59 skipped as historical ·
+`find_orphan_reads` 14 keys · `next build` rc=0 · `regression.mjs --port 3212` **27/27** (24 route/viewport +
+3 interaction) · `mkdocs build --strict` rc=0. The one red is `sync_vendor.py --check`: `dsa_evaluation: 1
+file(s) differ [external_validation.py]`, which is another session's uncommitted work (below). CI cannot see
+that red because it only ever checks committed trees, which is why the commit's own run is the verdict that
+counts here.
+
+**Falsification chain, in the order it was observed.** `test_the_plain_export_strips_the_free_text_it_keeps_too`
+was run against the code that shipped an hour earlier and **failed** with four leaked tokens, including
+`absolute_path: /var/lib/dsa/output/datasets/9bdfe7ad_sales.csv with 9bdfe7ad-… and report the r value behind
+E-22b3922b.` — the failure text is what revealed defect 2 above, and it is kept in this ledger because a
+guard whose red state nobody recorded is a guard nobody can trust. The live pair then re-measured on a fresh
+run (`run-2c3497a5cc`): audited 2523 chars against findings 463, numeric tokens **89 vs 7** with every
+findings token present in audited, identifier rule tripping **21 tokens on audited and 0 on findings**, and
+both refusals answering 400 with the mode list named.
+
+**Files other sessions own, untouched.** `packages/evaluation/src/dsa_evaluation/external_validation.py` and
+`tests/evals/test_external_validation.py` carry another session's uncommitted source (53 and 27 lines) whose
+`_vendor` mirror is deliberately not synced — repairing it needs `--package`/`--all`, which would copy their
+WIP into the published wheel. `README.md`, `apps/web/lib/api.ts` and `apps/web/app/research/page.tsx` are
+likewise outside this lane's commit fence. Worth naming: §164's fence had already classified *this* lane's
+three files (`apps/web/app/analysis/[runId]/page.tsx`, `RunInspector.tsx`,
+`apps/api/src/dsa_api/routers/analysis.py`) as "dirty, do not touch — concurrent session", which is the same
+situation seen from the other side; neither session swept the other's work.

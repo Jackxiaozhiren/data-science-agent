@@ -7,10 +7,11 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dsa_agent.report_export import EXPORT_MODES, export_html, export_markdown
 from dsa_agent.run_summary import run_summary
 from dsa_api.core.database import get_session
 from dsa_api.services.analysis_service import (
@@ -124,23 +125,57 @@ async def get_analysis_events(
 @router.get("/{run_id}/report")
 async def get_analysis_report(
     run_id: str,
-    format: str = Query(default="json", description="json|markdown"),
+    format: str = Query(default="json", description="json|markdown|html"),
+    mode: str = Query(
+        default="audited",
+        description=(
+            "Which rendering of this run to return: `audited` carries the evidence ids, tool trace and "
+            "paths; `findings` is the plain document -- conclusions, numbers and limitations, with no "
+            "trace material. Both are produced by the same owner from the same run summary."
+        ),
+    ),
     session: AsyncSession = Depends(get_session),
 ) -> Any:
     row = await get_analysis_run(session, run_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
+    if mode not in EXPORT_MODES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown report mode {mode!r}; expected one of {', '.join(EXPORT_MODES)}",
+        )
     state = row.get("state") or {}
+    plain = mode == "findings"
     md: str | None = state.get("report_markdown")
     if format == "markdown":
+        if plain:
+            # Rendered on read rather than stored: the plain document is a view of the run, and keeping a
+            # second copy in the row is how the two would start to disagree.
+            return PlainTextResponse(
+                content=export_markdown(state, "findings"),
+                media_type="text/markdown; charset=utf-8",
+            )
         if not md:
             raise HTTPException(status_code=404, detail="Report not yet generated")
         return PlainTextResponse(content=md, media_type="text/markdown; charset=utf-8")
+    if format == "html":
+        if plain:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "the self-contained HTML rendering is only produced for the audited mode; "
+                    "the plain document is meant to be pasted into a submission, not opened offline"
+                ),
+            )
+        return HTMLResponse(content=export_html(state), media_type="text/html; charset=utf-8")
     summary = run_summary(state)
     return {
         "run_id": run_id,
         "status": row.get("status") or summary["status"],
-        "markdown": summary[REST_RUN_ALIASES["markdown"]],
+        "mode": mode,
+        "markdown": export_markdown(state, mode)
+        if plain
+        else summary[REST_RUN_ALIASES["markdown"]],
         "insights": summary["insights"],
         "evidence": summary["evidence"],
         "validation": summary[REST_RUN_ALIASES["validation"]],

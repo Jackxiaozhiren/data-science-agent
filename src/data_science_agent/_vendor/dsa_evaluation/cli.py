@@ -72,6 +72,16 @@ def main() -> None:
         "--task", dest="task", required=False, default=None, help="Task description"
     )
     p_analyze.add_argument("--json", action="store_true", help="JSON output")
+    p_analyze.add_argument(
+        "--report",
+        metavar="MODE",
+        default=None,
+        help=(
+            "Print the whole report instead of a preview, in MODE: 'findings' is the plain document "
+            "(conclusions, numbers, limitations) and 'audited' adds the evidence trace. The mode list is "
+            "owned by dsa_agent.report_export and checked there."
+        ),
+    )
     p_profile = sub.add_parser(
         "profile", help="Profile dataset (§37): dsa profile <dataset> [--json]"
     )
@@ -231,7 +241,10 @@ def main() -> None:
         if not args.dataset or not args.task:
             print(
                 json.dumps(
-                    {"error": "Usage: dsa analyze <dataset> --task <task> [--json]"},
+                    {
+                        "error": "Usage: dsa analyze <dataset> --task <task> "
+                        "[--report findings|audited] [--json]"
+                    },
                     ensure_ascii=False,
                 )
             )
@@ -240,6 +253,35 @@ def main() -> None:
 
         agent = Agent()
         r = agent.analyze_sync(args.dataset, args.task)
+        if getattr(args, "report", None):
+            # One owner renders the document; the CLI only asks which mode and prints what comes back. The
+            # mode is checked against the owner's own tuple rather than caught as an exception, so the
+            # refusal names the same list the export does and no handler is added to shipped code.
+            from dsa_agent.report_export import EXPORT_MODES, export_markdown
+
+            if args.report not in EXPORT_MODES:
+                print(
+                    json.dumps(
+                        {
+                            "error": f"unknown report mode {args.report!r}; "
+                            f"expected one of {', '.join(EXPORT_MODES)}"
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+                sys.exit(2)
+            if r.raw_state is None:
+                print(
+                    json.dumps(
+                        {
+                            "error": "this run returned no state to render; read report_markdown instead"
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+                sys.exit(2)
+            print(export_markdown(r.raw_state, args.report))
+            return
         if args.json:
             print(
                 json.dumps(

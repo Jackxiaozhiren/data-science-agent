@@ -325,7 +325,7 @@ function FollowUpBox({ run }: { run: RunDetail }) {
   );
 }
 
-export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; reportUrl: string; fromRunId?: string }) {
+export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: RunDetail; reportUrl: string; findingsUrl?: string; fromRunId?: string }) {
   const st = run.state;
   const [copied, setCopied] = React.useState(false);
   const [traceFilter, setTraceFilter] = React.useState<"all" | "ok" | "error">("all");
@@ -447,6 +447,17 @@ export function RunInspector({ run, reportUrl, fromRunId }: { run: RunDetail; re
             {st?.report_markdown && (
               <a href={reportUrl} target="_blank" rel="noreferrer">
                 <Button variant="secondary" size="sm"><Download className="size-4" aria-hidden /> Download report</Button>
+              </a>
+            )}
+            {st?.report_markdown && findingsUrl && (
+              <a href={findingsUrl} target="_blank" rel="noreferrer">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  title="The same conclusions, numbers and limitations without evidence ids, tool trace or file paths — the document to attach to a submission"
+                >
+                  <Download className="size-4" aria-hidden /> Download plain findings
+                </Button>
               </a>
             )}
           </>

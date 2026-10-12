@@ -26,7 +26,7 @@ Conventions:
 | GET | `/api/v1/analysis/{id}` | AnalysisState (polling) |
 | GET | `/api/v1/analysis/{id}/events` | SSE `agent/tool/validation/report/completed` (JSON fallback via `Accept`) |
 | GET | `/api/v1/analysis/{id}/progress` | `progress_pct + counts` |
-| GET | `/api/v1/analysis/{id}/report?format=json\|markdown` | report |
+| GET | `/api/v1/analysis/{id}/report?format=json\|markdown\|html&mode=findings\|audited` | the export pair (R-06). `audited` (default) is the stored report with evidence ids, tool trace and artifact paths; `findings` is the plain document — conclusions, numbers and limitations, with every identifier stripped by the same rule the guard tests. `mode` is checked against `dsa_agent.report_export.EXPORT_MODES`; an unknown value is a 400. `format=html` renders the audited document as one self-contained file and is refused for `findings` |
 | GET | `/api/v1/analysis/{id}/artifacts` | artifacts + tool_calls + progress |
 | GET | `/api/v1/analysis/{id}/evidence/{eid}` | evidence → tool_call → insights → dataset trace |
 | POST | `/api/v1/analysis/{id}/approve` | HUMAN_REVIEW approval |

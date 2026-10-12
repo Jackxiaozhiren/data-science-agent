@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — one run, two exports (web plan Lane C, R-06)
+
+- A finished run had exactly one rendering. The plan's argument is a pair -- the conclusion and the evidence
+  behind it -- and Study 2 (§12) blind-compares the two, so `packages/agent/src/dsa_agent/report_export.py`
+  is now the single owner that assembles a run once and serialises it twice: `audited` (what the graph
+  stores -- plan, tool calls, evidence records, validation results, identifiers) and `findings`
+  (conclusions, their numbers, derived limitations; no ids, no tool trace, no hashes, no paths).
+  `report.py`'s `build_markdown_report` is a one-line adapter over `export_markdown(state, "audited")`, so
+  the stored artifact and the served export cannot become two documents with one name.
+- The plain mode drops material from that same assembly; it never re-derives anything, so the pair agrees on
+  every figure by construction rather than by hope. Measured on a live run (`run-2c3497a5cc`, heuristic
+  mode): 89 numeric tokens audited against 7 in findings, every findings token present in audited, and the
+  identifier rule trips 21 tokens on the audited text and 0 on the plain one -- the absence check
+  demonstrably bites, which is what makes the 0 mean anything.
+- `## Limitations` is derived (`derived_limitations`): the validation results that did not pass, in the
+  reader's words, each insight's own limitation, the critic's causal-rewrite marker, the run's recorded
+  error, and one standing methodological floor. `report.py` shipped two hardcoded sentences, which R-06.4
+  forbids.
+- `_generated()` reads `created_at`, not `updated_at` and not `datetime.now()`. The capture measured the
+  stored audited report and an on-demand findings render of the *same* run disagreeing by 11.109185 seconds,
+  because the terminal status write touches `updated_at` after the report is composed. Kit T5's review task
+  is to compare two renders, so a stamp that moves is a defect, not a timestamp.
+- Served three ways from the one owner: `GET /api/v1/analysis/{run_id}/report?format=markdown|html` with
+  `mode=findings|audited` (an unknown mode returns 400 naming the two allowed values; `format=html` is
+  audited-only, because a self-contained file whose charts are absent would overstate what travelled with
+  it -- that is R-07's job), `dsa-eval analyze --report <mode>` printing to stdout, and a second
+  "Download plain findings" link beside the existing report link on the run page.
+- The HTML is inline CSS with no subresource references, and a chart is *named* rather than embedded until
+  R-07. Found by opening the artifact rather than trusting the test: the first version leaked raw markdown
+  (`**Profile dataset**`, backticks, an image reference) into the offline file a reviewer is supposed to
+  read, so `_inline()` escapes first and then renders the emphasis this module itself emits.
+- Guarded by `tests/contract/test_report_export_pair.py` (13 tests), red before green throughout, including
+  a case the original fixture could not reach: a user question that names its own file, and a finding that
+  cites its own evidence record. Both leaked, and the rule that caught them was itself swallowing the rest
+  of the sentence around a path -- so the pattern now demands a dotted extension and refuses spaces in the
+  final segment, and the test asserts the person's prose survived the strip, not only that the id vanished.
+- The module's own coverage row was read as a branch inventory, not a number: it showed the critic-rewrite
+  line, the recorded-error line, a failed tool call's error, the empty-trace run and the dict source the
+  API really passes had never been rendered by a test. All are now, and `report_export.py` stands at 181
+  statements / 80 branches with 0 missed and 0 partial.
+
 ### Added (post-4.5.0) — the API names its build and its reasoning mode (web plan Lane A)
 
 - `/version` answered `1.8.0` from a hardcoded `Settings.version` default while `pyproject.toml` was on the

@@ -34,5 +34,6 @@ export default async function TracePage({ params, searchParams }: { params: Prom
   }
 
   const reportUrl = apiUrl(`/api/v1/analysis/${runId}/report?format=markdown`);
-  return <RunInspector run={run} reportUrl={reportUrl} fromRunId={from} />;
+  const findingsUrl = apiUrl(`/api/v1/analysis/${runId}/report?format=markdown&mode=findings`);
+  return <RunInspector run={run} reportUrl={reportUrl} findingsUrl={findingsUrl} fromRunId={from} />;
 }
