@@ -8,8 +8,9 @@
 
 ## What this kit is
 
-Six self-contained files that let a third-party person install, exercise, and
-evaluate **Data Science Agent** end-to-end, then return structured feedback:
+Self-contained files that let a third-party person install, exercise, and
+evaluate **Data Science Agent** end-to-end, then return structured feedback. Two
+instruments live here and they answer different questions:
 
 | File | Purpose |
 |------|---------|
@@ -18,6 +19,12 @@ evaluate **Data Science Agent** end-to-end, then return structured feedback:
 | [RUBRIC.md](RUBRIC.md) | The seven evaluation dimensions (§78) with 1-5 anchored scales |
 | [FEEDBACK_TEMPLATE.md](FEEDBACK_TEMPLATE.md) | The written feedback form |
 | [RESULTS_SCHEMA.json](RESULTS_SCHEMA.json) | Machine-readable schema for the scores |
+| [STUDY1_FIRST_RUN.md](STUDY1_FIRST_RUN.md) | Web plan §12 Study 1: can a stranger finish a real task from a URL, alone? Frozen 2026-10-12, `NOT CONDUCTED` |
+| [STUDY1_RESULTS_SCHEMA.json](STUDY1_RESULTS_SCHEMA.json) | One participant record for that study, in the same style as `RESULTS_SCHEMA.json` |
+
+The reviewer kit scores the **quality of an analysis** and needs the reviewer's own ground truth. Study 1
+scores the **path** — completion, time, what was noticed, what was said first — and needs no expertise at
+all. Do not merge the two into one number.
 
 ## Design rules honored by this kit
 

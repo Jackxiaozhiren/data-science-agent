@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "external-validation/STUDY1_RESULTS_SCHEMA.json",
+  "title": "Data Science Agent — Study 1 Unmoderated First Run, one participant record",
+  "description": "Web Product Plan §12 Study 1. One document per participant, filled by the coordinator from the session record. Conventions inherited from RESULTS_SCHEMA.json: nothing is pre-filled by the project, integer 1-5 scores only where the rubric allows, an unanswerable dimension is absent rather than imputed, and a blocked step is a result. STATUS: NOT CONDUCTED — no such record exists yet, and creating one without a real participant violates external-validation/README.md §80.",
+  "type": "object",
+  "required": ["study", "participant", "session", "outcome", "first_sentence_verbatim", "consent"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "study": {
+      "type": "string",
+      "const": "study1_first_run",
+      "description": "Fixed so a Study 1 record can never be mistaken for a reviewer-kit submission."
+    },
+    "participant": {
+      "type": "object",
+      "required": ["id_or_pseudonym", "background", "is_project_author", "screen"],
+      "additionalProperties": false,
+      "properties": {
+        "id_or_pseudonym": { "type": "string", "minLength": 1 },
+        "background": { "type": "string", "minLength": 1 },
+        "is_project_author": {
+          "type": "boolean",
+          "description": "Must be false for the session to count (same independence rule as the reviewer kit, V4.3 §75)."
+        },
+        "screen": {
+          "type": "object",
+          "required": ["produces_judged_analyses", "current_tool", "has_installed_python_package"],
+          "additionalProperties": false,
+          "properties": {
+            "produces_judged_analyses": { "type": "boolean" },
+            "current_tool": { "type": "string", "description": "Free text, question 2 of STUDY1_FIRST_RUN.md §2." },
+            "has_installed_python_package": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["date", "coordinator", "deployment_url", "build_observed"],
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "coordinator": { "type": "string", "minLength": 1 },
+        "deployment_url": { "type": "string", "minLength": 1 },
+        "build_observed": {
+          "type": "object",
+          "required": ["version", "reasoning_mode"],
+          "additionalProperties": false,
+          "description": "Captured from the running API immediately before the session (STUDY1_FIRST_RUN.md §3), so a claim about what participants saw names the build that produced it.",
+          "properties": {
+            "version": { "type": "string", "minLength": 1 },
+            "reasoning_mode": {
+              "type": "object",
+              "required": ["mode", "stub"],
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "type": "string", "minLength": 1 },
+                "stub": { "type": "boolean" },
+                "provider": { "type": "string" },
+                "model": { "type": ["string", "null"] },
+                "error": { "type": ["string", "null"] }
+              }
+            }
+          }
+        },
+        "time_box_s": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Frozen at 1200 before the first session; recorded per session so a later change cannot be read as having always applied."
+        }
+      }
+    },
+    "obligations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The three things the participant was asked to do, scored separately: a partial success is a result (V4.3 'environment failures are results, not noise' carried over).",
+      "properties": {
+        "o1_completed_analysis": { "$ref": "#/$defs/obligation" },
+        "o2_found_limitation": { "$ref": "#/$defs/obligation" },
+        "o3_artifact_for_reviewer": { "$ref": "#/$defs/obligation" }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": ["completion"],
+      "additionalProperties": false,
+      "properties": {
+        "completion": {
+          "enum": ["complete", "incomplete"],
+          "description": "complete = O1 reached a report page showing at least one finding AND help_events is 0 before that point (STUDY1_FIRST_RUN.md §5.1)."
+        },
+        "help_events": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Times the participant asked the coordinator what to do. The protocol says the coordinator does not answer; each request is still counted."
+        },
+        "environment_failure": {
+          "type": "boolean",
+          "description": "True when the trial itself failed (unreachable API, cold start never resolving). Such a session is reported separately and is not counted as a participant failure."
+        }
+      }
+    },
+    "abandonment": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Required when outcome.completion is incomplete. The frozen triggers are in STUDY1_FIRST_RUN.md §6.",
+      "required": ["occurred", "trigger", "stopped_at", "last_action_observed"],
+      "properties": {
+        "occurred": { "type": "boolean" },
+        "trigger": {
+          "enum": ["asked_to_stop", "idle_90s", "time_box_expired", "three_failed_runs", "none"]
+        },
+        "stopped_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where they stopped, in the participant's own terms. §18's kill criterion turns on this field, not on the bare completion flag."
+        },
+        "last_action_observed": { "type": "string", "minLength": 1 }
+      }
+    },
+    "timings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Coordinator wristwatch timings, not product telemetry (R-15 is not built). Quote them as observed, never as instrumented.",
+      "properties": {
+        "time_to_first_result_s": { "type": ["integer", "null"] },
+        "total_session_s": { "type": ["integer", "null"] }
+      }
+    },
+    "mode_label": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "R-02's value claim is that a stranger can tell what did the thinking. Splitting unprompted from asked is the whole point: a debrief question cannot create an observation that free play did not produce.",
+      "required": ["unprompted", "noticed"],
+      "properties": {
+        "unprompted": { "type": "boolean" },
+        "unprompted_quote": { "type": ["string", "null"] },
+        "unprompted_at_s": { "type": ["integer", "null"] },
+        "noticed": { "type": "boolean" },
+        "debrief_exchange": {
+          "type": ["string", "null"],
+          "description": "The literal question asked and the literal answer, including any second prompt needed."
+        }
+      }
+    },
+    "first_sentence_verbatim": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The first thing said after the report appeared, transcribed word for word from the recording. Not summarised, not cleaned up."
+    },
+    "debrief": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "what_would_show": { "type": "string" },
+        "least_sure_of": { "type": "string" },
+        "where_would_have_stopped_unhelped": { "type": "string" }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Only the four RUBRIC.md dimensions a first-run session can honestly answer. Absent means genuinely not applicable, never imputed (§79).",
+      "properties": {
+        "clarity": { "$ref": "#/$defs/score" },
+        "evidence_quality": { "$ref": "#/$defs/score" },
+        "usefulness": { "$ref": "#/$defs/score" },
+        "trust": { "$ref": "#/$defs/score" }
+      }
+    },
+    "friction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blocked_steps": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "empty_first_screen",
+              "no_example_question",
+              "cold_start_wait",
+              "frozen_page_during_run",
+              "no_plain_export",
+              "unclear_what_evidence_is_for",
+              "upload_rejected",
+              "other"
+            ]
+          },
+          "description": "A closed list so the fifth session is comparable with the first; 'other' requires notes."
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "required": ["may_publish_anonymized"],
+      "additionalProperties": false,
+      "properties": {
+        "may_record_audio": { "type": "boolean" },
+        "may_publish_anonymized": { "type": "boolean" },
+        "attribution_preference": { "type": "string" }
+      }
+    },
+    "raw_archive_path": {
+      "type": "string",
+      "description": "Where the verbatim raw material lives, under research/external/study1/<pseudonym>/. A reported number should be traceable to this path."
+    }
+  },
+  "$defs": {
+    "score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reached"],
+      "properties": {
+        "reached": { "type": "boolean" },
+        "artifact_taken": {
+          "type": ["string", "null"],
+          "description": "O3 only: which artifact the participant chose to keep, named as the product offers it."
+        },
+        "asked_for_something_plainer": {
+          "type": "boolean",
+          "description": "O3 only: the signal R-06 is designed to serve. Recorded as observed; nothing was offered to them."
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}
