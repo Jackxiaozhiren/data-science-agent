@@ -15,6 +15,24 @@ The full DSA Python package is intentionally not treated as a lightweight server
 
 The repository includes a root `render.yaml` Blueprint so the API can be provisioned from GitHub without recreating Docker, health-check, port, or demo-mode settings by hand.
 
+### Which Render object is the live one
+
+`render.yaml` declares one Web Service named `data-science-agent-api`. Render publishes it under a
+suffixed hostname, so the deployed service is titled **`data-science-agent-api-h43i`** and the Blueprint
+name you see under **Blueprints** is not that string -- searching the dashboard for
+`data-science-agent-api` as a *Blueprint* name finds nothing, which is a dead end, not a missing service.
+
+The dashboard may list more than one Blueprint instance pointing at this repository. Identify the live one
+by the Web Service's **External URL**, which must read exactly
+`https://data-science-agent-api-h43i.onrender.com`; the other instance owns a different hostname or is
+suspended. Never resolve the ambiguity by creating a Blueprint instance -- that provisions a second public
+service.
+
+**A synced Blueprint is not a deployed service.** The Blueprint list reports `Synced`, which only means
+Render's copy of `render.yaml` matches the repository. `autoDeploy` is `false` on this service, so merging
+to `main` changes nothing visitors see until a **Manual Deploy → Deploy latest commit code** runs, and the
+deploy row shows the commit it built.
+
 The public demo runs in deterministic offline/heuristic mode so a visitor can complete the core product flow without requiring or exposing a model API key. Real-model evaluation is a separate, explicitly configured path.
 
 ## Verified product flow
@@ -72,6 +90,23 @@ DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
 ```
 
 If an existing Blueprint has a failed deploy, keep the same Blueprint and use **Manual sync** or **Manual Deploy** after the repository fix is merged. Do not create a second Blueprint for the same service.
+
+### Verify a deploy from the outside
+
+A deploy is not confirmed by the dashboard going green; confirm the artifact answers. Run these after the
+service reports `Live`, and read what comes back rather than the build status:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/version
+curl -s https://data-science-agent-api-h43i.onrender.com/health
+curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/datasets/
+```
+
+`/version` reports the version of the distribution actually installed in the running container, read from
+its package metadata, plus the effective reasoning mode (`/health` stays import-free and I/O-free, so the
+mode is not published there). A first request may take tens of seconds: the free instance spins down when
+idle. The dataset listing is expected to be empty after a deploy -- see the storage note below -- so an
+empty list is the healthy answer, not a failure.
 
 ## Dataset storage behavior
 
