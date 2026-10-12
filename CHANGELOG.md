@@ -2,6 +2,57 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — the API names its build and its reasoning mode (web plan Lane A)
+
+- `/version` answered `1.8.0` from a hardcoded `Settings.version` default while `pyproject.toml` was on the
+  `4.5.0` line, and the hosted demo served exactly that (`curl .../version` → `{"version":"1.8.0"}`,
+  measured 2026-10-11), so no "the demo shows release X" claim could be checked against the demo it names.
+  The version is now read from the installed distribution's metadata by one function whose fallback is the
+  string `unknown`; `Settings.version` became a property, so `DSA_VERSION` can no longer publish a version
+  the running artifact does not have.
+- No route reported `DSA_LLM_MODE` while `render.yaml` pins the demo to `heuristic`, so a visitor could not
+  tell that no model planned anything. `dsa_llm.providers.resolve_llm_mode()` is now the single owner of
+  that answer, built on the same `configured_llm_mode()` `EnvLLMProvider` itself calls, and `/version`
+  publishes `{mode, stub, provider, model, error}`. A real-mode instance with no credential reports
+  `unconfigured` plus a refusal instead of a model name: an interface copying this must not describe a
+  runtime whose first call would raise. `/health` keeps its documented import-free, I/O-free contract.
+- Rendered in three places from one fetching owner (`apps/web/lib/buildProvenance.ts`, so no component
+  coins a display term): the persistent status area beside the API dot, the footer beside the build
+  version, and each run's report page beside its status badge. Verified in a real browser against a fresh
+  production build in all three configurations -- heuristic, `openai · gpt-5.6-luna`, and refused-for-a-
+  missing-key -- with DOM text compared to the live payload and geometry checked above the fold.
+- The wording is scoped to the instance, not the run: `AnalysisState` persists no planner provenance, so a
+  report page says "this API instance plans with..." rather than claiming what a historical run used.
+  Per-run provenance is R-05's stated deliverable.
+- Guarded by `tests/contract/test_reasoning_mode_and_version_provenance.py`, red before green: reported mode
+  equals the provider's own resolution in both configurations, `/version` equals installed metadata equals
+  the manifest (reusing `conftest.py`'s `declared_version` rather than restating the claim), no API surface
+  re-reads the environment, and every provenance surface must import the owner instead of typing a number.
+  Each planted defect asserts it changed the text before being trusted. The two branches that must notice a
+  refusal use `contextlib.suppress`, so the lane spends none of the `debt.exceptHandlers` ceiling.
+
+### Added (post-4.5.0) — Study 1's first-run protocol, frozen before any participant exists
+
+- `external-validation/STUDY1_FIRST_RUN.md` + `STUDY1_RESULTS_SCHEMA.json` specify the web plan's §12 Study
+  1 -- can a stranger finish a real task from a URL, alone -- with the success rubric, the 20-minute box and
+  the four abandonment triggers fixed *before* the first session, since a rubric written after seeing the
+  data is not a measurement. Status is `NOT CONDUCTED`; recruiting is the maintainer's action and nothing in
+  the kit may be filled by the project.
+- The mode-label observation is split into `unprompted` and `noticed`, because R-02's value claim is that a
+  stranger can tell what did the thinking and a debrief question can only ever produce the second.
+  Completion is reported as `k of 5`, never a percentage, and only four of the seven `RUBRIC.md` dimensions
+  are collected -- Correctness, Statistical Validity and Uncertainty need the participant's own ground
+  truth and belong to the reviewer studies.
+- Two gaps recorded rather than smoothed over: the task's "export something you would send a reviewer"
+  cannot be satisfied as written, because the conclusion-only export is R-06 and does not exist yet, so the
+  study logs which artifact was taken and whether a plainer one was wanted, and Study 2 stays blocked on
+  R-06; and each session records the build it saw from the API's own `/version`, so a claim about what
+  participants saw names the artifact that answered.
+- `external-validation/` is reached by no gate -- `check_public_claims.py`'s `SCAN_GLOBS` skips it and no
+  test imported it -- so `tests/contract/test_validation_kit_schemas.py` checks both kit schemas
+  structurally: every `$ref` resolves, every `required` name exists, and the fields the protocol promises
+  are storable. No validator dependency was added to get that.
+
 ### Fixed (post-4.5.0) — what the frozen `mean_latency_ms` gate actually guards
 
 - `tests/regression/test_regression_matrix.py::test_baseline_contract` compared the **stored** baseline
