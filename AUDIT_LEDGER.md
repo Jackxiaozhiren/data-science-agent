@@ -8765,3 +8765,40 @@ old proof.
 
 **Not done here, deliberately.** No code, no exclusion, no ceiling, no wiring. §142's paragraph was
 annotated with a pointer rather than rewritten, because its pricing was measured when written.
+
+## 156. Target 4's third part was never closed, and the reason it is still open is a dependency, not a deadline
+
+**Same root cause as §155: paraphrasing a close-out instead of reading the target.** §131's map row for §24
+target 4 says "Process-global state isolated by derivation; sentinel tranche adjudicated" -- which is true
+and complete for what it claims. §24 lists three parts, and the third, "real browser specs where only a
+script exists", is not in that row. I reported target 4 as closed anyway.
+
+**Measured today, in the shape the target uses.** There is a browser script and no browser *spec* surface:
+`find . -name "*.spec.ts" -o -name "*.spec.mjs" -o -name "*.spec.js"`, excluding `node_modules` and the
+second clone, returns **zero files**; `apps/web/package.json` devDependencies are
+`@types/node, @types/react, autoprefixer, playwright, postcss, tailwindcss, typescript` -- the Playwright
+*library*, not `@playwright/test` -- and its scripts are `build, dev, start, typecheck`, with no test entry;
+`grep -nE "\.click\(|\.fill\(|\.press\(|\.selectOption\(|\.tap\("` over `apps/web/scripts/regression.mjs`
+counts **0** interaction verbs. What the tour does is `page.goto(..., waitUntil: "networkidle")` over 12
+routes at 2 viewports -- 24 checks, which is exactly the `regression: 24/24` the §153 sweep quoted -- plus
+`fullPage` screenshots, and its own header says it is "intentionally backend-independent", so every page is
+seen in its Empty/Error state.
+
+**What that leaves unverified, concretely.** No shipped interaction is exercised by anything CI runs: the
+run-inspector controls (`apps/web/app/analysis/[runId]/RunInspector.tsx`) and the dataset page's handlers
+(`apps/web/app/datasets/page.tsx`) are the only `.click(`/`dispatchEvent` sites in the tree, and they are
+product code, not assertions. So the class this repository has already been burned by -- a control whose
+event never reaches a handler, a form that posts nothing, a mouse-only affordance that axe cannot see -- is
+invisible to `ci.yml`. A green `24/24` means "the routes render cold at two widths", not "the product is
+clickable".
+
+**Why it is `BLOCKED` rather than queued.** Writing real specs needs `@playwright/test` (or an equivalent
+runner) added to `apps/web` devDependencies plus a wired CI step. §29.6 makes a fix that needs a dependency
+a `BLOCKED`, and §N6 forbids adding one silently -- so this is a maintainer's yes/no, not a work item I can
+close inside the standing rules. Priced: the spec framework and the first journeys (the analysis run
+lifecycle, dataset upload, the compare pages) are the bulk of one lane's budget on their own, and until they
+exist the browser lane's honest status is *script, not specs*.
+
+**What changed in the ledger because of it.** Nothing beyond this section: §131's row stays as written
+because it is accurate about what it claims, and the correction belongs where the misreading happened -- in
+this entry, which is what a future session reads when it is asked whether target 4 is done.
