@@ -8676,3 +8676,10 @@ spirit rather than its letter, since a fresh session cannot read the finding bef
 **Runner confirmation.** `ef38f94` → CI run **38195639144** `completed/success`, both `ci` and
 `web-regression` `success`. The runner's tree is the committed one, which is where the export's sync_vendor
 green above also points.
+
+**The attribution, confirmed from the runner side rather than only from my export.** The sweep's own commit
+`9c7c3ee` ran all three workflows green -- CI **38196224280**, CodeQL 38196224300, Secret Scan
+38196224286, combined status `success` -- and the step `Run uv run python scripts/sync_vendor.py --check` is
+listed `success` in that run's step inventory, not merely absent from a job that passed for other reasons.
+The check that is red in this working tree therefore runs green on a checkout of the same commit, which is
+the strongest form of "the drift is the uncommitted foreign edit, not the tree".
