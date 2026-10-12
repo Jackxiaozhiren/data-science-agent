@@ -9146,3 +9146,51 @@ date.
 **Status: archived, not open work for this session.** **Unlocked by:** 2026-11-07, or the run in which the
 gate first goes red, whichever the maintainer sees first -- and at that point the choice belongs to §89's
 two shapes, not to a third.
+
+## 162. Close-out for §158-§161, and the runner's own verdict on the commit that carried them
+
+**Runner confirmation, appended after the push rather than before it.** `fb00c08ae231ba096a4399b2df519a36f36fa600`
+is `origin/main` (`git rev-list --left-right --count origin/main...HEAD` → `0 0`). The push printed
+`3397c10..fb00c08  main -> main` with rc 0 and the same admin-bypass notice §89 recorded
+(`Bypassed rule violations for refs/heads/main: - Required status check "ci" is expected.`). Its three
+workflows, named rather than read off `gh run list --commit`'s first row: **CI 38201486057**,
+CodeQL 38201486136, Secret Scan 38201486069. CI's own words are `status: completed`,
+`conclusion: success`, `createdAt 2026-10-12T03:52:32Z`, `updatedAt 2026-10-12T03:57:23Z`, with both jobs
+success -- `ci` at 35 steps and `web-regression` at 13. The combined status for the commit reads
+`state: success` (two `Vercel – data-science-agent-web*` contexts). §152's older note lists those step
+counts the other way round; this one is read from the run, not from a precedent.
+
+**What this session changed.** One commit, one path: `git show --pretty=format: --name-only fb00c08` →
+`AUDIT_LEDGER.md`, 307 insertions and 0 deletions (`git diff --numstat` before the commit, and the commit
+statistic after). No gate was touched: no ceiling raised, no exclusion or ignore entry added, no threshold
+relaxed, no re-seed, no `noqa`. No dependency installed. No coverage `source` or CI gate-list file edited.
+No implementation written for any Group B item, and no release action taken for Group A -- no version bump,
+tag, release or publish. `.env` was not read or echoed.
+
+**The shared tree is wider than §1 of the handoff described, and it grew during the work.** At commit time
+`git status --short` listed 20 paths belonging to others: 11 modified (adding `apps/api/src/dsa_api/routers/analysis.py`,
+`apps/web/app/analysis/[runId]/RunInspector.tsx`, `apps/web/app/analysis/[runId]/page.tsx`,
+`packages/agent/src/dsa_agent/report.py`, `packages/evaluation/src/dsa_evaluation/cli.py`, three
+`src/data_science_agent/_vendor/` mirrors and `tests/evals/test_external_validation.py` to the three the
+handoff names) and 9 untracked (adding `packages/agent/src/dsa_agent/report_export.py` and
+`src/data_science_agent/_vendor/dsa_agent/report_export.py` to the four résumé documents, the Web PRD and
+`tests/contract/test_report_export_pair.py`). None was staged by me, and `git diff --cached` is empty at the
+end of this section. Consequence for §160: the web-layer line citations there sit in files another session
+is actively editing, so re-measure before executing on them -- the *counts* (15 non-2xx sites, 3 read sites,
+4 gate mirrors) came from `grep` at `3397c10` and will move if their work lands.
+
+**Dispositions, so the next session does not re-derive them.** Items 1 and 2 (Group A) are unchanged in
+status -- they need a release event -- and §159 now states what each must show, with the §151 step dry-run
+at rc 0 against this tree. Items 3, 4, 5 and 6 (Group B) are `BLOCKED` on a maintainer pick, priced in
+§160 with the first files named for each option; item 4 additionally loses the option as filed, since a
+per-module coverage retirement cannot be expressed against a package-name `source` list. Item 7 is archived
+(§161): 26 days to its review date, gate and exception file untouched.
+
+**What this session did not verify, stated rather than left implicit.** The §151 path has still never
+carried a real tag -- the dry run proves the step is satisfiable, not that a Publish run executes it. The
+deployed `/benchmarks` and `/research` pages were not fetched from the live demo, so §160's claim about what
+a visitor sees rests on `docker/Dockerfile.web` and the page sources, not on an HTTP response. The chromium
+reuse in B3 is read from `ci.yml:31-40`, not measured by a runner. The two tests behind §158's 856 → 858
+movement were attributed to `71a30d4` by `git log --oneline ef38f94..HEAD -- tests/` and not individually
+identified. And §158's pytest result is a count from an invocation this session chose to run; the gate the
+sweep actually executed is `pytest -q --cov`, whose own output is the coverage line, quoted there.
