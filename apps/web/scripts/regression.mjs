@@ -2,7 +2,9 @@
 /**
  * Web regression tour: boots `next start`, then asserts every static route
  * returns 200 with zero console errors and zero horizontal overflow at
- * desktop (1280) and mobile (390) widths. Screenshots land in
+ * desktop (1280) and mobile (390) widths, and finally drives the upload
+ * controls on `/datasets` so a click or keypress that reaches no handler
+ * fails here rather than shipping green. Screenshots land in
  * output/playwright/regression/ for visual review.
  *
  * Intentionally backend-independent: with no API running, pages render
@@ -45,6 +47,61 @@ const VIEWPORTS = [
   { name: "desktop", width: 1280, height: 900 },
   { name: "mobile", width: 390, height: 844 },
 ];
+
+// The tour above proves a route renders cold. It never proved an event reaches a
+// handler, so a control whose click does nothing, or one only the mouse can drive,
+// shipped green (audit §156, §164 item 3). These controls are client-side, so the
+// pass needs no API and stays backend-independent like the tour.
+const INTERACTIONS = [
+  {
+    label: "drop zone click opens the file chooser",
+    selector: '[role="button"][aria-label^="Upload dataset"]',
+    action: "click",
+    want: 1,
+  },
+  {
+    // The control's own aria-label promises "or press Enter to browse"; a keyboard
+    // user finding nothing happens is invisible to axe and invisible to goto.
+    label: "drop zone Enter opens the file chooser",
+    selector: '[role="button"][aria-label^="Upload dataset"]',
+    action: "press",
+    key: "Enter",
+    want: 1,
+  },
+  {
+    // The nested button calls stopPropagation; if that ever goes missing the parent
+    // handler fires too and the browser is asked for a file twice for one click.
+    label: "Browse files opens exactly one chooser",
+    selector: 'button:has-text("Browse files")',
+    action: "click",
+    want: 1,
+  },
+];
+
+const UPLOAD_INPUT_ARIA = "Dataset files";
+
+async function expectFileChooser(page, act, want, timeoutMs = 5000) {
+  let count = 0;
+  let last = null;
+  const onChooser = (chooser) => {
+    count += 1;
+    last = chooser;
+  };
+  page.on("filechooser", onChooser);
+  try {
+    await act();
+    const deadline = Date.now() + timeoutMs;
+    while (count < want && Date.now() < deadline) await page.waitForTimeout(50);
+    // Settle window so a duplicate fire (a missing stopPropagation) is counted too.
+    await page.waitForTimeout(250);
+    if (count !== want) {
+      throw new Error(`file chooser fired ${count} time(s), expected ${want}`);
+    }
+    return last;
+  } finally {
+    page.off("filechooser", onChooser);
+  }
+}
 
 const slug = (r) => (r === "/" ? "home" : r.replaceAll("/", "-").replace(/^-/, ""));
 
@@ -132,6 +189,36 @@ try {
     }
     await context.close();
   }
+
+  const interContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const interPage = await interContext.newPage();
+  try {
+    await interPage.goto(`http://localhost:${PORT}/datasets`, { waitUntil: "networkidle", timeout: 45000 });
+    for (const item of INTERACTIONS) {
+      try {
+        const control = interPage.locator(item.selector).first();
+        await control.waitFor({ state: "visible", timeout: 15000 });
+        const act =
+          item.action === "click"
+            ? () => control.click()
+            : async () => {
+                await control.focus();
+                await interPage.keyboard.press(item.key);
+              };
+        const chooser = await expectFileChooser(interPage, act, item.want);
+        const aria = await (await chooser.element()).getAttribute("aria-label");
+        if (aria !== UPLOAD_INPUT_ARIA) {
+          throw new Error(`chooser opened ${JSON.stringify(aria)}, wanted the ${JSON.stringify(UPLOAD_INPUT_ARIA)} input`);
+        }
+      } catch (e) {
+        failures.push(`interaction ${item.label}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  } catch (e) {
+    failures.push(`interaction harness: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    await interContext.close();
+  }
 } catch (e) {
   failures.push(`harness: ${e instanceof Error ? e.message : String(e)}\n${serverLog.slice(-1500)}`);
 } finally {
@@ -139,7 +226,12 @@ try {
   killServer();
 }
 
-console.log(`\nregression: ${ROUTES.length * VIEWPORTS.length - failures.length}/${ROUTES.length * VIEWPORTS.length} checks passed, screenshots in ${OUT}`);
+const ROUTE_CHECKS = ROUTES.length * VIEWPORTS.length;
+const TOTAL_CHECKS = ROUTE_CHECKS + INTERACTIONS.length;
+console.log(
+  `\nregression: ${TOTAL_CHECKS - failures.length}/${TOTAL_CHECKS} checks passed ` +
+    `(${ROUTE_CHECKS} route/viewport + ${INTERACTIONS.length} interaction), screenshots in ${OUT}`,
+);
 if (failures.length > 0) {
   console.error("FAILURES:\n- " + failures.join("\n- "));
 }

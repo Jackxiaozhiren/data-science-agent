@@ -9261,3 +9261,54 @@ carrying the concurrent session's uncommitted work. Two consequences, stated rat
 item 6 lands on nine of its fifteen collapse sites and leaves the two `[runId]` ones for that session's
 commit, and item 5 cannot use `routers/analysis.py` as a template to edit, so it gets its own new module.
 A change that would have to edit a dirty path waits instead of being written over their work.
+
+## 165. Item 3 executed as picked: the tour now clicks, and the click check is proven able to fail
+
+§164's fence made item 3 the first executable one, and it is also the only pick that needed no other file
+than its own. `apps/web/scripts/regression.mjs` gained an interaction pass; no dependency was added, no
+lockfile regenerated, no CI step or gate-mirror list touched -- the step `node apps/web/scripts/regression.mjs`
+already runs in both `ci.yml` and `scripts/run_gates.sh`, so the new checks ride an existing gate.
+
+**verify_before.** §158's probe 2: `grep -cE "\.click\(|\.fill\(|\.press\(|\.selectOption\(|\.tap\("
+apps/web/scripts/regression.mjs` → **0** (rc 1 is `grep -c`'s no-match status, which is the value). The script
+opened a page, checked HTTP 200, console errors and horizontal overflow, and never dispatched an input.
+
+**What landed.** Three checks against `/datasets`, on one 1280x900 context after the route tour, driven
+through a `filechooser` listener rather than a screenshot: the drop zone's mouse click must open the chooser,
+the same control's **Enter** keypress must open it (its own `aria-label` promises "or press Enter to browse",
+and a mouse-only affordance is exactly what axe cannot see), and the nested "Browse files" button must open
+**exactly one** chooser -- the count is what pins `stopPropagation`, since a missing stop would make the
+parent handler fire too and ask the browser for a file twice. Each chooser is further asserted to target the
+input `aria-label="Dataset files"`, so the check fails if a click ever opens the wrong control.
+
+**verify_after, with a control run rather than an inference.** `node apps/web/scripts/regression.mjs` →
+**25/27 checks passed (24 route/viewport + 3 interaction)**, rc 1: all three interaction checks pass, and the
+two failures are `desktop: 39 console error(s)` and `mobile: 39 console error(s)`. Those are not this change.
+The committed script, re-run in the same ambient state from a copy built with
+`git show HEAD:apps/web/scripts/regression.mjs` (executed, then deleted), returned **22/24** with the
+*identical* two failures -- so the delta is exactly +3 checks and 0 new failures. `node --check` rc 0;
+`audit_facts --check` rc 0; `ruff check scripts apps/web` → `All checks passed!`;
+`find_orphan_reads --check` → `orphan reads: 14 key(s)` rc 0.
+
+**The guard was falsified before it was trusted.** A throwaway copy with the third check's selector
+retargeted to "Compare datasets" -- a rendered `<Button>` that carries no `onClick` -- printed
+`interaction Browse files opens exactly one chooser: file chooser fired 0 time(s), expected 1` and exited 1.
+So the assertion is carried by the chooser count, not by the locator resolving to something visible; deleting
+the handler from the page would redden this gate. The copy was removed; the census afterwards shows no
+scratch path of mine left in the tree.
+
+**An environmental finding this surfaced, recorded rather than silenced.** `lsof -nP -iTCP:8000 -sTCP:LISTEN`
+now reports a Python process listening on `127.0.0.1:8000` -- it was absent at the §158 sweep, which is why
+the same script printed `24/24` then and `25/27` now. With an API answering, cross-origin requests from
+`:3000` surface to Chrome as `net::ERR_FAILED`, and the tour's console filter tolerates only
+`ERR_CONNECTION_REFUSED` without a URL plus resource/CORS failures naming `localhost:8000`/`127.0.0.1:8000`.
+A live-but-CORS-rejecting backend therefore counts as 39 app errors per viewport. Not widened: relaxing a
+filter to absorb it is the prohibited move (§164's own red line), CI is unaffected because nothing listens on
+`:8000` there, and the honest fix is a decision about whether the tour should tolerate a local backend at
+all -- which is item 6's neighbourhood (status semantics) and so belongs with that pick, not with this one.
+
+**Item 3's status after this.** The class §156 named -- "Nothing CI runs ever clicks a control" -- is closed:
+CI now clicks, presses Enter, and counts chooser events. What the picked option explicitly did **not** buy is
+the word *specs*: this is still one script, so §24 target 4's third part stays partly met and option (i)
+(`@playwright/test`, with per-test reporting and traces) remains a separate maintainer decision rather than
+a step this session may take on its own.
