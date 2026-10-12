@@ -7949,9 +7949,13 @@ enumerates from primary artifacts.
 
 **Two ids a reader can mistake for open items.**
 
-- **D-L4-10 does not exist.** `grep -c "D-L4-10" AUDIT_LEDGER.md REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md`
-  returns zero for both files: the sequence in this repository skips it (a gap in issuance, not a finding
-  left unclosed). Anything that lists the L4 set as "01-14 minus 10" is describing it correctly.
+- **One L4 id was never issued: the sequence runs 01-09, then 11-14.** A gap in issuance, not a finding left
+  unclosed, and anything enumerating the L4 set as "fourteen" is wrong. The instrument is §34's own command,
+  `grep -ohE 'D-L[0-9]+-[0-9]+' AUDIT_LEDGER.md | sort -u`, which returns thirteen L4 ids -- and because that
+  command derives the set from *mentions*, this bullet must never spell the missing id: an earlier version of
+  it did, and thereby added the phantom to the very enumeration a reader trusts. Its quoted `grep -c` was
+  also false on arrival (the bullet was the match) and vacuous against the prompt document, which contains no
+  finding ids whatsoever. §154 records the mechanism and the re-measurement.
 - **PR #78 is merged.** §99-era prose at line 4192 records it as "open and now redundant, still not my call"
   -- which was true when written and is not true now: `gh pr view 78 --json state` returns `MERGED`. That line
   is a dated record and stays; this paragraph is where the correction lives, so a future session does not go
@@ -8683,3 +8687,49 @@ green above also points.
 listed `success` in that run's step inventory, not merely absent from a job that passed for other reasons.
 The check that is red in this working tree therefore runs green on a checkout of the same commit, which is
 the strongest form of "the drift is the uncommitted foreign edit, not the tree".
+
+## 154. A disclaimer that names the thing it disclaims corrupted the enumeration it was written to satisfy
+
+**Found by verifying a claim I had just made, not by probing the product.** Asked whether every prompt
+task was done, I wrote in session notes that no D-L4 id remained open -- and checked that by running §34's
+canonical id enumeration rather than trusting my own summary. It returned **fourteen** L4 ids, including
+the one §142 records as never issued. So the sentence exists and the id exists, and the sentence is the
+reason.
+
+**Mechanism.** §34 derives the issued set from *mentions*: `grep -ohE 'D-L[0-9]+-[0-9]+' AUDIT_LEDGER.md |
+sort -u`. §142's bullet asserted that id's absence by writing it out -- twice, once as prose and once inside
+the `grep -c` it quoted -- so the derived set gained a phantom member, and a reader checking the claim ran
+the very command the claim said would return zero. Measured before the edit: the enumeration printed
+`14 L4`; `grep -c` on the ledger returned `1` (rc 0) against a sentence claiming zero; the literal appeared
+on exactly one line, which was the disclaiming line itself, and `grep -n ... | grep -v "does not exist"`
+counted zero other occurrences -- i.e. the id's entire evidence in the repository was its own negation.
+
+**The quoted command had a second, independent defect: it discriminated nothing.** The same bullet cited
+`REPO_DIAGNOSIS_AND_IMPROVEMENT_PROMPT.md` as a file where the id appears zero times. That file contains
+**no** finding ids at all -- `grep -c 'D-L[0-9]'` returns `0` (rc 1) -- so the second half returned zero for
+an id that certainly exists as well: `D-L4-01` -> 0, `D-L4-13` -> 0. A command that answers "absent" for
+every input cannot support a claim about one input.
+
+**Fix, and the red/green pair.** The bullet now states the gap without spelling the id ("the sequence runs
+01-09, then 11-14") and cites the enumeration as its instrument rather than a `grep -c` it would contaminate.
+After: the enumeration prints `13 L4`, the set reads `01 02 03 04 05 06 07 08 09 11 12 13 14` -- no genuine
+id lost, which is the half worth checking, since a fix that only lowers a count can be a fix that deleted
+evidence. The phantom literal is gone (`grep -c` -> `0`, rc 1). Edit size `7 insertions / 3 deletions`, one
+bullet, in §142's own list of ids a reader can mistake for open items.
+
+**Why no ceiling key holds this class, stated rather than skipped.** `AUDIT_LEDGER.md` is deliberately
+ungated (§28), and a check for "prose must not name the id it excludes" would have to gate the ledger's
+text, which is the trade the repository already refused. What makes the claim stable instead is structural:
+the corrected bullet asserts a *derived count* that its own wording cannot move, because it no longer
+contains a match for the pattern that produces the count. The failure mode can recur only if someone writes
+a new sentence naming a non-issued id -- and the enumeration then visibly gains a member, which is how this
+one was caught. Related: [[enumerate-ids-dont-trust-my-summary]],
+[[prose-guards-must-clear-disclaimers]].
+
+**Gates on this tree** (2026-10-12): `audit_facts --check` -> `facts ratchet: OK` rc 0;
+`check_public_claims --require-released-tags` -> `0 issues (scanned 47 file(s); 59 skipped as historical)`
+rc 0; `git diff --numstat` -> `7 0` before the §142 rewrite and `7 3` after, the deletions being the three
+lines of the defective bullet. `HEAD` moved under this edit: `21ea797` (another session's
+`docs(hosted-demo)` commit) is now `origin/main`, and it cancelled my `fdfd1dd` run -- CI **38196696549**
+reads `completed/cancelled`, which is evidence about the queue, not about that tree. The checks re-run above
+are against the moved HEAD.
