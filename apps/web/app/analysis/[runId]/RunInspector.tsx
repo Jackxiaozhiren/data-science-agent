@@ -63,8 +63,10 @@ function limitationSeverity(text: string): "error" | "warning" {
 }
 
 // Live progress: polls the lightweight /progress endpoint every 3s while the
-// run is non-terminal. The backend /events SSE is snapshot-style (dumps and
-// closes), so polling is the correct transport. Full state refreshes via
+// run is non-terminal. /events became a live stream when the run stopped
+// blocking its own create call (R-03), but a poll is the transport that
+// survives a buffering proxy and costs one small row read; the stream is for
+// clients that want the event sequence itself. Full state refreshes via
 // router.refresh() on phase transitions and terminal states.
 function useLiveProgress(runId: string, initialStatus: string) {
   const router = useRouter();

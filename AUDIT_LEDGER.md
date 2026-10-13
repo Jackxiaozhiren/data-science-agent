@@ -9859,3 +9859,98 @@ which is not what HEAD does. The second was a vacuous `n=0` assertion in phase C
 list. Both fixed before any number above was produced. Not verified by this probe: Render's own disk
 ownership/persistence semantics, the free tier's restart policy, and anything about the paid deploy -- those
 are the first things step 1-7 of the acceptance test will measure once the disk exists.
+
+## 174. R-03 executed: the API answers a run before it finishes, and the crash finally has somewhere to land
+
+**Scope.** `WEB_PRODUCT_MASTER_PROMPT.md` §15 Lane B, requirement **R-03** only. **R-11** (Lane B's second
+requirement) was not started; the session's spare budget went into the crash-path redesign below, which was
+not foreseen. Shipped as `d3e121e`.
+
+**Premise re-measured, not inherited.** `analysis_service.py` carried the comment "run the agent graph
+synchronously (for MVP)" one line above `await run_analysis(...)`, and the ORM row was built *after* that
+await -- so while a run executed, its id did not exist, `/progress` answered 404, and `sse_events_for_state`
+could only project a finished state. Confirmed against the live hosted demo the same evening:
+`POST /api/v1/analysis/` answered **201** and the immediately following read said `COMPLETED`.
+
+**What moved where.** New owner `apps/api/src/dsa_api/services/run_lifecycle.py` holds the task, the session
+the task writes through, the in-flight/terminal vocabulary and the outcome-to-row rule.
+`dsa_agent.graph.run_analysis` gained an optional `on_update` awaited at three stage boundaries (plan set,
+each tool call recorded, validation entered) rather than the API re-implementing the step loop -- a second
+orchestrator is the defect §105/§115 spent two lanes removing. `POST` answers 202, or 200 with the same id
+when that exact question is already in flight. `/events` follows the stored row and closes at the terminal
+status, and `analysis_completed` is emitted only for a run that has actually stopped -- the old snapshot
+builder could not express that distinction.
+
+**The crash path took three drafts, and the ratchet forced the last one.**
+1. `except CancelledError` + `except Exception` inside `execute`: behaviourally right, but
+   `debt.exceptHandlers` went 184 → 186 against a ceiling of 185 and
+   `tests/unit/test_debt_ratchet.py` reddened. The ceiling is shared with the session working in this same
+   tree, so spending it is not free.
+2. Let the exception escape and write the row from the task's done callback. Ratchet satisfied; the suite
+   then reported `Exception ignored in: <coroutine object mark_failed>` with `RuntimeError: Event loop is
+   closed` beneath it -- a detached coroutine nobody awaited, so the row's terminal state arrived whenever
+   the loop got to it. That is the same class of bug the requirement exists to remove.
+3. Final: `execute` runs the graph inside a task it **awaits** and reads the outcome as a value
+   (`await asyncio.wait({attempt})`, then `attempt.exception()`). No handler node is counted (184 again),
+   the write is awaited inside the task, and "the task is done" and "the row is terminal" are the same
+   moment. A cancelled attempt deliberately writes nothing: a process that is going away cannot name the
+   cause, and the startup sweep says "the API restarted while this run was in flight" instead.
+
+**The failure mode this design creates, closed in the same commit.** A row can now exist unfinished.
+`sweep_abandoned_runs` runs from the app's startup, turns any non-terminal row into `FAILED` naming the
+restart, leaves terminal rows alone, and is asserted idempotent -- because the hook runs on every boot.
+
+**Web: less was missing than the requirement implies, and the missing part was specific.**
+`analysisStatus.ts` already classified every status and `useLiveProgress` already polled `/progress`,
+refreshed on stage change and put the percentage in the tab title; every state read was already `?.`-guarded,
+so an in-flight row rendered zeros rather than crashing. What was absent was the sentence: `RunDetail`
+carried no `error`, and the failure card derived everything from `state.tool_calls`, so a crash before the
+first write showed a red badge over an empty page. It now reads the row's own error and `Copy diagnostics`
+carries it. The comment above that hook claimed `/events` was "snapshot-style (dumps and closes)" and so
+polling was correct; that was true when written and is false now, so it was rewritten rather than left to
+mislead the next reader.
+
+**Browser acceptance, screenshots looked at rather than cited.** After the confirm click the page is a run
+page within one poll -- `UNDERSTANDING` badge, "Running… step 1 of 1", the
+Queued→Planning→Executing→Validating→Done rail with Queued lit, no COMPLETED badge
+(`output/lane-b/r03-in-flight.png`); it then reaches the finished report with both R-06 download links
+(`r03-completed.png`). A separately seeded row (`FAILED`, `state_json` NULL, the exact text
+`failure_message` produces) renders "This run failed / Reason The analysis stopped unexpectedly
+(RuntimeError). Start the run again." (`r03-failed.png`).
+
+**Two instrument faults that nearly became conclusions.** `httpx`'s `ASGITransport` buffers a response body
+until the application finishes writing it, so proving stream liveness over HTTP deadlocks: the generator
+waits for the release the test performs only after reading the response. Liveness is therefore asserted
+against `analysis_event_frames` -- the generator the route formats -- and the HTTP framing of a finished run
+stays covered by `test_phase6_api.py`. And a Playwright multipart payload was shaped wrongly
+(`file: <Buffer>` with `contentType`), which failed the journey before it began.
+
+**Migration cost that will recur.** A background task resolves `database.AsyncSessionLocal`, not the
+request's `get_session` override, so a test that overrides only the latter lets the task write to the
+developer's real database -- it announced itself as `analysis task started for an unknown run`. Five suites
+now patch both seams and wait through one new root-conftest fixture, `await_terminal_run`;
+`conftest._ISOLATED_GLOBALS` gained `_TASKS` because `tests/test_process_global_isolation.py` counts
+module-level containers written after import, and it went red for exactly that reason. No assertion was
+weakened to make a migration pass.
+
+**Coverage read as a branch inventory.** `run_lifecycle.py`: 76 statements / 14 branches, one uncovered line
+(`_write` finding no row, which needs a delete racing a poll) and the rest exercised -- including the
+stream's dedupe path, which the integration test cannot reach because each of its polls observes something
+new, so it is driven through the injected reader instead.
+
+**Full-lane result, quoted from the run that followed the last code edit** (`bash
+output/lane-b/run-lane-b-gates.sh`, log `output/lane-b/lane-b-gates-4.log`, local darwin/arm64, uv 0.12.7,
+executed after `d3e121e` so no new file was outside the guards' path lists): `ruff check` All checks passed ·
+`ruff format --check` 270 files already formatted · `mypy` Success, no issues found in 124 source files ·
+`pytest -q --cov` rc=0, coverage **83.73%** against the 79.0 floor (**915 tests collected**) ·
+`audit_facts --check` facts ratchet OK (`debt.exceptHandlers` back at **184** of 185) ·
+`check_public_claims` 0 issues (47 scanned, 59 skipped as historical) · `find_orphan_reads` 14 keys ·
+`next build` rc=0 · `regression.mjs` **27/27** (24 route/viewport + 3 interaction) · `mkdocs --strict` rc=0.
+The one red is `sync_vendor.py --check`: `dsa_evaluation: 1 file(s) differ [external_validation.py]`, another
+session's un-synced source, invisible to CI because CI only ever checks committed trees.
+
+**Not done, stated as limits rather than choices.** Execution is in-process, so the double-submit guard is a
+`(dataset_id, user_query)` in-flight match under a process-local lock: two workers could still start the same
+question, which is the price of not adding a broker. R-11 is untouched. And `/events` is now the only live
+progress channel the API offers while the web deliberately keeps polling -- the two are not redundant, they
+fail differently.
