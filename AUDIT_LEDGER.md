@@ -9631,3 +9631,36 @@ divergence and the in-flight runs again immediately before pushing, which is wha
 **Register state.** Group B (#3, #4, #5, #6) is executed and green on the runner. Group A stays release-gated
 exactly as §159 worded it -- nothing in this lane bumped a version, tagged, released, or published. Group C
 (#7) remains archived-until-due, reviewed in §161 with 26 days left at the time of writing.
+
+## 170. Close-out re-run at `99f113d`: the same one red gate, the same two green CI runs, and a probe that now only matches a comment
+
+The handoff's step 0 was run once, at the start, on `3397c10` (§158). This is the same suite re-run at the
+head this lane leaves behind, so the opening and closing evidence are both on the record.
+
+`bash scripts/run_gates.sh` on 2026-10-13 printed **`17 gate(s) run, 1 failed.`** and exited 1. The one
+failure is `scripts/sync_vendor.py --check`, naming exactly `dsa_evaluation: 1 file(s) differ
+[external_validation.py]` -- the other session's still-uncommitted source, forbidden to me by the register.
+The same check against a `git archive HEAD` export of `99f113d` exits **0** with `OK: vendored dsa_* is in
+sync`, which is the claim that matters: the committed tree is consistent, the worktree is not. Everything
+else in the suite passed as it did at §0, including the two gates this lane's work touches:
+`regression: 27/27 checks passed (24 route/viewport + 3 interaction)` and `Task success rate: 1.0` for the
+5-task slice, and the ratchet, claims, orphan-read, SBOM (`192 components and release '4.5.0'`), npm, mypy,
+ruff, format, lock and mkdocs-strict gates.
+
+**The pushed head's own verdict.** `origin/main` is `99f113d` and its **CI run 38271973672** reports
+`completed success` (Secret Scan 38271973563 and CodeQL 38271973657 likewise). The item-5 head before it,
+`2634207`, has `completed success` on CI run 38267969373, quoted in §169. Both pushes printed the same
+`Bypassed rule violations ... Required status check "ci" is expected` notice, i.e. admin bypass, not a
+protection gap.
+
+**One probe's reading changed, and it is the good kind.** §4's `grep -n readFileSync
+apps/web/app/benchmarks/page.tsx` returns line 22 only, which is the comment recording what the page used to
+do; no code path reads a repository file any more, and `test_the_converted_pages_read_no_artifact_from_the_
+filesystem` requires a `(` after the name so a comment cannot satisfy it. The langgraph probe now returns 3
+lines, all inside `packages/agent/src/dsa_agent/langgraph_graph.py` itself -- no external caller, which is
+exactly what §164's item-4 decision was about.
+
+**Tree left as found.** `git status --short` shows only the three foreign modifications (`README.md`,
+`packages/evaluation/src/dsa_evaluation/external_validation.py`, `tests/evals/test_external_validation.py`)
+and five foreign untracked files; `git diff --cached` is empty; no version bump, tag, release or publish was
+performed by this lane.
