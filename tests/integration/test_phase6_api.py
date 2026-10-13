@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -25,6 +27,8 @@ def _sse_data_frames(body: str) -> list[dict[str, object]]:
 
 @pytest.fixture
 async def ac():
+    from dsa_api.core import database
+
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -34,29 +38,41 @@ async def ac():
         async with SessionLocal() as s:
             yield s
 
+    # A run now executes in a background task that opens its own session, so the request-scoped override
+    # alone is not enough: without this the task would write to the app's real database and the test would
+    # read a row that never changes.
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = SessionLocal
     app.dependency_overrides[get_session] = _get_session
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()
+    database.AsyncSessionLocal = previous
     await engine.dispose()
 
 
-async def _upload_and_run(ac: AsyncClient) -> tuple[str, str]:
+async def _upload_and_run(
+    ac: AsyncClient,
+    await_terminal_run: Callable[..., Any],
+    *,
+    query: str = "Analyze correlation between a and b",
+) -> tuple[str, str]:
     csv = b"a,b,group\n1,2.0,A\n2,3.5,B\n3,4.1,A\n4,6.0,B\n5,7.2,A\n6,8.1,B\n7,9.0,A\n8,10.2,B\n9,11.1,A\n10,12.3,B\n11,13.0,A\n12,14.5,B\n"
     r = await ac.post("/api/v1/datasets/", files={"file": ("t.csv", csv, "text/csv")})
     assert r.status_code == 201, r.text
     ds_id = r.json()["id"]
-    r2 = await ac.post(
-        "/api/v1/analysis/",
-        json={"dataset_id": ds_id, "user_query": "Analyze correlation between a and b"},
-    )
-    assert r2.status_code == 201, r2.text
-    return ds_id, r2.json()["id"]
+    r2 = await ac.post("/api/v1/analysis/", json={"dataset_id": ds_id, "user_query": query})
+    assert r2.status_code == 202, r2.text
+    run_id = r2.json()["id"]
+    await await_terminal_run(ac, run_id)
+    return ds_id, run_id
 
 
 @pytest.mark.asyncio
-async def test_sse_events_and_json_fallback(ac: AsyncClient) -> None:
-    _, run_id = await _upload_and_run(ac)
+async def test_sse_events_and_json_fallback(
+    ac: AsyncClient, await_terminal_run: Callable[..., Any]
+) -> None:
+    _, run_id = await _upload_and_run(ac, await_terminal_run)
     # SSE
     r = await ac.get(f"/api/v1/analysis/{run_id}/events", headers={"Accept": "text/event-stream"})
     assert r.status_code == 200
@@ -78,8 +94,10 @@ async def test_sse_events_and_json_fallback(ac: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_progress_and_evidence_trace(ac: AsyncClient) -> None:
-    _, run_id = await _upload_and_run(ac)
+async def test_progress_and_evidence_trace(
+    ac: AsyncClient, await_terminal_run: Callable[..., Any]
+) -> None:
+    _, run_id = await _upload_and_run(ac, await_terminal_run)
     r = await ac.get(f"/api/v1/analysis/{run_id}/progress")
     assert r.status_code == 200
     data = r.json()

@@ -26,6 +26,7 @@ export type RunDetail = {
   status: string;
   user_query: string;
   dataset_id: string;
+  error?: string | null;
   state: {
     objective: string;
     plan: { id: string; name: string; tool: string; description: string }[];
@@ -218,6 +219,7 @@ function FailureCard({ run }: { run: RunDetail }) {
         run_id: run.id,
         status: run.status,
         query: run.user_query,
+        error: run.error ?? null,
         failures: failed.map((tc) => ({ tool: tc.tool, call_id: tc.call_id, error: tc.error ?? null })),
       },
       null,
@@ -238,6 +240,12 @@ function FailureCard({ run }: { run: RunDetail }) {
         <CardTitle className="flex items-center gap-2 text-sm text-red-800"><XCircle className="size-4" aria-hidden /> This run failed{failed.length > 0 ? ` — ${failed.length} tool call${failed.length === 1 ? "" : "s"} errored` : ""}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
+        {run.error && (
+          <p className="rounded-lg border border-red-200 bg-white p-2.5 text-xs leading-5">
+            <strong>Reason</strong>
+            <span className="ml-1 break-words text-red-700">{stripHtml(String(run.error)).slice(0, 500)}</span>
+          </p>
+        )}
         {failed.map((tc) => (
           <div key={tc.call_id} className="rounded-lg border border-red-200 bg-white p-2.5 text-xs leading-5">
             <code className="font-mono font-semibold">{tc.tool}</code>

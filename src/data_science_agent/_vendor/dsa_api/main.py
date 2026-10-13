@@ -33,7 +33,18 @@ except Exception:  # pragma: no cover
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Create ORM tables on startup so fresh databases (e.g. Render sqlite)
     accept writes immediately. Safe on existing databases (checkfirst)."""
+    import logging
+
+    from dsa_api.services.run_lifecycle import sweep_abandoned_runs
+
     await init_db()
+    # A run executes in this process now, so a row left non-terminal by the previous one has no task that
+    # will ever finish it. Closing it out here is what keeps "failed" and "frozen" distinguishable.
+    abandoned = await sweep_abandoned_runs()
+    if abandoned:
+        logging.getLogger(__name__).info(
+            "closed out %d abandoned analysis run(s) from a previous process", abandoned
+        )
     yield
 
 

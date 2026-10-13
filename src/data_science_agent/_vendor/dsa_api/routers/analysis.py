@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
@@ -16,15 +16,21 @@ from dsa_agent.run_summary import run_summary
 from dsa_api.core.database import get_session
 from dsa_api.services.analysis_service import (
     analysis_progress,
-    create_analysis_run,
+    create_pending_run,
     evidence_trace_for_state,
     get_analysis_run,
     list_analysis_runs,
+    sse_event_identity,
     sse_events_for_state,
 )
+from dsa_api.services.run_lifecycle import is_terminal, read_run, schedule_run
 
 #: Names this endpoint publishes for canonical fields, kept explicit at the boundary.
 REST_RUN_ALIASES = {"markdown": "report_markdown", "validation": "validation_results"}
+
+#: How often the live stream re-reads the row. The graph writes at stage boundaries, so this only sets how
+#: long a written event waits before it reaches a watching client; it is not a polling loop for progress.
+_EVENT_POLL_SECONDS = 0.25
 
 router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
 
@@ -36,24 +42,34 @@ class CreateAnalysisBody(BaseModel):
     user_query: str = ""
 
 
-@router.post("/", status_code=201)
+@router.post("/", status_code=202)
 async def create_analysis(
     body: CreateAnalysisBody,
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
+    """Accept a run: the row exists and is executing when this returns, not after it finishes.
+
+    202 for a run this call started, 200 when an identical question is already in flight -- a double click
+    is one run, and the second response says so without inventing a field for it.
+    """
     if not body.dataset_id or not body.user_query.strip():
         raise HTTPException(status_code=400, detail="dataset_id and user_query required")
     try:
-        result = await create_analysis_run(session, body.dataset_id, body.user_query)
+        result, started = await create_pending_run(session, body.dataset_id, body.user_query)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception:
-        # Never leak internals to clients; the traceback goes to server logs.
+        # Never leak internals to clients; the traceback goes to server logs. A crash inside the run
+        # itself is no longer reachable here -- it lands on the row, see dsa_api.services.run_lifecycle.
         log.exception("analysis run failed", extra={"dataset_id": body.dataset_id})
         raise HTTPException(
             status_code=500, detail="Analysis failed unexpectedly. Please retry shortly."
         ) from None
+    if started:
+        schedule_run(str(result["id"]))
+    else:
+        response.status_code = 200
     response.headers["Location"] = f"/api/v1/analysis/{result['id']}"
     return result
 
@@ -89,6 +105,38 @@ async def get_analysis_progress(
     return analysis_progress(row)
 
 
+async def analysis_event_frames(
+    run_id: str,
+    first_row: dict[str, Any],
+    *,
+    read_row: Callable[[str], Awaitable[dict[str, Any] | None]] = read_run,
+    disconnected: Callable[[], Awaitable[bool]] | None = None,
+    poll_s: float = _EVENT_POLL_SECONDS,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Each event of one run, exactly once, following the row while it is still being written.
+
+    A generator over the stored row rather than a snapshot of it: the events a client watches are produced
+    by a task in this same process, so "live" means re-reading the row until it says it has stopped. The
+    caller formats these as SSE frames; keeping the two apart is what makes the liveness testable, because
+    an HTTP test client buffers a response body to the end and can never observe a stream mid-run.
+    """
+    emitted: set[str] = set()
+    current: dict[str, Any] | None = first_row
+    while current is not None:
+        for event in sse_events_for_state(current):
+            key = sse_event_identity(event)
+            if key in emitted:
+                continue
+            emitted.add(key)
+            yield event
+        if is_terminal(str(current.get("status") or "")):
+            return
+        if disconnected is not None and await disconnected():
+            return
+        await asyncio.sleep(poll_s)
+        current = await read_row(run_id)
+
+
 @router.get("/{run_id}/events")
 async def get_analysis_events(
     run_id: str, request: Request, session: AsyncSession = Depends(get_session)
@@ -106,13 +154,11 @@ async def get_analysis_events(
         return StreamingResponse(iter([payload]), media_type="application/json")
 
     async def _gen() -> AsyncGenerator[str, None]:
-        events = sse_events_for_state(row)
         # Initial SSE comment for proxy keepalive
         yield ": analysis events\n\n"
-        for ev in events:
+        async for ev in analysis_event_frames(run_id, row, disconnected=request.is_disconnected):
             yield f"event: {ev.get('event', 'message')}\n"
             yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
-            await asyncio.sleep(0.01)
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(

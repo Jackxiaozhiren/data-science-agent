@@ -2,6 +2,52 @@
 
 ## Unreleased
 
+### Changed (post-4.5.0) — an analysis run is a job, not an HTTP request (web plan Lane B, R-03)
+
+- `POST /api/v1/analysis/` used to execute the whole agent graph before answering, and inserted the row only
+  afterwards (`analysis_service.py` said so in a comment: "run the agent graph synchronously (for MVP)").
+  So during a run there was nothing to read: the id did not exist, `/progress` 404'd, and `/events` could
+  only ever replay a finished state. With a stub planner that costs seconds; with a real model it is minutes
+  of a frozen tab, and a proxy timeout makes a working product look crashed. The create call now returns
+  **202** with the row already persisted and the run executing, **200** with the same id when that exact
+  question is already in flight (the double-click case the non-blocking button creates), and `Location` as
+  before.
+- One new owner, `apps/api/src/dsa_api/services/run_lifecycle.py`, holds the task, the session the task
+  writes through, the terminal/in-flight vocabulary, and the crash-to-row path. `dsa_agent.graph.run_analysis`
+  gained an optional `on_update` awaited at stage boundaries -- the plan is set, each tool call recorded,
+  validation entered -- which is what lets the row advance without a second orchestrator being written in
+  the API layer. Execution stays in-process: a broker would be a new dependency, and §19 reserves that.
+- `/events` now follows the stored row and closes when it turns terminal; `analysis_completed` is emitted
+  only for a run that has actually stopped, which the old snapshot builder could not express. The JSON
+  fallback is unchanged.
+- A crash inside the task lands on the row as `FAILED` with the *kind* of error and never its message
+  (`failure_message`), and a row left non-terminal by a restart is swept to `FAILED` at the next startup --
+  the failure mode this design creates, so it is closed by the same module that creates it.
+- The web needed less than expected and one real fix: `useLiveProgress` already polled `/progress`,
+  classified statuses through `analysisStatus.ts`, and null-guarded every state read, so an in-flight row
+  rendered as zeros instead of crashing. What was missing was the sentence -- `RunDetail` carried no
+  `error`, and the failure card derived everything from `state.tool_calls`, so a run that died before its
+  first write showed a red badge over an empty page. It now reads the row's own error, and
+  `Copy diagnostics` includes it.
+- Guarded by `tests/integration/test_analysis_run_lifecycle.py` (5 tests) and
+  `tests/contract/test_web_run_failure_surface.py` (3), each red before green: create answers while the run
+  is gated and the row is observable mid-flight; an exception in the task becomes a row and not a 500 on a
+  read; the event generator yields before the run finishes and never re-emits; a second identical submit
+  returns the first run and starts nothing; the restart sweep closes the abandoned row and leaves a
+  completed one alone. Every absence-assertion is run against a planted mutation that proves it can bite.
+- Acceptance in a real browser (`output/lane-b/`): after the confirm click the page is a run page showing
+  `UNDERSTANDING`, the stage rail and a progress bar -- no COMPLETED badge -- and reaches the finished
+  report with both download links; a separately seeded `FAILED` row with `state_json` NULL renders "This run
+  failed / Reason The analysis stopped unexpectedly (RuntimeError)…". Two instrument faults were fixed on
+  the way and are recorded rather than hidden: `httpx`'s `ASGITransport` buffers a response body to the end,
+  so a *live* stream cannot be read over it and liveness is asserted at the generator seam instead; and a
+  Playwright multipart payload was shaped wrongly.
+- Migration cost, stated because it will recur: any test that overrides only `get_session` now lets the
+  background task write through `database.AsyncSessionLocal` to the app's real database (it announced
+  itself as `analysis task started for an unknown run`). Five existing suites were updated to patch both
+  seams and to wait for the terminal state through one new root-conftest fixture, `await_terminal_run`,
+  rather than by assuming a POST returns a finished run. No assertion was weakened to make them pass.
+
 ### Added (post-4.5.0) — one run, two exports (web plan Lane C, R-06)
 
 - A finished run had exactly one rendering. The plan's argument is a pair -- the conclusion and the evidence

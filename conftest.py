@@ -57,6 +57,9 @@ _ISOLATED_GLOBALS = (
     ("dsa_llm.cost", "_CALL_LOG"),
     ("dsa_mcp.resources", "_ANALYSIS_STORE"),
     ("dsa_tools.registry", "_REGISTRY"),
+    # The in-flight analysis tasks (R-03). A registry of live asyncio tasks leaking across tests would
+    # hand one test another's run id, and the stale task would keep writing through a disposed engine.
+    ("dsa_api.services.run_lifecycle", "_TASKS"),
 )
 
 
@@ -98,6 +101,38 @@ def declared_version() -> str:
     return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"][
         "version"
     ]
+
+
+@pytest.fixture
+def await_terminal_run():
+    """Wait for a run the API is executing in the background to stop (web plan R-03).
+
+    A create call now answers while the work is still going, so every test that reads a finished report has
+    to wait for it the way a client does -- through ``GET /api/v1/analysis/{id}``. A fixed sleep would pass
+    on a quiet machine and fail on a loaded runner, and neither outcome would be about the code.
+    """
+
+    async def _wait(client: object, run_id: str, *, timeout_s: float = 30.0) -> dict:
+        import asyncio
+        import time
+
+        from dsa_api.services.run_lifecycle import REVIEW_STATUS, TERMINAL_STATUSES
+
+        stopped = {*TERMINAL_STATUSES, REVIEW_STATUS}
+        deadline = time.monotonic() + timeout_s
+        last: dict = {}
+        while time.monotonic() < deadline:
+            row = await client.get(f"/api/v1/analysis/{run_id}")  # type: ignore[attr-defined]
+            assert row.status_code == 200, row.text  # type: ignore[attr-defined]
+            last = row.json()  # type: ignore[attr-defined]
+            if str(last.get("status")) in stopped:
+                return last
+            await asyncio.sleep(0.05)
+        raise AssertionError(
+            f"run {run_id} never reached a terminal status within {timeout_s}s; last seen: {last}"
+        )
+
+    return _wait
 
 
 @pytest.fixture(autouse=True)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable
+from typing import Any
 from pathlib import Path
 
 import pytest
@@ -79,7 +81,9 @@ async def test_critic_evidence_coverage() -> None:
 
 
 @pytest.mark.asyncio
-async def test_api_analysis_flow() -> None:
+async def test_api_analysis_flow(await_terminal_run: Callable[..., Any]) -> None:
+    from dsa_api.core import database
+
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -89,6 +93,10 @@ async def test_api_analysis_flow() -> None:
         async with SessionLocal() as s:
             yield s
 
+    # The run executes in a background task with its own session, so the engine has to be reachable
+    # through the module the task resolves, not only through the request override.
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = SessionLocal
     app.dependency_overrides[get_session] = _get_session
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         # upload dataset
@@ -106,11 +114,15 @@ async def test_api_analysis_flow() -> None:
                 "user_query": "Analyze correlation between a and b and test group differences",
             },
         )
-        assert r2.status_code == 201, r2.text
+        assert r2.status_code == 202, r2.text
         data = r2.json()
         assert "id" in data
-        assert data["status"] in ("COMPLETED", "FAILED")
+        assert data["status"] not in ("COMPLETED", "FAILED"), (
+            f"the create call answered with a finished run ({data['status']}): R-03's early return regressed"
+        )
         run_id = data["id"]
+        finished = await await_terminal_run(ac, run_id)
+        assert finished["status"] in ("COMPLETED", "FAILED"), finished
 
         # get analysis
         r3 = await ac.get(f"/api/v1/analysis/{run_id}")
@@ -139,6 +151,7 @@ async def test_api_analysis_flow() -> None:
         assert len(r7.json()["analyses"]) >= 1
 
     app.dependency_overrides.clear()
+    database.AsyncSessionLocal = previous
     await engine.dispose()
 
 

@@ -4,6 +4,7 @@ import hashlib
 import json as _json
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
@@ -149,7 +150,16 @@ async def run_analysis(
     dataset_id: str,
     user_query: str,
     run_id: str | None = None,
+    on_update: Callable[[AnalysisState], Awaitable[None]] | None = None,
 ) -> AnalysisState:
+    """Run one analysis to completion.
+
+    ``on_update`` is awaited with the live state at each stage boundary (plan set, one tool call recorded,
+    validation entered). It exists for the API, which now persists the row *while* this runs so a client can
+    watch it (R-03); it is not a progress bar inside the graph, and nothing here reads it back. A failure in
+    the callback is not swallowed -- if the store cannot be written to, the run cannot be recorded anyway,
+    and the caller's own error path is the honest place for that to surface.
+    """
     from dsa_tools import bootstrap as tools_bootstrap
 
     # ensure tools registered (idempotent)
@@ -172,6 +182,10 @@ async def run_analysis(
     )
 
     # UNDERSTANDING -> PLANNING
+    async def _notify() -> None:
+        if on_update is not None:
+            await on_update(state)
+
     state.status = AnalysisStatus.PLANNING
     state.touch()
     cols = _get_columns(dataset_path)
@@ -186,6 +200,7 @@ async def run_analysis(
             content=f"Planned {len(plan.steps)} steps: {', '.join(s.tool for s in plan.steps)}",
         )
     ]
+    await _notify()
 
     # DATA_PROFILING -> ANALYSIS -> MODELING loop
     # batch independent steps (no depends_on) via gather; sequential for dependent tail
@@ -282,6 +297,7 @@ async def run_analysis(
                     )
         state.current_step += 1
         state.touch()
+        await _notify()
 
     if (
         indep_batch
@@ -322,6 +338,7 @@ async def run_analysis(
         state.status = AnalysisStatus.VALIDATION
         vresults = critic_validate(state)
         state.validation_results = vresults
+        await _notify()
         # retry logic: if should_retry and we have failures, attempt one re-run of failed statistical steps (max 3)
         if should_retry(vresults, state.retry_count, state.budget.max_retries):
             # simple retry: re-run error tool calls once

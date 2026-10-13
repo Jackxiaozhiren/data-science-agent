@@ -15,6 +15,8 @@ from dsa_execution.python_sandbox import execute_python
 
 @pytest.fixture
 async def ac():
+    from dsa_api.core import database
+
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -24,10 +26,15 @@ async def ac():
         async with SessionLocal() as s:
             yield s
 
+    # A scheduled run opens its own session through the module attribute, so overriding only the request
+    # dependency would let the task write to the developer's real database while this test read the temp one.
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = SessionLocal
     app.dependency_overrides[get_session] = _get_session
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()
+    database.AsyncSessionLocal = previous
     await engine.dispose()
 
 
@@ -216,7 +223,7 @@ async def test_human_review_approve(ac: AsyncClient) -> None:
     assert r.status_code == 201
     ds_id = r.json()["id"]
     r2 = await ac.post("/api/v1/analysis/", json={"dataset_id": ds_id, "user_query": "hello"})
-    assert r2.status_code == 201
+    assert r2.status_code == 202, r2.text
     run_id = r2.json()["id"]
     # Not HUMAN_REVIEW, so approve should 409
     r3 = await ac.post(f"/api/v1/analysis/{run_id}/approve", json={"note": "approve"})
