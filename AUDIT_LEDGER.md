@@ -9710,3 +9710,14 @@ and the workflow's own concurrency block -- `group: ci-${{ github.workflow }}-${
 content is therefore **their** run, **38347195341** on `9ab2668`: `status = completed`, `conclusion =
 success`. This is the same mechanism §169 had to wait out, now seen from the other side -- and the reason a
 docs-only tail commit is worth folding into the previous push rather than shipping separately.
+
+**Correction, 2026-10-13: §170's third open item is false as written.** It claimed
+`benchmarks/baseline/README.md` "still describes the pages as reading the files directly". `grep -c
+"apps/web\|readFileSync\|page.tsx" benchmarks/baseline/README.md` returns **0** -- that file never mentioned
+the web layer at all, and the only documents that describe how these artifacts are read are `docs/api.md`
+(updated by §168) and this ledger. The claim came from my own §160 wording rather than from the file, which
+is the failure mode §158 already named: quoting a number or a sentence from the proposal instead of
+re-opening the artifact. The real open list is the two items above it (rebuild the API image; pick the
+`Authorization` shape) plus the release-gated §159 work. Line anchors also shift: §159 cites
+`tests/regression/test_regression_matrix.py:50` for the `mean_latency_ms_refreeze_bound_ms` read, and on
+`749938b` that assertion is at **:51** (`:24` still defines the key).
