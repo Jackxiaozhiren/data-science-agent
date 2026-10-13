@@ -9721,3 +9721,39 @@ re-opening the artifact. The real open list is the two items above it (rebuild t
 `Authorization` shape) plus the release-gated §159 work. Line anchors also shift: §159 cites
 `tests/regression/test_regression_matrix.py:50` for the `mean_latency_ms_refreeze_bound_ms` read, and on
 `749938b` that assertion is at **:51** (`:24` still defines the key).
+
+## 171. Item 5 is live on the hosted pair, verified by its artifacts rather than by the dashboard
+
+The maintainer ran the Render **Manual Deploy** the §170 open item called for: deploy
+`dep-db71a6d9fdbs73ems7l0`, source **`e0c4688`**, `Deploy succeeded | Live`, duration 1m21s, trigger
+"Manually deployed by you via Dashboard", 2026-10-13 19:25:14 GMT+8, log ending `Application startup
+complete` / `Your service is live`. `docs/hosted-demo.md:96` says a deploy is not confirmed by that screen,
+so the confirmation below is all artifact answers, re-measured against the pre-deploy baseline in §170.
+
+- `/version` -> `{"version":"4.5.0","distribution":"jack-data-science-agent","reasoning_mode":{"mode":
+  "heuristic","stub":true,…}}`, unchanged, as expected for a post-4.5.0 commit.
+- `/openapi.json` -> **22 paths**, up from the 19 §170 measured, and the three new ones are exactly
+  `/api/v1/benchmarks/baseline`, `/api/v1/benchmarks/catalog`, `/api/v1/research/experiments`.
+- Those three now answer **200** with the repository's own artifacts: `{"n":50,"task_success_rate":1.0,…}`,
+  `{"tasks":100,"by_category":{"EDA":11,"SQL":11,"Statistics":13,…},"datasets":30,…}`, and
+  `{"experiments":["ablation_ablation-587c4bf0.json",…],"total":3}`. Before this deploy the same three
+  requests returned `404 {"detail":"Not Found"}` -- FastAPI's route-absent body.
+- Hosted `/benchmarks` renders `Tasks 100`, `Datasets 30`, `EDA 11`, and neither "Baseline not frozen yet"
+  nor "V2 catalog missing"; hosted `/research` lists the three ablation files. **The §167 defect is therefore
+  inverted in production, not just in CI**: the deployment used to tell a visitor no baseline existed while the
+  repository held one.
+- The web side's identity is proven behaviorally rather than by a label: the deployed HTML carries no
+  `buildId` or commit marker (only `/_next/static/immutable/`), but it does carry the sentence "Ablation
+  result files served from research/results by GET /api/v1/research/experiments", which exists only from
+  `2634207` onward. So the Vercel deployment is at or after item 5 as well.
+
+**One consequence of the redeploy, named rather than buried.** `render.yaml:20` points the demo at
+`sqlite+aiosqlite:////tmp/dsa.db`, and Render's own log line in the same panel says to use a persistent
+volume or a managed DB for anything beyond demos. After this deploy,
+`GET /api/v1/analysis/run-842ea7595f` -- the run §166's hosted acceptance measured -- answers
+**404 `{"detail":"Analysis not found"}`**. Its audited/findings numbers stay valid as a dated record, but
+they can no longer be re-fetched from the live service; re-verifying that claim needs a fresh upload + run.
+
+**Still open after §171:** the `Authorization` shape (§170's item B, two priced options, recommendation
+"keep the demo public"), and the release-gated §159 work -- §151's announcement first run and the
+`mean_latency_ms` re-freeze / α, both of which need a tag and therefore the maintainer's decision.
