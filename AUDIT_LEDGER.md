@@ -9687,3 +9687,26 @@ exactly what §164's item-4 decision was about.
 `packages/evaluation/src/dsa_evaluation/external_validation.py`, `tests/evals/test_external_validation.py`)
 and five foreign untracked files; `git diff --cached` is empty; no version bump, tag, release or publish was
 performed by this lane.
+
+**Addendum, same day: the pushed close-out commit, and the census aging in real time.** `d55c286` (§170
+rebased onto lane C's `dd36911`, ledger delta still `33 0`) CI run **38346749363** reports **`completed cancelled` at step 28 (`docker build -f docker/Dockerfile.web`), with its own `web-regression` job `success` and Secret Scan 38346749280 plus CodeQL 38346749279 `completed success`**. The
+foreign-file list above was accurate for about three minutes: `docs/hosted-demo.md` joined it as a fourth
+unstaged modification before this addendum was written, which is lane C editing the file its own `dd36911`
+had just landed -- `git show --name-only` over this lane's four commits returns zero hits for it. Treat a
+worktree census as a timestamp, not a fact: re-run `git status --short` before quoting any count of it.
+
+**The deployment still predates item 5, measured rather than assumed.** A read-only census of the hosted API
+just now: `GET /api/v1/benchmarks/baseline`, `/api/v1/benchmarks/catalog` and `/api/v1/research/experiments`
+each answer **404 with `{"detail":"Not Found"}`** -- FastAPI's route-absent body, which is deliberately
+different from this lane's artifact-404 that names the missing file -- and `/openapi.json` lists **19 paths**,
+none of them artifact routes. So the endpoints exist on `main` (CI builds the image that carries them) and do
+not exist in the running service until the maintainer rebuilds and redeploys; the hosted pair is still
+serving the `fac06f7`-era API recorded in §166.
+
+
+The cancellation was not mine and not a regression: lane C pushed `9ab2668` (§166 close-out, a descendant of
+`d55c286`, proven by `git merge-base --is-ancestor d55c286 origin/main` => rc 0) while my run was in flight,
+and the workflow's own concurrency block -- `group: ci-${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progress: true` (`.github/workflows/ci.yml:11-13`) -- retired the superseded run on that ref. The verdict that covers this lane's
+content is therefore **their** run, **38347195341** on `9ab2668`: `status = completed`, `conclusion =
+success`. This is the same mechanism §169 had to wait out, now seen from the other side -- and the reason a
+docs-only tail commit is worth folding into the previous push rather than shipping separately.
