@@ -98,6 +98,27 @@ silently drops preview support.
 
 Do not remove the existing health check or Docker configuration.
 
+### Pre-flight: is the mount writable by the process?
+
+`docker/Dockerfile.api` runs `chown -R appuser:appuser /app` at build time and then switches with
+`USER appuser`. A disk mounted at `/var/data` is created by Render at runtime, so it is **not** covered by
+that chown, and the build-time layer cannot cover it either -- the path does not exist yet when the image is
+built. If it arrives root-owned, the symptom is not a clear permission error: SQLite reports
+`unable to open database file` at startup, or `attempt to write a readonly database` on the first insert,
+and the dataset upload can fail while `/health` still answers.
+
+Check it once, in the service's Shell, before running the acceptance test:
+
+```bash
+id -un                                  # expect appuser
+touch /var/data/.write-check && rm /var/data/.write-check && echo writable
+```
+
+If that fails, prefer moving the mount under the directory the image already owns (for example
+`/app/data` with the three variables pointed there) over adding a startup chown, and record whichever you
+chose here -- the guard test only enforces that all three roots sit under the declared mount path, so any
+mount path is acceptable as long as it is the same one in all three places.
+
 ### Acceptance test
 
 After the disk is attached and the service is live:
@@ -108,11 +129,17 @@ After the disk is attached and the service is live:
 4. Trigger a manual redeploy.
 5. Return to `/datasets` and confirm the uploaded dataset is still present.
 6. Run the same analysis again without re-uploading the file.
-7. Open the **pre-redeploy** run's report and fetch one of its chart paths from
-   `GET /api/v1/analysis/{run_id}/artifacts`. A surviving row whose image no longer resolves means the
-   artifact root is not on the mount, which steps 5-6 cannot detect.
+7. Open the **pre-redeploy** run and confirm every path listed by
+   `GET /api/v1/analysis/{run_id}/artifacts` still resolves to a file, and that the report's
+   `experiment.json` / `reproduce.sh` / chart PNGs are present on the mount.
 
 The persistence hardening is accepted only if steps 5-7 work after a redeploy.
+
+Step 7 is the one that catches a half-durable configuration, and it is not the same failure as step 5-6.
+`GET /api/v1/analysis/{run_id}/report` renders from the state stored in the database, so the report **text**
+survives a redeploy on a free instance even when nothing else does; the artifact list is the part that
+points at files. A run can therefore look perfectly healthy in the UI while its reproducibility bundle and
+charts are gone.
 
 ## Stage 2 — scalable persistence
 

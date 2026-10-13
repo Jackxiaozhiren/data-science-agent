@@ -9803,3 +9803,59 @@ The local ratchet is red for a reason that is not this work: `debt.exceptHandler
 ceiling of 185**, and the delta is `apps/api/src/dsa_api/services/run_lifecycle.py` -- untracked, created
 19:47 today by the concurrent session, contributing two handlers. Not repaired here and the ceiling was not
 touched. Not run: the full pytest suite, `docker build`, and any live deploy (the paid step is the owner's).
+
+## 173. The Stage-1 configuration was verified locally against a directory standing in for the disk: 21 checks, 0 failures
+
+The paid step cannot be taken from this side of the screen, so the question became whether the configuration
+itself is right. It was tested the way the deployment will run it: `git archive HEAD` of `e143f6b` exported to
+a scratch tree, its own `uv sync --offline --no-dev --locked --all-packages` environment, an empty directory
+as `/var/data`, and -- the part that makes the fallback observable -- a **separate launch directory as the
+process cwd**, so anything the code writes "next to itself" is visible as a defect rather than as a guess.
+
+**Phase A, first boot on an empty mount (9 checks, all pass).** `POST /api/v1/datasets/` 201, `POST
+/api/v1/analysis/` 201, run `run-a37e110b34` reached `COMPLETED`. The application created all three roots
+itself -- nothing had to be pre-made: `dsa.db` (630,784 B), `datasets/<uuid>_sales.csv` (17,894 B), and
+`artifacts/` holding `charts/` (two PNGs, 21,233 B and 94,831 B), `reports/<run>/` (`report.md` 3,214 B,
+`experiment.json` 314,036 B, `evidence_graph.json` 311,760 B, `analysis.ipynb` 4,760 B, `reproduce.sh`
+937 B) and `exports/<run>/` (`chart.png`, `result_table.csv`). Every path in the run's artifact list starts
+with the mount, every one of them resolves to a real file, and the launch directory stayed empty -- no
+`<cwd>/artifacts` fallback was taken.
+
+**Phase B, restart with the same configuration (5 checks, all pass).** The uploaded dataset is still listed,
+the run row is still 200 with its 5 artifacts, all five files still resolve, `report.md` is readable, and
+`GET /api/v1/analysis/{run_id}/artifacts` answers 200.
+
+**Phase B-prime, rebuilt container (6 checks, all pass).** A process restart is not a deploy: Render rebuilds
+the image, so the launch directory was deleted outright before booting again. Dataset row and its file, the
+run row and all five artifact files survived, the report endpoint still rendered (3,108 bytes), and the fresh
+cwd stayed empty. That is the acceptance test's steps 5-7 executed locally rather than asserted.
+
+**Phase C, the negative control that makes §172 load-bearing (2 checks, all pass).** With `DSA_ARTIFACT_ROOT`
+unset and everything else identical, the next run wrote its five artifact paths into
+`<cwd>/artifacts/reports/...` -- outside the mount, exactly where a redeploy deletes them. This is measured,
+not inferred from the source.
+
+**What the probe found in the documentation, and what was corrected here.** The report **text** renders from
+the state stored in the database (`GET /api/v1/analysis/{id}/report` reads `state_json`), so on a free
+instance a redeploy leaves a run that looks healthy in the UI while its reproducibility bundle and chart
+files are gone. §172's step 7 said "a surviving row whose image no longer resolves", which is the wrong
+story twice over -- there is no file-serving route at all (no `FileResponse` anywhere in `dsa_api/routers`),
+so nothing "resolves" an image; what breaks is the artifact list pointing at files that no longer exist. The
+acceptance step now says that, and explains why steps 5-6 cannot catch it.
+
+**A pre-flight risk for the real mount, added to the page rather than discovered by luck.**
+`docker/Dockerfile.api` chowns `/app` at build time and then runs as `appuser`, but a disk Render mounts at
+`/var/data` is created at runtime and is therefore not covered by that layer. If it arrives root-owned the
+failure is `unable to open database file` / `attempt to write a readonly database`, not a clean permission
+error, and `/health` can still pass. The doc now tells the operator to `touch` the mount in the service
+Shell before running the acceptance test, and to prefer moving the mount under the already-owned directory
+over adding a startup chown.
+
+**Two bugs in my own harness, recorded because they produced the first set of numbers.** The probe initially
+accepted only 200/202 from `POST /api/v1/analysis/`; `e143f6b` returns **201**, so the first run polled
+`run_id=None` and reported four spurious FAILs -- and the reason the expectation looked authoritative is that
+the *worktree's* in-flight `routers/analysis.py` declares `status_code=202` (the concurrent session's edit),
+which is not what HEAD does. The second was a vacuous `n=0` assertion in phase C that passed on an empty
+list. Both fixed before any number above was produced. Not verified by this probe: Render's own disk
+ownership/persistence semantics, the free tier's restart policy, and anything about the paid deploy -- those
+are the first things step 1-7 of the acceptance test will measure once the disk exists.
