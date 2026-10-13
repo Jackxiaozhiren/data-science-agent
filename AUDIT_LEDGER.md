@@ -9429,6 +9429,35 @@ too (that component is in a lazily-loaded route chunk, so absence proved nothing
 local `.next/static/chunks/<hash>.js` path against the deployed `/_next/static/immutable/chunks/` layout,
 which is a different layout, not a missing file. A probe whose control also fails is not evidence.
 
+**Hosted acceptance, run later the same evening against the deployed service.** The API half passed on the
+real artifact rather than a local stand-in: one dataset upload (`f1045ca6-80a3-46e6-9d2f-90027bce2621`,
+500 rows, sha256 `05e300ac…` -- the same `examples/datasets/sales.csv` the kit hands a reviewer) and one
+heuristic run (`run-842ea7595f`, COMPLETED) produced **audited 2,442 chars / 73 numeric tokens / 21
+identifier trips** (the run id, four evidence ids, two `/app/artifacts/charts/*.png` paths) against
+**findings 463 chars / 7 numeric tokens / 0 trips**, with only `## Insights` and `## Limitations` present and
+every findings token accounted for in the audited text. Both refusals answered **400** on the live service
+naming the allowed modes -- observable only against an existing run, because an unknown run id 404s before
+the mode is checked, and that ordering is deliberate. The live API also echoes both
+`data-science-agent-web.vercel.app` and `…-rr93.vercel.app` as CORS origins, so the label/content mismatch
+this lane flagged could not have arrived through CORS. The run and dataset now exist on the shared demo; the
+free instance's disk resets on the next redeploy.
+
+**The web half is still unverified, and the cause is this network, not the build.** `*.vercel.app` stopped
+resolving usefully from this machine mid-session: the same URL returned 28,029 bytes of HTML at 15:50 and
+timed out at TCP `:443` on every attempt after that, with DNS answering `69.171.247.71`, then
+`199.16.156.71`, then `216.198.79.195` across four tries, while `vercel.com` (`64.239.123.1`) and
+`api.vercel.com` (`76.76.21.112`) still connected normally. A Playwright run against the deployed page
+therefore dies inside `page.goto` and no assertion about the two buttons is available from here. §169
+measured the same window from the other direction -- outbound `github.com:443` flapping for ~25 minutes
+while `api.github.com` answered 200 throughout -- so the reading is an intermittent egress path on this
+machine, not a permanent property of `*.vercel.app`, and the retry below is expected to succeed later or
+elsewhere rather than never. What is established about the deployed web build, by other means: the commit
+Render and Vercel built (`fac06f7`) contains the link --
+`git show fac06f7:"apps/web/app/analysis/[runId]/RunInspector.tsx"` carries the label -- CI's `next build`
+and `web-regression` jobs are green on it, and the same component passed the browser-level proof locally
+against a server this machine started. The exact remaining command, from a network that can reach the
+origin: `node output/lane-c/prove-hosted.mjs <runId>`.
+
 ## 167. Item 6 executed as picked: a failed request is no longer a page that claims there is nothing
 
 §164's sequencing put item 6 ahead of item 5, because routing the benchmark artifacts through the API moves

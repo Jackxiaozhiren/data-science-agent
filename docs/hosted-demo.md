@@ -108,6 +108,20 @@ mode is not published there). A first request may take tens of seconds: the free
 idle. The dataset listing is expected to be empty after a deploy -- see the storage note below -- so an
 empty list is the healthy answer, not a failure.
 
+To confirm which build the API is serving, read its own schema rather than the dashboard:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/openapi.json \
+  | python3 -c "import json,sys; p=json.load(sys.stdin)['paths']['/api/v1/analysis/{run_id}/report']['get']['parameters']; print([q['name'] for q in p])"
+```
+
+Some networks cannot reach `*.vercel.app` at all: DNS answers an address outside Vercel's ranges and TCP to
+port 443 times out, while `vercel.com` itself still connects. That is an environment condition, not a product
+defect, and it does not block a deploy check -- the API census above runs from anywhere. To confirm the web
+half without a browser, check the commit the platform built (`git show <sha>:<file>` for the change you
+expect) together with the `web-regression` CI job for that commit, and say plainly that the rendered page was
+not observed.
+
 ## Dataset storage behavior
 
 Runtime uploads are stored under the API dataset directory. The default resolves to:
