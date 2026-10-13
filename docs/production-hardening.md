@@ -27,7 +27,16 @@ The existing API can therefore preserve uploaded datasets and SQLite metadata ac
 
 ## Billing gate
 
-Do not change the active root `render.yaml` from `plan: free` until the repository owner explicitly chooses to incur paid Render compute and disk charges.
+Do not change the active root `render.yaml` from `plan: free` until the repository owner explicitly chooses
+to incur paid Render compute and disk charges.
+
+Money involved, read from Render's pricing page on 2026-10-13: the web service row matching
+`0.5c-512mb` (0.5 CPU / 512 MB) lists **$7/month**, and persistent storage is billed at
+**$0.25/GB/month**, so the Stage-1 shape above is roughly **$7.25/month**. Treat those as a quote, not a
+contract -- one read of the same page put this plan at $25/month by conflating it with the 1c/2GB tier, so
+confirm the number in the dashboard before paying. Render documents disks on **paid** web services only,
+which is why no free configuration exists: persistence on the free instance is not a setting, it is
+unavailable.
 
 The repository includes a non-active reference configuration at:
 
@@ -69,10 +78,23 @@ Set these environment variables:
 ```bash
 DSA_DATASET_DIR=/var/data/datasets
 DSA_DATABASE_URL=sqlite+aiosqlite:////var/data/dsa.db
-DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
+DSA_ARTIFACT_ROOT=/var/data/artifacts
+DSA_CORS_ORIGINS=https://data-science-agent-web-rr93.vercel.app
+DSA_CORS_ORIGIN_REGEX=https://.*\.vercel\.app
 DSA_LLM_MODE=heuristic
 DSA_LLM_FALLBACK=heuristic
 ```
+
+Three roots, not two. `DSA_ARTIFACT_ROOT` is the knob `dsa_datasets.artifact_paths.artifact_root()` reads,
+and with it unset the process writes charts to `<cwd>/artifacts`, which inside the API container is
+`/app/artifacts` -- outside the mount, and gone on the next deploy. A run would then survive with its
+metadata and its dataset while every chart path in its report 404s, which is harder to diagnose than total
+loss. `tests/contract/test_persistence_blueprint_covers_writable_roots.py` refuses a Stage-1 configuration
+whose writable roots are not all under `disk.mountPath`.
+
+The two CORS values above are the live service's, read from the root `render.yaml`: an explicit production
+origin plus a regex covering Vercel preview hostnames. Copying an older origin from this page's history
+silently drops preview support.
 
 Do not remove the existing health check or Docker configuration.
 
@@ -86,8 +108,11 @@ After the disk is attached and the service is live:
 4. Trigger a manual redeploy.
 5. Return to `/datasets` and confirm the uploaded dataset is still present.
 6. Run the same analysis again without re-uploading the file.
+7. Open the **pre-redeploy** run's report and fetch one of its chart paths from
+   `GET /api/v1/analysis/{run_id}/artifacts`. A surviving row whose image no longer resolves means the
+   artifact root is not on the mount, which steps 5-6 cannot detect.
 
-The persistence hardening is accepted only if steps 5–6 work after a redeploy.
+The persistence hardening is accepted only if steps 5-7 work after a redeploy.
 
 ## Stage 2 — scalable persistence
 
@@ -116,7 +141,16 @@ Do not mix the Stage 2 migration with unrelated planner/statistics changes.
 
 The current free hosted demo must still be treated as ephemeral until Stage 1 is actually configured in Render. The application-level checks that hide stale dataset records and reject missing backing files should remain in place even after persistent storage is enabled; they are useful corruption and recovery guards.
 
-Generated report/chart artifacts currently use local paths too. A persistent `/var/data` strategy should eventually move artifact output under the mounted directory as well. Dataset and database durability are the first gate because they directly affect whether a previously uploaded dataset can be analyzed after an instance lifecycle event.
+Generated report/chart artifacts are now part of Stage 1 rather than a later refinement: `DSA_ARTIFACT_ROOT`
+belongs on the mount alongside the database and the dataset directory, for the reason given in Stage 1.
+Dataset, database and artifact durability are the gate because they jointly decide whether a run a visitor
+created before an instance lifecycle event is still readable afterwards.
+
+One detection gap to know about: `dsa_api.core.database.is_ephemeral_database()` -- the function behind the
+startup warning "use a persistent volume or managed DB for anything beyond demos" -- inspects only the
+database URL. A configuration that puts the database on `/var/data` while charts stay in `/app/artifacts`
+therefore starts up with no warning at all. The guard test closes that hole at the configuration level; the
+runtime check remains DB-scoped.
 
 Render persistent disks are single-instance storage. Attaching one prevents multi-instance scaling for that service and introduces a brief deploy gap because the old instance must release the disk before the new instance mounts it. That tradeoff is acceptable for the current demo, but it is another reason to move to managed Postgres + object storage before horizontal scaling.
 

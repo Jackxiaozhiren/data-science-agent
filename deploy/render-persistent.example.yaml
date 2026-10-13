@@ -5,6 +5,15 @@
 #
 # This example intentionally uses Render's smallest current paid Web Service
 # compute plan and a 1 GB persistent disk for the single-instance demo.
+# Render attaches disks to paid services only, so there is no free variant of
+# this file. Priced from Render's page on 2026-10-13: 0.5c/512MB $7/month plus
+# $0.25/GB/month -- confirm in the dashboard before paying.
+#
+# Every path the process can write to sits under the mount. `DSA_ARTIFACT_ROOT`
+# is the one that is easy to miss: unset, charts go to <cwd>/artifacts, which in
+# this image is /app/artifacts -- outside the disk, and the startup warning that
+# names ephemeral storage reads only the database URL, so it stays silent.
+# tests/contract/test_persistence_blueprint_covers_writable_roots.py enforces it.
 services:
   - type: web
     name: data-science-agent-api
@@ -29,7 +38,13 @@ services:
         value: sqlite+aiosqlite:////var/data/dsa.db
       - key: DSA_DATASET_DIR
         value: /var/data/datasets
-      - key: DSA_CORS_ORIGINS
-        value: https://data-science-agent-web.vercel.app
+      - key: DSA_ARTIFACT_ROOT
+        value: /var/data/artifacts
       - key: PYTHONUNBUFFERED
         value: "1"
+      # Kept identical to the live root render.yaml: the explicit production
+      # origin plus the regex that covers Vercel preview hostnames.
+      - key: DSA_CORS_ORIGINS
+        value: https://data-science-agent-web-rr93.vercel.app
+      - key: DSA_CORS_ORIGIN_REGEX
+        value: https://.*\.vercel\.app

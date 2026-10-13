@@ -9757,3 +9757,49 @@ they can no longer be re-fetched from the live service; re-verifying that claim 
 **Still open after §171:** the `Authorization` shape (§170's item B, two priced options, recommendation
 "keep the demo public"), and the release-gated §159 work -- §151's announcement first run and the
 `mean_latency_ms` re-freeze / α, both of which need a tag and therefore the maintainer's decision.
+
+## 172. Persistence work started where it was free: the Stage-1 configuration was half-durable, and the half it missed was silent
+
+The instruction was to take the database-persistence problem next and to hold off on a tag. The paid part of
+that job is the maintainer's (Render attaches disks to paid services only), so this section does the part
+that costs nothing and that the paid step depends on: making the documented Stage-1 configuration actually
+durable, and making it fail loudly if it is not.
+
+**The defect found by reading the code the document points at.** `docs/production-hardening.md` Stage 1 told
+the operator to set two paths -- `DSA_DATABASE_URL` and `DSA_DATASET_DIR` -- and `deploy/render-persistent
+.example.yaml` set the same two. Charts are written through `dsa_datasets.artifact_paths.artifact_root()`,
+which reads `DSA_ARTIFACT_ROOT` and otherwise falls back to `<cwd>/artifacts`
+(`packages/datasets/src/dsa_datasets/artifact_paths.py:31,57-63`). In the API image that is `/app/artifacts`,
+outside any mount, and it is exactly where §166's hosted acceptance saw its PNGs (`/app/artifacts/charts/
+*.png`). So copying the documented block would have produced a demo that keeps its metadata and its uploaded
+datasets and loses every chart on the next deploy -- a report whose images 404 while its rows survive.
+Nothing would have warned: the startup log line comes from `is_ephemeral_database()`, which inspects the
+database URL only (`apps/api/src/dsa_api/core/database.py:19-21`), and a `/var/data` database passes it.
+
+**Changed.** The example blueprint now sets all three roots under `/var/data` and carries the live CORS pair
+(`DSA_CORS_ORIGINS` with the `-rr93` origin plus `DSA_CORS_ORIGIN_REGEX`) -- its previous value pointed at a
+hostname the live service does not use and dropped the preview regex, so an operator copying it would have
+changed browser behaviour while trying to change durability. The document's Stage-1 block lists the same
+three variables with the reason inline, its acceptance test gained a step 7 that fetches a **pre-redeploy**
+run's chart path (steps 5-6 cannot see the artifact hole), and the closing paragraph that called artifact
+durability a later refinement now says it is part of Stage 1 and names the silent-warning gap.
+`tests/contract/test_persistence_blueprint_covers_writable_roots.py` (9 tests) is the guard: it parses both
+YAMLs, requires every writable root to sit under `disk.mountPath`, requires the paid example to differ from
+the live service in nothing but durability fields, and pins the live side three ways -- `plan: free`, a `/tmp`
+URL, and `docs/hosted-demo.md` still using the word "ephemeral". Four planted defects (artifact root moved
+to `/app/artifacts`, plan flipped to free, `sizeGB: 0`, disk removed) and three live-side mismatches are each
+proven to be reported by the same checker that passes on the shipped files.
+
+**Money, verified rather than guessed, and not spent.** Render's docs confirm disks require a paid web
+service; its pricing page read on 2026-10-13 gives `0.5c-512mb` at **$7/month** and persistent storage at
+**$0.25/GB/month**, so Stage 1 is about **$7.25/month**. Two reads of that page disagreed -- one put this plan
+at $25/month by conflating it with the 1c/2GB tier -- so the doc records the number as a quote to confirm in
+the dashboard. `render.yaml` is untouched: still `plan: free`, still `/tmp/dsa.db`, which is what the new test
+insists the documentation continue to say out loud.
+
+**Verification.** `pytest tests/contract` 90 passed (9 new); `ruff check` and `ruff format --check` rc 0;
+`mkdocs build --strict` rc 0; `audit_facts --check` on a `git archive HEAD` export rc 0 (`facts ratchet: OK`).
+The local ratchet is red for a reason that is not this work: `debt.exceptHandlers` reads **186 against a
+ceiling of 185**, and the delta is `apps/api/src/dsa_api/services/run_lifecycle.py` -- untracked, created
+19:47 today by the concurrent session, contributing two handlers. Not repaired here and the ceiling was not
+touched. Not run: the full pytest suite, `docker build`, and any live deploy (the paid step is the owner's).
