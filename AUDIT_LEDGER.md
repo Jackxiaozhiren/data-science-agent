@@ -9439,8 +9439,11 @@ every findings token accounted for in the audited text. Both refusals answered *
 naming the allowed modes -- observable only against an existing run, because an unknown run id 404s before
 the mode is checked, and that ordering is deliberate. The live API also echoes both
 `data-science-agent-web.vercel.app` and `…-rr93.vercel.app` as CORS origins, so the label/content mismatch
-this lane flagged could not have arrived through CORS. The run and dataset now exist on the shared demo; the
-free instance's disk resets on the next redeploy.
+this lane flagged could not have arrived through CORS. The run and dataset were written to the shared demo,
+and the demo's filesystem is not durable: within about forty minutes, with no redeploy in between,
+`GET /api/v1/datasets/` answered `{"datasets":[],"total":0}` and that run answered 404 -- the free instance's
+spin-down reset, which the storage note in `docs/hosted-demo.md` describes for redeploys and which this
+measures for idle restarts too.
 
 **The web half is still unverified, and the cause is this network, not the build.** `*.vercel.app` stopped
 resolving usefully from this machine mid-session: the same URL returned 28,029 bytes of HTML at 15:50 and
@@ -9457,6 +9460,26 @@ Render and Vercel built (`fac06f7`) contains the link --
 and `web-regression` jobs are green on it, and the same component passed the browser-level proof locally
 against a server this machine started. The exact remaining command, from a network that can reach the
 origin: `node output/lane-c/prove-hosted.mjs <runId>`.
+
+**Resolved the same evening: the deployed web page passed, and the outage named itself.** Egress came back
+while this entry was being written -- `curl` returned 200 from `…-rr93.vercel.app` with the peer address
+`198.18.0.57`, a carrier-grade/NAT range, which is what a local intercepting tunnel answers with and is the
+mechanism behind the three rotating "DNS answers" above. A fresh warm run (`run-9f8db8d5ee`) then cleared
+the browser proof end to end: both links offered (`report=1 plain-findings=1`), the plain href carrying
+`mode=findings` and the audited href carrying none, both served `200` (2,443 B and 463 B), evidence ids and
+an `/app/artifacts/charts/*.png` path present in the audited body and absent from the plain one, the plain
+document holding only `## Insights` and `## Limitations`, numeric tokens **80 audited / 7 plain with nothing
+unexplained**, identifier trips **21 / 0**, `?mode=nonsense` answered **400** naming the two allowed modes,
+and zero console errors. Screenshot: `output/lane-c/hosted-report-page.png`.
+
+Two things inside that pass were wrong before they were right, and both were the instrument. The first
+attempt reported `FAIL: the hosted service did not refuse an unknown mode with 400` while printing the
+correct 400 body beside it -- `badMode.status` was read as a property when `APIResponse.status()` is a
+method, so the comparison was against a function object. Fixed, re-run, rc=0. And the page that opened this
+paragraph reported "Run not found" not because the deploy was broken but because the free instance had
+already wiped the run it was asked about; the 404 was the right answer, which is §167's failure vocabulary
+doing the job it was picked for. **R-06's Accept is therefore closed against the deployed pair**, not only
+against a local server.
 
 ## 167. Item 6 executed as picked: a failed request is no longer a page that claims there is nothing
 
