@@ -112,6 +112,7 @@ const PROBE_SCENARIOS = [
     label: "a hanging health check reads as waking up, not as broken",
     mode: "hang",
     wantState: "warming",
+    wantWithinS: 6,
     wantDot: /Waking… \d\/\d/,
     wantPage: /Attempt \d+ of \d+/,
     forbid: ["No datasets yet", "Uploaded — profiled"],
@@ -121,6 +122,7 @@ const PROBE_SCENARIOS = [
     mode: "hang",
     route: "/analysis",
     wantState: "warming",
+    wantWithinS: 6,
     wantPage: /waking up/i,
     forbid: ["No datasets loaded", "No datasets yet"],
   },
@@ -128,6 +130,7 @@ const PROBE_SCENARIOS = [
     label: "an answering proxy is unreachable, never 'waking'",
     mode: "503",
     wantState: "unreachable",
+    wantWithinS: 6,
     wantDot: /API unreachable/,
     wantPage: /nothing answered/,
     forbid: ["No datasets yet", "Uploaded — profiled"],
@@ -340,6 +343,12 @@ try {
       const dot = probePage.locator(`[data-api-state="${scenario.wantState}"]`).first();
       await dot.waitFor({ state: "visible", timeout: 25000 });
       const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+      // The bound is the point: a state that appears after a whole attempt has timed out is a different
+      // product than one that appears while the request is still in flight. 12.4 s was measured here once the
+      // budget grew, and every assertion below would have passed at 12.4 s.
+      if (scenario.wantWithinS !== undefined && Number(elapsed) > scenario.wantWithinS) {
+        throw new Error(`${scenario.wantState} first appeared after ${elapsed}s, wanted within ${scenario.wantWithinS}s`);
+      }
       const dotText = (await dot.innerText()).trim();
       if (scenario.wantDot && !scenario.wantDot.test(dotText)) {
         throw new Error(`dot read ${JSON.stringify(dotText)}, wanted ${scenario.wantDot}`);

@@ -10065,7 +10065,7 @@ which are invoked with argv arrays rather than an interpolated shell string. A l
 session stayed up on 8000 throughout -- it is not this lane's to kill -- so the lane's own evidence came from a
 hermetic run: build with `NEXT_PUBLIC_API_URL=http://127.0.0.1:8123`, `--api-port 8123`, and the tour is
 **30/30** (24 route/viewport + 3 interaction + 3 backend-probe), with `warming` visible after 4.4 s and
-`unreachable` after 0.1 s. CI's clean runner is the authoritative green for the same script at its default port.
+`unreachable` after 0.1 s -- the timings of the first version, corrected in the addendum below. CI's clean runner is the authoritative green for the same script at its default port.
 
 **R-12 found a defect, and not in the place the requirement pointed at.** The button's request path was
 already correct: it decides success from `res.ok`, so R-03's 202 needed no change, and the failure branch was
@@ -10124,3 +10124,28 @@ still reports only `dsa_evaluation` -- another session's un-synced WIP, untouche
 metrics. The hosted API still serves the pre-R-03 revision, so the redeploy from `1a18106` (or later) is still
 owed by the maintainer's hand; the OpenAPI census expecting `['202','422']` on
 `POST /api/v1/analysis/` is the check that says whether it landed.
+
+**Addendum, same session -- re-reading my own prose found that the budget did not add up.** The paragraph
+above describes the first shipped version, and that version was wrong in a way its own sentences hid. Three
+claims sat next to each other and disagreed: the comment said the waits "add up to roughly the observed
+wake-up time", the copy promised "about a minute", and the constants were 4 attempts x 4 s plus 3 s/6 s/12 s
+of backoff -- **37 s** of coverage against a 44.5 s cold start. On the measured wake the page would tell the
+visitor to keep waiting while the code had already published `unreachable`, which is requirement R-11's central
+claim stated in the wrong direction. No assertion could see it, because each of the three sentences passes a
+text check on its own.
+
+Fixing coverage by lengthening the attempts (12 s each, 62 s total) then surfaced the second half of the same
+defect: `warming` is published when an attempt *ends*, so the first explanation arrived at **12.4 s** -- worse
+than the 4.4 s the tour had measured, and still green on every assertion. Legibility and coverage are two
+different clocks, and the shorter one has to win the first paint. `PROBE_SILENCE_HINT_MS` (1.5 s) repaints an
+outstanding request as `warming` while it is still in flight, and the guard only allows it from `probing`, so a
+backend that answered with a 5xx is still `unreachable` rather than "waking". The tour now refuses a scenario
+whose state arrives late (`wantWithinS: 6`), because "it appeared eventually" was precisely the standard that
+let 12.4 s pass.
+
+Measured after the fix: `warming` first visible at **1.9 s**, `unreachable` at 0.1 s, tour **30/30**, coverage
+62 s against the 44.5 s wake. `PROBE_BUDGET_MS` is derived from the three constants in the module itself, and
+`tests/contract/test_web_backend_probe.py::test_the_probe_waits_longer_than_the_cold_start_it_is_meant_to_cover`
+compares that derived coverage against the measurement -- with the plant (attempt timeout to 1 s) asserted to
+fall below the bound, so the guard cannot be satisfied by a budget that shrinks. Eleven contract tests, all
+green; the hint's own plant (hint window longer than an attempt) is checked the same way.

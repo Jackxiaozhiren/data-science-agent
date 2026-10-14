@@ -8,8 +8,10 @@
 // "nothing has answered yet" is a real third state, it is what a first-time visitor actually sees, and
 // calling it "unreachable" loses the visitor.
 //
-// The budget below is that measurement, not a guess: one short first attempt so the waiting state appears
-// quickly, then growing waits that add up to roughly the observed wake-up time.
+// The budget below is that measurement, not a guess, and it has to *exceed* it: a sequence that gives up
+// before the instance wakes reports a sleeping machine as a dead one, which is the exact defect R-11 exists
+// to remove. The first attempt is short so the waiting state appears at once, and the rest hold long enough
+// that total coverage clears 44.5 s with margin -- PROBE_BUDGET_MS is what the guard compares against it.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
@@ -18,11 +20,27 @@ import { apiUrl } from "@/lib/api";
 export type BackendPhase = "probing" | "warming" | "ready" | "unreachable";
 
 /** Per-attempt ceiling. A sleeping instance hangs rather than refusing, so this is what detects it. */
-export const PROBE_TIMEOUT_MS = 4000;
+export const PROBE_TIMEOUT_MS = 12000;
 /** Attempts are bounded on purpose: an unbounded retry is indistinguishable from a hang. */
 export const PROBE_ATTEMPTS = 4;
-/** Waits between attempts; the sum lands near the 44.5 s cold start measured above. */
-export const PROBE_BACKOFF_MS = [3000, 6000, 12000] as const;
+/** Waits between attempts. */
+export const PROBE_BACKOFF_MS = [2000, 4000, 8000] as const;
+
+/**
+ * How long an outstanding request may go unanswered before the page says it is waiting. Deliberately much
+ * shorter than PROBE_TIMEOUT_MS: this names the experience, that one names the coverage.
+ */
+export const PROBE_SILENCE_HINT_MS = 1500;
+
+/**
+ * How long the probe keeps saying "waking up" before it concludes "nothing answered", derived from the three
+ * constants above rather than restated: coverage = one timeout per attempt plus one backoff per gap.
+ */
+export const PROBE_BUDGET_MS =
+  PROBE_ATTEMPTS * PROBE_TIMEOUT_MS +
+  Array.from({ length: Math.max(0, PROBE_ATTEMPTS - 1) }, (_, gap) =>
+    PROBE_BACKOFF_MS[Math.min(gap, PROBE_BACKOFF_MS.length - 1)]
+  ).reduce((total, ms) => total + ms, 0);
 
 export type ProbeOutcome = "ok" | "answered" | "no-answer";
 
@@ -96,18 +114,29 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-async function oneProbe(): Promise<ProbeOutcome> {
+async function oneProbe(onSilent: () => void): Promise<ProbeOutcome> {
+  // The wait is explained while it is happening, not after a whole attempt has timed out: a 12 s per-attempt
+  // ceiling buys the coverage a 44.5 s cold start needs, but publishing `warming` only when that attempt ends
+  // would leave the visitor staring at "Checking API…" for 12 seconds. So the attempt stays in flight and a
+  // short silence timer repaints it. A ready instance answers inside the hint window and never sees this fire.
+  const hint = setTimeout(onSilent, PROBE_SILENCE_HINT_MS);
   try {
     const res = await fetch(apiUrl("/health"), { cache: "no-store", signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
     return res.ok ? "ok" : "answered";
   } catch {
     return "no-answer";
+  } finally {
+    clearTimeout(hint);
   }
 }
 
 async function probeSequence(): Promise<void> {
   for (let attempt = 1; attempt <= PROBE_ATTEMPTS; attempt += 1) {
-    const outcome = await oneProbe();
+    const outcome = await oneProbe(() => {
+      // Only a request that is genuinely outstanding may be described as a wake-up, and only the first time
+      // through: once the reader has been told, re-publishing the same phase would churn every subscriber.
+      if (snapshot.phase === "probing") publish({ phase: "warming", attempt });
+    });
     const phase = nextPhase(snapshot.phase, outcome, attempt);
     publish({ phase, attempt });
     if (phase === "ready" || phase === "unreachable") return;

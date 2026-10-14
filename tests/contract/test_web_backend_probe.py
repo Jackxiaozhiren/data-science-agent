@@ -97,6 +97,113 @@ def test_the_retry_is_bounded_and_says_so() -> None:
     )
 
 
+COLD_START_MS_MEASURED = 44_500  # hosted demo, 2026-10-13: /health answered 200 after 44.5 s
+
+
+def test_the_probe_waits_longer_than_the_cold_start_it_is_meant_to_cover() -> None:
+    """The budget has to outrun the measurement, and the copy has to promise only what the budget does.
+
+    The first version of this module advertised "can take about a minute" while its own constants added up to
+    37 s (4 attempts x 4 s + 21 s of backoff), so on a 44.5 s wake the page told the visitor to keep waiting
+    and the code had already published `unreachable`. That is requirement R-11's central claim stated in the
+    wrong direction, and no text-matching assertion could see it because every piece of it was individually
+    plausible -- so the coverage is computed from the constants here, the same way the runtime computes it.
+    """
+    source = PROBE.read_text(encoding="utf-8")
+    timeout = re.search(r"export const PROBE_TIMEOUT_MS\s*=\s*(\d+)", source)
+    attempts = re.search(r"export const PROBE_ATTEMPTS\s*=\s*(\d+)", source)
+    backoff = re.search(r"export const PROBE_BACKOFF_MS\s*=\s*\[([\d,\s]+)\]", source)
+    assert timeout and attempts and backoff, (
+        "one of the three budget constants is missing or renamed"
+    )
+
+    timeouts_ms = int(timeout.group(1))
+    count = int(attempts.group(1))
+    waits = [int(part) for part in backoff.group(1).replace(" ", "").split(",") if part]
+    assert waits, "PROBE_BACKOFF_MS is empty"
+
+    # Mirror `probeSequence`: one timeout per attempt, one backoff per gap, clamped to the last entry.
+    coverage = count * timeouts_ms + sum(
+        waits[min(gap, len(waits) - 1)] for gap in range(count - 1)
+    )
+    assert coverage >= COLD_START_MS_MEASURED, (
+        f"the probe gives up after {coverage / 1000:.1f}s but the measured cold start is "
+        f"{COLD_START_MS_MEASURED / 1000}s -- a waking instance would be reported as unreachable"
+    )
+
+    # The budget is derived in one place rather than restated, so the UI and this guard cannot drift apart.
+    assert re.search(r"export const PROBE_BUDGET_MS\s*=", source), (
+        "no derived PROBE_BUDGET_MS -- coverage would then live only in prose"
+    )
+
+    warming = re.search(r'if \(phase === "warming"\) return \(`([^`]+)`', source)
+    assert warming, "no warming copy"
+    if "minute" in warming.group(1).lower():
+        assert coverage >= 45_000, (
+            f"warming copy promises 'about a minute' but the probe stops at {coverage / 1000:.1f}s"
+        )
+
+    thin = _planted(
+        source,
+        f"export const PROBE_TIMEOUT_MS = {timeouts_ms}",
+        "export const PROBE_TIMEOUT_MS = 1000",
+        "per-attempt timeout",
+    )
+    re_timeouts = re.search(r"export const PROBE_TIMEOUT_MS\s*=\s*(\d+)", thin)
+    assert re_timeouts and int(re_timeouts.group(1)) == 1000, (
+        "the plant did not reach the line the coverage reads"
+    )
+    planted_coverage = count * int(re_timeouts.group(1)) + sum(
+        waits[min(gap, len(waits) - 1)] for gap in range(count - 1)
+    )
+    assert planted_coverage < COLD_START_MS_MEASURED, (
+        "a 1 s attempt still clears the bound, so this guard could not fail on a shrinking budget"
+    )
+
+
+def test_the_wait_is_named_while_it_is_happening() -> None:
+    """Coverage and legibility are two different clocks, and the shorter one has to win the first paint.
+
+    Fixing the budget to clear 44.5 s pushed `warming` out to 12.4 s -- the tour measured it -- because the
+    phase used to be published only when an attempt *ended*. A visitor then stared at "Checking API…" for the
+    whole first attempt, which is the same silence R-11 was raised about. So a request that has not answered
+    within the hint window repaints as `warming` while still in flight, and the browser scenario asserts the
+    number.
+    """
+    source = PROBE.read_text(encoding="utf-8")
+    hint = re.search(r"export const PROBE_SILENCE_HINT_MS\s*=\s*(\d+)", source)
+    timeout = re.search(r"export const PROBE_TIMEOUT_MS\s*=\s*(\d+)", source)
+    assert hint and timeout, "the silence hint or the attempt timeout is missing"
+    hint_ms, timeout_ms = int(hint.group(1)), int(timeout.group(1))
+    assert hint_ms < timeout_ms, (
+        f"the hint fires at {hint_ms}ms but an attempt lasts {timeout_ms}ms -- nothing would repaint until the attempt ends"
+    )
+
+    assert re.search(r"setTimeout\(onSilent, PROBE_SILENCE_HINT_MS\)", source), (
+        "the hint timer is not what drives the silence callback"
+    )
+    assert re.search(r"clearTimeout\(hint\)", source), (
+        "the hint timer is never cancelled, so it fires after the answer"
+    )
+    assert re.search(
+        r'if \(snapshot\.phase === "probing"\) publish\(\{ phase: "warming"', source
+    ), (
+        "warming is published without checking that the request is still outstanding -- an answered failure "
+        "could be repainted as a wake-up"
+    )
+
+    long_hint = _planted(
+        source,
+        f"export const PROBE_SILENCE_HINT_MS = {hint_ms}",
+        f"export const PROBE_SILENCE_HINT_MS = {timeout_ms + 1}",
+        "hint window",
+    )
+    re_hint = re.search(r"export const PROBE_SILENCE_HINT_MS\s*=\s*(\d+)", long_hint)
+    assert re_hint and int(re_hint.group(1)) > timeout_ms, (
+        "the plant did not reach the line the comparison reads"
+    )
+
+
 def test_a_warming_backend_is_never_described_as_ready_or_as_gone() -> None:
     """The copy is the product decision here, so it is pinned rather than paraphrased.
 

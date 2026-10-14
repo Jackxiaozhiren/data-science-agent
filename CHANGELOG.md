@@ -10,11 +10,15 @@
   distinguish a sleeping free instance from a broken product, and had no retry to press. That is B3, and it is
   the moment a trial is lost.
 - One new owner, `apps/web/app/lib/backendProbe.ts`, holds the phase machine (`probing | warming | ready |
-  unreachable`), the bounded budget (4 attempts, 4 s per attempt, 3 s/6 s/12 s backoff -- derived from the
-  measured 44.5 s rather than guessed), the retry, and the wording, and publishes it through
-  `useSyncExternalStore` so every consumer reads the same probe instead of fetching alone. A non-2xx answer is
-  `unreachable`, never `warming`: something replied. The header dot now carries `data-api-state` and says
-  `Waking… 2/4`, with a Retry when the budget is spent.
+  unreachable`), the budget, the retry, and the wording, and publishes it through `useSyncExternalStore` so
+  every consumer reads the same probe instead of fetching alone. Two clocks, deliberately different: coverage is
+  4 attempts x 12 s plus 2 s/4 s/8 s backoff = **62 s**, which has to clear the measured 44.5 s or the probe
+  would report a sleeping machine as a dead one; and an unanswered request repaints as `warming` after 1.5 s
+  (`PROBE_SILENCE_HINT_MS`), while still in flight, so the explanation is there when the visitor looks instead
+  of after a whole attempt ends. `PROBE_BUDGET_MS` is derived from the constants, and the guard compares that
+  derived coverage against the measurement -- the first version advertised "about a minute" while its own
+  numbers added up to 37 s. A non-2xx answer is `unreachable`, never `warming`: something replied. The header
+  dot now carries `data-api-state` and says `Waking… 2/4`, with a Retry when the budget is spent.
 - The expectation moved into copy at the entrance instead of appearing as a toast after the failure: the
   datasets page states the idle-sleep up front, and -- the second half of B4 -- "No datasets yet" and "No
   datasets loaded" are now gated on `phase === "ready"`. A list that is empty because nothing answered used to
