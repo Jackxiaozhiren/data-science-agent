@@ -211,6 +211,33 @@ def default_database_has_schema() -> None:
 
 
 @pytest.fixture(autouse=True)
+def isolate_database_binding(request: pytest.FixtureRequest):
+    """Pin the two names the routes resolve through, and say who moved them.
+
+    `isolate_process_global_state` restores the *contents* of known containers, which cannot see a rebinding:
+    a suite that assigns `database.AsyncSessionLocal = async_sessionmaker(tmp_engine)` and leaves it in place
+    sends every later route to a different database than the one `engine` -- and therefore the schema-creating
+    fixture -- refers to. That is the shape CI is reporting: the session's own guard sees the tables through
+    `engine` while `apps/api/tests/test_security.py`, in the same run, gets `no such table: datasets`. So the
+    binding goes back, and the test that moved it is named rather than left to be inferred from a failure
+    forty files away.
+    """
+    from dsa_api.core import database
+
+    before = (database.AsyncSessionLocal, database.engine)
+    yield
+    after = (database.AsyncSessionLocal, database.engine)
+    if after != before:
+        warnings.warn(
+            f"{request.node.nodeid} rebound dsa_api.core.database.AsyncSessionLocal/engine "
+            f"(before={before[0].kw.get('bind')!r} after={after[0].kw.get('bind')!r}) without restoring it; "
+            "the binding has been put back for the rest of the run",
+            stacklevel=1,
+        )
+        database.AsyncSessionLocal, database.engine = before
+
+
+@pytest.fixture(autouse=True)
 def isolate_process_global_state():
     """Reset every writable module-level container after each test, whatever the test did to it."""
     live = []

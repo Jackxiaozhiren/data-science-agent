@@ -10393,3 +10393,75 @@ passed, rc 0. The fs-read detector in the first of those is page-scoped (`PAGE_T
 nothing about this router; the containment rule above is what polices it, and that is worth recording because
 the guard's name invites the opposite reading. The rest of the gate set is measured in §178, both changes
 having been verified in one tree.
+
+**Addendum, same session -- the runner answered §178's prediction, and it held.** Pushed as `fa04f2e` +
+`c575bd2`. CI run **38573281796** on `c575bd2` is `completed failure`, at step 20
+(`uv run pytest -q --cov --cov-report=term-missing`), and that step's own summary is three lines:
+`test_agent_analysis.py::test_api_analysis_flow`, `test_phase6_api.py::test_progress_and_evidence_trace` and
+`test_phase6_api.py::test_sse_events_and_json_fallback`, each `AssertionError: run run-<hex> never reached a
+terminal status`. The four `no such table` failures are gone, which is the prediction verified by the runner
+rather than by me; the bundle route and §175's disclosure are no longer implicated in them.
+
+**What the addendum does not settle.** `test_phase6_api`'s two timeouts survive the leak repair, so the stall
+is a shared condition of every test that waits for a run rather than an artefact of a hijacked session. Both
+point at `never reached a terminal status` with the row last seen in a non-terminal state, and neither has a
+local reproduction at any budget. That is still the open defect, and it belongs to whoever owns the run
+lifecycle, not to this section.
+
+**Runner scope for this head, stated because fast-fail makes it invisible.** Steps 1-19 completed success,
+which is where `audit_facts.py --check`, `sync_vendor.py --check`, `ruff check`, `ruff format --check` and
+mypy ran against the committed tree including the new vendored `dsa_api/routers/bundles.py`. Steps 21-32 were
+skipped, so the runner has not verified the SBOM, the `dsa --limit 5` benchmark probe, either docker build,
+the web build or `mkdocs --strict` for `c575bd2`. Those were run locally and reported above: `mkdocs build
+--strict` and `find_orphan_reads.py --check` rc 0, and full `pytest -q --cov` rc 0 at 83.87% coverage -- the
+local suite is green precisely because the stall needs CI's condition, which is the finding rather than a
+reassurance.
+
+## 178. The database the routes use is not the database the schema was created in: a rebinding leak, reproduced by planting it
+
+**Scope.** Continuing §177 after CI falsified its fix. No requirement, no product surface: this is the test
+harness's own consistency, and it is the reason `main` has been red since `362bfe5`.
+
+**The datum that decided it.** At `bfc160a` CI ran the guard added in §177's correction -- which asks the
+module `engine` what tables it can see -- and the guard **passed** while `apps/api/tests/test_security.py`
+failed later in the same session with `no such table: datasets`. Those two facts together rule out "the schema
+was never created" and rule in "the routes are not reading the engine that has it". The reason is that
+`init_db()` and this session's fixture go through `database.engine`, while a request is answered by
+`database.AsyncSessionLocal`, and the second is a module-level *name* that any test can rebind.
+
+**Why only CI can show this, and how to show it anyway.** A contents-based isolation guard
+(`isolate_process_global_state`, which snapshots and restores the contents of known containers) cannot see a
+rebinding at all -- rebinding replaces the attribute, not its contents. And a developer machine has a
+populated `data/dsa.db`, so the leak lands on a database that happens to have the tables anyway. So the
+mechanism was manufactured rather than waited for: in the disposable worktree export, one temporary test
+assigned `database.AsyncSessionLocal = async_sessionmaker(create_async_engine("sqlite+aiosqlite:///:memory:"))`
+and returned without restoring it, and the next test in the file read through the factory. Because
+`:memory:` gives every connection its own empty database, that read found no tables. **1 failed, 1 passed.**
+With the new pin in the same export, the same two tests are **2 passed** plus a warning that names the
+offender:
+
+`test_aaa_rebind_and_leak rebound dsa_api.core.database.AsyncSessionLocal/engine (before=<AsyncEngine 0x…>
+after=<AsyncEngine 0x…>) without restoring it; the binding has been put back for the rest of the run`
+
+The probe file and the export's `conftest.py` were then reverted; nothing from the plant is in the tree.
+
+**What shipped.** Two things, in the root `conftest.py` and
+`tests/contract/test_test_database_is_reachable.py`. First, a function-scoped autouse fixture
+`isolate_database_binding` that records `(AsyncSessionLocal, engine)` before each test, puts them back if a
+test left them moved, and warns with that test's node id -- so a leak is both neutralised and attributed in
+the same run instead of appearing as an unexplained failure forty files later. Second, a guard that asks the
+**factory** rather than the engine, in the same way a route does, and prints both bindings when they differ.
+The engine-only guard from §177 was kept, because the pair is what makes the diagnosis legible: engine green
+and factory red is the leak, engine red is a genuinely missing schema.
+
+**Local regression.** Full `pytest -q --cov`: **rc=0**, coverage **84%**, and the pin's warning fired **zero**
+times -- consistent with the theory, since the local ordering never leaks. Which is precisely why this could
+not be closed locally: the fix's evidence is the plant above, and the confirmation is the next CI run, where
+green means the leak was real and a warning in the summary names the suite responsible.
+
+**Honest limits.** The pin restores the module attributes; it cannot un-capture a reference another module
+took with `from dsa_api.core.database import AsyncSessionLocal`, so a suite that imports the name and then
+rebinds the module is still able to confuse itself. And this section does not claim the seven CI failures are
+fixed: it claims the mechanism is reproduced, neutralised, and attributable, and that CI will say which of
+those was the cause. §177's correction stands as written -- that section's fix was necessary and not
+sufficient, and saying so cost two more CI round-trips, which is cheaper than saying it was fixed.

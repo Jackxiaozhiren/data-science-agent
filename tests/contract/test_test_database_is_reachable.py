@@ -17,6 +17,7 @@ passes and this fails.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 
 from sqlalchemy import inspect
@@ -55,6 +56,36 @@ def test_the_application_engine_can_see_the_orm_tables() -> None:
         f"bytes={size}, settings.database_url={settings.database_url!r}) and found no {missing}. "
         "Any suite that skips the lifespan -- every ASGITransport client -- will fail with "
         "'no such table' on a machine that has never run the app"
+    )
+
+
+def test_the_session_factory_the_routes_use_sees_the_same_database() -> None:
+    """The routes do not read through `engine`, they read through `AsyncSessionLocal`.
+
+    CI is the discriminator here: at `bfc160a` the guard above PASSED while `apps/api/tests/test_security.py`
+    failed in the same session with `no such table: datasets`. A check against the engine alone therefore
+    certifies the wrong object -- the shipped default and the live factory can disagree when a suite rebinds
+    `AsyncSessionLocal` and something fails to restore it, and it is the factory that answers a request. This
+    asks the factory, in the same way a route does, and names both bindings when they differ.
+    """
+    from sqlalchemy import text
+
+    from dsa_api.core import database
+
+    async def _probe() -> list[str]:
+        async with database.AsyncSessionLocal() as session:
+            rows = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+            return sorted(str(r[0]) for r in rows)
+
+    seen = set(asyncio.run(_probe()))
+    with contextlib.suppress(Exception):
+        # The connections this opened belong to the loop that just closed.
+        asyncio.run(database.engine.dispose())
+    missing = sorted({"datasets", "analysis_runs", "experiments"} - seen)
+    assert not missing, (
+        f"AsyncSessionLocal read a database with no {missing} (factory bind={database.AsyncSessionLocal.kw.get('bind')!r}, "
+        f"module engine={database.engine.url!r}, cwd={Path.cwd()}) -- a suite rebound the factory and did not "
+        "restore it, so every route that answers from it sees a different database than the one created"
     )
 
 

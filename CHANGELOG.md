@@ -68,7 +68,14 @@
   `tests/contract/test_test_database_is_reachable.py` now asks that engine directly and fails with the URL,
   the working directory and the file's size, and its own predicate is falsified against a freshly created
   empty database so it cannot pass for the wrong reason. The root fixture warns rather than raises on the same
-  condition, because a session-scoped autouse fixture that aborts reddens every test in the run.
+  condition, because a session-scoped autouse fixture that aborts reddens every test in the run.- **What CI then showed.** The guard added for that gap *passed* on CI while `apps/api/tests/test_security.py`
+  failed later in the same session. Reading the tables through `database.engine` therefore certifies the wrong
+  object: requests are answered by `database.AsyncSessionLocal`, a module-level name any test can rebind, and a
+  contents-based isolation guard cannot see a rebinding. A function-scoped autouse `isolate_database_binding`
+  now restores `(AsyncSessionLocal, engine)` after any test that moved them and warns with that test's node id,
+  and a companion guard queries the factory the way a route does. The mechanism was proven by planting it in a
+  disposable export -- 1 failed without the pin, 2 passed plus a named warning with it -- because a developer
+  machine, holding a populated `data/dsa.db`, cannot see this defect at all.
 
 
 ### Changed (post-4.5.0) — the wait explains itself, and a refused follow-up stays refused (web plan Lane B, R-11 + R-12)
