@@ -10181,3 +10181,27 @@ still reports only `dsa_evaluation` -- another session's un-synced source, as in
 `tests/contract/test_web_backend_probe.py` (7), `tests/contract/test_web_identifier_display.py` (3) and the
 browser tour (30/30 hermetic) as its guards. Remaining in the plan: R-07 and R-01 (still P0), Lane D, E, F,
 §12 Study 2, §16 metrics.
+
+**The CI red, traced to a named frame.** CI's `no such table: analysis_runs` is not a hang and not a slow
+budget: the traceback chain is `merged_lifespan` -> `dsa_api/main.py:43 in lifespan` ->
+`dsa_api/services/run_lifecycle.py:170 in sweep_abandoned_runs` (6 occurrences across the failed log), reached
+from suites that open the app with `with TestClient(app) as c:` (`tests/unit/test_more_coverage.py:35`,
+`tests/unit/test_more_gaps.py:35`) while building their own `sqlite+aiosqlite:///:memory:` engine
+(same files, lines 20). So the startup sweep -- which §174 added, in this lane -- queries through
+`database.AsyncSessionLocal` while the schema was just created through `database.engine`. In the shipped
+module those two are the same bind (`AsyncSessionLocal = async_sessionmaker(engine)`), so the only way they
+can disagree is a test that rebinds one name and not the other, plus the `:memory:` property that every new
+connection is a separate empty database. Two consequences, both honest to state: (a) the finding is a defect
+of the seam contract this lane introduced, not of a foreign commit, even though the red first appeared at
+`362bfe5`; (b) `no such table` at startup would also be a real misconfiguration on a deployment, so the fix
+must not be a `try/except` that lets boot proceed silently.
+
+**Not reproduced anywhere I can reach.** The clean `git worktree` export of HEAD at
+`build/head-isolation` (own `.venv`, own empty `data/`, `dsa_api.__file__` identity printed and verified, so
+this is not the main tree's stale `data/dsa.db` talking) runs the full suite green for every one of those
+tests. Only the main tree's `test_phase6_api::test_progress_and_evidence_trace` failed there, once, and it
+passed with a 180 s wait budget and again on re-run -- while `--durations=12` measured the slowest test in the
+whole instrumented batch at 1.50 s. That single local failure is therefore machine contention with the other
+session's concurrent runs, not a lifecycle stall, and the 30 s default in `await_terminal_run` was not shown
+to be too tight. Left in place, unstrengthened: the export at `build/head-isolation` is disposable and is
+registered as a git worktree, so `git worktree list` will show it.
