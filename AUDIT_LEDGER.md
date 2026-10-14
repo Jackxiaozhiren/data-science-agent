@@ -10285,3 +10285,111 @@ Also worth keeping: my own local verification was contaminated twice by leftover
 "moved DDL target" appeared not to fail because `data/dsa.db` in the export had been populated by an earlier
 run; only after deleting it did the assertion fire and name both URLs. A machine that has ever run the app
 cannot see the bug this is about -- which is, precisely, why CI found it and I did not.
+
+## 178. One unrestored rebind turned a single CI timeout into seven reds: the rebinder is now named
+
+**Scope.** Not a lane requirement, and a follow-up to §177 rather than a repeat of it. §177 proved that
+`dsa_api.core.database.engine` and `.AsyncSessionLocal` can disagree and closed one half of the gap with a
+session-scoped `create_all`; it did not name the test that rebinds. CI at `bccb4e0` still reports the same
+seven, so this section names it, reproduces the signature, and states a prediction to be checked.
+
+**The rebinder.** `tests/integration/test_agent_analysis.py::test_api_analysis_flow` rebinds
+`database.AsyncSessionLocal` (line 99) and `app.dependency_overrides[get_session]` (line 100) so the run's
+background task and its route share the test's `:memory:` engine, then restores both at lines 153-155 --
+**on the success path only, with no `finally`**. `conftest._ISOLATED_GLOBALS` covers dict/list/set containers
+(`run_lifecycle._TASKS` among them) and its `_snapshot` raises on anything else, so an attribute rebinding is
+outside what the harness reverts. That is why the leak survives the fixture added in §177.
+
+**Reproduced rather than argued.** In a disposable `git worktree` export at `362bfe5` (own `.venv`, identity
+asserted by printing `sys.prefix` and `dsa_api.__file__`, `data/dsa.db` absent by construction): rebind,
+dispose the test engine, raise. Downstream fails with CI's verbatim signature --
+`no such table: analysis_runs` in `tests/unit/test_more_coverage.py::test_routers_and_llm_env_provider`,
+`no such table: datasets` in both `apps/api/tests/test_security.py` auth tests. Same plant with the restore
+moved into `finally`: **one failed, downstream green**. A `:memory:` database hands every new connection an
+empty file, which is why disposing the pooled connection is the half that makes the hijack observable; without
+the dispose the leaked connection keeps its schema and the same leak reads as harmless.
+
+**Why the ordering in CI's own summary matters.** 38554392483 (`bccb4e0`, fixture included) lists the failures
+in execution order: `test_api_analysis_flow`'s 30 s timeout first, then the two `test_phase6_api.py` timeouts,
+then the four `no such table`. A session-scoped fixture necessarily runs before any of them, so it cannot be
+the divergence's origin -- the divergence appears mid-session, which is precisely when a leak can create it.
+The "missing schema explains the timeouts" half of §177 is also unnecessary: after the first leak, the next
+test's own `previous = database.AsyncSessionLocal` reads the leaked value and its teardown restores *that*, so
+`test_phase6_api` can be reported as timed out while its task writes into a database it never created.
+
+**What is still unexplained.** The origin of that first timeout. Locally it does not exist: shrinking
+`await_terminal_run`'s default budget to 0.001 s still returned a terminal status on the first poll (19
+passed), and the clean export's full suite ran all three tests green -- §177's `--durations=12` (slowest test
+1.50 s) agrees. A CI-side stall is therefore still unnamed, and two tempting moves were refused: lengthening
+the 30 s budget and setting `DSA_LLM_MODE` on the pytest step, both of which edit the condition to lose the
+symptom rather than the cause.
+
+**The fix shipped.** Restore moved into `finally` in that one test: 56 insertions, 55 deletions, the diff being
+the re-indent plus `try:`/`finally:`. No exception handler was added -- `audit_facts.py --check` reports
+`facts ratchet: OK` -- and nothing is swallowed, so a boot that cannot see its own schema still raises, as
+§176 required.
+
+**Measured after the change, in the main tree with §177's fixture present.** The six-file window (the three
+affected suites plus `apps/api/tests/test_run_bundle.py`) rc 0; `mypy packages apps/api src apps/jupyter
+--ignore-missing-imports` reports no issues in 126 source files; `ruff check` and `ruff format --check` over
+the CI directories rc 0; `find_orphan_reads.py --check` rc 0; `mkdocs build --strict` rc 0; full
+`pytest -q --cov` rc 0 at **83.87%** coverage. `sync_vendor.py --check` is rc 1 on
+`dsa_evaluation: external_validation.py` -- another session's un-synced source, untouched, as in §174-§177.
+
+**Prediction, falsifiable.** On the next CI run of a head carrying this commit the four `no such table`
+failures are gone; what remains is `test_api_analysis_flow` plus whatever `test_phase6_api` does once it is no
+longer writing through a hijacked session. If more than that changes, the reading above is wrong, and it is
+corrected by dated addendum rather than edited in place.
+
+**Shared state, named rather than assumed.** Nothing was pushed after §177. The local branch carries a commit
+(`bfc160a`, "test(api): ask the application's own engine which database it opened") that is **not** on
+`origin/main` (still `bccb4e0`), so any push from this worktree would publish another session's work alongside
+this one; that handoff belongs to the maintainer. No tag, no Release, no PyPI, no workflow file, no new
+dependency, no paid resource.
+
+## 179. Item 2 shipped as an endpoint: a run's artifacts can leave the instance in one archive, gaps listed
+
+**What the register asked for.** Option 2 of the two zero-cost answers to the free instance's throwaway
+filesystem (the user's "1+2"): reproducibility the visitor can keep. No dependency, no paid resource, no
+workflow change.
+
+**The route.** `GET /api/v1/analysis/{run_id}/bundle` in `apps/api/src/dsa_api/routers/bundles.py`, wired in
+`main.py`, mirrored by `sync_vendor.py --package dsa_api` (wrote `dsa_api/main.py`, added
+`dsa_api/routers/bundles.py`). OpenAPI paths **22 -> 23**, counted from `app.openapi()["paths"]` at `362bfe5`
+and in the working tree. `docs/api.md` carries the row in that table's own `{id}` spelling, and the test pins
+the served `{run_id}` path through the router separately, because the table and the router have never agreed
+on that name.
+
+**Three properties, each with a case that fails if the route is written the obvious way.**
+* the stored `path` column is not trusted: every entry is resolved and must sit under `artifact_root()`, and a
+  path outside it is listed with reason `outside the artifact root` and **never opened** -- asserted with a
+  symlink planted inside the root and pointing at a sentinel outside it.
+* nothing is dropped in silence: an empty `path` and a file the host already cleared both appear in
+  `manifest.excluded` with their reason, beside the `included` names.
+* a run whose files are all gone answers **404**, not an empty zip, naming the run id and pointing at
+  `/report` -- the half of the run that lives in the database and did survive.
+`MAX_BUNDLE_BYTES` (64 MiB) answers 413 rather than growing without bound, the route sits inside the
+authenticated `/api/` family and not in `_AUTH_PUBLIC_PATHS`, and §175's storage disclosure travels with the
+archive in `manifest.storage`, because the zip is what the visitor still holds after the container is gone.
+
+**Two defects my own tests found before this was called done.** `manifest.excluded` was emitted in recorded
+order while `manifest.included` was sorted, so the archive depended on row order; the fix is one `sorted(...)`,
+and the evidence that it can fail is that the order-sensitive assertion was red first. The second defect was
+the test's, not the route's: I asserted the 404 detail contained `not present in this deployment`, a phrase
+the route never emitted, and changed the assertion rather than the shipped wording.
+
+**Not shipped, and why.** The download affordance in the web UI. `apps/web/app/analysis/[runId]/page.tsx` and
+`.../RunInspector.tsx` are exactly the two entries in `tests/contract/test_web_fetch_outcome_vocabulary.py`'s
+`PENDING_SITES`; making the button honest means editing that list (and likely `DECLARED_WITHIN_CONVERTED`),
+which is a gate list the standing instruction protects. So it stays a proposal: one `Download bundle` action in
+RunInspector's artifact header, response classified through the existing `classifyResponse`, `ErrorState` on
+non-2xx, the two files moved from `PENDING_SITES` into `CONVERTED_PAGES` with their declared non-collapse
+sites, then `tsc`, `next build` and the browser tour. Without it the endpoint serves an SDK/script caller and
+`curl`, and is invisible to a visitor who never leaves the page.
+
+**Verification.** `apps/api/tests/test_run_bundle.py` -- 9 tests -- together with
+`tests/contract/test_benchmark_artifact_endpoints.py` and `tests/contract/test_storage_disclosure.py`: 43
+passed, rc 0. The fs-read detector in the first of those is page-scoped (`PAGE_TO_ENDPOINT`), so it says
+nothing about this router; the containment rule above is what polices it, and that is worth recording because
+the guard's name invites the opposite reading. The rest of the gate set is measured in §178, both changes
+having been verified in one tree.

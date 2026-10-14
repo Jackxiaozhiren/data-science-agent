@@ -30,6 +30,7 @@ Conventions:
 | GET | `/api/v1/analysis/{id}/progress` | `progress_pct + counts` |
 | GET | `/api/v1/analysis/{id}/report?format=json\|markdown\|html&mode=findings\|audited` | the export pair (R-06). `audited` (default) is the stored report with evidence ids, tool trace and artifact paths; `findings` is the plain document — conclusions, numbers and limitations, with every identifier stripped by the same rule the guard tests. `mode` is checked against `dsa_agent.report_export.EXPORT_MODES`; an unknown value is a 400. `format=html` renders the audited document as one self-contained file and is refused for `findings` |
 | GET | `/api/v1/analysis/{id}/artifacts` | artifacts + tool_calls + progress |
+| GET | `/api/v1/analysis/{id}/bundle` | a zip of the artifact files this run recorded, plus a `manifest.json`. Only paths that resolve under the configured artifact root are read; a recorded path outside it, or a file the host has already cleared, is named in the manifest's `excluded` with its reason instead of being silently dropped, and `storage` repeats what `/version` says about the roots. A run with nothing includable is a **404**, not an empty archive |
 | GET | `/api/v1/analysis/{id}/evidence/{eid}` | evidence → tool_call → insights → dataset trace |
 | POST | `/api/v1/analysis/{id}/approve` | HUMAN_REVIEW approval |
 | POST | `/api/v1/experiments/` | programmatic experiment record → 201 (surfaced read-only in the web UI research page) |

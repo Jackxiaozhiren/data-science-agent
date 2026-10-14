@@ -14,6 +14,7 @@ from dsa_api.models import dataset as _dataset_models  # noqa: F401
 from dsa_api.models import experiment as _experiment_models  # noqa: F401
 from dsa_api.routers.analysis import router as analysis_router
 from dsa_api.routers.artifacts import router as artifacts_router
+from dsa_api.routers.bundles import router as bundles_router
 from dsa_api.routers.datasets import router as datasets_router
 from dsa_api.routers.experiments import router as experiments_router
 from dsa_api.routers.health import router as health_router
@@ -65,6 +66,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(health_router)
 app.include_router(datasets_router)
 app.include_router(analysis_router)
+app.include_router(bundles_router)
 app.include_router(experiments_router)
 app.include_router(artifacts_router)
 if mcp_app is not None:

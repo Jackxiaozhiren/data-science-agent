@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — a run leaves the instance as one archive (register item 2, the free-tier half)
+
+- `GET /api/v1/analysis/{run_id}/bundle` answers a zip of the artifact files a run recorded, plus a
+  `manifest.json`. The free demo's filesystem is cleared when its container is recreated, and the report text
+  survives in the database while the files do not, so the only reproducibility a visitor can keep is the one
+  they download before the instance goes away.
+- The stored `path` column is not trusted: each entry is resolved and required to sit under
+  `artifact_root()`, and an entry outside it is listed with its reason and never opened -- pinned with a
+  symlink planted inside the root that points at a file outside it.
+- Nothing is dropped in silence. `manifest.excluded` names every entry that could not be carried and why, and
+  a run whose files are all gone answers **404** rather than an empty zip, pointing at `/report` for the half
+  that did survive. `manifest.storage` repeats what `/version` says about the roots, so the archive carries its
+  own provenance after the server is gone.
+- OpenAPI paths 22 -> 23. Nine tests in `apps/api/tests/test_run_bundle.py`; the vendored copy was repaired
+  with `sync_vendor.py --package dsa_api`. The web download button is **not** in this change and is recorded as
+  a proposal in audit §179, because it would edit a contract test's protected gate list.
+
+### Fixed (post-4.5.0) — one test's failure no longer decides what the next test reads (audit §178)
+
+- The seven reds named in §177 are not seven causes. `test_api_analysis_flow` rebinds
+  `dsa_api.core.database.AsyncSessionLocal` and the `get_session` override so its background task and its route
+  share one in-memory engine, and restores both only on the success path. When it fails for any reason, the
+  rebind survives it: the next test's own `previous = ...` reads the leaked value and restores *that*, so every
+  later database read in the process goes to a `:memory:` engine that hands each new connection an empty file.
+  That is where CI's `no such table: analysis_runs` and `no such table: datasets` came from -- four suites whose
+  own code was fine.
+- Reproduced in a disposable worktree at `362bfe5` (rebind, dispose, raise -> the same two messages in the
+  same four tests) and falsified in the same place by moving the restore into a `finally`: one failed,
+  downstream green. The `_ISOLATED_GLOBALS` harness cannot cover this, because it snapshots dict/list/set
+  containers and `_snapshot` raises on an attribute rebinding.
+- No exception handler was added and nothing is swallowed, so a boot that cannot see its own schema still
+  raises. What is **not** fixed here is the origin of the first 30 s timeout: it does not exist locally at any
+  budget, and lengthening it or forcing `DSA_LLM_MODE` on the pytest step would edit the condition instead of
+  the cause. Prediction for the next CI run, stated to be checkable: the four `no such table` failures go away,
+  the timeout does not necessarily.
+
 ### Fixed (post-4.5.0) — the test suite no longer depends on which test created the schema first
 
 - `apps/api/tests/test_security.py` asserts that `/api/v1/datasets/` answers 200 with auth off and 401 with a
