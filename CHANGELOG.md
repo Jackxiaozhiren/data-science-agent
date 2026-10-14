@@ -2,6 +2,49 @@
 
 ## Unreleased
 
+### Changed (post-4.5.0) — the wait explains itself, and a refused follow-up stays refused (web plan Lane B, R-11 + R-12)
+
+- Measured before writing anything: the first request to the hosted demo after it had idled took **44.5 s** to
+  answer `/health`. During that window the app had exactly two states -- `checking`, then `down` -- and the
+  entire visible signal was the letters "API" beside a coloured dot, so a first-time visitor could not
+  distinguish a sleeping free instance from a broken product, and had no retry to press. That is B3, and it is
+  the moment a trial is lost.
+- One new owner, `apps/web/app/lib/backendProbe.ts`, holds the phase machine (`probing | warming | ready |
+  unreachable`), the bounded budget (4 attempts, 4 s per attempt, 3 s/6 s/12 s backoff -- derived from the
+  measured 44.5 s rather than guessed), the retry, and the wording, and publishes it through
+  `useSyncExternalStore` so every consumer reads the same probe instead of fetching alone. A non-2xx answer is
+  `unreachable`, never `warming`: something replied. The header dot now carries `data-api-state` and says
+  `Waking… 2/4`, with a Retry when the budget is spent.
+- The expectation moved into copy at the entrance instead of appearing as a toast after the failure: the
+  datasets page states the idle-sleep up front, and -- the second half of B4 -- "No datasets yet" and "No
+  datasets loaded" are now gated on `phase === "ready"`. A list that is empty because nothing answered used to
+  be reported as a fact about the user's account.
+- Re-verifying the follow-up button after R-03 (the plan's Lane B obligation, §R-12) found a real defect in the
+  lineage line, not in the request: `analysis_service.py` mints ids that already carry their prefix
+  (`run-2a4d6eeeb2`), and `RunInspector.tsx` rendered the parent as `run-{fromRunId.slice(0, 12)}`, so a reader
+  was shown `run-run-2a4d6eee` -- a string that identifies nothing, truncated so it could not be searched for.
+  It now renders the stored id verbatim, and `tests/contract/test_web_identifier_display.py` polices the class
+  across `apps/web` (a prefix glued onto an interpolated id), verified red on a planted mutation.
+- Acceptance in a real browser, in two acts (`output/lane-b/capture-r12.sh`): with the live API, the follow-up
+  create answered **202 declaring UNDERSTANDING 83 ms after the click** and the route committed with it, the
+  child linked back with the parent's stored id as its text, and the child ran on the parent's dataset. Then
+  with the create refused (an in-process stub that answers the reads and 404s only the POST -- stopping the API
+  would not work, because `/analysis/[runId]` is server-rendered and would never reach the card), the page
+  states `Analysis not found`, does not navigate, sends exactly one POST, and re-enables its button. The stub
+  answers `OPTIONS` because a JSON cross-origin POST is preflighted, and a stub that ignores that never sees
+  the request it claims to be refusing.
+- The web tour grew three backend-probe scenarios that intercept `/health` -- a hanging request on
+  `/datasets` and on `/analysis`, and a 503 -- and assert the phase, the dot's text, that the page states the
+  wait in its own words, and that the header and the paragraph agree about the *same* attempt number. That last
+  control earned its keep: it caught an off-by-one (dot `1/4` against "Attempt 2 of 4") which the contract test
+  had itself codified, because each string looked plausible alone.
+- The tour also refuses rather than misattributing. A live server on the API port makes Chrome report
+  `net::ERR_FAILED` with no URL in the message, so the console filter cannot see it and the tour had blamed the
+  app for 51 phantom errors (§165). `regression.mjs` now checks the port before booting anything, names the
+  `LISTEN` holder (`lsof -sTCP:LISTEN`, not a bare port match -- the probe's own connection otherwise names
+  this script), and exits. Hermetic result at this revision: **30/30** (24 route/viewport + 3 interaction + 3
+  backend-probe).
+
 ### Changed (post-4.5.0) — an analysis run is a job, not an HTTP request (web plan Lane B, R-03)
 
 - `POST /api/v1/analysis/` used to execute the whole agent graph before answering, and inserted the row only

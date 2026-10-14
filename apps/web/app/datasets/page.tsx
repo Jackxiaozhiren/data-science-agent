@@ -11,6 +11,7 @@ import { Progress } from "@/app/components/ui/feedback";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { DataTable } from "@/app/components/data/DataTable";
 import { EmptyState, ErrorState, TableSkeleton } from "@/app/components/data/States";
+import { useBackendProbe } from "@/app/lib/backendProbe";
 
 type Dataset = {
   id: string;
@@ -53,6 +54,9 @@ export default function DatasetsPage() {
   const [dragging, setDragging] = useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const busyRef = React.useRef(false);
+  // One shared probe tells this page whether the backend answered at all, which is the difference between
+  // "this account has no datasets" and "there is nothing there to ask" (web plan B3/B4).
+  const { phase, copy, retry } = useBackendProbe();
 
   async function load() {
     setLoading(true);
@@ -67,7 +71,7 @@ export default function DatasetsPage() {
       const data = (await res.json()) as { datasets: Dataset[] };
       setItems(data.datasets);
     } catch (e) {
-      setErr(`Could not reach the DSA API at ${API_BASE_URL}. ${String(e)}`);
+      setErr(`${FAILURE_PRESENTATION.transport} (${API_BASE_URL})`);
     } finally {
       setLoading(false);
     }
@@ -148,6 +152,15 @@ export default function DatasetsPage() {
         }
       />
 
+      {/* The expectation, stated once here rather than in a toast after the first failure: this demo runs
+          on a free instance that sleeps when idle, so the first request can take the better part of a
+          minute. Saying it at the entrance is what makes the wait readable instead of suspicious. */}
+      <p className="text-xs leading-5 text-zinc-500" data-cold-start-notice="true">
+        {phase === "ready"
+          ? "This demo runs on a free instance that sleeps when idle, so the first request after a pause can take about a minute."
+          : copy}
+      </p>
+
       {/* Drag-and-drop upload card */}
       <Card>
         <CardHeader>
@@ -208,16 +221,25 @@ export default function DatasetsPage() {
               ))}
             </ul>
           )}
-          {err && <div className="mt-3"><ErrorState message={err} retry={() => void load()} /></div>}
+          {/* While the probe is still waiting, its own notice is the truth on screen: showing "no response
+              could be read" next to "waking up, attempt 2 of 4" is the contradiction R-11 exists to remove. */}
+          {err && phase !== "warming" && phase !== "probing" && (
+            <div className="mt-3"><ErrorState message={err} retry={() => { retry(); void load(); }} /></div>
+          )}
         </CardContent>
       </Card>
 
       {/* Table card */}
       <Card>
         <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
-          {loading ? (
+          {loading && (phase === "warming" || phase === "probing") ? (
+            <div role="status" aria-live="polite" className="space-y-2">
+              <p className="text-sm text-amber-800">{copy}</p>
+              <p className="text-xs text-zinc-500">The table below fills in as soon as the API answers.</p>
+            </div>
+          ) : loading ? (
             <TableSkeleton rows={5} />
-          ) : items.length === 0 && !err ? (
+          ) : items.length === 0 && !err && phase === "ready" ? (
             <EmptyState
               icon={<Database className="size-5 text-zinc-400" aria-hidden />}
               title="No datasets yet"
@@ -226,6 +248,8 @@ export default function DatasetsPage() {
                 <Button size="sm" onClick={() => inputRef.current?.click()}>Upload your first dataset</Button>
               }
             />
+          ) : items.length === 0 && !err ? (
+            <div role="status" aria-live="polite" className="text-sm text-zinc-600">{copy}</div>
           ) : items.length > 0 ? (
             <DataTable<Dataset & Record<string, unknown>>
               caption="Datasets"

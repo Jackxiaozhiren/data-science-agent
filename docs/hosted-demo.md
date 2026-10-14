@@ -158,7 +158,7 @@ For the public demo, visitors should assume:
 - uploaded datasets are temporary;
 - generated chart/report files are temporary;
 - a restart or redeploy may require re-uploading the dataset;
-- the free instance may need a short cold start after inactivity.
+- the free instance sleeps when idle, and the first request after an idle period was measured at 44.5 s to answer `/health`. The web app now says this up front and shows a bounded "waking up" retry rather than a spinner; see R-11 in the changelog.
 
 A production deployment should replace ephemeral local dataset/artifact storage with durable object storage, a persistent disk, or another explicitly managed persistence layer.
 

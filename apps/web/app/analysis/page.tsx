@@ -11,6 +11,7 @@ import { Select, Textarea } from "@/app/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/app/components/ui/dialog";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { ErrorState, CardsSkeleton } from "@/app/components/data/States";
+import { useBackendProbe } from "@/app/lib/backendProbe";
 
 type Ds = { id: string; filename: string };
 
@@ -59,6 +60,9 @@ function AnalysisWorkspace() {
   const [err, setErr] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // The dataset list here is empty during a cold start for a different reason than it is empty for a new
+  // account, and only the probe can tell them apart (web plan B3/B4).
+  const { phase, copy, retry } = useBackendProbe();
 
   useEffect(() => {
     fetch(apiUrl("/api/v1/datasets/"))
@@ -160,9 +164,13 @@ function AnalysisWorkspace() {
                 ))}
               </Select>
               {datasets.items.length === 0 && !datasets.failure && (
-                <p className="mt-1.5 text-xs text-zinc-500">
-                  No datasets loaded. <Link href="/datasets" className="font-medium underline">Upload one in Step 1 →</Link>
-                </p>
+                phase === "ready" ? (
+                  <p className="mt-1.5 text-xs text-zinc-500">
+                    No datasets loaded. <Link href="/datasets" className="font-medium underline">Upload one in Step 1 →</Link>
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-amber-800" role="status" aria-live="polite">{copy}</p>
+                )
               )}
             </div>
             <div>
@@ -197,10 +205,18 @@ function AnalysisWorkspace() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={askConfirm} disabled={running} aria-busy={running}>
-                {running ? <><Loader2 className="size-4 animate-spin" aria-hidden /> Running analysis…</> : <><Play className="size-4" aria-hidden /> Run analysis →</>}
+              {/* Submitting into an instance that has not answered yet queues a request the reader cannot
+                  see, so the button says why it is waiting instead of going quiet. */}
+              <Button onClick={askConfirm} disabled={running || phase === "warming" || phase === "probing"} aria-busy={running}>
+                {running ? <><Loader2 className="size-4 animate-spin" aria-hidden /> Starting analysis…</> : <><Play className="size-4" aria-hidden /> Run analysis →</>}
               </Button>
-              {running && <p className="text-xs text-zinc-500">Planning and executing tools — this can take a minute.</p>}
+              {running && <p className="text-xs text-zinc-500">The run starts immediately and you watch it on the next page.</p>}
+              {(phase === "warming" || phase === "probing") && !running && (
+                <p className="text-xs text-amber-800" role="status" aria-live="polite">{copy}</p>
+              )}
+              {phase === "unreachable" && (
+                <Button variant="secondary" size="sm" onClick={retry}>Retry the API check</Button>
+              )}
             </div>
             {err && <ErrorState message={err} />}
           </CardContent>

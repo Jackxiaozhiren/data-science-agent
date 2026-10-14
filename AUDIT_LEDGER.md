@@ -10015,3 +10015,112 @@ raises `SyntaxError: invalid syntax` at line 153 from nested double quotes insid
 which aborts collection for the entire `tests/contract` directory, and it is the single file
 `ruff format --check` wants reformatted. Neither is in `main`, so the pushed tree is unaffected; both become
 that session's commit to make. `sync_vendor --check` still reports only `dsa_evaluation`.
+
+## 176. R-11 shipped and the follow-up re-verification found a fake identifier: the wait now explains itself
+
+**Scope.** `WEB_PRODUCT_MASTER_PROMPT.md` §15 Lane B's second requirement, **R-11**, plus the re-verification
+of **R-12** that §R-12 explicitly assigns to this lane ("must re-verify that the follow-up button still returns
+promptly, still links child to parent run, and still reports a failure as a failure"). Continuing from §174.
+No new dependencies, no paid resources, no workflow files: the maintainer's standing instruction for this
+session is that the project stays on free tiers and the remaining judgement calls are delegated here, and the
+three consequences of that are recorded under *Decisions taken under the delegated objective* below.
+
+**Premise re-measured before touching code.** The first request to the hosted demo after an idle period took
+**44.5 s** to answer `/health` (captured in `output/lane-c`, "health warmup: HTTP 200 in 44.507560s"). In that
+window the app offered exactly two phases -- `checking`, then `down` -- and the only visible text was the
+literal word "API" next to a coloured dot. So B3 was not a styling complaint: for 44 seconds a first-time
+visitor had no way to tell a sleeping free instance from a broken product, and no retry to press. The second
+half of the requirement is B4's ambiguity, and §167 had closed only its first half -- an empty list still could
+mean "you are new" or "nothing has ever answered", and a page cannot know which from its own request, because
+that request is the thing that is stuck.
+
+**What moved where.** One new owner, `apps/web/app/lib/backendProbe.ts`: the phase vocabulary
+(`probing | warming | ready | unreachable`), the budget, the retry, the wording, and a
+`useSyncExternalStore` subscription so consumers read one probe instead of each running its own fetch. The
+budget is derived from the measurement rather than picked -- 4 attempts x 4 s with 3 s/6 s/12 s backoff, which
+covers the observed cold start and stops -- and an answer that is not 2xx is `unreachable`, never `warming`,
+because something replied. `ApiStatusDot` reads the probe, exposes `data-api-state` for a browser to assert on,
+shows `Waking… 2/4`, and offers a Retry once the budget is spent. The expectation moved to the entrance: the
+datasets page states the idle-sleep before the visitor hits it, and the two "nothing here" claims
+(`datasets/page.tsx`, `analysis/page.tsx`) are gated on `phase === "ready"` so a cold start no longer reads as
+an empty account. `docs/hosted-demo.md` said the instance "may need a short cold start" -- replaced with the
+measured 44.5 s, because "short" was the same untruth in documentation form.
+
+**The frame-equality control earned its keep immediately.** The three new tour scenarios assert the dot's text
+and the paragraph's sentence in the *same* frame, and that is what caught a real off-by-one: `probeCopy` added
+`+1` to an attempt number that was already 1-based, so the header read `1/4` while the page said "Attempt 2 of
+4". It survived because each string is individually plausible -- the contract test had not merely missed the
+bug, it had **codified** it by matching the buggy sentence. Fixing the copy meant fixing the guard, and the new
+equality assertion was then proved to bite by planting the disagreement back (28/29, rc=1, "the header and the
+page disagree about the same attempt").
+
+**The tour now refuses instead of misattributing.** §165 measured 51 `net::ERR_FAILED` per viewport and could
+not filter them, because Chrome prints that message without a URL when a cross-origin response lacks
+`Access-Control-Allow-Origin` -- so the filter cannot see the origin that caused it, and the tour blamed the
+app for somebody else's listener. `regression.mjs` now checks the API port before booting anything and names
+the holder. Two instrument bugs surfaced while writing it, both worth recording: `lsof -ti tcp:N` matched the
+tour's *own* probe connection and therefore named the tour script as the occupant, so the lookup is
+`lsof -nP -iTCP:N -sTCP:LISTEN`; and the port is validated as a bare integer before it reaches `lsof`/`ps`,
+which are invoked with argv arrays rather than an interpolated shell string. A live server owned by another
+session stayed up on 8000 throughout -- it is not this lane's to kill -- so the lane's own evidence came from a
+hermetic run: build with `NEXT_PUBLIC_API_URL=http://127.0.0.1:8123`, `--api-port 8123`, and the tour is
+**30/30** (24 route/viewport + 3 interaction + 3 backend-probe), with `warming` visible after 4.4 s and
+`unreachable` after 0.1 s. CI's clean runner is the authoritative green for the same script at its default port.
+
+**R-12 found a defect, and not in the place the requirement pointed at.** The button's request path was
+already correct: it decides success from `res.ok`, so R-03's 202 needed no change, and the failure branch was
+intact. What a real browser surfaced was the *lineage line*. `analysis_service.py` mints ids that already carry
+their prefix (`run_id = f"run-{uuid.uuid4().hex[:10]}"`, so a stored id reads `run-2a4d6eeeb2`), and
+`RunInspector.tsx` rendered the parent as `run-{fromRunId.slice(0, 12)}` -- the reader saw
+`run-run-2a4d6eee`, a string that matches no identifier the API ever produced and is truncated so it cannot
+even be searched for. It now renders `{fromRunId}`. The class is policed by
+`tests/contract/test_web_identifier_display.py`, which walks every `.tsx` under `apps/web/app` looking for a
+known id prefix glued onto an interpolated id, asserts the lineage line shows the stored id, and proves its own
+negative control by planting the defect back (2 of 3 tests red) and restoring byte-identically. The corpus walk
+currently finds exactly one such site in history and none in the tree.
+
+**Why the refusal act is a stub and not a stopped server.** Stopping the API to "simulate an unreachable
+backend" cannot prove anything here: `/analysis/[runId]` is server-rendered, so with nothing listening the page
+short-circuits to "Run not found" and never renders the follow-up card -- the test would pass by never running
+the control. Act 2 therefore runs an in-process stub that answers the reads with the parent row captured live
+in act 1 and refuses only the POST. It had to answer `OPTIONS`: a cross-origin JSON POST is preflighted, and a
+stub that ignores the preflight never sees the request it claims to be refusing -- which is what the first
+attempt reported (`the stub saw 0 POSTs`) while the page was actually showing a transport error.
+
+**One premise was wrong twice before it was fixed.** The first act 1 asserted "the child was still running when
+we navigated", and it could not hold: a heuristic run on `examples/datasets/sales.csv` finishes in about a
+second, so the child had already reached `COMPLETED` 91 ms after the click -- and a *synchronous* create would
+have produced the same observation, just slower. Reading the status after navigation cannot separate the two
+designs, so the assertion was moved to the create response itself: **202 declaring `UNDERSTANDING`**, captured
+from the live response object, with the route committing 83 ms after the click. Recorded run
+(`output/lane-b/capture-r12.sh`, `capture-r12.log`): act 1 3/3 -- accepted-not-completed, the child linking
+back with the parent's stored id as its text, the child running on the parent's dataset -- and act 2 3/3, with
+teardown proved on both ports.
+
+**Decisions taken under the delegated objective.** All three follow from "free tiers only", and none of them
+changes a conclusion a user sees, so they are recorded rather than escalated:
+1. **Study 1's frozen protocol is not unfrozen.** §12 froze a 90-second idle trigger and a 20-minute box,
+   measured against a page that used to block; R-03 and R-11 changed the thing being measured (the page now
+   answers immediately and says it is waiting). Editing a frozen protocol after the fact to match a shipped
+   change is exactly what freezing was for, so the divergence is noted here and the kit stays as frozen. If
+   the maintainer recruits participants, the box should be re-frozen *before* the first session, not
+   retro-justified.
+2. **R-01's seeded demo data must be rebuilt on boot, not persisted.** A persistent disk is the paid option
+   (§172/§173: the free instance cannot attach one), so seeding has to be an idempotent boot-time rebuild over
+   whatever ephemeral root exists. That also means R-01 cannot promise a run survives a redeploy, and the copy
+   must not imply it does.
+3. **No paid disk, so the hosted pair stays as it is** and durability claims keep coming from `/version`'s
+   ephemeral-root disclosure (§175) rather than from a mount.
+
+**Foreign-red correction, measured rather than argued.** §175 recorded `tests/contract/test_web_backend_probe.py`
+as raising `SyntaxError` at line 153 and aborting collection for all of `tests/contract`, and as the one file
+`ruff format --check` rejected. Re-run against the current tree: `pytest --collect-only tests/contract` collects
+**121 tests** with no error, `ruff format --check tests/contract/` reports 14 files formatted, and `ruff check`
+passes. Both statements were true of an intermediate write and are false now; my own two files were genuinely
+unformatted and are formatted now, and the new file's `UP031` percent-format is gone. `sync_vendor --check`
+still reports only `dsa_evaluation` -- another session's un-synced WIP, untouched, as in §174.
+
+**Not done in this lane.** R-07 and R-01 (the remaining P0), the whole of Lane D/E/F, §12 Study 2 kit, and §16
+metrics. The hosted API still serves the pre-R-03 revision, so the redeploy from `1a18106` (or later) is still
+owed by the maintainer's hand; the OpenAPI census expecting `['202','422']` on
+`POST /api/v1/analysis/` is the check that says whether it landed.

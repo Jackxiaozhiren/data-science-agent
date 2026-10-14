@@ -478,7 +478,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
 
       {fromRunId && (
         <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs text-zinc-600 shadow-sm">
-          Follow-up of <Link href={`/analysis/${fromRunId}`} className="font-mono font-medium text-zinc-900 underline">run-{fromRunId.slice(0, 12)}</Link>
+          Follow-up of <Link href={`/analysis/${fromRunId}`} className="font-mono font-medium text-zinc-900 underline">{fromRunId}</Link>
           {" · "}<Link href={`/analysis/${fromRunId}`} className="underline">View parent trace →</Link>
         </p>
       )}
