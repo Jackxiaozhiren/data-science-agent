@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Fixed (post-4.5.0) — the test suite no longer depends on which test created the schema first
+
+- `apps/api/tests/test_security.py` asserts that `/api/v1/datasets/` answers 200 with auth off and 401 with a
+  token set. It drives the app through `httpx.AsyncClient(transport=ASGITransport(app=app))`, which **never
+  runs the app's lifespan**, and `init_db()` lives in that lifespan -- so nothing in the test created the ORM
+  tables. It passed for months only because some earlier test had opened a `TestClient` (whose context manager
+  does run the lifespan), or because the machine already carried a populated `data/dsa.db`. On a clean
+  checkout the answer depended on collection order, and CI answered `sqlite3.OperationalError: no such table:
+  datasets`.
+- R-03 turned the same latent condition into a second, louder symptom. A run's background task writes through
+  `dsa_api.core.database.AsyncSessionLocal`, while a test's own request path can be overridden through the
+  `get_session` dependency. When the first points at a database with no schema and the second at one with it,
+  the row is created, the task's writes fail, and the run never becomes terminal -- so four suites reported
+  `no such table: analysis_runs` from `sweep_abandoned_runs` at startup and three more reported
+  `never reached a terminal status within 30.0s`. Seven CI failures, one root cause, and green on every
+  developer machine that had ever run the app.
+- A session-scoped autouse fixture in the root `conftest.py` now creates the schema once against the database
+  the module engine names, the same `create_all(checkfirst=True)` the application performs at boot -- so the
+  test process guarantees the fact instead of borrowing it from a neighbour. The DDL runs through a sync
+  engine because the async one binds to whichever event loop touches it first, and a session-scoped fixture
+  has no claim on the per-test loops.
+- Proved by A/B on a disposable `git worktree` export of HEAD (own virtualenv, own empty `data/`, module
+  identity printed to confirm which copy was imported): with the default database removed, the auth suite runs
+  **9 passed with the fixture and 2 failed without it**, and the full instrumented suite in the main tree is
+  green apart from three tests in another session's still-untracked `apps/api/tests/test_run_bundle.py`.
+  Coverage 84%.
+
+
 ### Changed (post-4.5.0) — the wait explains itself, and a refused follow-up stays refused (web plan Lane B, R-11 + R-12)
 
 - Measured before writing anything: the first request to the hosted demo after it had idled took **44.5 s** to

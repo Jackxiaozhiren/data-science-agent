@@ -10205,3 +10205,61 @@ whole instrumented batch at 1.50 s. That single local failure is therefore machi
 session's concurrent runs, not a lifecycle stall, and the 30 s default in `await_terminal_run` was not shown
 to be too tight. Left in place, unstrengthened: the export at `build/head-isolation` is disposable and is
 registered as a git worktree, so `git worktree list` will show it.
+
+## 177. Seven CI failures, one root cause: the suite was reading whichever database another test had happened to create
+
+**Scope.** Not a lane requirement. `main` has been red since `362bfe5` (§176 recorded the symptom there); this
+section records the diagnosis, the fix, and -- because the red predates it -- the measurement showing this
+lane's commits neither caused nor masked it. No dependency, no workflow file, no paid resource.
+
+**What was claimed and what was checked.** §176 said the failure looked like an environment condition I could
+not reach. That was wrong, and the correction is the useful part: the condition is reachable anywhere, it just
+cannot be reached on a machine that has ever run the app. The recipe is `rm data/dsa.db` in a clean export and
+run `apps/api/tests/test_security.py` -- 2 failed with `sqlite3.OperationalError: no such table: datasets`.
+Restoring one fixture turns it into 9 passed. Nothing about Linux, CI, or the other session's commit is
+required to reproduce it.
+
+**The chain.** `test_security.py` drives the app with `AsyncClient(transport=ASGITransport(app=app))`, which
+does not send lifespan events, and `init_db()` only ever ran inside the lifespan. So the test reads a database
+nobody created: it passed while some *other* test in the same process had opened a `TestClient` (whose context
+manager does run the lifespan), or while the developer's `data/dsa.db` still carried tables from a previous
+month. On a fresh checkout the result is decided by collection order, and CI's order decided badly.
+
+**Why R-03 made it louder rather than quieter.** A run's background task writes through
+`dsa_api.core.database.AsyncSessionLocal`; a test can override the *route*'s session through the
+`get_session` dependency and leave that name alone. With the two seams pointing at different databases, the
+row is created, the task's every write then fails, and nothing ever makes the run terminal. That is one defect
+wearing three faces in CI's seven failures: `no such table: datasets` (2, the route reads),
+`no such table: analysis_runs` from `sweep_abandoned_runs` at startup (2, in `test_more_coverage` and
+`test_more_gaps`, visible in the traceback as `main.py:43 in lifespan` -> `run_lifecycle.py:170`), and
+`never reached a terminal status within 30.0s` (3, the same missing schema reported as a timeout, because the
+polling helper cannot observe a write that fails inside another database).
+
+**The fix, and why it is this shape.** A session-scoped autouse fixture in the root `conftest.py` performs the
+same `Base.metadata.create_all(checkfirst=True)` the application performs at boot, against the database the
+module engine names. The application already guarantees that fact; the suite was borrowing it from a
+neighbour, and borrowing is what made the outcome order-dependent. The DDL goes through a **sync** engine: the
+async module engine binds to whichever event loop touches it first, and a session-scoped fixture must not
+claim the per-test loops that follow -- a sqlite file written by one driver is fully visible to the other. No
+exception handler was added, so `debt.exceptHandlers` stays at 184 of 185, and nothing is swallowed: a real
+failure to reach the database still raises.
+
+**Falsification, run as an A/B on the same condition.** In the disposable `git worktree` export of HEAD at
+`build/head-isolation` (own `.venv`, identity asserted by printing `dsa_api.__file__` and `sys.prefix` so this
+is the export's code and not the main tree's): with `data/dsa.db` removed, the auth suite is
+**2 failed without the fixture, 9 passed with it**; the fixture was then stripped a second time after
+`ruff --fix` reordered its imports, and re-added, to be sure the passing result was the fixture and not the
+luck of a file left behind. `--durations=12` over the whole instrumented suite put the slowest test at 1.50 s,
+which is why §176's guess that "30 s is too tight under load" was discarded rather than shipped as a fix.
+
+**Main-tree regression after the change.** Full `pytest -q --cov`: coverage **84%**, and the only failures are
+three tests in `apps/api/tests/test_run_bundle.py`, which is **untracked** (`??`) -- another session's
+in-flight bundles feature, whose router in `apps/api/src/dsa_api/main.py` is also `M`. Left untouched. The
+export's own six failures (`tests/sdk/test_cli_contract.py` x2 -- `failed to spawn: dsa`, because the export's
+venv has no console script -- plus `test_currency_claims`, `test_announcement_currency`,
+`test_doc_census_claims` x2) are artifacts of the copy: the same three guard files run 32 passed in the main
+tree, and all six were already failing there before this fixture existed.
+
+**Shared-state actions.** Push of `conftest.py` + changelog + this section to `main`; no tag, no Release, no
+PyPI, no workflow change, no new dependency, no force-push, no file belonging to another session. The hosted
+pair is still `fac06f7` and still owes a redeploy (§176); this change does not alter that.

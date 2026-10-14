@@ -135,6 +135,45 @@ def await_terminal_run():
     return _wait
 
 
+@pytest.fixture(scope="session", autouse=True)
+def default_database_has_schema() -> None:
+    """Guarantee the ORM tables exist in the database the app's module engine points at, once per run.
+
+    Several suites drive the app with `httpx.AsyncClient(transport=ASGITransport(app=app))`, which never runs
+    the lifespan where `init_db()` lives. Those tests therefore issue reads against a database nobody in
+    their own process created: they pass only because some earlier test opened a `TestClient` (whose context
+    manager does run the lifespan), or because the machine already had a populated `data/dsa.db`. On a clean
+    checkout the outcome depends on collection order, and that is exactly what CI showed -- `no such table:
+    datasets` from `apps/api/tests/test_security.py` and `no such table: analysis_runs` from the startup
+    sweep, green on every developer machine that had run the app. The application guarantees its own schema at
+    boot; this guarantees the same fact for the test process rather than borrowing it from a neighbour.
+
+    The DDL goes through a sync engine on purpose. The module-level async engine binds to whichever event loop
+    touches it first, and a session-scoped fixture cannot claim the per-test loops that follow; a sqlite file
+    created by one driver is fully visible to the other.
+    """
+    from pathlib import Path
+
+    from sqlalchemy import create_engine
+
+    # Register the models on Base.metadata, the same three imports apps/api/src/dsa_api/main.py makes.
+    import dsa_api.models.analysis  # noqa: F401
+    import dsa_api.models.dataset  # noqa: F401
+    import dsa_api.models.experiment  # noqa: F401
+    from dsa_api.core.config import settings
+    from dsa_api.core.database import Base
+
+    url = settings.database_url
+    if "+aiosqlite" in url:
+        url = url.replace("+aiosqlite", "")
+    if url.startswith("sqlite:"):
+        Path(url.rsplit("///", 1)[-1]).parent.mkdir(parents=True, exist_ok=True)
+
+    sync_engine = create_engine(url)
+    Base.metadata.create_all(sync_engine, checkfirst=True)
+    sync_engine.dispose()
+
+
 @pytest.fixture(autouse=True)
 def isolate_process_global_state():
     """Reset every writable module-level container after each test, whatever the test did to it."""
