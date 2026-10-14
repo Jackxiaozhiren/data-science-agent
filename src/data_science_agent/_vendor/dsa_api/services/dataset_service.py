@@ -16,7 +16,7 @@ from dsa_datasets.models import DatasetFormat
 from dsa_datasets.validate import validate_file
 
 
-def _storage_dir() -> Path:
+def storage_dir() -> Path:
     configured = os.getenv("DSA_DATASET_DIR", "").strip()
     if configured:
         return Path(configured).expanduser()
@@ -63,7 +63,7 @@ async def save_dataset(
     fmt = validate_file(filename, size_bytes, content_type=content_type, head=head)
     sha = sha256_file(tmp_path)
     dataset_id = str(uuid.uuid4())
-    storage = _storage_dir()
+    storage = storage_dir()
     storage.mkdir(parents=True, exist_ok=True)
     safe_name = f"{dataset_id}_{filename}"
     dest = storage / safe_name

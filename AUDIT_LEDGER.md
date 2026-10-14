@@ -9954,3 +9954,64 @@ session's un-synced source, invisible to CI because CI only ever checks committe
 question, which is the price of not adding a broker. R-11 is untouched. And `/events` is now the only live
 progress channel the API offers while the web deliberately keeps polling -- the two are not redundant, they
 fail differently.
+
+## 175. The demo now says it forgets: `/version` publishes which roots are throwaway, and the shell renders it
+
+The billing answer came back "no", so Stage 1 stays a document and the free tier stays the deployment. What
+was left was the part that costs nothing and was nonetheless missing: the fact was known to the process and
+never reached a visitor. `is_ephemeral_database()` has logged "use a persistent volume or managed DB for
+anything beyond demos" since it was written, and Render's own banner says free instances spin down -- so a
+reviewer who returns to an empty run list has nothing to distinguish "this instance is free" from "this
+application loses data".
+
+**Landed.** `apps/api/src/dsa_api/core/storage_state.py` owns one predicate and one report;
+`is_ephemeral_database()` in `core/database.py` is now the database-named entry point to that same rule
+rather than a second wording of it; `dataset_service._storage_dir` became `storage_dir()` so the disclosure
+reads the accessor the writer uses instead of re-deriving a path; `/version` gained
+`{"storage": {"durable": bool, "ephemeral_roots": [...]}}`; `apps/web/lib/buildProvenance.ts` parses it and
+owns the wording; `ProvenanceStatus` renders `not kept` beside the reasoning mode, in the header and the
+footer, and only when the API says non-durable. `docs/api.md` and `docs/hosted-demo.md` describe the field,
+including what it does not promise.
+
+**Two deliberate limits.** It publishes roles, never locations -- `/version` is unauthenticated, and a
+private deployment's layout is not information a caller needs in exchange for a warning it does need. And
+`durable` means exactly "no configured root sits on a path the host may clear", not "the volume behind this
+mount is safe"; the docstring says so, because a boolean that reads like a guarantee is how the next stale
+claim gets written.
+
+**A real gap closed on the way.** The old rule matched `"/tmp/"` and `":memory:"` only. macOS exposes its
+scratch directories under two spellings -- `/var/folders/...` resolves to `/private/var/folders/...`, and
+`artifact_root()`/`Path.resolve()` hand back the second one -- so a database at `/private/tmp/dsa.db` was
+reported durable. `EPHEMERAL_PREFIXES` now covers both spellings of both roots; `test_the_ephemeral_rule`
+carries the four rows, and the four pre-existing pins in `apps/api/tests/test_health.py:69-72` still hold.
+
+**Measured, not inferred.** Against a booted API: `/tmp` database ->
+`{'durable': False, 'ephemeral_roots': ['database']}`; every root off the throwaway paths ->
+`{'durable': True, 'ephemeral_roots': []}`. In a real browser (Playwright, geometry and accessible name
+rather than a text search): the marker renders at 99.56 x 26 px in the header with the name leading
+`not kept. This instance keeps its database on storage the host may clear...`, and the durable deployment
+renders no marker at all. That browser check caught a defect in my own first version: `aria-label` replaces
+the visible text, so the long explanation was spoken while the short label a sighted reader sees was not --
+the parts are now ordered marker-first, and `title` carries the same string.
+
+**Gates.** `pytest tests/contract apps/api/tests` 134 passed (excluding the one file named below); the new
+`tests/contract/test_storage_disclosure.py` is 19 tests including a planted-defect control that mutates
+synthetic TypeScript sources, so the real ones are never compared with themselves; `ruff check` and
+`ruff format --check` clean over `packages apps/api tests src apps/jupyter scripts` for these files; `mypy`
+clean over 125 source files; `audit_facts --check` rc 0 with **zero new exception handlers** (the ceiling is
+185 and the tree is at 185, so an `except` here would have reddened the ratchet -- the report is written with
+conditional expressions instead); `mkdocs build --strict` rc 0; `tsc --noEmit` rc 0; `next build` rc 0.
+
+**Not run, and why.** The committed tour was not re-run locally: the worktree's `apps/web/scripts/regression.mjs`
+is the concurrent session's in-flight copy, whose new preflight refuses to run while anything answers on port
+8000 and which then fails on a probe assertion of their own that is still unfinished. CI runs `main`'s copy
+against this commit, which is the version that matters. Two of my own process errors are visible in that
+attempt and are recorded rather than quietly retried: `uv run` does not forward SIGTERM, so killing the
+wrapper orphaned the uvicorn child and left port 8000 answering -- their preflight caught exactly that, which
+is the guard working as designed.
+
+**Foreign reds named, not repaired.** `tests/contract/test_web_backend_probe.py` (untracked, another session)
+raises `SyntaxError: invalid syntax` at line 153 from nested double quotes inside a double-quoted regex,
+which aborts collection for the entire `tests/contract` directory, and it is the single file
+`ruff format --check` wants reformatted. Neither is in `main`, so the pushed tree is unaffected; both become
+that session's commit to make. `sync_vendor --check` still reports only `dsa_evaluation`.

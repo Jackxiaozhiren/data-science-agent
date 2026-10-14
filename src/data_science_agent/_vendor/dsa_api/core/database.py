@@ -17,9 +17,15 @@ AsyncSessionLocal: Any = async_sessionmaker(engine, expire_on_commit=False)
 
 
 def is_ephemeral_database(url: str) -> bool:
-    """True when the DB lives on throwaway storage (data loss on restart)."""
-    low = url.lower()
-    return "/tmp/" in low or ":memory:" in low  # noqa: S108 - substring match, not file creation
+    """True when the DB lives on throwaway storage (data loss on restart).
+
+    The rule itself belongs to `dsa_api.core.storage_state`, which has to answer the same question about the
+    dataset and artifact roots too; this stays as the database-named entry point the lifespan and the tests
+    use, so the predicate cannot be worded two ways.
+    """
+    from dsa_api.core.storage_state import is_ephemeral_path
+
+    return is_ephemeral_path(url)
 
 
 async def init_db() -> None:

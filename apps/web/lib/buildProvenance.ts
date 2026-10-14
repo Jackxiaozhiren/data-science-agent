@@ -21,11 +21,24 @@ export type ReasoningMode = {
   error: string | null;
 };
 
+/**
+ * Whether this process writes to storage the platform may throw away.
+ *
+ * `ephemeralRoots` names the roles ("database", "datasets", "artifacts") and never the paths: the API
+ * publishes modes because `/version` is unauthenticated. `durable` is the conjunction the UI branches on,
+ * and it means only "no root sits on a known throwaway path" -- not a promise about the volume behind it.
+ */
+export type StorageState = {
+  durable: boolean;
+  ephemeralRoots: string[];
+};
+
 export type BuildProvenance = {
   state: "checking" | "ready" | "unreachable";
   version: string | null;
   distribution: string | null;
   reasoningMode: ReasoningMode | null;
+  storage: StorageState | null;
 };
 
 const UNKNOWN: BuildProvenance = {
@@ -33,6 +46,7 @@ const UNKNOWN: BuildProvenance = {
   version: null,
   distribution: null,
   reasoningMode: null,
+  storage: null,
 };
 
 export function useBuildProvenance(): BuildProvenance {
@@ -49,6 +63,7 @@ export function useBuildProvenance(): BuildProvenance {
           version: typeof body.version === "string" ? body.version : null,
           distribution: typeof body.distribution === "string" ? body.distribution : null,
           reasoningMode: asReasoningMode(body.reasoning_mode),
+          storage: asStorageState(body.storage),
         });
       })
       .catch(() => {
@@ -60,6 +75,15 @@ export function useBuildProvenance(): BuildProvenance {
   }, []);
 
   return provenance;
+}
+
+function asStorageState(value: unknown): StorageState | null {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record.durable !== "boolean" || !Array.isArray(record.ephemeral_roots)) return null;
+  const roots = record.ephemeral_roots.filter((item): item is string => typeof item === "string");
+  if (roots.length !== record.ephemeral_roots.length) return null;
+  return { durable: record.durable, ephemeralRoots: roots };
 }
 
 function asReasoningMode(value: unknown): ReasoningMode | null {
@@ -78,6 +102,28 @@ function asReasoningMode(value: unknown): ReasoningMode | null {
 }
 
 export type ModeDescription = { label: string; short: string; detail: string; modelPlanned: boolean };
+
+export type StorageDescription = { short: string; detail: string };
+
+/**
+ * The one wording for the storage disclosure, and the only place that decides it is worth saying.
+ *
+ * Returns null while the API reports the deployment durable: a warning that fires on nothing is noise that
+ * trains readers to ignore the chip. When it does fire, `detail` names which roots are throwaway using the
+ * API's own role names, because the alternative -- a generic "data may be lost" -- leaves a reviewer
+ * wondering whether the application is broken or the instance is free.
+ */
+export function describeStorage(state: StorageState): StorageDescription | null {
+  if (state.durable) return null;
+  const named = state.ephemeralRoots.length > 0 ? state.ephemeralRoots.join(", ") : "one or more stores";
+  return {
+    short: "not kept",
+    detail:
+      `This instance keeps its ${named} on storage the host may clear when the service restarts, idles, ` +
+      "or redeploys. Runs and uploads can therefore disappear without this application losing anything it " +
+      "was holding in memory.",
+  };
+}
 
 /**
  * The one wording for a reasoning mode. `label` and `short` carry the backend's own token (`heuristic`,

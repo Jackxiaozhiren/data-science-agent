@@ -108,6 +108,21 @@ mode is not published there). A first request may take tens of seconds: the free
 idle. The dataset listing is expected to be empty after a deploy -- see the storage note below -- so an
 empty list is the healthy answer, not a failure.
 
+`/version` also answers `storage`, and on the free demo it says so out loud:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/version \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['storage'])"
+# {'durable': False, 'ephemeral_roots': ['database']}
+```
+
+`ephemeral_roots` names which of `database` / `datasets` / `artifacts` sit on a path the host may clear, and
+the web header renders "not kept" whenever `durable` is false -- so a visitor who returns to an empty run
+list sees a stated property of the instance rather than an unexplained loss. It publishes roles, not paths,
+because the route is unauthenticated; and after Stage 1 in
+[Production Persistence Hardening](production-hardening.md) it is the check that the mount is actually
+configured, since a `/var/data` database with `/app/artifacts` charts reports `["artifacts"]`.
+
 To confirm which build the API is serving, read its own schema rather than the dashboard:
 
 ```bash
