@@ -10149,3 +10149,35 @@ Measured after the fix: `warming` first visible at **1.9 s**, `unreachable` at 0
 compares that derived coverage against the measurement -- with the plant (attempt timeout to 1 s) asserted to
 fall below the bound, so the guard cannot be satisfied by a budget that shrinks. Eleven contract tests, all
 green; the hint's own plant (hint window longer than an attempt) is checked the same way.
+
+**SHARED-STATE ACTIONS under §19.1.**
+- push -> `6cab56d` (R-11 + R-12 + the two new contract files + changelog + this section) and `d4fa40a`
+  (the budget/hint correction), both to `main`. No PR, no merge, no tag, no Release, no PyPI, no
+  `.github/workflows` change, no dependency added or removed, no force-push.
+- deploy -> **none by this session.** The hosted pair still serves `fac06f7`: `GET /openapi.json` reports
+  `POST /api/v1/analysis/` -> `['201','422']` and `/version` carries no `storage` key, so it is two revisions
+  behind (pre-R-03 and pre-§175). Redeploying Render and Vercel from `d4fa40a` is authorised in §19.1 but not
+  executable here: there is no Render or Vercel credential or CLI on this machine (`env` exposes neither, and
+  `command -v render vercel` finds nothing), so it is the maintainer's click. The check that says whether it
+  landed is the OpenAPI census expecting `['202','422']`.
+- CI -> the run at `6cab56d` failed on `uv run pytest -q --cov` with **the same 7 test ids** as the run at
+  `362bfe5`; `1a18106` and everything before it was green. The sets being identical is the evidence that this
+  lane's commit neither caused nor fixed it. The failure is batch-only and Linux-only:
+  `tests/integration/test_phase6_api.py::test_progress_and_evidence_trace` passes in isolation locally
+  (1 passed in 2.17 s) and the CI symptom is a run parked at `VALIDATION` with
+  `sqlite3.OperationalError: no such table: analysis_runs` -- some test in the batch leaves the app talking to
+  a database whose tables were never created, which on a fresh checkout is the default `./data/dsa.db` because
+  the lifespan never runs under `httpx.ASGITransport`.
+
+**Foreign reds, named and left alone.** At the sweep launch (05:18) `ruff check`/`ruff format` flagged
+`apps/api/src/dsa_api/main.py` (I001) and `apps/api/src/dsa_api/routers/bundles.py` (I001 + format), and
+`pytest` additionally failed three tests in `apps/api/tests/test_run_bundle.py`. All three are another
+session's in-flight work: `main.py` is `M` and both `bundles.py` files are **untracked** (`??`), and the same
+two gates measured green over the identical committed corpus twenty minutes earlier (04:58: "All checks
+passed", "274 files already formatted"). Nothing in this lane's path list was flagged. `sync_vendor --check`
+still reports only `dsa_evaluation` -- another session's un-synced source, as in §174 and §175.
+
+**Lane state.** Lane B is finished: R-03 (§174), R-11 and the R-12 re-verification (this section), with
+`tests/contract/test_web_backend_probe.py` (7), `tests/contract/test_web_identifier_display.py` (3) and the
+browser tour (30/30 hermetic) as its guards. Remaining in the plan: R-07 and R-01 (still P0), Lane D, E, F,
+§12 Study 2, §16 metrics.
