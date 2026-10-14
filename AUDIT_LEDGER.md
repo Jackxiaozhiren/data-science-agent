@@ -10263,3 +10263,25 @@ tree, and all six were already failing there before this fixture existed.
 **Shared-state actions.** Push of `conftest.py` + changelog + this section to `main`; no tag, no Release, no
 PyPI, no workflow change, no new dependency, no force-push, no file belonging to another session. The hosted
 pair is still `fac06f7` and still owes a redeploy (§176); this change does not alter that.
+
+**Correction after CI, same section.** The claim above that the fixture "fixes" this was falsified by the run
+it was supposed to fix: `38554392483` at `bccb4e0` reported the identical seven failures, with the fixture in
+the tree (`git show --stat bccb4e0` lists `conftest.py`, 39 insertions). What the local A/B did prove and what
+it did not: it proved that creating the schema flips those specific tests from red to green when the database
+file is empty, and it did not prove that CI's engine reads the file my fixture writes. That the two can differ
+while both cite `settings.database_url` is now the open question, and the failure mode is exactly the one
+§177 described -- so the diagnosis named a class and shipped a fix for a symptom of it.
+
+Two things were checked rather than assumed on the way here. First, `_vendor` is not involved: the CI traceback
+frames name `apps/api/src/dsa_api/main.py:43` and `run_lifecycle.py:170`, and the string `_vendor` appears zero
+times in the failed log, so the duplicate-module hazard §174 recorded is not this. Second, the negative control
+I first wrote for the new guard was itself wrong: it re-ran the check in a subprocess with `DSA_DATABASE_URL`
+pointed at an empty file, which the root fixture duly populates, so the child passed and the control looked
+like a failure of the guard rather than of my design. It now falsifies the predicate directly (a freshly
+created empty database must not satisfy the set comparison), and the reason it cannot use the subprocess
+version is recorded in the test's own docstring, because that trap is the interesting part.
+
+Also worth keeping: my own local verification was contaminated twice by leftover state. The first plant of the
+"moved DDL target" appeared not to fail because `data/dsa.db` in the export had been populated by an earlier
+run; only after deleting it did the assertion fire and name both URLs. A machine that has ever run the app
+cannot see the bug this is about -- which is, precisely, why CI found it and I did not.

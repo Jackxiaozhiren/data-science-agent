@@ -1,6 +1,7 @@
 import importlib
 import sys
 import tomllib
+import warnings
 from pathlib import Path
 
 import pytest
@@ -151,6 +152,9 @@ def default_database_has_schema() -> None:
     The DDL goes through a sync engine on purpose. The module-level async engine binds to whichever event loop
     touches it first, and a session-scoped fixture cannot claim the per-test loops that follow; a sqlite file
     created by one driver is fully visible to the other.
+
+    CI status of this fixture: at `bccb4e0` it created the file and the same seven tests still failed, so
+    writing the DDL is necessary but not sufficient -- what is asserted below is the disagreement itself.
     """
     from pathlib import Path
 
@@ -172,6 +176,38 @@ def default_database_has_schema() -> None:
     sync_engine = create_engine(url)
     Base.metadata.create_all(sync_engine, checkfirst=True)
     sync_engine.dispose()
+
+    # Verify through the seam the application itself uses, not only through the engine that wrote the DDL.
+    # The first CI run of this fixture created the file and the auth suite still failed with `no such table`,
+    # which can only mean the two ends disagree about which database this URL names. Saying so here is the
+    # point: a named failure at session setup beats seven downstream ones whose cause is inferred from a
+    # traceback that cannot show what the process actually opened.
+    import asyncio
+
+    from sqlalchemy import inspect as sqlalchemy_inspect
+
+    from dsa_api.core import database as app_database
+
+    async def _tables() -> list[str]:
+        async with app_database.engine.connect() as conn:
+            return await conn.run_sync(
+                lambda sync_conn: sorted(sqlalchemy_inspect(sync_conn).get_table_names())
+            )
+
+    seen = asyncio.run(_tables())
+    # Connections created above are bound to this throwaway loop; drop them before the per-test loops start.
+    asyncio.run(app_database.engine.dispose())
+    missing = sorted({"datasets", "analysis_runs", "experiments"} - set(seen))
+    if missing:
+        # Warned here rather than raised: a session-scoped autouse fixture that raises reddens every test in the
+        # run, which is a worse signal than one named failure. The hard assertion lives in
+        # tests/contract/test_test_database_is_reachable.py, where it can fail on its own and name both urls.
+        warnings.warn(
+            f"schema was written through {url!r} but the application's engine sees no {missing} "
+            f"(engine url={app_database.engine.url!r}, cwd={Path.cwd()}) -- the test process and the "
+            "application are opening different databases",
+            stacklevel=1,
+        )
 
 
 @pytest.fixture(autouse=True)

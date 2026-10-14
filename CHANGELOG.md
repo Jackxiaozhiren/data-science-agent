@@ -23,11 +23,16 @@
   test process guarantees the fact instead of borrowing it from a neighbour. The DDL runs through a sync
   engine because the async one binds to whichever event loop touches it first, and a session-scoped fixture
   has no claim on the per-test loops.
-- Proved by A/B on a disposable `git worktree` export of HEAD (own virtualenv, own empty `data/`, module
-  identity printed to confirm which copy was imported): with the default database removed, the auth suite runs
-  **9 passed with the fixture and 2 failed without it**, and the full instrumented suite in the main tree is
-  green apart from three tests in another session's still-untracked `apps/api/tests/test_run_bundle.py`.
-  Coverage 84%.
+- Verified by A/B in a disposable `git worktree` export of HEAD (own virtualenv, own empty `data/`, module
+  identity printed to confirm which copy was imported): with the default database removed, the auth suite is
+  **2 failed without the fixture and 9 passed with it**.
+- **This did not turn CI green.** The run at `bccb4e0` reported the identical seven failures with the fixture
+  present, so guaranteeing the DDL is necessary but not sufficient, and the remaining disagreement is about
+  which database the *application's* engine opens rather than whether a file was written. A guard in
+  `tests/contract/test_test_database_is_reachable.py` now asks that engine directly and fails with the URL,
+  the working directory and the file's size, and its own predicate is falsified against a freshly created
+  empty database so it cannot pass for the wrong reason. The root fixture warns rather than raises on the same
+  condition, because a session-scoped autouse fixture that aborts reddens every test in the run.
 
 
 ### Changed (post-4.5.0) — the wait explains itself, and a refused follow-up stays refused (web plan Lane B, R-11 + R-12)
