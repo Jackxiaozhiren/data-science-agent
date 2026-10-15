@@ -11077,3 +11077,64 @@ defect underneath is **not** closed by this: a run whose graph returns while sti
 FAILED row with `last status VALIDATION` in its error, which a visitor can see, instead of a page that polls
 forever. Finding the early-return branch stays with the graph's owner; every future occurrence now names itself
 in the row, the log, and the process-wide counter at once.
+
+## 186. Session close: Lane D and Lane C are both done, and Lane F starts from measurements instead of the plan's stale evidence lines
+
+**What this session shipped, in the order the work actually happened.** Lane D first (R-01 `78bd1e3`, R-10
+`3f4e851`, the caveat-severity fix `c700dd5`, the tour's instrument repairs `46e9c3e`, ledger `b6eec17`; §182
+holds the four corrections the lane had to make to its own evidence). Then Lane C's outstanding half: R-07
+(`20f828e`, the mirror's format follow-up `85d2411`, the download entry point `044b157`; §185). CI on
+`044b157` -- the revision carrying all of it -- is green on both jobs. Lane C and Lane D are therefore closed;
+Lane A and B were already closed, and Lane E is untouched by design ("last, because the owner migration
+touches everything").
+
+**The CI data point this session owed §183.** On `b6eec17`, the first CI run failed one test
+(`test_agent_analysis.py::test_api_analysis_flow`, the 30-second terminal-write timeout) and a re-run of the
+*same commit* passed both jobs. Combined with §183's mechanism, that puts the pre-`29fd18f` reds in the
+intermittent column and makes the fork-closing seam the first revision where the family has a writing
+instrument rather than a silence. Not proof of a fix -- one green sample -- but the failing set went
+3 → 1 → 0 across three revisions and never grew.
+
+**Lane F's premises, measured 2026-10-15 so the next session does not trust the plan's evidence lines:**
+
+- **R-13.** No locale layer exists anywhere in `apps/web` (grep for `i18n|useLocale|locales`: nothing), and
+  no a11y tooling is installed (`axe` appears in no package.json). The plan's guard -- "an automated a11y
+  check wired into the existing web lane" -- therefore needs a **new devDependency**, and §19.1 puts
+  dependencies on the must-ask list: the next session asks before installing, or builds the check without
+  one and says so. Status badges already carry the status string as text, so "text as well as color" starts
+  partially met.
+- **R-14.** The premise holds and is now cheaper than the plan assumes: `packages/mcp/src/dsa_mcp/app.py` is
+  156 lines of hand-written HTML mounted at `/mcp-app` (`main.py:85`) -- a second renderer, which R-06 forbids
+  -- but the single renderer it should call is exactly the offline file R-07 just finished. The MCP App view
+  is likely `export_html(state)` plus a mount change. Baseline the tool surface with `dsa mcp` before and
+  after; a real client capture remains the accept's open half.
+- **R-15.** Greenfield confirmed: no analytics of any kind exists. The file-based measurement style
+  (`external-validation/`, dated kits) is the house style, and the census guards (§18) already police
+  hand-typed numbers in prose -- R-15's event list should be a data file those guards can reach.
+- **§12 kits.** Study 1's protocol is already frozen and honestly marked `NOT CONDUCTED` (`71a30d4`). What is
+  missing: the Study 2 paired kit (findings vs audited, order alternated) and the Study 3 reviewer kit -- both
+  writable without recruiting anyone, both required to reuse `RESULTS_SCHEMA.json` rather than invent a
+  schema.
+
+**Still owed, unchanged.** The maintainer's redeploy of both demo services: every capability in §182 and §185
+is on `main` and nowhere else. Verification after redeploy is `docs/hosted-demo.md`'s census plus two new
+checks: `GET /api/v1/datasets/` answering two marked rows with three questions each, and the run page offering
+the offline HTML download.
+
+**Files this session owns, for the fence:** `apps/api/src/dsa_api/services/demo_seed.py` (+ vendor),
+`apps/api/src/dsa_api/main.py` (+ vendor), `apps/web/app/lib/{sampleData,limitations}.ts`,
+`apps/web/app/{page,datasets/page}.tsx`, `apps/web/app/components/layout/{Sidebar,SiteHeader}.tsx`,
+`apps/web/app/analysis/[runId]/{page,RunInspector}.tsx`, `apps/web/scripts/regression.mjs`,
+`packages/agent/src/dsa_agent/report_export.py` (+ vendor), `docs/FRONTEND_IA.md`,
+`tests/integration/test_demo_seeding.py`,
+`tests/contract/test_web_{navigation_groups,limitation_severity,report_html_offline}.py`,
+`conftest.py` (one fixture), `CHANGELOG.md`, `AUDIT_LEDGER.md` (§182, §185, §186).
+
+**Files other sessions own, untouched:** `README.md`,
+`packages/evaluation/src/dsa_evaluation/external_validation.py`, `tests/evals/test_external_validation.py`,
+`WEB_PRODUCT_MASTER_PROMPT.md`, the four `项目经历-*.md` files, and the lifecycle/stall-evidence work that
+landed under `4dbc26f`..`7a7b520`.
+
+**Free-tier audit for the whole session:** nothing purchased, no service created, no workflow file touched,
+no dependency added (the a11y tooling R-13 wants is explicitly *not* installed), no release cut. Pushes to
+main by explicit path only, no PRs, no force-push.
