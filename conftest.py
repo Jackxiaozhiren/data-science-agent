@@ -245,6 +245,27 @@ def _stall_evidence(run_id: str) -> str:
 
 
 @pytest.fixture(scope="session", autouse=True)
+def demo_seeding_off_by_default() -> None:
+    """No test asks for the demo, so no test should pay for it or be disturbed by it.
+
+    `dsa_api.main`'s lifespan seeds the sample datasets and, in a mode that calls no model, runs one analysis
+    per seeded dataset so the first screen has a finished report to show (web plan R-01). Eight unrelated
+    files open `TestClient(app)`, and that context manager runs the lifespan -- so a default-on boot would
+    execute the agent inside each of them, add seconds per file, and write rows into whichever database the
+    process happens to have configured. Measured on 2026-10-15: with the hook live and the flag absent,
+    `tests/integration/test_agent_analysis.py::test_api_analysis_flow` timed out waiting for its own run to
+    finish, because two boot-generated analyses were writing to the same sqlite file.
+
+    The default in the product stays on -- an opt-in demo would leave a plain `docker compose up` showing the
+    empty list the requirement exists to end. `tests/integration/test_demo_seeding.py` turns it back on, and
+    one of its tests asserts the flag is what makes the difference, so this line cannot silently stop working.
+    """
+    import os
+
+    os.environ.setdefault("DSA_DEMO_SEEDING", "off")
+
+
+@pytest.fixture(scope="session", autouse=True)
 def default_database_has_schema() -> None:
     """Guarantee the ORM tables exist in the database the app's module engine points at, once per run.
 

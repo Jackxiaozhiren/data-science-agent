@@ -8,6 +8,7 @@ import { StatCard } from "@/app/components/data/StatCard";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { HeroVisual } from "@/app/components/data/HeroVisual";
+import { firstStarter, sampleInfo, type SampleInfo } from "@/app/lib/sampleData";
 
 type AnalysisSummary = { id: string; status: string; user_query: string; created_at: string | null };
 
@@ -45,8 +46,32 @@ const steps = [
   { icon: ShieldCheck, no: "03 · Verify", title: "Inspect where each claim came from", body: "Review the agent trace, claim-level evidence, validation checks, and reproducible artifacts." },
 ];
 
+type DatasetRow = { id: string; metadata?: unknown };
+
+/** R-01: the sample data the API rebuilt on boot, read through the one marker owner. */
+async function fetchSamples(): Promise<{ samples: { id: string; sample: SampleInfo }[]; failure: ApiFailure | null }> {
+  try {
+    const res = await fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" });
+    const failure = classifyResponse(res);
+    if (failure) return { samples: [], failure };
+    const data = (await res.json()) as { datasets: DatasetRow[] };
+    const samples = (data.datasets || [])
+      .map((row) => ({ id: row.id, sample: sampleInfo(row.metadata) }))
+      .filter((entry): entry is { id: string; sample: SampleInfo } => entry.sample !== null);
+    return { samples, failure: null };
+  } catch {
+    return { samples: [], failure: "transport" };
+  }
+}
+
 export default async function Home() {
-  const [{ recent, failure }, counts] = await Promise.all([fetchRecent(), fetchCounts()]);
+  const [{ recent, failure }, counts, seeded] = await Promise.all([
+    fetchRecent(),
+    fetchCounts(),
+    fetchSamples(),
+  ]);
+  const starter = firstStarter(seeded.samples);
+  const exampleRunId = seeded.samples.find((entry) => entry.sample.exampleRunId)?.sample.exampleRunId ?? null;
 
   return (
     <div className="space-y-6">
@@ -65,14 +90,38 @@ export default async function Home() {
               Upload a dataset and ask a question in natural language. DSA runs statistics, SQL, machine learning, and visualization — then preserves the evidence behind every supported finding.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/datasets">
-                <Button size="lg">Try with your data <ArrowRight className="size-4" aria-hidden /></Button>
-              </Link>
+              {starter ? (
+                <Link
+                  href={`/analysis?dataset=${encodeURIComponent(starter.datasetId)}&q=${encodeURIComponent(starter.question)}`}
+                  data-start-here="true"
+                >
+                  <Button size="lg" title={starter.question}>
+                    Ask this of the sample data{" "}
+                    <span className="max-w-[18ch] truncate sm:max-w-[34ch]">
+                      {starter.question.replace(/^(Summarize|Provide)[,:]? ?/i, "").slice(0, 46)}…
+                    </span>{" "}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/datasets" data-start-here="upload">
+                  <Button size="lg">Try with your data <ArrowRight className="size-4" aria-hidden /></Button>
+                </Link>
+              )}
+              {exampleRunId && (
+                <Link href={`/analysis/${exampleRunId}`} data-example-report={exampleRunId}>
+                  <Button variant="secondary" size="lg">Open a finished example <ArrowRight className="size-4" aria-hidden /></Button>
+                </Link>
+              )}
               <a href="https://github.com/Jackxiaozhiren/data-science-agent" target="_blank" rel="noreferrer">
                 <Button variant="secondary" size="lg"><Github className="size-4" aria-hidden /> View on GitHub ↗</Button>
               </a>
             </div>
-            <p className="mt-3 text-xs text-zinc-500">Question → execution → evidence → claim → reproducible report</p>
+            <p className="mt-3 text-xs text-zinc-500">
+              {starter
+                ? "The sample data and this question ship with the demo; the example report was run by this instance when it started. Nothing was written for this page."
+                : "Question → execution → evidence → claim → reproducible report"}
+            </p>
           </div>
           <HeroVisual />
         </div>

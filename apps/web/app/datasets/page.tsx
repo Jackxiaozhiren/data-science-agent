@@ -12,6 +12,7 @@ import { PageHeader } from "@/app/components/data/PageHeader";
 import { DataTable } from "@/app/components/data/DataTable";
 import { EmptyState, ErrorState, TableSkeleton } from "@/app/components/data/States";
 import { useBackendProbe } from "@/app/lib/backendProbe";
+import { sampleInfo, type SampleInfo } from "@/app/lib/sampleData";
 
 type Dataset = {
   id: string;
@@ -20,6 +21,9 @@ type Dataset = {
   rows: number | null;
   cols: number | null;
   created_at: string | null;
+  // The API's own marker for seeded sample data rides along (apps/web/app/lib/sampleData.ts owns the shape);
+  // without it a visitor cannot tell a demo row from their own upload.
+  metadata?: unknown;
 };
 
 async function errorMessage(res: Response): Promise<string> {
@@ -57,6 +61,14 @@ export default function DatasetsPage() {
   // One shared probe tells this page whether the backend answered at all, which is the difference between
   // "this account has no datasets" and "there is nothing there to ask" (web plan B3/B4).
   const { phase, copy, retry } = useBackendProbe();
+
+  const samples = React.useMemo(
+    () =>
+      items
+        .map((d) => ({ id: d.id, filename: d.filename, sample: sampleInfo(d.metadata) }))
+        .filter((entry): entry is { id: string; filename: string; sample: SampleInfo } => entry.sample !== null),
+    [items]
+  );
 
   async function load() {
     setLoading(true);
@@ -228,6 +240,60 @@ export default function DatasetsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* R-01: the demo ships sample data, and this says so where a visitor would otherwise wonder whether an
+          unfamiliar row is theirs. Nothing here is written for this page: the questions are the committed
+          benchmark catalog's own tasks, offered only where the catalog's dataset is byte-identical to this
+          sample, and the report link goes to a run this instance made from them. */}
+      {samples.length > 0 && (
+        <Card data-sample-panel="true">
+          <CardHeader>
+            <CardTitle className="text-sm">Sample data shipped with this demo</CardTitle>
+            <CardDescription className="text-xs">
+              Copied from the repository at startup, so it is here after a redeploy that deletes uploads. The
+              questions below are this project&apos;s own benchmark tasks for these exact bytes, and the report
+              was run by this instance when it booted.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {samples.map(({ id, filename, sample }) => (
+              <div key={id} className="rounded-lg border bg-white p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="block max-w-[220px] truncate font-mono text-xs font-medium" title={filename}>{filename}</code>
+                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] uppercase tracking-wide text-zinc-600">sample</span>
+                  {sample.exampleRunId && (
+                    <Link href={`/analysis/${sample.exampleRunId}`} data-example-report={sample.exampleRunId} className="text-xs font-medium underline">
+                      Open its finished report →
+                    </Link>
+                  )}
+                </div>
+                {sample.starterQuestions.length > 0 ? (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {sample.starterQuestions.map((question) => (
+                      <li key={question}>
+                        <Link
+                          href={`/analysis?dataset=${encodeURIComponent(id)}&q=${encodeURIComponent(question)}`}
+                          data-starter-question={question.slice(0, 24)}
+                        >
+                          <Button variant="secondary" size="sm" title={question}>
+                            Ask: {question.slice(0, 52)}
+                            {question.length > 52 ? "…" : ""}
+                          </Button>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-xs text-zinc-500">
+                    No benchmark task in the repository was written for this file&apos;s bytes, so no question
+                    is offered for it.
+                  </p>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table card */}
       <Card>

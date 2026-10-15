@@ -36,6 +36,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     accept writes immediately. Safe on existing databases (checkfirst)."""
     import logging
 
+    from dsa_api.services.demo_seed import ensure_demo_data_at_boot
     from dsa_api.services.run_lifecycle import sweep_abandoned_runs
 
     await init_db()
@@ -45,6 +46,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     if abandoned:
         logging.getLogger(__name__).info(
             "closed out %d abandoned analysis run(s) from a previous process", abandoned
+        )
+    # The free demo's storage is ephemeral, so the sample data cannot be uploaded once and kept: it is
+    # rebuilt from committed files on every boot (web plan R-01, and the durability limit in §176).
+    seeded = await ensure_demo_data_at_boot()
+    if seeded:
+        logging.getLogger(__name__).info(
+            "demo data ready: %d dataset(s), example run %s",
+            seeded["seeded_datasets"] + seeded["kept_datasets"],
+            seeded["example_run_id"] or "none",
         )
     yield
 
