@@ -20,6 +20,7 @@ import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
 import { Markdown } from "@/app/components/data/Markdown";
 import { isInFlightStatus, isReviewStatus, TERMINAL_STATUSES } from "@/app/lib/analysisStatus";
+import { limitationSeverity } from "@/app/lib/limitations";
 
 export type RunDetail = {
   id: string;
@@ -53,13 +54,6 @@ const DEFAULT_TITLE = "Data Science Agent — Verifiable AI Data Science";
 
 function stripHtml(raw: string): string {
   return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-const SEVERE_LIMITATIONS = ["bias", "leakage", "leak", "overfit", "causal", "causation", "confound", "spurious"];
-
-function limitationSeverity(text: string): "error" | "warning" {
-  const lower = text.toLowerCase();
-  return SEVERE_LIMITATIONS.some((k) => lower.includes(k)) ? "error" : "warning";
 }
 
 // Live progress: polls the lightweight /progress endpoint every 3s while the
