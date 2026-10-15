@@ -58,6 +58,9 @@ _ISOLATED_GLOBALS = (
     ("dsa_agent.graph", "_TOOL_CACHE"),
     ("dsa_llm.cost", "_CALL_LOG"),
     ("dsa_mcp.resources", "_ANALYSIS_STORE"),
+    # R-14: the original AnalysisState behind each handle, held for the app's report view. A state leaking
+    # across tests would let one test render another test's run.
+    ("dsa_mcp.resources", "_STATE_STORE"),
     ("dsa_tools.registry", "_REGISTRY"),
     # The in-flight analysis tasks (R-03). A registry of live asyncio tasks leaking across tests would
     # hand one test another's run id, and the stale task would keep writing through a disposed engine.
