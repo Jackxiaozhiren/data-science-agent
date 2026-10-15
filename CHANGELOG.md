@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed (post-4.5.0) — the MCP App's report is the product's one rendering (R-14)
+
+- `GET /mcp-app/report/{run_id}` serves the run's report through `dsa_agent.report_export.export_html` —
+  byte-for-byte the same rendering the web's *Download offline HTML* hands over. The old MCP page truncated
+  `report_markdown` to 3,000 characters into a `<pre>`; that second, amputated renderer is gone, and with it
+  the risk of the two views disagreeing about a number.
+- The `analyze` tool's stored handle now also carries the run's original `AnalysisState` (the SDK's
+  `raw_state`), which is what the renderer reads; the MCP resource surface (`report://`, `evidence://`,
+  `dataset://`) and the tool surface are unchanged — the `dsa mcp` listing is identical before and after, and
+  the only adapter delta is the store call.
+- An unknown handle answers **404** with the next action ("Run the analyze tool first"), not an empty page.
+- Guarded behaviorally: the endpoint's response is asserted **byte-equal** to `export_html(state)`; the page
+  is pinned to embed rather than re-implement (the old `slice(0, 3000)` fails the guard); the new store is
+  registered in the process-global isolation registry, whose derived-from-source scan caught it the moment it
+  existed. The MCP contract, acceptance and seam suites stay green.
+- Honest half of the accept: no MCP chat client was available here to produce the spec's rendered capture
+  from a real client. Verification is the byte-equality test plus the existing suites; the client capture is
+  recorded as owed, not implied.
+
 ### Added (post-4.5.0) — the report a stranger opens is one file, offline (R-07)
 
 - `GET /api/v1/analysis/{run_id}/report?format=html` now returns a file that carries everything it shows:

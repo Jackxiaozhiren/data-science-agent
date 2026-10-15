@@ -11198,3 +11198,31 @@ too.
 **Main's honest state:** red, on the lifecycle family, for a revision whose own content is measurement
 paperwork. Not worked around, not retried into silence -- three samples recorded, the shape named, and the
 fix owed to the file's owner.
+
+## 189. R-14 shipped: the MCP App stopped being a second renderer, and the isolation registry caught its own store
+
+**The defect the plan named, confirmed in the source.** `dsa_mcp/app.py`'s report card did
+`report_markdown.slice(0, 3000)` into a `<pre>` -- a second rendering of the report, amputated at an arbitrary
+byte, exactly what R-06's single-renderer rule forbids. R-14's premise held, and the fix was smaller than the
+plan estimated because R-07 had already built the thing it needed: the app now serves
+`GET /mcp-app/report/{run_id}` whose body **is** `export_html(state)` -- asserted byte-for-byte equal in the
+test, which is the strongest form of "one renderer" available. The page embeds it; it assembles nothing.
+
+**The store the renderer reads.** The MCP `analyze` tool's stored payload is a *summary* shaped for clients
+(`validation`, no `plan`, no `dataset_id`) -- feeding it to the renderer would have been the consumer-guesses-
+the-producer-shape mistake. The SDK's `raw_state` (the original `AnalysisState`, documented stable) is what
+gets stored, in its own `_STATE_STORE` alongside the existing handle store, so `report://` keeps serving
+markdown to MCP clients while the app view renders from the real state.
+
+**Two guards did their jobs this section should name.** The process-global isolation registry -- derived from
+the shipped tree, not a typed list -- caught `_STATE_STORE` the moment it existed and refused the suite until
+it was registered; that is the list-shaped-guard lesson working in the other direction. And the MCP
+acceptance, contract and seam suites (37 tests) stayed green across the change, which is the R-14 guard's
+"tool surface unchanged" half: the `dsa mcp` listing is byte-identical before and after, and the adapter's
+whole diff is the two-line store call.
+
+**The accept's honest half.** No MCP chat client exists in this environment, so the spec's "rendered capture
+from at least one real client" is **not** produced; what is produced is the byte-equality test, the existing
+suites, and this statement. The client capture stays on R-14's ledger as owed, not implied.
+
+**Free tier:** no dependency, no service, no money; the report view renders from the in-process store.
