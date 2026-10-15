@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from functools import partial
 from typing import Any
 
 from sqlalchemy import select
@@ -131,7 +132,32 @@ async def execute(run_id: str) -> None:
         log.error("analysis task failed", extra={"run_id": run_id}, exc_info=failure)
         await mark_failed(run_id, failure_message(failure))
         return
-    await persist_state(attempt.result())
+    # The terminal write goes through `gather(return_exceptions=)` rather than a plain await so a failure here
+    # is still handled inside this coroutine: an `except` would add a counted handler to the shipped tree, and
+    # letting it escape reaches the done callback below, where writing would mean spawning a detached
+    # coroutine -- the `Exception ignored in: <coroutine object mark_failed>` shape §174 already recorded.
+    written = await asyncio.gather(persist_state(attempt.result()), return_exceptions=True)
+    error = written[0]
+    if isinstance(error, BaseException):
+        log.error("the terminal write failed", extra={"run_id": run_id}, exc_info=error)
+        await mark_failed(run_id, failure_message(error))
+
+
+def _finish(run_id: str, finished: asyncio.Task[Any]) -> None:
+    """Drop the registry entry and look at how the task ended.
+
+    A callback that only pops leaves the exception inside a task that nobody awaits, so the row stays
+    non-terminal and the log says nothing about which of the two happened. CI showed exactly that shape: every
+    tool call recorded as ok, a report already in the state, and `status: VALIDATION` forever.
+    """
+    _TASKS.pop(run_id, None)
+    if finished.cancelled():
+        return
+    error = finished.exception()
+    if error is not None:
+        log.error(
+            "run lifecycle ended without a terminal row", extra={"run_id": run_id}, exc_info=error
+        )
 
 
 async def mark_failed(run_id: str, error: str) -> None:
@@ -146,7 +172,7 @@ def schedule_run(run_id: str) -> asyncio.Task[Any]:
     """
     task = asyncio.create_task(execute(run_id))
     _TASKS[run_id] = task
-    task.add_done_callback(lambda _finished: _TASKS.pop(run_id, None))
+    task.add_done_callback(partial(_finish, run_id))
     return task
 
 

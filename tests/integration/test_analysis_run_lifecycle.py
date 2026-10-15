@@ -453,3 +453,52 @@ async def test_executing_a_row_that_no_longer_exists_is_a_no_op(env: dict[str, A
     await asyncio.wait_for(execute("run-never-stored"), 5)
     gone = await env["client"].get("/api/v1/analysis/run-never-stored")
     assert gone.status_code == 404, gone.text
+
+
+@pytest.mark.asyncio
+async def test_a_terminal_write_that_fails_lands_as_failed_not_as_a_frozen_run(
+    env: dict[str, Any], monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The run finished its work and the row never got the news: that gap used to be silent.
+
+    Measured on CI at `f1eec91`: three tests timed out with a state carrying a four-step plan, four tool calls
+    all recorded ok, a report already rendered -- and `status: VALIDATION`, `error: null`. Everything the graph
+    does had happened, so the failure was in the last write, and `schedule_run`'s done callback only removed
+    the registry entry: the exception stayed inside a task nobody awaited, and nothing in the log said whether
+    the graph stalled or the write failed. This test forces exactly that shape -- a terminal write that raises
+    -- and requires two things of the fixed code: the reader gets a FAILED row rather than a run that looks
+    forever in progress, and the server says so.
+    """
+    from dsa_api.services import run_lifecycle
+
+    real_write = run_lifecycle._write
+    refused = {"done": False}
+
+    async def _refuse_completion(run_id: str, **fields: Any) -> None:
+        if fields.get("status") == "COMPLETED" and not refused["done"]:
+            refused["done"] = True
+            raise OSError("database is locked")
+        await real_write(run_id, **fields)
+
+    monkeypatch.setattr(run_lifecycle, "_write", _refuse_completion)
+
+    client = env["client"]
+    ds_id = await _dataset(client)
+    r = await _create(client, ds_id, "does a drive b")
+    assert r.status_code == 202, r.text
+    run_id = str(r.json()["id"])
+
+    row = await _wait_for_status(client, run_id, lambda s: s in {"FAILED", "COMPLETED"})
+    assert refused["done"], (
+        "the injected failure never fired, so the row reached a terminal state without going through the "
+        "write under test -- this proves nothing"
+    )
+    assert row["status"] == "FAILED", (
+        f"a run whose terminal write failed reads {row['status']!r}: a client polling it has no way to stop"
+    )
+    assert row["error"] and "OSError" in row["error"], row["error"]
+    logged = [rec for rec in caplog.records if "terminal write failed" in rec.getMessage()]
+    assert logged, (
+        "the write failed and the log says nothing -- the silent gap this test exists to keep closed; "
+        f"records were {[r.getMessage() for r in caplog.records][:6]}"
+    )

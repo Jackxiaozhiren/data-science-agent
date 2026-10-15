@@ -10465,3 +10465,60 @@ rebinds the module is still able to confuse itself. And this section does not cl
 fixed: it claims the mechanism is reproduced, neutralised, and attributable, and that CI will say which of
 those was the cause. §177's correction stands as written -- that section's fix was necessary and not
 sufficient, and saying so cost two more CI round-trips, which is cheaper than saying it was fixed.
+
+## 179. Seven became three, and the three said the work had finished: the terminal write was going into a task nobody watched
+
+**Attribution first, because §177 and §178 both guessed.** Four CI runs, the failing set read from each run's
+own log rather than inferred:
+
+| run | commit | whose | failed |
+|---|---|---|---|
+| `38554392483` | `bccb4e0` | this lane (schema fixture) | 7 |
+| `38565685622` | `bfc160a` | this lane (engine guard) | 7 -- identical set |
+| `38573281796` | `c575bd2` | the other session (artifact archive) | **3** |
+| `38580483456` | `f1eec91` | this lane (binding pin) | 3 -- identical to `c575bd2` |
+
+So four of the seven closed between `bfc160a` and `c575bd2`, i.e. in work this lane did not do, and the pin and
+the guard changed nothing on the remaining three. §178's conclusion that the rebinding leak was the cause was
+wrong as a *cause* and survives only as a hazard the pin now neutralises: the pin's warning never fired on any
+of these runs, including the two after it shipped. What is true of the pin is only that it makes the class
+unobservable-as-a-mystery: if it ever does fire, the log names the test.
+
+**What the three remaining failures actually contain.** The payload CI printed for `run-5696334a0b` was parsed
+out of the log rather than read off the assertion sentence: plan of 4, four tool calls, the last one
+`export_artifact` recorded ok, a rendered report already in the state, and `status: VALIDATION` with
+`error: null`. Every stage had happened. Only the row's last news was missing, which is a different defect
+from "the graph stalls" and the fix is not a longer timeout.
+
+**The hole was in this lane's own design, and it was silent by construction.** `schedule_run` ended with
+`task.add_done_callback(lambda _finished: _TASKS.pop(run_id, None))`. Popping keeps the task alive to GC, but
+it also means nothing ever calls `.exception()` on it, so any error raised after the graph returns -- in
+`persist_state`, in `mark_failed`, in opening the session -- stays inside a task no one awaits. The row keeps
+its last in-flight status, a client keeps polling, and the log is empty. R-03 was written to make "failed" and
+"frozen" distinguishable, and this path made them indistinguishable again.
+
+**Two changes, no counted handler.** `execute` now awaits the terminal write through
+`asyncio.gather(..., return_exceptions=True)`: a failure there is read as a value, logged as
+`the terminal write failed`, and the row is written again as `FAILED` with the kind of error -- all still
+inside the awaited coroutine, so no detached `mark_failed` reappears (the `Exception ignored in: <coroutine
+object mark_failed>` failure §174 recorded). The done callback became a named `_finish` that checks
+`cancelled()` and logs `run lifecycle ended without a terminal row` with the exception. `debt.exceptHandlers`
+stays at 184 of 185, which matters because the ceiling is shared with the other session working in this tree.
+
+**Falsification, including of my own first attempt.** The new test injects a refusal at exactly one place --
+`_write` raising `OSError("database is locked")` on the `COMPLETED` write, once -- and requires the row to end
+`FAILED`, the error field to name the exception kind, and the log to carry the new message. Its first version
+asserted the injection had fired *immediately after the create returned*, which is before the background task
+reaches that write: 1 failed with "the injected failure never fired". With the order fixed, the test is red
+against the pre-fix module (`git checkout --` of that one file: the raw `OSError` escapes to the poller and the
+8.14 s deadline exhausts) and green against the fix in 1.35 s.
+
+**Local state.** Full `pytest -q --cov` **rc=0**, coverage **84%** (8324 statements), `audit_facts --check`
+**OK**, mypy clean on the changed module. `sync_vendor.py --file` copied `services/run_lifecycle.py` into the
+mirror and `--check` now reports only `dsa_evaluation: external_validation.py` -- another session's un-synced
+source, untouched, as in §174 through §178.
+
+**What this run will decide.** If CI goes green, the missing terminal write was the third symptom and the log
+now shows the chain that produced it. If the three still fail, they fail with a named cause -- either
+`the terminal write failed` with its exception, or `run lifecycle ended without a terminal row` -- instead of
+a 30-second silence about a run that had already finished its work.

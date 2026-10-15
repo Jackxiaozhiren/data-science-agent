@@ -1,6 +1,28 @@
 # Changelog
 
 ## Unreleased
+### Fixed (post-4.5.0) -- a run whose last write failed is now failed, not frozen
+
+- Reading a CI payload instead of its assertion sentence changed the diagnosis: the run that timed out at
+  `status: VALIDATION` had a four-step plan, all four tool calls recorded ok, and a rendered report already in
+  its state. Nothing stalled. The row's final write simply never landed, and `schedule_run`'s done callback
+  only removed the registry entry, so the exception stayed inside a task no one awaited -- no log line, no
+  terminal status, and a client polling a finished run forever. R-03 exists to keep "failed" and "frozen"
+  distinguishable, and this path had made them identical again.
+- The terminal write is now awaited through `asyncio.gather(..., return_exceptions=True)`, so a failure is read
+  as a value, logged as `the terminal write failed`, and written back as `FAILED` naming the kind of error --
+  all inside the awaited coroutine, which keeps the detached-coroutine failure §174 recorded from coming back.
+  The done callback became a named `_finish` that retrieves the task's exception and logs
+  `run lifecycle ended without a terminal row`. No counted handler was added: `debt.exceptHandlers` stays at
+  184 of 185, a ceiling shared with the other session in this tree.
+- Guarded by `test_a_terminal_write_that_fails_lands_as_failed_not_as_a_frozen_run`, which refuses exactly one
+  write (the `COMPLETED` one) and requires a `FAILED` row plus the log line. Red against the pre-fix module --
+  the raw `OSError` reaching the poller and the deadline expiring -- green in 1.35 s after.
+- Attribution, because two earlier sections guessed: the failing set went 7, 7, 3, 3 across `bccb4e0` (this
+  lane's schema fixture), `bfc160a` (this lane's guard), `c575bd2` (another session) and `f1eec91` (this lane's
+  binding pin). Four of seven closed in work this lane did not do; the pin's warning has never fired. §178's
+  rebinding leak is therefore a real hazard the pin now neutralises, not the cause of these three.
+
 
 ### Added (post-4.5.0) — a run leaves the instance as one archive (register item 2, the free-tier half)
 
