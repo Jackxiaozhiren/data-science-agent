@@ -16,8 +16,8 @@
  * Usage: node apps/web/scripts/regression.mjs [--port 3210] [--api-port 8000] [--out <dir>]
  */
 import { spawn, execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { mkdirSync, readFileSync, existsSync, statSync, readdirSync } from "node:fs";
+import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
@@ -64,6 +64,23 @@ const ROUTES = [
   "/failures",
   "/mcp",
 ];
+
+// Every entry the navigation can send a visitor to must be walked here, so the list is checked against the
+// declaration rather than maintained beside it: a copied route table goes stale the day someone adds a nav
+// link, and the new route then ships without ever having been rendered once. Read from source because plain
+// node cannot import a .tsx module.
+function assertNavRoutesWalked() {
+  const sidebar = readFileSync(join(webDir, "app/components/layout/Sidebar.tsx"), "utf8");
+  const declared = [...sidebar.matchAll(/href: "([^"]+)"/g)].map((m) => m[1]);
+  if (declared.length === 0) {
+    throw new Error("no nav hrefs parsed from Sidebar.tsx -- the declaration changed shape and this check went blind");
+  }
+  const missing = declared.filter((href) => !ROUTES.includes(href));
+  if (missing.length > 0) {
+    throw new Error(`navigation links to routes the tour never walks: ${missing.join(", ")}`);
+  }
+}
+assertNavRoutesWalked();
 
 const VIEWPORTS = [
   { name: "desktop", width: 1280, height: 900 },
@@ -220,6 +237,73 @@ if (portConflict) {
   process.exit(1);
 }
 
+// `next start` serves whatever `.next` already holds -- it never builds. That is fine in CI, which builds
+// first, and quietly wrong on a workstation: a bundle compiled from older source, or from a different
+// `NEXT_PUBLIC_API_URL`, passes or fails for reasons that have nothing to do with this tree. Both cases were
+// hit for real while capturing Lane D's evidence -- the acceptance build baked :8124, and the tour then
+// reported the shared probe's page copy as missing because the page was talking to a dead origin.
+function assertBundleMatchesThisTree() {
+  const marker = join(webDir, ".next", "BUILD_ID");
+  if (!existsSync(marker)) {
+    throw new Error(`no build at ${marker}: run \`npm --prefix apps/web run build\` first`);
+  }
+  const builtAt = statSync(marker).mtimeMs;
+  const sources = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else sources.push(full);
+    }
+  };
+  for (const root of [join(webDir, "app"), join(webDir, "lib")]) if (existsSync(root)) walk(root);
+  for (const extra of ["next.config.ts", "next.config.mjs", "package.json"]) {
+    const full = join(webDir, extra);
+    if (existsSync(full)) sources.push(full);
+  }
+  const stale = sources
+    .filter((f) => statSync(f).mtimeMs > builtAt)
+    .map((f) => `${relative(webDir, f)} (${((statSync(f).mtimeMs - builtAt) / 1000).toFixed(0)}s newer)`);
+  if (stale.length > 0) {
+    throw new Error(
+      `the bundle predates the source it would be used to represent: ${stale.slice(0, 4).join(", ")}` +
+        (stale.length > 4 ? ` and ${stale.length - 4} more` : "") +
+        " -- run `npm --prefix apps/web run build`"
+    );
+  }
+  const chunks = [];
+  const staticDir = join(webDir, ".next", "static");
+  if (existsSync(staticDir)) {
+    const walkChunks = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walkChunks(full);
+        else if (full.endsWith(".js")) chunks.push(full);
+      }
+    };
+    walkChunks(staticDir);
+  }
+  const foreign = new Set();
+  for (const chunk of chunks) {
+    for (const match of readFileSync(chunk, "utf8").matchAll(/https?:\/\/(?:localhost|127\.0\.0\.1):(\d{2,5})/g)) {
+      if (Number(match[1]) !== API_PORT) foreign.add(match[0]);
+    }
+  }
+  if (foreign.size > 0) {
+    throw new Error(
+      `the built bundle points at an API origin other than the ${API_PORT} this tour is guarding: ` +
+        `${[...foreign].slice(0, 3).join(", ")} -- rebuild with NEXT_PUBLIC_API_URL for that port, ` +
+        "or the console-error filter below will be filtering a different server than the pages are calling"
+    );
+  }
+}
+try {
+  assertBundleMatchesThisTree();
+} catch (e) {
+  console.error(`FAILURES:\n- preflight (bundle freshness): ${e instanceof Error ? e.message : e}`);
+  process.exit(1);
+}
+
 const server = spawn("npx", ["next", "start", "--port", PORT], {
   cwd: webDir,
   stdio: ["ignore", "pipe", "pipe"],
@@ -353,9 +437,44 @@ try {
       if (scenario.wantDot && !scenario.wantDot.test(dotText)) {
         throw new Error(`dot read ${JSON.stringify(dotText)}, wanted ${scenario.wantDot}`);
       }
+      // Next streams this route, and each page then waits on its own fetch: the shell paints first, the loading
+      // skeleton replaces it, and the copy that names the backend's state only exists after that fetch has
+      // failed. Reading the body at any earlier moment measures a page that has not decided yet -- which is how
+      // this scenario came to fail at 0.1s with a body full of static text and no notice anywhere. So wait for
+      // the page to be *decided*: real content, and no loading affordance left.
+      try {
+        await probePage.waitForFunction(
+          () => {
+            const main = document.querySelector("main");
+            const text = (main?.innerText ?? "").trim();
+            const loading = document.querySelector(
+              '[aria-label="Loading table"], [aria-label="Loading page"], [aria-busy="true"]'
+            );
+            return text.length > 20 && !loading;
+          },
+          null,
+          { timeout: 15000, polling: 100 }
+        );
+      } catch {
+        const still = await probePage
+          .locator('[aria-label="Loading table"], [aria-label="Loading page"], [aria-busy="true"]')
+          .count();
+        throw new Error(
+          `the page never reached a decided state within 15s: url=${probePage.url()} dot=${JSON.stringify(dotText)} ` +
+            `loading affordances left=${still} main=${JSON.stringify(
+              (await probePage.locator("main").first().innerText().catch(() => "")).slice(0, 120)
+            )}`
+        );
+      }
       const body = await probePage.locator("body").innerText();
       if (!scenario.wantPage.test(body)) {
-        throw new Error(`the page never stated the wait in its own words; wanted ${scenario.wantPage}`);
+        // "the page never stated the wait" is not a diagnosis: this scenario passes standalone, so the
+        // failure has to be captured with what the page did say, or the next reader is guessing too.
+        await probePage.screenshot({ path: join(OUT, `probe-${scenario.wantState}-FAILED.png`) });
+        throw new Error(
+          `the page never stated the wait in its own words; wanted ${scenario.wantPage} after ${elapsed}s ` +
+            `on ${probePage.url()} -- body said: ${JSON.stringify(body.replace(/\s+/g, " ").slice(0, 900))}`
+        );
       }
       // One frame, two renderings of the same counter: a base off-by-one between them is invisible to every
       // text-matching assertion above, because each is individually plausible.
