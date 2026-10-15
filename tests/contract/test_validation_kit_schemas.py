@@ -218,9 +218,7 @@ def test_the_kit_index_and_the_directory_agree_in_both_directions() -> None:
     readme = (KIT / "README.md").read_text(encoding="utf-8")
     linked = set(re.findall(r"\]\(([^)]+\.md|[^)]+\.json)\)", readme))
     on_disk = {
-        p.name
-        for p in KIT.iterdir()
-        if p.suffix in {".md", ".json"} and p.name != "README.md"
+        p.name for p in KIT.iterdir() if p.suffix in {".md", ".json"} and p.name != "README.md"
     }
     rows = {name for name in on_disk if f"]({name})" in readme}
     assert rows == on_disk, (
