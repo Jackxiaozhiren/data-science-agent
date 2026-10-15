@@ -10670,3 +10670,27 @@ button. The old text stays as what was known then.
 helper added in `f84f579` was linted and formatted explicitly because no gate would have looked at it. That is
 the same blind spot §16x recorded for untracked new files -- a directory-shaped list certifies its directories,
 not the repository.
+
+**Addendum, same session -- §180's "closed by `b35594d`" was premature, and the new evidence says so.** Three
+heads, read from each run's own summary rather than inferred:
+
+| head | whose | CI | the three waits |
+|---|---|---|---|
+| `b35594d` | the other lane (terminal write awaited) | success | none |
+| `0221729` | the other lane (docs only, ancestor `f84f579` present) | **failure** | 2, both `test_phase6_api` |
+| `15c1d75` | this session (web control + contract inventory) | **failure** | 3, `test_api_analysis_flow` + the same two |
+
+So the condition is intermittent, not linear, and it recurred on a docs-only commit that carried the terminal-write
+fix -- which means §180 overstated the closure and the sentence above stands corrected by this note rather than
+edited. My two commits are not in the causal chain: `0221729` is red without them, and the failure shape is
+identical with and without them.
+
+**What the evidence block reports, on both red runs.** Every timeout prints
+`task registry: no task for run-<id>; 0 registered`, alongside an idle pool
+(`Current Checked out connections: 0`) and the expected `engine url=sqlite+aiosqlite:///./data/dsa.db`. Nothing
+is wedged and no task survives: the writer is gone and the row was left in-flight. Neither of the two messages
+the terminal-write fix introduced appears anywhere in those logs -- not `the terminal write failed` and not
+`run lifecycle ended without a terminal row` -- so the remaining path is one where the task ends without either
+branch being reached, or ends before the log is captured. Which of those it is belongs to the run-lifecycle
+owner, and the discriminator is now printed by the harness instead of being inferred from a traceback: pending
+with a stack, or cancelled, or raised, or absent. That fourth case is what CI keeps showing.
