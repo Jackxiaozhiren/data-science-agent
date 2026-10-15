@@ -10742,3 +10742,55 @@ only difference is that this time the scan found it rather than a reader.
 would have failed on the day both pairs landed -- but adding it joins the CI gate list, and the standing rule is
 that gate lists are not touched without an explicit yes. So the guard is left as the offered next step, named
 here rather than shipped quietly.
+
+## 183. The frozen row has a mechanism, and it was found locally: two exits in the write path that say nothing
+
+**The reproduction, which changed what could be claimed.** `tests/integration/test_phase6_api.py::
+test_sse_events_and_json_fallback` failed on this machine at `bd0016a`, run as a single test: 30 s timeout, row
+left at `status: VALIDATION`, `current_step: 4`, four tool calls recorded, `report_markdown: None`, registry
+empty, pool idle. It then passed inside a fuller run minutes later, so the condition is intermittent here exactly
+as it is on CI (which is why CI has shown three of these, then two, then two again). Nothing about Linux or the
+runner was needed after all -- §180's framing of it as "CI-side and still unnamed" was overtaken by the repro.
+
+**An instrument's blind spot, found by using it.** The stall evidence added in `bd0016a` printed
+`live tasks on this loop: {}`, and the reading that invited is "the writer is gone". That reading was not
+licensed: `asyncio.all_tasks()` is loop-local, proved by parking a pending coroutine on a second thread's loop
+and seeing it absent from the census. The scan is now thread-wide -- `sys._current_frames()` for any frame inside
+`run_lifecycle.py` or `dsa_agent/graph.py` -- and it is that scan, plus the empty registry, that actually supports
+the conclusion. The census line is labelled as loop-only so nobody repeats my inference.
+
+**What the writer was doing.** `await execute(run_id)` called directly, with a row and dataset of the same shape,
+produces seven writes ending `COMPLETED` with a report: the lifecycle is healthy when something awaits it. The
+failing path is the scheduled one, and the difference is not the graph. `run_lifecycle._write` began with
+`row = await session.get(...)`; `if row is None: return` -- **a discarded write with no exception and no log**.
+`session_factory()` resolves `database.AsyncSessionLocal` at call time, deliberately, and the comment beside it
+says why: a background task must follow the app's current engine. Put the two together and a database rebound
+while a run is in flight sends every later write for that row into a database that has no such row: `execute`
+returns normally, `_finish` finds no exception and stays silent, and the client polls a status that nothing will
+ever change again. That is the exact payload of all three CI failures and of the local repro.
+
+**Two exits, both now named.** A write that cannot find its row logs at ERROR with the run id and the engine it
+was writing to. A lifecycle that ends by cancellation logs instead of returning, which was the other silent way
+out (`_finish` checked `cancelled()` and stopped). Neither change adds a handler, so the ratchet is untouched:
+`audit_facts.py --check` reports OK, and the tree's `debt.exceptHandlers` reading is unchanged.
+
+**Falsified in both directions.** `tests/unit/test_run_lifecycle_cancellation.py` -- three tests. On the tree
+before these two log lines it is red with `AssertionError: []` for the cancel branch and a failed assertion for
+the discard branch; after, 3 passed. The third test asserts what this change does *not* fix: a cancelled
+lifecycle still leaves the row in `IN_FLIGHT_STATUSES` and still empties the registry. Asserting that as current
+behaviour is deliberate -- otherwise a log line reads like a remedy.
+
+**Two remedies, declined, because they are votes.** Making `_write` raise would turn the discard into a hard
+failure, which is a different product answer than "keep the row truthful", and it lands inside another lane's
+documented decision. Capturing the session factory once at `schedule_run` time would make a run immune to a
+mid-flight rebind, and that directly contradicts the comment explaining why the resolution is at call time. Both
+are the lifecycle owner's call, not a quiet edit at 03:00 in a shared worktree. What changes today is that the
+next failure -- CI or local -- arrives with a message: either `write for run <id> discarded: no such row in the
+database this process writes to (<url>)`, or `run lifecycle was cancelled before writing a terminal row`. One of
+those two is the missing premise every round so far has had to guess at.
+
+**Measured, and what it does not buy.** `ruff check`, `ruff format --check`, `mypy apps/api` (24 files) clean;
+`sync_vendor.py --package dsa_api` wrote `dsa_api/services/run_lifecycle.py`; `tests/unit/test_run_lifecycle_cancellation.py`
+plus all of `tests/integration` rc 0 locally at the time of writing -- and given the intermittency, that local
+green is a sample, not a proof. `main` may well stay red after this; it will not stay silent, which is the thing
+§176, §177 and §180 have all asked for in different words.

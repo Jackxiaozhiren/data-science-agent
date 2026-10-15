@@ -206,13 +206,35 @@ def _stall_evidence(run_id: str) -> str:
             "the entry was dropped, the task was not. Suspended at:"
         )
         lines.extend(f"    {entry}" for entry in suspended[-4:])
-    lines.append(f"  live tasks on this loop: {live_by_name}")
+    lines.append(
+        f"  live tasks on THIS loop (all_tasks() cannot see another loop's tasks): {live_by_name}"
+    )
+    # ...so an empty census above is not by itself proof the writer finished: verified against a live task on a
+    # second thread's loop, which `all_tasks()` does not list. Frames are thread-wide, so this scan is what
+    # licenses the stronger reading -- a coroutine still inside the lifecycle would show its line here, and an
+    # empty result with an empty registry means the writer really is gone rather than merely elsewhere.
+    frames = []
+    for tid, held_frame in sys._current_frames().items():
+        node, depth = held_frame, 0
+        while node is not None and depth < 30:
+            name = node.f_code.co_filename
+            if "run_lifecycle.py" in name or "dsa_agent/graph.py" in name:
+                frames.append(
+                    f"    thread {tid}: {name.rsplit('/', 1)[-1]}:{node.f_lineno} "
+                    f"in {node.f_code.co_name}"
+                )
+                break
+            node, depth = node.f_back, depth + 1
+    lines.append(f"  threads still inside the lifecycle or the graph: {len(frames)}")
+    lines.extend(frames[:6])
     # Two module objects for one file would explain a census that says no task while a task runs: the registry
     # written by the route and the registry read here would be different dicts. The vendored copies under
-    # `_vendor` are omitted from coverage, so nothing else in the report would ever show the split.
+    # `_vendor` are omitted from coverage, so nothing else in the report would ever show the split. Matched on
+    # the shipped module path rather than the bare suffix: `test_analysis_run_lifecycle` ends the same way and
+    # is a test module -- the first CI run of this line reported it as though it were a second copy of the code.
     lines.append(
-        f"  run_lifecycle modules loaded: "
-        f"{sorted(m for m in sys.modules if m.endswith('run_lifecycle'))}"
+        "  lifecycle module objects loaded: "
+        f"{sorted(m for m in sys.modules if m.endswith('dsa_api.services.run_lifecycle'))}"
     )
     lines.append(f"  engine pool: {app_database.engine.pool.status()}")
     lines.append(

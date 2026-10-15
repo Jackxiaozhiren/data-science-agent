@@ -84,6 +84,17 @@ async def _write(
     async with session_factory()() as session:
         row = await session.get(AnalysisRunORM, run_id)
         if row is None:
+            # Loud, because the alternative is a run that looks in progress forever. `session_factory()` is
+            # resolved at call time on purpose (a background task follows the app's current engine), so a
+            # database swap mid-run sends every later write for this row here -- no exception, no log, and the
+            # client polls a status nothing will ever change again. The engine is named because the only
+            # useful reading of this line is "which database did I just write to".
+            log.error(
+                "write for run %s discarded: no such row in the database this process writes to (%s)",
+                run_id,
+                database.engine.url,
+                extra={"run_id": run_id},
+            )
             return
         row.status = status
         if state_json is not None:
@@ -152,6 +163,12 @@ def _finish(run_id: str, finished: asyncio.Task[Any]) -> None:
     """
     _TASKS.pop(run_id, None)
     if finished.cancelled():
+        # Named rather than silent: a cancelled lifecycle is the one exit that neither writes the row nor
+        # raises, so without this line the only trace of it is a client polling a status nobody will ever
+        # change again. Three CI runs were read by elimination before it existed.
+        log.error(
+            "run lifecycle was cancelled before writing a terminal row", extra={"run_id": run_id}
+        )
         return
     error = finished.exception()
     if error is not None:
