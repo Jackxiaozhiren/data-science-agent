@@ -23,6 +23,7 @@ from __future__ import annotations
 import base64
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 from html.parser import HTMLParser
 from typing import Any
 
@@ -244,6 +245,27 @@ def test_limitations_are_first_class_not_a_trailing_section() -> None:
 
 def test_the_print_stylesheet_exists() -> None:
     assert "@media print" in export_html(_fixture_run())
+
+
+def test_the_product_offers_the_file_its_endpoint_makes() -> None:
+    """The endpoint without an entry point is the phantom-capability shape: R-07 exists, nobody reaches it.
+
+    Pinned at source for the same reason `test_demo_seeding` pins the missing DELETE control: the tour drives
+    routes, not this page's button row, and the failure to guard against is the button quietly disappearing
+    while the endpoint stays.
+    """
+    root = Path(__file__).resolve().parents[2]
+    page = (root / "apps/web/app/analysis/[runId]/page.tsx").read_text(encoding="utf-8")
+    inspector = (root / "apps/web/app/analysis/[runId]/RunInspector.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "format=html" in page, "the page no longer builds the offline-report URL"
+    assert "Download offline HTML" in inspector, (
+        "the download row no longer offers the offline file"
+    )
+    assert 'title="One self-contained file' in inspector, (
+        "the button stopped saying what the file is: a visitor cannot tell it apart from the markdown one"
+    )
 
 
 def test_the_guard_sees_what_it_claims_to_see() -> None:

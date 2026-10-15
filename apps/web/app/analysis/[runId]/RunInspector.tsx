@@ -329,7 +329,7 @@ function FollowUpBox({ run }: { run: RunDetail }) {
   );
 }
 
-export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: RunDetail; reportUrl: string; findingsUrl?: string; fromRunId?: string }) {
+export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }: { run: RunDetail; reportUrl: string; findingsUrl?: string; htmlUrl?: string; fromRunId?: string }) {
   const st = run.state;
   const [copied, setCopied] = React.useState(false);
   const [traceFilter, setTraceFilter] = React.useState<"all" | "ok" | "error">("all");
@@ -487,6 +487,17 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
                   title="The same conclusions, numbers and limitations without evidence ids, tool trace or file paths — the document to attach to a submission"
                 >
                   <Download className="size-4" aria-hidden /> Download plain findings
+                </Button>
+              </a>
+            )}
+            {st?.report_markdown && htmlUrl && (
+              <a href={htmlUrl} target="_blank" rel="noreferrer">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  title="One self-contained file: charts inlined, evidence chains expand in page, opens with no server and no network"
+                >
+                  <Download className="size-4" aria-hidden /> Download offline HTML
                 </Button>
               </a>
             )}
