@@ -1,6 +1,87 @@
 # Changelog
 
 ## Unreleased
+### Added (post-4.5.0) -- the first screen is never empty, and the door that opens is the analyst's
+
+- **R-01.** `dsa_api.services.demo_seed` runs in the lifespan: the committed files in `examples/datasets/` go
+  through the real `save_dataset` path (validated, profiled, hashed), each seeded row carries a
+  `dsa_sample_dataset` marker in its existing metadata column, and every seeded dataset gets a finished report
+  to open before the visitor does anything. `GET /api/v1/datasets/` on a fresh database answered
+  `{"datasets": []}` (audit B4); it now answers two marked rows with three questions each.
+- The questions are this project's own benchmark tasks: `benchmarks/v2/catalog.json` names a dataset per task,
+  and a task is offered for a sample only when `benchmarks/v2/datasets/<name>` has the same sha256 as that
+  sample. Nothing is written for a page, and a sample with no byte-matched task publishes no question.
+- The example report is **produced by the code that is shipping**, in a reasoning mode that calls no model and
+  spends nothing, and is linked only if its own row shows no errored tool call and no failing validation check
+  (`run_is_clean`). When the instance is configured to reason with a model, no run is started unasked -- the
+  questions stay offered.
+- **R-10.** `NAV_GROUPS` in `Sidebar.tsx` is the one declaration, read by the sidebar and the top bar:
+  *Your work* (`/analysis`, `/runs`, `/reports`, `/datasets`) then *About this system* (seven entries, labelled
+  as measurements of the agent rather than of the visitor's data). The sidebar now renders on every route -- it
+  previously appeared on three, so a report page had no workspace navigation -- and `/evaluations`, `/failures`
+  and `/mcp` gained their first links after being URL-only surfaces. Nothing was removed or hidden.
+- `docs/FRONTEND_IA.md` was rewritten as the spec of record: sixteen routes with where each is reached from,
+  the endpoint-per-screen data flow, the two deployment shapes (local and the free hosted pair, including the
+  disk that is wiped on every deploy), and an explicit deferred list with a reason per item. The previous
+  version described a five-route app and still said `Settings hidden until auth` (audit B12).
+- Twenty-nine guards: 18 in `tests/integration/test_demo_seeding.py`, 7 in
+  `tests/contract/test_web_navigation_groups.py`, 4 in `tests/contract/test_web_limitation_severity.py`. The
+  acceptance run (`output/lane-d/capture-r01-r10.sh`, fresh database, API :8124, web :3213) is 7/7 browser
+  checks plus the cold-boot assertion, with four screenshots; the web tour is 30/30.
+
+### Fixed (post-4.5.0) -- two premises that were true only on the machine that wrote them, and a warning that fired on every run
+
+- **The demo's evidence lived in a gitignored directory.** The first version of the seeder took its questions
+  and its example run from `benchmarks/ds-agent-benchmark/results/**/raw_runs.json`. Those are real completed
+  runs, so it looked like the stronger source; `.gitignore:36` excludes the whole directory, so a fresh clone
+  -- what a deploy builds and what a reviewer reads -- would have seeded two datasets and no questions, and
+  every test in the suite would have passed anyway because the developer's tree has the files. The seeding
+  tests read the same ignored path, so they would have errored in CI. `demo_seed` now names its sources as
+  constants, and `test_the_demo_reads_only_tracked_files` asserts each one is in `git ls-files` -- with the
+  ignored path kept in the file as the negative control, verified red by pointing `CATALOG` at it.
+- **`COMPLETED` is not a quality claim, and the promoted example proved it.** Every committed `titanic.csv` run
+  reaches `COMPLETED` with 4-8 errored tool calls inside it (a planner that emitted `x` missing and
+  `test: "t-test"` for a schema wanting `"t_test"`), so the landing page's "open a finished example" led to a
+  red "This run failed -- 4 tool calls errored" panel. The acceptance check passed on it, because it asserted
+  `COMPLETED` and a non-empty page. The example is now generated at boot by the current code, and the check
+  reads the rendered page for the failure panel and the check count; the cold-boot assertion opens every linked
+  example and refuses an errored call or a failed check.
+- **A caveat that fires on every report fires on none of them.** `SEVERE_LIMITATIONS` in the run inspector
+  listed `causal` and `causation`, and the agent attaches `limitation="Association does not imply causation."`
+  to every insight derived from a correlation or a hypothesis test -- so the loudest tier was the product's own
+  standing disclaimer, on effectively every page. Severity moved to `app/lib/limitations.ts` as one owner; the
+  causal words are out, `bias / leak / overfit / confound / spurious` stay. Claiming a causal conclusion is a
+  different gate and still is the `unsupported_claim` validation check, which the guard pins by name so the
+  banner is not quietly the last line of defence. Both directions are falsified: adding `causation` back
+  reddens it, emptying the list reddens it.
+- **A boot that ran the agent inside eight unrelated test files.** `TestClient(app)`'s context manager runs the
+  lifespan, and nine files open one -- eight of them with no connection to this work; with the hook live, each
+  of them seeded the configured database and
+  executed two analyses. The full gate sweep showed it as `test_api_analysis_flow` timing out at
+  `status: VALIDATION` -- a run whose four steps had all finished, waiting on a write while two other runs
+  shared the file. `DSA_DEMO_SEEDING` now gates the hook, the root conftest sets it off for the suite, and
+  `test_the_switch_the_suite_relies_on_actually_switches_it_off` holds both halves: off means the boot writes
+  nothing, and an unset variable still means on, so a deploy cannot silently lose the demo. Verified red by
+  making the hook ignore its own flag.
+- **The tour could be walked against a bundle that was not this tree.** `next start` never builds, so a stale
+  `.next` -- or one compiled with a different `NEXT_PUBLIC_API_URL` -- is served and judged. Hit for real while
+  capturing this lane's evidence: the acceptance build baked `:8124`, and the tour then reported the shared
+  probe's page copy as missing because the pages were calling a dead origin. `assertBundleMatchesThisTree`
+  refuses a bundle older than any source file, or one naming an API origin other than the port being guarded;
+  both branches were verified red (a `touch`, and the real `:8124` bundle).
+- **Two instrument reads taken at first paint.** Next streams these routes, so `main` arrives after the shell.
+  The probe scenarios and the example-report check each read the page the moment a locator appeared and
+  reported "rendered nothing" against a Suspense fallback. Both now wait for streamed content, and the probe
+  failure path dumps what the page did say -- a check that fails on an empty page would also pass its
+  forbidden-claim assertions vacuously, which is the part worth pinning.
+- The tour's route list is now checked against `NAV_GROUPS` rather than maintained beside it, so a nav entry
+  added tomorrow cannot ship without ever having been rendered once.
+- `debt.exceptHandlers` stays at 184 of 185: the boot hook reads failures through
+  `asyncio.gather(..., return_exceptions=True)`, and the two halves of the hook are gathered apart so a
+  missing example run is logged as "the datasets are there, the report is not" rather than as an empty screen.
+- Vendored copies repaired for the two files that changed (`dsa_api/main.py`, `dsa_api/services/demo_seed.py`);
+  `sync_vendor.py --check` reports only another session's `dsa_evaluation` drift.
+
 ### Fixed (post-4.5.0) -- a run whose last write failed is now failed, not frozen
 
 - Reading a CI payload instead of its assertion sentence changed the diagnosis: the run that timed out at

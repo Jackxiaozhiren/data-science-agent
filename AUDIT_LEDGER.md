@@ -10743,6 +10743,165 @@ would have failed on the day both pairs landed -- but adding it joins the CI gat
 that gate lists are not touched without an explicit yes. So the guard is left as the offered next step, named
 here rather than shipped quietly.
 
+## 182. Lane D shipped R-01 and R-10, and the acceptance evidence was the thing that had to be fixed first
+
+**Numbering note, in the spirit of §181.** This section is 182 because §180 and §181 were written in another
+session while Lane D was in flight. It was checked against `grep -n '^## ' AUDIT_LEDGER.md` before the heading
+was typed, not from memory of the last section this session wrote.
+
+### What moved
+
+R-01 (the first screen is never empty) and R-10 (the analyst's door on the front) are implemented, guarded by
+29 tests (18 + 7 + 4, counted by collection, not by hand), and the acceptance run is 7/7 browser checks plus the
+cold-boot assertion with four screenshots; the web tour is 30/30.
+
+- Cold boot on a fresh database: `GET /api/v1/datasets/` answers 2 rows, both marked, 3 questions each, and
+  `GET /api/v1/analysis/` answers 2 completed runs -- 5 and 7 tool calls, every one ok, 11/11 and 12/12 checks.
+  Before this lane it answered `{"datasets": []}` (B4).
+- `NAV_GROUPS` is the single navigation declaration; the sidebar renders on every route instead of three;
+  `/evaluations`, `/failures`, `/mcp` have links for the first time. B1's plan text described the author
+  surfaces as "at the same level as the task" -- measured, two of five were, and three were worse: unlinked.
+- `docs/FRONTEND_IA.md` is rewritten as the spec of record (16 routes, per-screen endpoints, the two deployment
+  shapes, and a deferred list with a reason per item). B12 is closed.
+
+### The two premises that were true only on this machine
+
+**1. The demo's evidence was in a gitignored directory.** The first version took its questions and example run
+from `benchmarks/ds-agent-benchmark/results/**/raw_runs.json` -- real completed runs, so it read as the stronger
+source. `.gitignore:36` excludes that directory. Measured on this tree: all three files the module named are
+untracked and ignored, and `git ls-files` returns none of them. Consequences, both silent:
+
+- A fresh clone -- the deploy, and the reviewer -- seeds two datasets and no questions. The landing page falls
+  back to its honest "no example" note, so nothing looks broken.
+- `tests/integration/test_demo_seeding.py` read the same path, so it would have **errored** in CI on a tree
+  where it passed locally. It was never pushed; the lane caught it while re-reading the source for the docs.
+
+The seeder now names its sources as constants and `test_the_demo_reads_only_tracked_files` asserts each is in
+`git ls-files`. The ignored path stays in the test file as the negative control, and the guard was verified red
+by pointing `CATALOG` at it -- not by reasoning that it would be.
+
+**2. `COMPLETED` is not a quality claim, and the promoted example proved it.** With the questions fixed, the
+acceptance run reached 6/7 and the screenshot explained itself: the page the landing CTA links said
+**"This run failed -- 4 tool calls errored"**, under a green COMPLETED pill and 11/12 validation. The recorded
+Titanic runs are stale in a way no text-matching assertion notices -- all four committed ones end with 4-8
+errored calls from a planner that emitted `x` missing and `test: "t-test"` where the schema wants `"t_test"`.
+A fresh run of the same question on the same bytes by HEAD's code is clean (5 calls, 11/11). So the example is
+now generated at boot by the shipping code, and `run_is_clean` (status, no errored call, no failed check, at
+least one call) decides whether it is promoted. Nothing was hidden: the dirty runs stay in the database, and
+`/failures` still lists them.
+
+**The check that certified it was the second bug.** My acceptance assertion read `COMPLETED` and a non-empty
+page. Both were true. A check written against the status field of the thing it is meant to scrutinise cannot
+see the thing. It now reads the rendered page for the failure panel and the check count, and the cold-boot
+script opens every linked example and refuses an errored call.
+
+### A warning that fired on every report
+
+Capturing the fixed example page surfaced the next defect: an amber banner reading "1 caveat (1 critical)" on a
+run with zero tool errors and 11/11 checks. `SEVERE_LIMITATIONS` in the inspector listed `causal` and
+`causation`, and `graph.py:295` / `langgraph_graph.py:131` attach `limitation="Association does not imply
+causation."` to every correlation or hypothesis-test insight -- so the loudest tier in the UI was reserved for
+the product's own boilerplate, on effectively every page. Severity moved to `app/lib/limitations.ts` as one
+owner with the causal words out and `bias / leak / overfit / confound / spurious` kept. Claiming a causal
+conclusion is a separate gate and stays one: the `unsupported_claim` validation check, which the guard now pins
+by name so nobody mistakes removing the banner word for removing the protection. Both directions falsified --
+adding `causation` back reddens, emptying the list reddens.
+
+### Two instrument reads taken at first paint
+
+Both of this lane's "product defect" reports were the instrument, and each was found the same way: read what the
+page actually contained instead of what the assertion claimed.
+
+- The example-report check read `main` the moment the URL changed and got Next's Suspense fallback (skeleton
+  divs, no text) and reported "rendered nothing" for a page that had streamed fine 200 ms later.
+- The tour's `unreachable` probe scenario reported the page copy missing. It passes standalone in 0.1 s and
+  failed inside the tour in 0.2 s -- because the tour had already visited `/datasets` twice, so the shell painted
+  fast and `main` had not arrived. The check now waits for streamed content before reading, and the failure path
+  dumps the body: a forbidden-claim assertion run against an empty page passes for the wrong reason, which is
+  the part worth pinning.
+- Separately, the tour's first red was *not* that bug: `next start` never builds, and the bundle was the
+  acceptance build, baked for `:8124`. `assertBundleMatchesThisTree` now refuses a bundle older than any source
+  file or naming an API origin other than the guarded port. Both branches verified red -- a `touch`, and the real
+  `:8124` bundle that triggered it.
+
+### The hook I added would have cost eight unrelated files
+
+`TestClient(app)`'s context manager runs the lifespan, and eight test files outside this lane open one. With
+the boot hook live and unguarded, each of them seeded the configured database and executed two analyses -- so
+the lane's first full gate sweep came back with `tests/integration/test_agent_analysis.py::test_api_analysis_flow`
+timed out at `status: VALIDATION`, a run whose four steps had all recorded ok and whose final write was waiting
+behind two runs nobody asked for. The stall report the previous session had just landed (`bd0016a`) is what made
+that readable in one screen: `threads still inside the lifecycle or the graph: 0`, one module object, pool idle.
+
+`DSA_DEMO_SEEDING` now gates the hook; the root conftest sets it off for the suite with a comment naming the
+failure it prevents, and `test_the_switch_the_suite_relies_on_actually_switches_it_off` holds both directions --
+off means the boot writes nothing, unset still means on, so the deployed default cannot rot into "no demo"
+without a red test. Verified red by making the hook ignore its own flag, not by reading the branch.
+
+**The attribution discipline this section is meant to show.** Three tests were red in that sweep, and two of
+them (`test_phase6_api.py`) belonged to the other session's in-flight lifecycle work -- they passed within
+minutes, once `3a60c4a` landed. Claiming all three, or blaming all three on the tree, would have been the §177
+mistake repeated. The one that stayed red was mine, and the fix is above.
+
+**And one more, found by the same sweep after that fix.** With the switch in place the failing set was still not
+empty: `test_phase6_api.py::test_progress_and_evidence_trace` timed out again, 40 tests after my file, with two
+orphaned aiosqlite worker threads alive. The cause was not the runs -- it was the *loop*. `TestClient(app)` runs
+the lifespan on its own loop in a thread and closes that loop on exit, so the connections the boot opened on the
+module engine belonged to a loop that no longer existed. Nothing in the suite had ever made the lifespan do
+work before, so nothing had ever noticed; this lane's boot was simply the first lifespan in collection order,
+which turned a latent hazard into a timeout in somebody else's test. The wiring test now enters the lifespan on
+its own loop through `app.router.lifespan_context(app)`, and the full suite is 0 failures with coverage 83.96%.
+
+**The general shape, since it will recur.** A guard that makes startup do something is also a guard that makes
+startup own resources -- connections, locks, tasks -- on whichever loop happens to boot it. Every one of this
+lane's four reds (gitignored source, `COMPLETED` as a quality signal, agent runs inside eight unrelated files,
+a closed loop's orphaned connections) was a consequence of an action nobody had taken before in that place, not
+a mistake in the code that ran it.
+
+### Still owed by this lane, and what looks like work next
+
+- The maintainer's redeploy of both demo services from a revision at least as new as this one. Verification
+  after it: the OpenAPI census from `docs/hosted-demo.md`, `/version` carrying `storage`, and
+  `GET /api/v1/datasets/` answering two marked rows with three questions each. Until then the hosted first
+  screen is still the empty one.
+- The heading-uniqueness guard §181 offered is still unshipped for the same reason (it joins a gate list).
+- A per-run evidence-coverage number for the landing stat card: computed per run today, and the card shows `—`.
+- Boot now costs ~1.5 s per seeded dataset in heuristic mode (measured 1.45 s for the Titanic EDA). Against the
+  44.5 s cold start this is noise, but it is a real cost on a persistent-disk instance where the runs are
+  reused rather than regenerated -- the reuse path is tested (`how == "reused"` on the second boot).
+
+```
+FILES OWNED BY THIS SECTION (Lane D)
+  apps/api/src/dsa_api/services/demo_seed.py        new; vendored copy repaired
+  apps/api/src/dsa_api/main.py                      lifespan hook; vendored copy repaired
+  apps/web/app/lib/sampleData.ts                    new (marker shape owner)
+  apps/web/app/lib/limitations.ts                   new (severity owner)
+  apps/web/app/page.tsx, app/datasets/page.tsx      sample panel, starter CTA, copy by provenance
+  apps/web/app/components/layout/{Sidebar,SiteHeader}.tsx   NAV_GROUPS
+  apps/web/app/analysis/[runId]/RunInspector.tsx    severity now imported
+  apps/web/scripts/regression.mjs                   bundle preflight, nav-derived routes, stream-aware probe
+  docs/FRONTEND_IA.md                               rewritten
+  tests/integration/test_demo_seeding.py            18
+  conftest.py                                     one session fixture (demo off for the suite)
+  tests/contract/test_web_{navigation_groups,limitation_severity}.py   7 + 4
+
+FILES OTHER SESSIONS OWN (untouched)
+  README.md, packages/evaluation/src/dsa_evaluation/external_validation.py,
+  tests/evals/test_external_validation.py -> dirty in the shared tree, never staged
+  apps/api/src/dsa_api/routers/bundles.py, apps/api/tests/test_run_bundle.py -> untracked WIP
+  src/data_science_agent/_vendor/dsa_evaluation/* -> left drifted on purpose; `sync_vendor --check` reports it
+
+SHARED-STATE ACTIONS UNDER §19.1
+  push    -> commits to main by explicit path (`git commit -- <paths>`), never `git add -A`; the two new test
+             files were `git add`ed by path in the same command
+  PR      -> none
+  deploy  -> none by this session: no Render or Vercel credential or CLI exists here, so the redeploy stays the
+             maintainer's click
+  money   -> none spent, nothing created. The boot-time example runs only in a mode that calls no model, and a
+             configured-provider instance generates none at all -- that rule is a test, not a comment
+```
+
+
 ## 183. The frozen row has a mechanism, and it was found locally: two exits in the write path that say nothing
 
 **The reproduction, which changed what could be claimed.** `tests/integration/test_phase6_api.py::
