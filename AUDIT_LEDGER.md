@@ -10522,3 +10522,15 @@ source, untouched, as in §174 through §178.
 now shows the chain that produced it. If the three still fail, they fail with a named cause -- either
 `the terminal write failed` with its exception, or `run lifecycle ended without a terminal row` -- instead of
 a 30-second silence about a run that had already finished its work.
+
+**Closed by CI, in the same section's own words.** `b35594d` is the first green run of `CI` since `362bfe5`
+(21 hours and four red pushes earlier): job `ci` and job `web-regression` both `success`, with
+`ruff check`, `ruff format --check`, `mypy`, `pytest -q --cov` and `mkdocs build --strict` each reported
+`success` as steps rather than as a job verdict, and the wheel build plus the clean-wheel smoke install on top.
+The tour's own numbers come from CI's log, not this machine: **30/30 checks passed**, `warming reached after
+1.9s`, `unreachable reached after 0.2s`.
+
+So the third symptom was the one this section diagnosed, and the two earlier guesses each shipped something
+worth keeping while being wrong about the cause -- which is the whole reason the failing-set table above exists
+in the record. What closed the seven: four by another session's `c575bd2`, three by the terminal-write fix
+here.
