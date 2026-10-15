@@ -11138,3 +11138,25 @@ landed under `4dbc26f`..`7a7b520`.
 **Free-tier audit for the whole session:** nothing purchased, no service created, no workflow file touched,
 no dependency added (the a11y tooling R-13 wants is explicitly *not* installed), no release cut. Pushes to
 main by explicit path only, no PRs, no force-push.
+
+## 187. The Study 2 and Study 3 kits are frozen, and the guard that watches kit schemas stopped being a list
+
+**What landed (`3eb32b0`).** The two measurement protocols §186 said were missing now exist, in Study 1's
+shape and under its rules. Study 2 pairs the two renderings R-06 ships -- findings vs audited, one analysis,
+blind, order alternated, n=6 -- and pre-commits the vocabulary for the finding the plan expects: `helped` /
+`hindered` / `neutral` / `mixed`, with `hindered` an outcome the product must be able to act on rather than a
+failed study. Study 3 hands a reviewer only the offline file R-07 ships and ends on the plan's mandatory
+question; its coordinator first replays the file's own zero-network acceptance so a broken file never wastes
+a session. Both schemas follow `RESULTS_SCHEMA.json`'s conventions: no pre-filled value, `is_project_author`
+must be false, raw records archived.
+
+**The guard that grew.** `test_validation_kit_schemas.py` enumerated kit schemas as a literal pair -- a list
+that cannot fail for a new member, which is exactly when it would have mattered. It now derives the list from
+the directory, gained protocol-to-schema consistency tests for Studies 2 and 3 (the fields each protocol
+promises must be storable), and gained the README mirror check in both directions: a kit file without an
+index row, and an index row without a file, are both red. Verified red by planting an unindexed file, then
+restored.
+
+**What recruiting now waits on.** Nothing in the repository. Study 1 was frozen at `71a30d4`; Studies 2 and 3
+are frozen here; all three are honestly `NOT CONDUCTED`. The next action belongs to the maintainer
+(plan §19.1 item 6) and is a person, not a commit.
