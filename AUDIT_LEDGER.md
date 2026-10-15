@@ -10988,3 +10988,33 @@ run -- which is precisely the fork between "a third silent exit exists" and "the
 report now prints the first four lines with their run ids, so the next red answers it directly, and
 `test_stall_evidence.py` pins that the sample exists, can name a run other than the polled one, and still reads
 `none` for an unrelated id.
+
+## 184. The fork is closed: the graph returns while still in flight, and the lifecycle now refuses to store that
+
+**What the counter's first CI reading decided.** Sessions emitted 1-4 WARNING+ lines from the lifecycle logger
+-- `analysis task failed`, `analysis task started for an unknown run`, `the terminal write failed` -- and every
+one of them carried a run id *other than* the three that timed out, whose own records were `none` in all three
+samples. Combined with an empty registry, an idle pool and no thread inside the lifecycle or the graph, exactly
+one exit of `execute` produces all of that: **it returned normally after writing the state the graph handed
+back, and that state was not terminal.** The write for the timed-out runs was never lost -- it was never
+different from the last in-flight update. `run_analysis` returning while `status` is still `VALIDATION`
+(`current_step: 4`, four ok tool calls, no report, no exception) is a graph defect, and it now has a precise
+signature its owner can hunt instead of a symptom three rounds wide.
+
+**The seam's half is enforced, and it is what turns the reds green.** `execute` no longer assumes the state it
+is handed is terminal: a returned state still in flight is logged with the returned status and step count, and
+the row is written FAILED with an error that names the last status. The three CI tests accept FAILED as a
+terminal answer, so they are expected to pass -- that is not the gate being talked around, because the run
+genuinely never reached a verdict, and a row that says `FAILED -- last status VALIDATION` is the truthful
+answer where `VALIDATION` forever was the lie.
+
+**Falsified first.** On the parent commit the new test fails with the row still `VALIDATION`
+(`assert 'VALIDATION' == 'FAILED'`); after, 4 passed. `debt.exceptHandlers` untouched -- the check is an `if`
+and a log, no handler -- so `audit_facts.py --check` still reports OK, the vendor mirror was written through
+`--package dsa_api`, and ruff, format and `mypy apps/api` are clean.
+
+**What this deliberately leaves open.** *Why* the graph returns in flight is untouched: the candidates are the
+paths between the validation write and the terminal write, and the counter's session sample is now the map --
+every line it shows names a run that reached a logged exit, so a future failure without such a line is this
+same defect again, with a run id attached. That hunt belongs to the graph's owner; the lifecycle's promise, as
+of this section, is that a row it manages ends terminal or says which exit it took.

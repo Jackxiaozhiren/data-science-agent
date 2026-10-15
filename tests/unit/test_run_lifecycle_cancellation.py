@@ -127,6 +127,44 @@ async def test_a_write_for_a_run_this_database_does_not_have_says_so(
     )
 
 
+async def test_a_graph_that_returns_a_non_terminal_state_becomes_a_failed_row(
+    memory_database: Any, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The lifecycle's half of the contract, enforced rather than assumed.
+
+    The graph is supposed to hand back a terminal state; when it returns one still in flight, writing it and
+    ending normally is the frozen row three CI rounds chased -- no exception, no log, a client polling a status
+    nothing will ever change. Enforced here because the row is the lifecycle's to keep truthful; *why* the
+    graph returned early stays the graph owner's bug, named in both the row and the log either way.
+    """
+    import dsa_agent.graph
+    from dsa_agent.state import AnalysisState, AnalysisStatus
+
+    async def _early_return(**kwargs: Any) -> AnalysisState:
+        return AnalysisState(
+            run_id=RUN_ID,
+            dataset_id="ds",
+            user_query="q",
+            current_step=4,
+            status=AnalysisStatus.VALIDATION,
+        )
+
+    monkeypatch.setattr(dsa_agent.graph, "run_analysis", _early_return)
+
+    with caplog.at_level("ERROR", logger=LOGGER):
+        await run_lifecycle.execute(RUN_ID)
+
+    async with memory_database() as session:
+        row = await session.get(AnalysisRunORM, RUN_ID)
+    assert row is not None and row.status == "FAILED", f"the row stayed {row.status!r}"
+    assert "VALIDATION" in (row.error or ""), row.error
+    assert any(
+        "non-terminal state" in record.getMessage()
+        for record in caplog.records
+        if record.name == LOGGER
+    ), [r.getMessage() for r in caplog.records]
+
+
 async def test_a_cancelled_lifecycle_leaves_the_row_in_flight_and_the_registry_empty(
     memory_database: Any, graph_that_never_finishes: dict[str, Any]
 ) -> None:

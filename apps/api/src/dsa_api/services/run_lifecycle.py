@@ -152,6 +152,25 @@ async def execute(run_id: str) -> None:
     if isinstance(error, BaseException):
         log.error("the terminal write failed", extra={"run_id": run_id}, exc_info=error)
         await mark_failed(run_id, failure_message(error))
+        return
+    # The graph's half of this contract is that the state it returns is terminal, and it is enforced here
+    # rather than assumed: a returned state that is still in flight is exactly the frozen row -- the write
+    # above succeeds, `execute` ends normally, the done callback finds no exception, and a client polls a
+    # status nothing will ever change again. Written FAILED with the last status named, so the row stops
+    # lying without hiding which state the graph handed back.
+    final_state = attempt.result()
+    if final_state.status.value not in (*TERMINAL_STATUSES, REVIEW_STATUS):
+        log.error(
+            "the graph returned a non-terminal state (%s after %d step(s)); the row is written FAILED",
+            final_state.status.value,
+            final_state.current_step,
+            extra={"run_id": run_id},
+        )
+        await mark_failed(
+            run_id,
+            "The analysis stopped before reaching a verdict "
+            f"(last status {final_state.status.value}). Start the run again.",
+        )
 
 
 def _finish(run_id: str, finished: asyncio.Task[Any]) -> None:
