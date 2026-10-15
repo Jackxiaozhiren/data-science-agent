@@ -182,6 +182,38 @@ def _stall_evidence(run_id: str) -> str:
         )
         for entry in [e.strip() for e in frame.getvalue().splitlines() if e.strip()][-4:]:
             lines.append(f"    await: {entry}")
+
+    # The discriminator the registry alone cannot supply: an absent entry means either "the writer finished" or
+    # "the writer is running and nothing points at it", and those two have different owners. So ask the loop
+    # directly -- by coroutine name, and by the run id in that frame's locals -- instead of inferring it.
+    live_by_name: dict[str, int] = {}
+    for candidate in asyncio.all_tasks():
+        if candidate is asyncio.current_task() or candidate.done():
+            continue
+        coro = candidate.get_coro()
+        name = getattr(coro, "__name__", type(coro).__name__)
+        live_by_name[name] = live_by_name.get(name, 0) + 1
+        if name != "execute":
+            continue
+        held = getattr(coro, "cr_frame", None)
+        if held is None or held.f_locals.get("run_id") != run_id:
+            continue
+        stack = StringIO()
+        candidate.print_stack(file=stack)
+        suspended = [e.strip() for e in stack.getvalue().splitlines() if e.strip()]
+        lines.append(
+            f"  a live execute() for {run_id} IS on this loop while the registry says otherwise -- "
+            "the entry was dropped, the task was not. Suspended at:"
+        )
+        lines.extend(f"    {entry}" for entry in suspended[-4:])
+    lines.append(f"  live tasks on this loop: {live_by_name}")
+    # Two module objects for one file would explain a census that says no task while a task runs: the registry
+    # written by the route and the registry read here would be different dicts. The vendored copies under
+    # `_vendor` are omitted from coverage, so nothing else in the report would ever show the split.
+    lines.append(
+        f"  run_lifecycle modules loaded: "
+        f"{sorted(m for m in sys.modules if m.endswith('run_lifecycle'))}"
+    )
     lines.append(f"  engine pool: {app_database.engine.pool.status()}")
     lines.append(
         f"  engine url={app_database.engine.url!r}; cwd={Path.cwd()}; "
