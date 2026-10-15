@@ -11068,3 +11068,12 @@ this directory are for.
 
 **Free-tier check:** no new dependency, no service, no money; the offline file adds bytes to an HTTP response
 and nothing else.
+
+**Closed by the runner, and the wording is §184's own prediction.** CI run **38749097329** on `044b157 --
+a head that carries this section's seam enforcement -- completed with both `ci` and `web-regression` at
+`success`, and its failed-step log is empty: none of the three `never reached a terminal status` failures
+remain, so the seam fix turned them green exactly as §184 predicted, on the runner rather than locally. The graph
+defect underneath is **not** closed by this: a run whose graph returns while still in flight is now a truthful
+FAILED row with `last status VALIDATION` in its error, which a visitor can see, instead of a page that polls
+forever. Finding the early-return branch stays with the graph's owner; every future occurrence now names itself
+in the row, the log, and the process-wide counter at once.
