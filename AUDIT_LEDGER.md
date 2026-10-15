@@ -11160,3 +11160,41 @@ restored.
 **What recruiting now waits on.** Nothing in the repository. Study 1 was frozen at `71a30d4`; Studies 2 and 3
 are frozen here; all three are honestly `NOT CONDUCTED`. The next action belongs to the maintainer
 (plan §19.1 item 6) and is a person, not a commit.
+
+## 188. The lifecycle family is red three samples running, and the seam's instrument is silent in all three
+
+**The record.** On `9ce20e0` -- a commit whose own content is docs, kit files and one test file -- CI's pytest
+step failed, was re-run, and failed again, then failed a third time. The failing set each time was the whole
+family: `test_agent_analysis.py::test_api_analysis_flow`,
+`test_phase6_api.py::test_progress_and_evidence_trace`, `test_phase6_api.py::test_sse_events_and_json_fallback`
+-- the 30-second terminal-write timeout, row parked at `VALIDATION` with the plan executed.
+
+**The shape, identical three times, and what it says.** The stall evidence in every failing capture:
+
+    live tasks on THIS loop (all_tasks() cannot see another loop's tasks): {}
+    threads still inside the lifecycle or the graph: 0
+    engine pool: Pool size: 5  Connections in pool: 0 or 1  Current Overflow: -5/-4
+
+That is §183's cross-loop signature exactly. Nothing logged a lifecycle exit -- §184's process-wide counter
+never fired -- so these three captures are not the early-return fork §184 closed; they are the other exit,
+the one that loses the task without a logged word, still unnamed.
+
+**What changed between green and red.** `044b157` (this session's R-07 close) was green on both jobs. Since
+then, the commits are `29fd18f`/`7a7b520` (the lifecycle owner's seam and counter), then this session's
+`66fd064`/`3eb32b0`/`076f1e1`/`9ce20e0` -- none of which touch the run path, the tests in question, or
+anything the failing tests import. Locally, the full suite is green on the same tree the runners are red on
+(84.02% coverage, 2026-10-15). So the discriminator is the runner environment, and the family has moved from
+"intermittent, green on re-run" to "red in three consecutive samples".
+
+**Whose move this is, stated plainly.** `run_lifecycle.py` and its test fixtures are the lifecycle owner's
+active area today (`4dbc26f`..`7a7b520`); §15's fence says report a collision rather than edit around it, and
+a third hand in that file while its owner is mid-instrumentation is how the counter and the fix diverge. What
+this section adds to their map: the seam's counter is silent in the CI captures, so the unknown exit lives
+*before* whatever the counter watches -- the task is lost between scheduling and the first logged exit, not
+between logged exits. Locally green / runner red three-for-three also means a reproduction needs the runner's
+slowness, not a shrunk local deadline: the 30 s budget is not the binding constraint here, or local would red
+too.
+
+**Main's honest state:** red, on the lifecycle family, for a revision whose own content is measurement
+paperwork. Not worked around, not retried into silence -- three samples recorded, the shape named, and the
+fix owed to the file's owner.
