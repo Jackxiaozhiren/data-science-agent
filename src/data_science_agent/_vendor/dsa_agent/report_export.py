@@ -380,7 +380,11 @@ def _travelling_charts(source: Any) -> list[tuple[str, str]]:
     """
     charts: list[tuple[str, str]] = []
     for call in _field(source, "tool_calls", []) or []:
-        get = call.get if isinstance(call, Mapping) else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        get = (
+            call.get
+            if isinstance(call, Mapping)
+            else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        )
         if get("tool") != "create_chart":
             continue
         output = get("output")
@@ -398,7 +402,11 @@ def _named_chart_lines(source: Any) -> list[str]:
     """The charts that did *not* travel, named the way the markdown view names them."""
     lines: list[str] = []
     for call in _field(source, "tool_calls", []) or []:
-        get = call.get if isinstance(call, Mapping) else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        get = (
+            call.get
+            if isinstance(call, Mapping)
+            else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        )
         if get("tool") != "create_chart":
             continue
         output = get("output")
@@ -416,7 +424,11 @@ def _named_chart_lines(source: Any) -> list[str]:
 def _dataset_sha256(source: Any) -> str | None:
     """The hash the profile call computed, read from the run's own trace -- the drill-down's last link."""
     for call in _field(source, "tool_calls", []) or []:
-        get = call.get if isinstance(call, Mapping) else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        get = (
+            call.get
+            if isinstance(call, Mapping)
+            else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        )
         output = get("output")
         if isinstance(output, Mapping):
             value = output.get("sha256")
@@ -503,15 +515,17 @@ def export_html(source: Any) -> str:
     parts.append("<ul>")
     for record in summary.get("evidence") or []:
         confidence = record.get("confidence")
-        confidence_text = f"{float(confidence):.2f}" if isinstance(confidence, (int, float)) else "?"
+        confidence_text = (
+            f"{float(confidence):.2f}" if isinstance(confidence, (int, float)) else "?"
+        )
         result = (
-            f'<br><code>{_esc(json.dumps(record["result"], sort_keys=True))}</code>'
+            f"<br><code>{_esc(json.dumps(record['result'], sort_keys=True))}</code>"
             if record.get("result")
             else ""
         )
         parts.append(
             f'<li id="{_esc(record.get("id"))}"><strong>{_esc(record.get("id"))}</strong>'
-            f" ({_esc(record.get('source_type'))} → <a href=\"#{_esc(record.get('source_id'))}\">"
+            f' ({_esc(record.get("source_type"))} → <a href="#{_esc(record.get("source_id"))}">'
             f"{_esc(record.get('source_id'))}</a>) — {_inline(record.get('claim'))}"
             f" — confidence {confidence_text} — {_esc(record.get('validation_status'))}{result}</li>"
         )
