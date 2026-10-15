@@ -11018,3 +11018,53 @@ paths between the validation write and the terminal write, and the counter's ses
 every line it shows names a run that reached a logged exit, so a future failure without such a line is this
 same defect again, with a run id attached. That hunt belongs to the graph's owner; the lifecycle's promise, as
 of this section, is that a row it manages ends terminal or says which exit it took.
+
+## 185. R-07 shipped: the report a stranger opens is one file, and the plan's premise about it was already stale
+
+**The premise correction first.** The plan's evidence line for R-07 reads "the report endpoint serves markdown
+text (`routers/analysis.py:124`)". Measured before building anything: that stopped being true when Lane C
+landed -- `format=html` has existed since `export_html` became the audited rendering, and its own docstring
+said so honestly: *"a chart is named rather than embedded: R-07 is the requirement that inlines the image."*
+So R-07 was never "build an HTML renderer"; it was "finish one that deliberately stopped short". Reading the
+endpoint before designing saved a second renderer, which is the exact defect R-06 exists to prevent.
+
+**The design that matters: the chart is read from the state, not the disk.** Measured on the seeded runs,
+`create_chart` embeds the picture in its own tool-call output -- `base64_png`, 12–126 KB per chart. The state
+is what survives the free tier's wiped disk; `artifacts/` is not. So the file a reviewer opens carries its
+charts even on an instance that was redeployed yesterday, no path containment needed, no artifact registry to
+drift. A payload that is not a PNG, or one over the per-chart cap, is *named* -- the old renderer's honesty
+rule, kept verbatim in a new place.
+
+**The chain, and where its last link was hiding.** Claim → evidence → tool call is three ids the state
+already carries. The spec's fourth link, the dataset hash, is nowhere in `run_summary` -- it lives in the
+profile call's `output.sha256`, which nothing rendered. The HTML surfaces it once, in the provenance line, and
+the guard counts it: `html.count(SHA256) == 1`, because a hash printed twice is two facts to keep in step.
+
+**Guarded by a parser, falsified on both predicates.** Nine tests
+(`tests/contract/test_report_html_offline.py`) read the document through `html.parser`, not regex: every
+in-page link must resolve to an id in the same document, no `src`/`href` of any external scheme, no
+`<script>`/`<iframe>`/`@import`, a 2 MB traveller ceiling, limitations rendered before the plan, and the
+chart inlined as a `data:` URI. Both directions are planted: a CDN script tag into a scratch copy reddens the
+reference check, a moved evidence anchor reddens the link check. The zero-external-references assertion was
+green on arrival -- which is precisely why its falsification is a test and not a comment.
+
+**Accepted the way the spec asks.** The file is opened from `file://` with every `http`/`https` request
+aborted at the route level: 0 network requests attempted, the inlined chart decodes (`naturalWidth > 0`), the
+chain expands on click and the evidence link navigates. Evidence: `output/lane-d/r07-offline-report.html`,
+its screenshot, and `r07-offline-acceptance.mjs`. Size on the seeded sales run, two charts: 161,570 bytes.
+
+**Measured and deferred, not fixed: the evidence payloads leak operator paths.** The visualization evidence
+entries carry `result` blobs containing `/Users/jackson/...` -- the chart tool records where it wrote. The
+HTML renders the run's numbers verbatim (the pair guard's invariant: same numbers, not a summary of them), so
+stripping paths here would break that promise and belongs to R-08's owner, which already owns who may see
+what. Recorded here so the next reader meets a decision instead of a surprise.
+
+**One test-side lesson, since the file is new.** The first version of the chart reader wrote
+`isinstance(call, Mapping)` guards copied from the dict-shaped state the API stores -- and silently skipped
+every call when handed the typed `AnalysisState` the contract fixture builds, returning no charts and no
+hash. The guard caught it as "the chart is not inlined"; the fix is the same tolerant getter `_step_text`
+already used. A helper that accepts two shapes must be proven on both, which is what the two fixtures in
+this directory are for.
+
+**Free-tier check:** no new dependency, no service, no money; the offline file adds bytes to an HTTP response
+and nothing else.

@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — the report a stranger opens is one file, offline (R-07)
+
+- `GET /api/v1/analysis/{run_id}/report?format=html` now returns a file that carries everything it shows:
+  charts inlined from the run state's own `base64_png` (12–126 KB per chart on the seeded runs), the
+  limitations block leading, and the drill-down from claim to evidence to tool call to dataset sha256
+  implemented as in-page `<details>` disclosure with anchor links that resolve inside the document.
+- The chart is read from the state, not the filesystem, because the state is what survives the free tier's
+  wiped disk; a payload that is not a PNG, or one over the per-chart cap, is *named* in the trace rather than
+  shipped as a broken `<img>` — the same honesty rule the previous renderer stated in its docstring.
+- A print stylesheet is included; collapsed chains print their summary line, so paper carries findings,
+  limitations and charts without scripts (there are none in the file).
+- Measured on the seeded sales run (two charts): 161,570 bytes, zero external origin references, and opened
+  from `file://` with every `http`/`https` request aborted: **0 requests attempted**, the chart decodes, and
+  the evidence chain expands and navigates (`output/lane-d/r07-offline-acceptance.mjs`).
+- Guarded by 9 tests in `tests/contract/test_report_html_offline.py`, parser-based rather than regex-based:
+  no `src`/`href` of any external scheme, no `<script>`/`<iframe>`/`@import`, every in-page link resolved
+  against the document's own ids, a 2 MB traveller ceiling, limitations before the plan, and both
+  falsifications — a planted CDN script tag reddens the reference check, a moved evidence anchor reddens the
+  link check.
+
 ### Added (post-4.5.0) -- a run leaves the instance as one archive, and the page has the button for it
 
 - `GET /api/v1/analysis/{run_id}/bundle` zips the artifacts a run recorded, resolving each stored path and
