@@ -131,9 +131,63 @@ def await_terminal_run():
             await asyncio.sleep(0.05)
         raise AssertionError(
             f"run {run_id} never reached a terminal status within {timeout_s}s; last seen: {last}"
+            + _stall_evidence(run_id)
         )
 
     return _wait
+
+
+def _stall_evidence(run_id: str) -> str:
+    """Name the condition the timeout is actually in, instead of leaving it to be inferred from a traceback.
+
+    A wait that expires says only "not terminal yet", which reads the same whether the run is slow, deadlocked
+    on a database connection belonging to an event loop that has since closed, or parked in an await that never
+    returns. Each line below is read without touching the database (a probe that awaited the hung resource would
+    replace the report with a second hang) and each one discriminates a different cause: the task's loop versus
+    the running loop, the task's own stack at the suspended await, the pool's checked-out count, and whether the
+    registry still holds a task for this run at all.
+
+    Nothing here is wrapped in a handler: this text is appended to a failure that is already real, so a probe
+    that can fail quietly would hide the one thing the report exists to show.
+    """
+    import asyncio
+    import threading
+    from io import StringIO
+    from pathlib import Path
+
+    from dsa_api.core import database as app_database
+    from dsa_api.services import run_lifecycle
+
+    lines = ["", "  --- stall evidence ---"]
+    running = asyncio.get_running_loop()
+    tasks: dict = run_lifecycle._TASKS
+    own = tasks.get(run_id)
+    if own is None:
+        # No task for this run is the answer by itself: nothing remains that could move the row, so the row is
+        # frozen because its writer is gone, not because the writer is slow.
+        lines.append(
+            f"  task registry: no task for {run_id}; {len(tasks)} registered ({sorted(tasks)[:4]})"
+        )
+    else:
+        frame = StringIO()
+        if own.done():
+            outcome = "cancelled" if own.cancelled() else f"raised {own.exception()!r}"
+        else:
+            own.print_stack(file=frame)
+            outcome = "pending"
+        own_loop = own.get_loop()
+        lines.append(
+            f"  task {run_id}: {outcome}; same loop as running={own_loop is running}; "
+            f"task loop closed={own_loop.is_closed()}"
+        )
+        for entry in [e.strip() for e in frame.getvalue().splitlines() if e.strip()][-4:]:
+            lines.append(f"    await: {entry}")
+    lines.append(f"  engine pool: {app_database.engine.pool.status()}")
+    lines.append(
+        f"  engine url={app_database.engine.url!r}; cwd={Path.cwd()}; "
+        f"threads={[t.name for t in threading.enumerate() if 'Thread' in t.name][:6]}"
+    )
+    return "\n".join(lines)
 
 
 @pytest.fixture(scope="session", autouse=True)
