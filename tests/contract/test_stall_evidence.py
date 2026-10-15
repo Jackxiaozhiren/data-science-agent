@@ -83,5 +83,9 @@ async def test_the_session_wide_counter_hears_what_per_test_capture_cannot(
     text = conftest._stall_evidence("run-instrument")
     assert "instrument probe line" in text, text
     assert f"{len(conftest._LIFECYCLE_RECORDS)} WARNING+ line(s) seen session-wide" in text, text
+    # The sample must exist and must be able to name runs other than the polled one: a session that spoke about
+    # other runs while staying quiet about this one is a different failure from never reaching either branch.
+    assert "session-wide lines (first" in text, text
+    assert any("run-instrument: instrument probe line" in line for line in text.splitlines()), text
     other = conftest._stall_evidence("run-unrelated")
     assert "run-unrelated anywhere in this process: none" in other, other

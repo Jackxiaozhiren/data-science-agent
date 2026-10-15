@@ -10972,3 +10972,19 @@ not print the "IS on this loop" claim, so an empty counter can never read as the
 `CHANGELOG.md` gained the two entries this session owed its own work (the archive plus its button, and the two
 silent exits), which is bookkeeping rather than code: nothing in the gate set reads the changelog, so the omission
 would have been invisible to CI and visible only to whoever next asks what changed since 4.5.0.
+
+**Addendum -- the intermittency itself was measured, not assumed, and the sample now names whose lines those were.**
+Two reruns settled the attribution question this session had been circling: `b6eec17` -- the other lane's head,
+whose first CI run was the only `success` since `362bfe5` -- came back **failure on its third attempt**, same
+commit, same test set. A head that flips green to red without a diff in between is the definition of the
+intermittency, so this session's red runs are not attributable to its commits, and nobody's are: the condition
+belongs to the tests, not to the diffs. (Operational cost of the measurement, recorded because it will recur:
+two reruns of the same branch race each other under `cancel-in-progress`, and the newer cancels the older -- my
+own rerun of `ec488cb` was killed by my rerun of `b6eec17`, so rerun one head at a time.)
+
+The report's last gap was that it counted the lifecycle's lines but did not say *whose* they were. CI's first
+reading with the counter: sessions emitted 1-4 WARNING+ lines from the lifecycle logger, none naming the timed-out
+run -- which is precisely the fork between "a third silent exit exists" and "the news went to another run". The
+report now prints the first four lines with their run ids, so the next red answers it directly, and
+`test_stall_evidence.py` pins that the sample exists, can name a run other than the polled one, and still reads
+`none` for an unrelated id.

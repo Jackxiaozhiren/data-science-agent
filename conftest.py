@@ -262,10 +262,15 @@ def _stall_evidence(run_id: str) -> str:
         f"{sorted(m for m in sys.modules if m.endswith('dsa_api.services.run_lifecycle'))}"
     )
     seen_for_run = sorted({m for rid, m in _LIFECYCLE_RECORDS if rid == run_id})
+    sample = [f"{rid}: {m}" for rid, m in _LIFECYCLE_RECORDS[:4]]
     lines.append(
         f"  lifecycle lines emitted for {run_id} anywhere in this process: "
         f"{seen_for_run or 'none'}; {len(_LIFECYCLE_RECORDS)} WARNING+ line(s) seen session-wide"
     )
+    # Whose lines they are matters as much as how many: a session that spoke about other runs while staying
+    # quiet about this one is a different failure from a session that never reached either branch.
+    if sample:
+        lines.append(f"  session-wide lines (first {len(sample)}): {sample}")
     lines.append(f"  engine pool: {app_database.engine.pool.status()}")
     lines.append(
         f"  engine url={app_database.engine.url!r}; cwd={Path.cwd()}; "
