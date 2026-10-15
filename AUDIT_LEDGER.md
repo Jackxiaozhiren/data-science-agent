@@ -10953,3 +10953,22 @@ those two is the missing premise every round so far has had to guess at.
 plus all of `tests/integration` rc 0 locally at the time of writing -- and given the intermittency, that local
 green is a sample, not a proof. `main` may well stay red after this; it will not stay silent, which is the thing
 §176, §177 and §180 have all asked for in different words.
+
+**Addendum, later the same day -- the last open question got an instrument, and the instrument got a guard.** The
+three CI timeouts reproduce with the writer gone and nothing in the failing test's capture, and pytest captures
+logs *per test* -- so "the lines never fired" and "the lines fired during somebody else's test" look identical
+from where the report sits. The handler installed by a session-scoped autouse fixture in `conftest.py` closes
+that gap: it counts WARNING+ records from the lifecycle logger process-wide, tags each with the run id it is
+about, and the stall report now prints whether any of them name *this* run. Nothing is swallowed -- the handler
+appends to a list and does not stop propagation, so `caplog` keeps working exactly as before.
+
+`tests/contract/test_stall_evidence.py` guards the report itself, and it earned its place on its first run: it
+was red, and the fault was in the guard, which had named its fabricated coroutine `_execute` while the scan
+matches the shipped coroutine's own name. That is the class of bug the file exists to catch -- a census line
+that reads like a discriminator and silently cannot fire -- and the fix was to the test, not to the instrument.
+The three tests then passed, and the negative case is pinned too: an unknown run id must report `none` and must
+not print the "IS on this loop" claim, so an empty counter can never read as the same answer as a full one.
+
+`CHANGELOG.md` gained the two entries this session owed its own work (the archive plus its button, and the two
+silent exits), which is bookkeeping rather than code: nothing in the gate set reads the changelog, so the omission
+would have been invisible to CI and visible only to whoever next asks what changed since 4.5.0.

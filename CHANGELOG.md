@@ -1,6 +1,41 @@
 # Changelog
 
 ## Unreleased
+
+### Added (post-4.5.0) -- a run leaves the instance as one archive, and the page has the button for it
+
+- `GET /api/v1/analysis/{run_id}/bundle` zips the artifacts a run recorded, resolving each stored path and
+  requiring it to sit under `artifact_root()`: the path column is data, so an entry outside the root is listed
+  with its reason and never opened (pinned with a symlink pointing out of the root). Nothing is dropped
+  silently -- `manifest.excluded` names what could not be carried and why -- and a run whose files are all gone
+  answers **404** rather than an empty zip. `manifest.storage` repeats the `/version` disclosure inside the
+  archive, because the zip is what survives the instance.
+- `Download bundle` sits with the other export controls, and the outcome is reported through the shared
+  vocabulary: a real click against a live API saved the archive, and with the artifact directory removed the
+  same click produced no download and named the 404 as "files recorded, none readable here, report text still in
+  the database". `analysis/[runId]/page.tsx` was the last page calling a failed request "not found"; with it
+  converted, the gate's `PENDING_SITES` inventory is now empty -- kept as `set()`, because the guard compares
+  against exactly that list. audit §179, §183.
+
+### Fixed (post-4.5.0) -- a discarded run write and a cancelled lifecycle both speak now
+
+- A run could stop updating its row while everything looked merely slow. `await execute()` on the same row and
+  dataset writes seven states ending `COMPLETED`, so the graph is not the loss: `_write` began
+  `if row is None: return`, discarding the write with no exception and no log, and `session_factory()` resolves
+  the module session at call time by design -- so a database rebound mid-run sends every later write for that
+  row into a database holding no such row, `execute` returns normally, the done callback finds no exception,
+  and a client polls a status nothing will ever change again. That is the shape CI had been reporting as a
+  30-second timeout.
+- Both silent exits now name themselves: the write line carries the run id and the engine it was writing to, and
+  a lifecycle that ends by cancellation logs instead of returning. No exception handler was added, so
+  `debt.exceptHandlers` is unchanged, and a boot that cannot see its own schema still raises.
+- Not fixed, and asserted as not fixed: a cancelled lifecycle still leaves the row in flight and still empties
+  the registry, because closing that gap means either raising from `_write` or pinning the session factory at
+  schedule time, and both reverse a documented decision in another lane's file. audit §183 records them as votes.
+- The stall report's own instrument was wrong in a way that mattered: `asyncio.all_tasks()` is loop-local (an
+  empty census did not prove the writer had finished), so the report now labels that line as this-loop-only and
+  adds a thread-wide stack scan, which is what actually shows the writer gone.
+
 ### Added (post-4.5.0) -- the first screen is never empty, and the door that opens is the analyst's
 
 - **R-01.** `dsa_api.services.demo_seed` runs in the lifespan: the committed files in `examples/datasets/` go

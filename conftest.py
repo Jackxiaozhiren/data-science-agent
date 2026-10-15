@@ -1,4 +1,5 @@
 import importlib
+import logging
 import sys
 import tomllib
 import warnings
@@ -137,6 +138,30 @@ def await_terminal_run():
     return _wait
 
 
+_LIFECYCLE_RECORDS: list[tuple[str, str]] = []
+
+
+class _CountLifecycleLines(logging.Handler):
+    """Count the run lifecycle's own lines process-wide; never absorb one.
+
+    pytest captures logs per test, so a record emitted while an *earlier* test was running is invisible to the
+    report of the test that finally times out. That difference is the whole remaining question -- either a third
+    silent exit exists, or the write did say so and the reader was looking in another test's capture window.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        _LIFECYCLE_RECORDS.append((str(getattr(record, "run_id", "-")), record.getMessage()[:80]))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def count_lifecycle_log_lines():
+    logger = logging.getLogger("dsa_api.services.run_lifecycle")
+    handler = _CountLifecycleLines(level=logging.WARNING)
+    logger.addHandler(handler)
+    yield
+    logger.removeHandler(handler)
+
+
 def _stall_evidence(run_id: str) -> str:
     """Name the condition the timeout is actually in, instead of leaving it to be inferred from a traceback.
 
@@ -235,6 +260,11 @@ def _stall_evidence(run_id: str) -> str:
     lines.append(
         "  lifecycle module objects loaded: "
         f"{sorted(m for m in sys.modules if m.endswith('dsa_api.services.run_lifecycle'))}"
+    )
+    seen_for_run = sorted({m for rid, m in _LIFECYCLE_RECORDS if rid == run_id})
+    lines.append(
+        f"  lifecycle lines emitted for {run_id} anywhere in this process: "
+        f"{seen_for_run or 'none'}; {len(_LIFECYCLE_RECORDS)} WARNING+ line(s) seen session-wide"
     )
     lines.append(f"  engine pool: {app_database.engine.pool.status()}")
     lines.append(
