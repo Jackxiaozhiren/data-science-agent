@@ -10694,3 +10694,51 @@ the terminal-write fix introduced appears anywhere in those logs -- not `the ter
 branch being reached, or ends before the log is captured. Which of those it is belongs to the run-lifecycle
 owner, and the discriminator is now printed by the harness instead of being inferred from a traceback: pending
 with a stack, or cancelled, or raised, or absent. That fourth case is what CI keeps showing.
+
+## 181. Reading order for the ledger's own identifiers: two numbers appear twice, one cited number has no heading
+
+**Scope.** Bookkeeping only, no product surface, and nothing here edits a section another session wrote. The
+enumeration is generated from the file with `^## (\d+)\. `, not recited from memory: **120 numbered headings,
+118 distinct numbers, highest 180**, so exactly two numbers are claimed twice and one cited number is absent.
+That scan is the whole basis of this section; if a later commit changes the shape, this section is the stale
+one and gets corrected by its own addendum.
+
+**The two collisions, and who wrote which.** `## 178.` appears at line 10289 ("One unrestored rebind turned a
+single CI timeout into seven reds: the rebinder is now named") and at line 10420 ("The database the routes use
+is not the database the schema was created in: a rebinding leak, reproduced by planting it"). `## 179.` appears
+at line 10350 ("Item 2 shipped as an endpoint: a run's artifacts can leave the instance in one archive, gaps
+listed") and at line 10469 ("Seven became three, and the three said the work had finished: the terminal write
+was going into a task nobody watched"). The first pair is this session's, the second pair the other lane's. The
+cause is structural, not careless: in a shared worktree both lanes computed "next number" from the same `git
+log` tail minutes apart, and the heading a session writes is chosen before it appends, so two lanes can only
+agree by accident. Reading order is file order; the subject line disambiguates, and each pair's two entries
+argue with each other on purpose (§178/§179 first pair vs §178/§179 second pair is the same disagreement §180's
+addendum records).
+
+**No heading was renumbered, and that is a deliberate non-action.** Renaming the other lane's headings would
+edit dated text §180 already cross-references, and renaming this session's would strand the "audit 178/179"
+phrases inside already-pushed commits `c575bd2` and `15c1d75`. The cheaper truth is this index: the numbers are
+not unique, the subjects are, and a reader who needs a stable identifier should cite subject plus line, not
+number alone.
+
+**A cited section that exists nowhere: §83.** `§83` is referenced three times -- at line 4044 (inside §84) and
+at lines 4426 and 4431 (inside §89) -- and §89 quotes its sentence: "branch protection with `ci` as a required
+status check". Two independent history searches find nothing: `git log -S '## 83.' -- AUDIT_LEDGER.md` and
+`git log -G '^## 83' -- AUDIT_LEDGER.md` both return no commit, so no revision of this file ever carried that
+heading. Searching the whole file for the quoted clause yields exactly one hit -- the quotation in §89 itself.
+The sentence's actual home is the session memory note for this lane
+(`project-l2-status-semantics-open-decision.md`, line 61), where it is recorded under the 2026-10-01 heading
+"main has **branch protection with `ci` as a required status check**". So a 2026-10-02-era entry cited a
+paragraph that lived only in agent memory as though it were a ledger section -- the citation was written from
+recall, not from the file. §89's substantive point survives untouched: the protection does gate admin pushes,
+and the remote's own bypass notice is the evidence.
+
+**Why this is worth a section rather than a silence.** §154 and §155 already recorded two defects of exactly
+this shape -- prose that named an identifier it had not issued, and an inventory assembled by hand. A number
+cited three times across two sections that no revision contains is the same failure mode recurring, and the
+only difference is that this time the scan found it rather than a reader.
+
+**What keeps it from being merely observed.** A uniqueness guard over these headings is a two-line test, and it
+would have failed on the day both pairs landed -- but adding it joins the CI gate list, and the standing rule is
+that gate lists are not touched without an explicit yes. So the guard is left as the offered next step, named
+here rather than shipped quietly.
