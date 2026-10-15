@@ -10534,3 +10534,75 @@ So the third symptom was the one this section diagnosed, and the two earlier gue
 worth keeping while being wrong about the cause -- which is the whole reason the failing-set table above exists
 in the record. What closed the seven: four by another session's `c575bd2`, three by the terminal-write fix
 here.
+
+### §20 handoff -- Lane B closes, and the 21-hour CI red closes with it
+
+```
+LANE: B   DATE: 2026-10-15   HEAD AT START: 362bfe5   HEAD AT END: f84f579 (this lane's last commit: cf21ce1)
+
+PREMISES RE-VERIFIED
+  B3 -> `GET /health` on the hosted demo after idle -> 44.5 s, quoted from the `output/lane-c` capture log;
+        NOT re-measured this session, so the budget is built on a recorded number rather than a fresh one
+  R-11 probe -> `node apps/web/scripts/regression.mjs --port 3212 --api-port 8123` -> warming visible 1.9 s,
+        unreachable 0.2 s, 30/30 -- and the same numbers printed by CI's own `web-regression` job
+  R-12 -> live browser against a locally started API+web on ports this script owns -> create answered
+        202 declaring UNDERSTANDING 83 ms after the click; child linked to the parent by its stored id
+  hosted contract -> `curl /openapi.json` -> POST /api/v1/analysis/ still `['201','422']` and `/version`
+        still has no `storage` key, so the demo remains on `fac06f7` (re-measured 2026-10-15, not inherited)
+
+DELIVERED
+  R-11: cold-start and degraded-state UX -- red first seen in a screenshot (dot `1/4` vs "Attempt 2 of 4"),
+        green captured in `output/lane-b/regression/probe-warming.png` and CI's tour log
+  R-12: follow-up re-verification, which found and fixed `run-run-2a4d6eee` -- red at
+        `tests/contract/test_web_identifier_display.py` on a planted mutation, green in `capture-r12.log`
+  CI red (not a requirement, but the session's third item): terminal-write failure made observable and the
+        row written as FAILED -- §179; red at 8.14 s against the pre-fix module, green in 1.35 s after
+
+NOT DELIVERED
+  R-01, R-07, R-10, R-04, R-05, R-08, R-13, R-14, R-15, §12 Study 2 kit, §16 metrics -- untouched, all P0/P1
+    next exact command for Lane D: `bash output/lane-b/run-lane-b-gates.sh` is the sweep shape to copy; Lane D
+    owns `apps/api/src/dsa_api/` seeding and `apps/web/app/components/layout/Sidebar.tsx`, and its premise is
+    that seeding must rebuild on boot because a persistent disk is the paid option (§176 decision 2)
+
+FULL LANE RESULT
+  CI run 38671734385 at b35594d -> job `ci` and job `web-regression` both success; steps `ruff check`,
+    `ruff format --check`, `mypy`, `pytest -q --cov`, `mkdocs build --strict`, wheel build, clean-wheel smoke
+    each reported success individually (checked as steps, not as a job verdict)
+  local -> `uv run --frozen python -m pytest -q --cov`: rc=0, coverage 84%, `audit_facts --check` OK
+    (debt.exceptHandlers 184 of 185), environment darwin/arm64, uv 0.12.7
+
+FALSIFICATION PROOF
+  identifier guard -> planted `run-{fromRunId}` back into RunInspector -> 2 of 3 tests red, restored
+    byte-identically (`cmp` verified)
+  probe budget -> planted per-attempt timeout to 1 s and hint window past the attempt -> the coverage and
+    hint comparisons both went red, and the plant's own anchor was asserted to be the line being read
+  terminal write -> `git checkout --` of run_lifecycle.py alone -> the new test went red with the raw
+    OSError reaching the poller at 8.14 s; green at 1.35 s after
+  rebinding pin -> a temporary export test assigned AsyncSessionLocal to a fresh :memory: maker ->
+    1 failed without the pin, 2 passed plus a warning naming the culprit with it
+  guard that could not fail -> first version of the terminal-write test asserted the injection had fired
+    before the background task got there: red for the wrong reason, and fixed before it was trusted
+
+FILES OTHER SESSIONS OWN (untouched)
+  README.md, packages/evaluation/src/dsa_evaluation/external_validation.py,
+  tests/evals/test_external_validation.py -> dirty in the shared tree the whole session, never staged
+  apps/api/src/dsa_api/routers/bundles.py, apps/api/tests/test_run_bundle.py -> untracked WIP whose three
+    failures were recorded and left
+  /Users/jackson/stall-probe -> another session's worktree, listed but never entered or removed
+
+SHARED-STATE ACTIONS UNDER §19.1
+  push    -> 8 commits to main: 6cab56d, d4fa40a, f8551ba, 2972996, bccb4e0, bfc160a, f1eec91, b35594d,
+             cf21ce1 (nine), each with `git commit -- <explicit paths>`; never `git add -A`; the two
+             brand-new test files were `git add`ed by path in the same command as the commit so no other
+             session's sweep could pick them up
+  PR      -> none opened, none merged
+  deploy  -> none by this session: no Render or Vercel credential or CLI exists here (`env` shows none,
+             `command -v render vercel` empty), so the demo staying on fac06f7 is the maintainer's click
+  other   -> created a disposable `git worktree` at build/head-isolation for HEAD-export measurements and
+             removed it afterwards (`git worktree remove --force`); its four suite logs are preserved under
+             output/lane-b/head-export/
+```
+
+Free-tier constraint held throughout: nothing was purchased, no service created, no workflow file touched,
+no dependency added, no release cut. The three judgement calls delegated to this session are recorded in §176
+and none changes a conclusion a user sees.
