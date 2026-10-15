@@ -1,30 +1,42 @@
 import Link from "next/link";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { ErrorState } from "@/app/components/data/States";
 import { Button } from "@/app/components/ui/button";
 import { RunInspector, type RunDetail } from "@/app/analysis/[runId]/RunInspector";
 
-async function fetchRun(id: string): Promise<RunDetail | null> {
+async function fetchRun(id: string): Promise<{ record: RunDetail | null; failure: ApiFailure | null }> {
   try {
     const res = await fetch(apiUrl(`/api/v1/analysis/${id}`), { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as RunDetail;
+    const failure = classifyResponse(res);
+    if (failure) return { record: null, failure };
+    return { record: (await res.json()) as RunDetail, failure: null };
   } catch {
-    return null;
+    return { record: null, failure: "transport" };
   }
 }
 
 export default async function TracePage({ params, searchParams }: { params: Promise<{ runId: string }>; searchParams: Promise<{ from?: string }> }) {
   const { runId } = await params;
   const { from } = await searchParams;
-  const run = await fetchRun(runId);
+  const { record: run, failure } = await fetchRun(runId);
+  // A 404 is this page's own not-found answer. Every other outcome is a request that failed, and saying
+  // "run not found" for it would tell a reader the product has no such run when the API never answered.
   if (!run) {
+    const missing = failure === null || failure === "notFound";
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Step 3 · Inspect the evidence" title="Run not found" description={`No trace for ${runId} — the run may not exist or the API is unreachable.`} />
+        <PageHeader
+          eyebrow="Step 3 · Inspect the evidence"
+          title={missing ? "Run not found" : "Run could not be loaded"}
+          description={
+            missing
+              ? `No trace for ${runId} — this API says the run does not exist.`
+              : `No trace for ${runId} could be read, so nothing below is a statement about the run.`
+          }
+        />
         <ErrorState
-          message="Run not found or the DSA API is unavailable."
+          message={failure ? FAILURE_PRESENTATION[failure] : `No run ${runId} exists behind this API.`}
           diagnostics={
             <Link href="/analysis"><Button variant="secondary" size="sm">Back to Analysis</Button></Link>
           }

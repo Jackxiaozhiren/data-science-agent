@@ -43,6 +43,8 @@ VOCABULARY = {"unauthorized", "notFound", "serverError", "clientError", "transpo
 CONVERTED_PAGES = [
     "page.tsx",
     "analysis/page.tsx",
+    "analysis/[runId]/page.tsx",
+    "analysis/[runId]/RunInspector.tsx",
     "datasets/page.tsx",
     "datasets/[id]/page.tsx",
     "failures/page.tsx",
@@ -59,14 +61,19 @@ DECLARED_WITHIN_CONVERTED: dict[str, dict[str, int]] = {
     "failures/page.tsx": {"if (!RESP.ok) return;": 1},
     "analysis/page.tsx": {"if (!RESP.ok) return;": 1, "if (!RESP.ok) {": 1},
     "datasets/page.tsx": {"if (!RESP.ok) {": 1},
+    # The two POST branches report the API's own detail into `err` and render it; the poll keeps the last
+    # good progress and retries on the next tick, which the live card above it discloses as a phase.
+    "analysis/[runId]/RunInspector.tsx": {
+        "if (!RESP.ok || stop) return;": 1,
+        "if (!RESP.ok) {": 2,
+    },
 }
 
-#: Uncommitted at the time of audit §164, so this session left them alone. Each entry is a page that
-#: still collapses a failed request into an empty shape.
-PENDING_SITES = {
-    "analysis/[runId]/page.tsx",
-    "analysis/[runId]/RunInspector.tsx",
-}
+#: Closed on 2026-10-15: the last two pages that collapsed a failed request into an empty shape now classify
+#: it (audit §179's download work carried `analysis/[runId]/*` over). The set is kept as an empty inventory
+#: rather than deleted, because `test_no_other_page_collapses_or_waits_unlisted` compares the pages it finds
+#: collapsing against exactly this list -- an absent name there is a page that regressed quietly.
+PENDING_SITES: set[str] = set()
 
 RAISES = "throw"
 

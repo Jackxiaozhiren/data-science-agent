@@ -10606,3 +10606,67 @@ SHARED-STATE ACTIONS UNDER §19.1
 Free-tier constraint held throughout: nothing was purchased, no service created, no workflow file touched,
 no dependency added, no release cut. The three judgement calls delegated to this session are recorded in §176
 and none changes a conclusion a user sees.
+
+## 180. What §178 got wrong, the section numbers that collided, and the archive's second half landing
+
+**§178 was half right, and the half that was wrong was the diagnosis of the three timeouts.** It recorded the
+four `no such table` failures as downstream casualties of an unrestored rebinding and predicted they would
+disappear once the restore moved into a `finally`; it also said the remaining stall "belongs to whoever owns
+the run lifecycle". Both halves closed, but only the first one closed the way §178 expected. The run payloads
+CI printed had already planned, executed four tool calls, rendered the report and passed all four validation
+checks with `error: null` -- nothing was stalling. What was missing was only the row's last write, and that
+write went into a task whose done-callback merely popped it, so nobody ever called `.exception()` on it: an
+error after the graph returned stayed inside an unawaited task and the row kept its in-flight status. Fixed by
+another lane in `b35594d`, which is the first green `CI` run of `main` since `362bfe5`. So the leak accounted
+for four of the seven and had nothing to do with the other three, and §178's framing of them as "a CI-side
+stall, still unnamed" was a wrong read of a finished run. The lesson is the payload, not the assertion
+sentence: parse `last seen:` before theorising about what the timeout means.
+
+**Section numbers collided in this worktree, and no heading was edited to fix it.** `## 178.` and `## 179.`
+each appear twice in this file: the first pair is this session's (the rebinding cascade, then the bundle
+endpoint), the second pair is the other lane's (the rebinding leak reproduced by planting, then the unawaited
+terminal write). Both pairs were written against the same `git log` tail in the same minutes, and the second
+lane's `git commit --only -- AUDIT_LEDGER.md` also carried this session's §178 addendum into its own commit
+(`f1eec91`), which is why that addendum's text appears under a commit that does not mention it. Renumbering
+either pair means editing another session's dated text, so it is left as the maintainer's call; the reading
+order is the file order, and each pair's title names its author's subject.
+
+**Item 2's second half shipped: the archive is now reachable from the page a visitor is on.** A
+`Download bundle` action sits with the other two export controls in
+`apps/web/app/analysis/[runId]/RunInspector.tsx`, and the outcome of the request is reported through the
+shared vocabulary rather than folded into an empty state: a real click against a live API saved
+`run-<id>-bundle.zip` (six members: the five recorded files plus `manifest.json`) and rendered the saved line;
+after the artifact directory was moved away, the same click produced **no download** and rendered
+`FAILURE_PRESENTATION.notFound` plus the sentence naming what that 404 means for this run -- files recorded,
+none readable here, report text still in the database. That second arm is the case §175 exists to disclose,
+and the free-tier chip said so in the same page load: `not kept. This instance keeps its artifacts, database,
+datasets on storage the host may clear...` with all three roots flagged, because the probe ran on `/tmp`.
+
+**Closing the vocabulary inventory, which is what the consent was for.** `analysis/[runId]/page.tsx` was the
+last page that collapsed a failed request into "not found": a 500, a 401 and an unreachable API all rendered
+the same "Run not found" card. It now classifies through `classifyResponse`, keeps 404 as its own answer, and
+names every other kind with `FAILURE_PRESENTATION`. With that page and the inspector converted, both moved out
+of `PENDING_SITES` into `CONVERTED_PAGES`, and the inspector's three remaining `!res.ok` sites are declared
+where they belong -- two POST branches that report the API's own detail into an error the component renders,
+and the 3 s progress poll that keeps the last good value and retries. `PENDING_SITES` is kept as an empty set
+rather than deleted, because `test_no_other_page_collapses_or_waits_unlisted` compares what it finds against
+exactly that inventory: an absent name there is a page that regressed quietly.
+
+**Measured, on the changed surface.** Contract suite 8/8 including the inventory check; `next build` rc 0 twice
+(before and after the artifact-card copy change); browser tour **30/30** (24 route/viewport + 3 interaction + 3
+backend-probe) against a build baked at a quiet API port, twice; one console line remains in the failure arm,
+and it is Chromium logging the deliberate 404 fetch rather than a page defect -- the tour never clicks the
+button, so it cannot turn this into a regression. `debt.exceptHandlers` is untouched: no handler was added, and
+the catch in the click handler is the transport branch the vocabulary already owns.
+
+**One claim this change makes stale, corrected by note rather than by edit.** An earlier section recorded "there
+is no file-serving route at all (no `FileResponse` anywhere in `dsa_api/routers`)". The literal half is still
+true -- the bundle is assembled in memory and returned as a `Response` -- but the sentence's conclusion is not:
+the API does now let a run's artifact bytes leave the instance, which is the point of §179 and of this section's
+button. The old text stays as what was known then.
+
+**Gate scope named, not widened.** `conftest.py` sits at the repository root and so is outside CI's
+`ruff check packages apps/api tests src apps/jupyter scripts` and the matching `mypy` paths: the stall-evidence
+helper added in `f84f579` was linted and formatted explicitly because no gate would have looked at it. That is
+the same blind spot §16x recorded for untracked new files -- a directory-shaped list certifies its directories,
+not the repository.

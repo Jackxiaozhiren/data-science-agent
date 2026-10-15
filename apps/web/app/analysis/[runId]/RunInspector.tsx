@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -421,8 +421,34 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // Artifacts grouped by kind. Paths are server-local (no file-serving
-  // endpoint exists), so the honest action is copy-path, not a fake link.
+  const [bundle, setBundle] = React.useState<"idle" | "sending" | "saved" | ApiFailure>("idle");
+
+  async function downloadBundle() {
+    setBundle("sending");
+    try {
+      const res = await fetch(apiUrl(`/api/v1/analysis/${run.id}/bundle`), { cache: "no-store" });
+      const failure = classifyResponse(res);
+      if (failure) {
+        setBundle(failure);
+        return;
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${run.id}-bundle.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setBundle("saved");
+    } catch {
+      setBundle("transport");
+    }
+  }
+
+  // Artifacts grouped by kind. The stored paths are server-local and there is no per-file serving route,
+  // so the honest action on a row is copy-path, not a fake link; the whole set leaves through
+  // /bundle below, which is the only thing a visitor can keep when the host's filesystem is not durable.
   const artifactGroups = React.useMemo(() => {
     const groups = new Map<string, NonNullable<RunDetail["state"]>["artifacts"]>();
     for (const a of st?.artifacts ?? []) {
@@ -470,11 +496,43 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
                 </Button>
               </a>
             )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={downloadBundle}
+              disabled={bundle === "sending"}
+              title="Every artifact this run recorded, in one archive, with a manifest naming the files it could not carry and why"
+            >
+              {bundle === "sending" ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Download className="size-4" aria-hidden />
+              )}{" "}
+              Download bundle
+            </Button>
           </>
         }
       />
 
       <ReasoningModeNotice />
+
+      {bundle !== "idle" && bundle !== "sending" && (
+        <p
+          role="status"
+          aria-live="polite"
+          className={`rounded-xl border px-4 py-2.5 text-xs shadow-sm ${
+            bundle === "saved"
+              ? "border-zinc-200 bg-white text-zinc-600"
+              : "border-amber-200 bg-amber-50/60 text-amber-900"
+          }`}
+        >
+          {bundle === "saved"
+            ? "Bundle saved. The archive carries a manifest listing any file this instance could not read, so a missing chart is named rather than absent."
+            : bundle === "notFound"
+              ? `${FAILURE_PRESENTATION.notFound} — this run recorded files, but none is readable here. The report text is stored with the run and still opens above.`
+              : FAILURE_PRESENTATION[bundle]}
+        </p>
+      )}
 
       {fromRunId && (
         <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs text-zinc-600 shadow-sm">
@@ -777,7 +835,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Artifacts ({st?.artifacts.length ?? 0})</CardTitle>
-                <CardDescription className="text-xs">Files generated during the run. Paths are server-local — copy a path to retrieve it from the host.</CardDescription>
+                <CardDescription className="text-xs">Files generated during the run. Each path is on the server, so copy one to fetch it from the host; &ldquo;Download bundle&rdquo; above returns everything the run recorded as one archive, naming any file it could not read.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(st?.artifacts.length ?? 0) === 0 && (
