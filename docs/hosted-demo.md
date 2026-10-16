@@ -103,16 +103,37 @@ If an existing Blueprint has a failed deploy, keep the same Blueprint and use **
 
 ### Product events are off on the demo unless the operator turns them on
 
-The API can count the funnel (`run_started` → `run_completed` → `export_taken`; vocabulary:
-`apps/api/src/dsa_api/services/product_events.json`). The switch is `DSA_TELEMETRY`, and its default is `off`,
-which means **nothing is written and no file is created** -- the current deployment does not set the variable,
-so the public demo records nothing about whoever visits it. Setting `DSA_TELEMETRY=on` on the Render service
-makes it append one JSONL line per event to `DSA_EVENT_LOG` (default `data/events/events.jsonl`, which on the
-free tier is the ephemeral `/tmp`-class disk, so the log vanishes on restart like everything else there).
+The API can count the funnel -- arrival, then a starter question used, then run started, run completed,
+export taken -- and the vocabulary that defines every one of them is
+`apps/api/src/dsa_api/services/product_events.json`. Nothing is recorded unless the operator asks for it, and
+because the first link is something only a browser can know, **counting it takes two deliberate acts, one on
+each service.** Setting only one is a real and easy mistake: it yields a live counter that reports zero for
+the step nobody configured.
 
-That is a decision about a stranger's session, not a deployment detail, so it is left to the maintainer. The
-payload contract does not change with it: query text, dataset content and any user-identifying value are
-refused at emit time, before the consent check, whether or not counting is on.
+| What you set | What the instance records |
+|---|---|
+| neither (the state of the current deployment) | nothing. No file is created, and the web bundle sends no event request at all |
+| `DSA_TELEMETRY=on` on the Render service only | the server-observed steps (`run_started`, `run_completed`, `export_taken`, and `starter_question_used` when a run's question matches a published one). `arrival` stays zero, because the deployed web bundle was not built to report it |
+| `NEXT_PUBLIC_TELEMETRY=on` in Vercel's build environment only | nothing. The browser posts, and the API's own gate discards every post |
+| both | the whole funnel, including arrivals |
+
+`NEXT_PUBLIC_*` values are inlined when Vercel builds the site, so changing it means a **rebuild**, not a
+restart -- a bundle built without it cannot reach the events endpoint even if the API is counting. Set it in
+Vercel's Environment Variables (Production), then deploy, and confirm the deployed JS actually contains the
+change rather than assuming the setting took effect.
+
+On the API side, `DSA_TELEMETRY=on` appends one JSONL line per event to `DSA_EVENT_LOG` (default
+`data/events/events.jsonl`), which on the free tier sits on the ephemeral disk -- so the log vanishes on
+restart, exactly like the runs table. A count you have not read out of the instance is a count you do not
+have.
+
+Counting arrivals is a decision about a stranger's session, not a deployment detail, and it is left to the
+maintainer for that reason. If you turn it on, say so where a visitor can read it: the event carries only a
+short page label from the vocabulary's own choice list -- no URL, referrer, user agent, cookie or identifier
+is accepted, and the relay refuses values it was never told about -- but "we count page views on this demo"
+still has to be written down somewhere a person can see. The payload contract itself does not change with
+consent: query text, dataset content and user-identifying values are refused at emit time, before the consent
+check, whether or not counting is on.
 
 ### Verify a deploy from the outside
 

@@ -82,7 +82,8 @@
   value reddens both the refusal test and the disk re-check.
 - Enabling counting on the hosted demo is deliberately **not** done here: `DSA_TELEMETRY` is a new variable
   for that service, and turning it on changes what a real visitor's session does with their activity. It is
-  recorded as the maintainer's decision, with the one-line how in `docs/hosted-demo.md`.
+  recorded as the maintainer's decision, with both switches, the four combinations they produce, and the
+  rebuild caveat set out in `docs/hosted-demo.md`.
 
 ### Changed (post-4.5.0) — the MCP App's report is the product's one rendering (R-14)
 
