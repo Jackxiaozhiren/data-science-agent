@@ -13,7 +13,7 @@ import gc
 import logging
 import sys
 import weakref
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 from typing import Any
 
@@ -220,3 +220,138 @@ async def _raises() -> None:
 
 async def _parks() -> None:
     await asyncio.Event().wait()
+
+
+class _HangsOnEnter:
+    """A session whose acquisition never returns -- the shape that would hang the report itself."""
+
+    async def __aenter__(self) -> _HangsOnEnter:
+        await asyncio.Event().wait()
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+
+class _HangingFactory:
+    def __call__(self) -> _HangsOnEnter:
+        return _HangsOnEnter()
+
+
+async def test_the_writer_side_read_names_what_the_lifecycle_database_actually_holds() -> None:
+    """Three states, because the whole remaining question is whether the write landed somewhere else.
+
+    `execute` returns normally only after a terminal write, CI shows no line for the run, and the client still
+    reads it in flight. Those three can only hold together if the writer and the client are not looking at one
+    database -- so the report asks the writer's own session, and this pins that the answer is readable in every
+    case: the row as that database has it, a row that database does not have, and a database that never answers
+    (the bounded case, which must return rather than replace the timeout with a second hang).
+    """
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from dsa_api.core import database
+    from dsa_api.core.database import Base
+    from dsa_api.models.analysis import AnalysisRunORM
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        session.add(
+            AnalysisRunORM(
+                id="run-written",
+                dataset_id="ds",
+                dataset_path="/tmp/does-not-matter.csv",
+                user_query="q",
+                status="COMPLETED",
+            )
+        )
+        await session.commit()
+
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = factory
+    try:
+        landed = await conftest._writer_side_row("run-written")
+        assert "status=COMPLETED" in landed, landed
+        assert "factory bind is that engine=False" in landed, landed
+        absent = await conftest._writer_side_row("run-not-in-this-database")
+        assert "row absent" in absent, absent
+    finally:
+        database.AsyncSessionLocal = previous
+        await engine.dispose()
+
+    database.AsyncSessionLocal = _HangingFactory()
+    try:
+        slow = await conftest._writer_side_row("run-hanging")
+        assert "no answer within 3s" in slow, slow
+    finally:
+        database.AsyncSessionLocal = previous
+
+
+@pytest.fixture
+async def completed_somewhere_else(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[str, None]:
+    """A database that says COMPLETED while a client keeps reading the row as in flight.
+
+    This is the shape CI reports: `execute` returned normally, no line named the run, and the client polls
+    forever. The fixture makes that state real rather than asserted, so the report can be tested against it.
+    """
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from dsa_api.core import database
+    from dsa_api.core.database import Base
+    from dsa_api.models.analysis import AnalysisRunORM
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        session.add(
+            AnalysisRunORM(
+                id="run-completed-here",
+                dataset_id="ds",
+                dataset_path="/tmp/does-not-matter.csv",
+                user_query="q",
+                status="COMPLETED",
+            )
+        )
+        await session.commit()
+    monkeypatch.setattr(database, "AsyncSessionLocal", factory)
+    try:
+        yield "run-completed-here"
+    finally:
+        await engine.dispose()
+
+
+class _StillInFlight:
+    """The client's view: a 200 whose status never stops being a wait condition."""
+
+    status_code = 200
+
+    async def get(self, url: str) -> _StillInFlight:
+        return self
+
+    def json(self) -> dict[str, Any]:
+        return {"id": "run-completed-here", "status": "VALIDATION"}
+
+
+async def test_a_wait_that_expires_prints_what_the_writer_database_holds(
+    await_terminal_run: Callable[..., Any], completed_somewhere_else: str
+) -> None:
+    """The report's last claim has to be the one that distinguishes the two remaining readings.
+
+    Only the raise path carries it, so this drives the real fixture with a client that is stuck in flight while
+    the writer's own database already says COMPLETED. If the writer-side read were dropped from the message, or
+    ran against a different factory, the line would not name that status -- and the CI reading would stay
+    ambiguous, which is the whole reason the line exists.
+    """
+    with pytest.raises(AssertionError) as raised:
+        await await_terminal_run(_StillInFlight(), completed_somewhere_else, timeout_s=0.1)
+    message = str(raised.value)
+    assert f"writer-side row for {completed_somewhere_else} (same session factory" in message, (
+        message
+    )
+    assert "status=COMPLETED" in message, message
+    assert "last seen: {'id': 'run-completed-here', 'status': 'VALIDATION'}" in message, message
+    assert "scheduled loop:" in message and "how the lifecycle task ended:" in message, message

@@ -138,6 +138,7 @@ def await_terminal_run():
             await asyncio.sleep(0.05)
         raise AssertionError(
             f"run {run_id} never reached a terminal status within {timeout_s}s; last seen: {last}"
+            + await _writer_side_row(run_id)
             + _stall_evidence(run_id)
         )
 
@@ -189,6 +190,42 @@ def _record_outcome(run_id: str, finished: asyncio.Task) -> None:
         return
     error = finished.exception()
     _SCHEDULED_OUTCOME[run_id] = ("raised", type(error).__name__) if error else ("returned", "-")
+
+
+async def _writer_side_row(run_id: str) -> str:
+    """Read the frozen row back through the factory the lifecycle writes through, and name both sides.
+
+    The enumeration of `execute` is closed: it returns normally only after a terminal write, and every other
+    exit emits a line naming the run. CI reads `returned (-)` with no line at all, and the polled row stays in
+    flight -- so the two readings can only be reconciled if the writer and the client are not looking at the
+    same database or the same snapshot of it. This asks the writer's own session. Bounded by `asyncio.wait`
+    rather than a handler, because a probe that can hang would replace the report with a second hang, and a
+    counted `except` for it would be a new silent exit in the harness.
+    """
+    from dsa_api.core import database
+    from dsa_api.services.run_lifecycle import read_run
+
+    collector = asyncio.gather(read_run(run_id), return_exceptions=True)
+    done, _pending = await asyncio.wait({collector}, timeout=3)
+    if not done:
+        collector.cancel()
+        await asyncio.wait({collector}, timeout=1)
+        verdict = "no answer within 3s"
+    else:
+        value = collector.result()[0]
+        if isinstance(value, BaseException):
+            verdict = f"read raised {type(value).__name__}"
+        elif value is None:
+            verdict = "row absent -- the writer's database does not have this run"
+        else:
+            verdict = f"status={value.get('status')} updated_at={value.get('updated_at')}"
+    bind = getattr(database.AsyncSessionLocal, "kw", {}).get("bind")
+    return (
+        f"\n  writer-side row for {run_id} (same session factory the lifecycle writes through): {verdict}"
+        f"\n  factory identity: id(AsyncSessionLocal)={id(database.AsyncSessionLocal)} "
+        f"id(engine)={id(database.engine)} factory bind is that engine={bind is database.engine} "
+        f"url={database.engine.url!r}"
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)

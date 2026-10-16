@@ -11935,3 +11935,56 @@ ERROR line for that branch never reached a handler, which voids every log-absenc
 §197 and forces them to be re-read. `not recorded … task object: done=True` is a sixth shape nobody has claimed:
 the coroutine finished but the loop dropped its callbacks. `task object: done=False` means the writer really is
 still in flight while `all_tasks()` reports none, and then §194's census correction is the thing on trial.
+
+## 201. The lifecycle returned normally with the row still in flight, so the question is now which database the write landed in
+
+**The sample.** CI 38918664756 on `655bb91` -- three stalls, same three tests, and every one of them read:
+
+    task registry: no task for run-…; 0 registered ([])
+    scheduled loop: 0x…; same as polling loop=True; that loop closed=False
+    how the lifecycle task ended: returned (-); task object: garbage-collected
+    live tasks on THIS loop …: {};  threads still inside the lifecycle or the graph: 0
+    lifecycle lines emitted for run-… anywhere in this process: none
+
+So `execute` was neither cancelled nor did it raise: it **returned**. By §200's enumeration the exits that
+return are the unknown-row WARNING, the three ERROR branches, and the normal path that writes the status the
+graph handed back. No line names the run, and the same session's counter demonstrably does hear this logger --
+`run-1ecca477c5: analysis task failed` and `run-never-stored: analysis task started for an unknown run` are in
+its sample -- so the remaining reading is that the terminal write landed somewhere the client is not looking.
+That is a different bug from the one this thread has been chasing: the run is not dead, it is invisible.
+
+**What the code says now, read rather than reasoned.** The reader is `analysis.py:104-108` →
+`get_session` (`core/database.py:45-46`, `async with AsyncSessionLocal()`, resolved when the request runs) →
+`analysis_service.get_analysis_run:58-61`, a plain `SELECT` and `to_dict()` with no cache and no state store.
+The writer is `run_lifecycle.session_factory:66-68`, returning the same module attribute. Both therefore read
+one global, which means a split requires that global to have been swapped between the last intermediate write and
+the terminal one -- or that the two sides hold different snapshots of one sqlite file. The CI engine url printed
+by the report is `sqlite+aiosqlite:///./data/dsa.db`, i.e. the repo's shared file database, with
+`Connections in pool: 1` and `Current Checked out connections: 0`.
+
+**The datum added for that, and its guard.** `_writer_side_row()` reads the row back through the writer's own
+factory at the moment the wait expires, bounded by `asyncio.wait(..., timeout=3)` rather than by a handler -- a
+probe that could hang would replace the failure with a second hang, and a counted `except` would add a silent
+exit to the harness. It prints the row's `status` and `updated_at` as that database holds it, plus
+`id(AsyncSessionLocal)`, `id(engine)` and whether the factory's bind still *is* that engine.
+`tests/contract/test_stall_evidence.py` drives all four states: a database that says COMPLETED, a row that
+database does not have, a factory that never answers (`no answer within 3s`, proven to return), and the real
+raise path -- a client stuck at VALIDATION while the writer's database already holds COMPLETED, where the
+message has to carry `status=COMPLETED`. Dropping the `await _writer_side_row(run_id)` call turns that test red,
+so the line is wired and not merely available.
+
+**Measured locally.** ruff check and format --check on both files: rc 0. `test_stall_evidence.py` +
+`test_run_lifecycle_cancellation.py` + `test_process_global_isolation.py`: 17 passed. `test_product_events.py` +
+`test_analysis_run_lifecycle.py` + `test_demo_seeding.py`: 43 passed. `audit_facts.py --check`: rc 0. No shipped
+file, gate list, dependency or coverage source touched.
+
+**What the next sample decides, said before reading it.** `status=<terminal>` next to a client still reading
+VALIDATION ⇒ the writer and reader are on different databases or different snapshots, and the CI red is a
+harness-isolation artifact rather than a product defect. `status=VALIDATION` with the same frozen `updated_at`
+⇒ nothing was written after the last intermediate state, and then `execute` returned without writing *and*
+without logging, so §200's enumeration is missing an exit and the defect is in the shipped module. `row absent`
+or `bind is that engine=False` ⇒ the global was swapped mid-run. `no answer within 3s` ⇒ the writer's connection
+is stuck while the reader still answers, which points at the pool rather than at the coroutine.
+
+**Limits.** Test-side only: a stall in a deployed API produces none of this. And the head that gets sampled
+carries other lanes' commits, so this reading is single-variable for the lifecycle only, not for the suite.
