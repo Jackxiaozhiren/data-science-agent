@@ -11693,3 +11693,108 @@ still has no such line; the wrapper is installed for the session, and a test tha
 own stub bypasses it, which is why the report prints "never recorded" rather than guessing. One run id, one loop:
 a run rescheduled later on a different loop overwrites its own entry, which is the truth about the last writer and
 not about the first.
+
+## 198. Session close (Lane F, completed): R-15 finished on all five links, and the CI sample that says so
+
+```
+LANE: F (continued from §191)   DATE: 2026-10-16   HEAD AT START: eebb104   HEAD AT END: 4a3b588 (+ this section)
+```
+
+**What this stretch delivered, after §191 had already closed the lane's first three requirements.** §191 left
+R-15 at three of five links and called the fourth "the exact next slice". It is now five of five, and the
+slices are §192 (the starter link, plus the funnel-pairing defect) and §195 (the relay and the consent shape
+the maintainer chose). §196 is this project's own number-hygiene correction.
+
+**PREMISES RE-VERIFIED in this stretch** -- each by running something, not by reading the plan.
+
+- Does a wheel carry `product_events.json`? -> root `pyproject.toml:197` and `apps/api/pyproject.toml:12` set
+  `[tool.hatch.build.targets.wheel] packages` to a *directory* -> hatchling takes every file under it; no
+  packaging change needed, and none was made.
+- Did the telemetry import add a dependency edge? -> `grep '^from dsa_' apps/api/src` ->
+  `services/demo_seed.py:58` already imported `dsa_llm.providers` -> no new edge.
+- Does the isolation registry need telemetry's cache? -> it scans for module-level **literal** containers; the
+  spec cache initialises to `None`, so `test_process_global_isolation.py` passing is the correct outcome, read
+  from the guard's own AST rather than assumed.
+- Can this session redeploy the demos? -> `api.render.com/v1/services` answers **400 carrying a
+  `render-request-id`** (so it reaches Render) and `api.vercel.com` **403**, while `${#RENDER_API_KEY}` and
+  `${#VERCEL_TOKEN}` both measure **0**. Declared-but-empty placeholders. §186's "maintainer's action" was
+  right, and the first probe that called them "set" was the instrument bug -- existence instead of length.
+- What does a visitor see today? -> `/version` `4.5.0`, `storage.durable: false`, `reasoning_mode.stub: true`;
+  `/api/v1/datasets/` one `live-probe.csv` row and no sample marker -> still **pre-R-01**.
+- Do the new modules actually run in CI? -> the runner's coverage table lists
+  `apps/api/src/dsa_api/routers/events.py … 15 0 2 0 100%` and `services/telemetry.py … 91%`. A file cannot
+  appear there without having been imported and executed, which is the evidence that `-q`'s silence about test
+  names does not give.
+
+**FULL LANE RESULT.**
+
+- Local: `uv run --frozen python -m pytest -q --cov --cov-report=term-missing` -> exit **0**, **0** FAILED
+  lines, coverage **84.19%** against a 79.0% floor; **1033** tests, derived by summing the progress glyphs in
+  `build/arrival-pytest.log` per §196's method.
+- `ruff check` / `ruff format --check` -> "All checks passed!" / "286 files already formatted";
+  `mypy packages apps/api src apps/jupyter` -> "Success: no issues found in 129 source files"; `audit_facts.py --check` -> OK with `exceptHandlers` **184** of 185
+  measured through the ratchet's own code path; `mkdocs build --strict` -> built clean; `check_public_claims.py
+  --require-released-tags` -> "0 issues (scanned 47 file(s); 59 skipped as historical)".
+- Browser tour -> `regression: 30/30 checks passed (24 route/viewport + 3 interaction + 3 backend-probe)`.
+  Before it passed, the bundle-freshness preflight built in §182's follow-up **refused** to run against a
+  bundle older than `app/layout.tsx`, which is the guard doing its job rather than a failure: the plants had
+  touched those files after the build.
+- Runner, `gh run view 38891693163` at `4a3b588` (which carries every commit of this stretch): `web-regression`
+  **success**, `ci` **failure** on the pytest step alone, failing set **exactly** §188's three ids
+  (`test_api_analysis_flow`, `test_progress_and_evidence_trace`, `test_sse_events_and_json_fallback`). R-15
+  added nothing to the known-red set, and its own suites are not in it.
+- Live end to end: a booted instance with `DSA_TELEMETRY=on` recorded the seeder's
+  `run_started(initiated_by: seeding) -> run_completed` pairs, refused a forged `run_completed` and an
+  undeclared `page: settings` with 400s quoting the vocabulary's own sentences, accepted one arrival, and left
+  exactly the expected lines in the JSONL; the test port was then confirmed free with `lsof`.
+
+**FALSIFICATION PROOF**, all reverted from byte snapshots with `cmp` proving the restore and `git diff
+--numstat` returning to the feature's own shape: the endpoint's starter emission removed -> positive funnel
+test red; matcher forced always-true -> negative test red; lifecycle emission removed -> pairing test red;
+`_check_payload` neutered with a spaced value -> both the emit-time refusal and the disk re-check red; the
+consent `return` deleted from the client -> gating guard red; a label renamed off-vocabulary -> label-equality
+guard red; beacon unmounted -> mounted guard red; `client_event_refusal` aimed at the wrong owner ->
+forge-resistance red; required-keys rule neutralised -> empty-payload refusal red. Nine plants, nine
+directions, nothing left in the tree.
+
+**FILES OTHER SESSIONS OWN, untouched:** `README.md`,
+`packages/evaluation/src/dsa_evaluation/external_validation.py`, `tests/evals/test_external_validation.py`,
+`conftest.py` (dirty in this worktree at commit time -- the §197 author's), `render.yaml`,
+`docs/hosted-demo.md` (dirty, and it was deliberately not edited this stretch even though §190's telemetry
+note belongs there), `WEB_PRODUCT_MASTER_PROMPT.md`, the four `项目经历-*.md` files, and
+`apps/api/src/dsa_api/services/run_lifecycle.py` + `tests/**` for the lifecycle loop-recording work landed as
+`4a3b588`. **Declared contact with their file:** `run_lifecycle.py` carries my 7-line `is_terminal` emission
+from §190, additive and control-flow-free; their §197 work touched the same file afterwards and both changes
+are in `4a3b588`.
+
+**SHARED-STATE ACTIONS UNDER §19.1**
+
+- push -> `0022d4e`, `0680cb9`, `e42cba9` (all §191), then `b36ad4c` (§195/§196) and `38e1cd2`, all on `main`
+  by explicit path. No force-push, no PR, no merge of anything I did not author.
+- deploy -> **none**, and now measured rather than assumed: both platform tokens are empty, so no session on
+  this machine can do it until the maintainer exports real ones.
+- env vars -> **none set or changed anywhere.** `DSA_TELEMETRY` and `NEXT_PUBLIC_TELEMETRY` exist as documented
+  switches, both off; `docs/api.md` and the vocabulary state that enabling them is the operator's disclosure act.
+- money / services / dependencies / workflows / releases -> none. `sync_vendor --check` remained red for
+  `dsa_evaluation` alone throughout, and `--all` was never run.
+- Ledger numbering: §193 was claimed by another session while my section was already in the worktree, so mine
+  moved to §195 and appended at the end; this close block is §198. Every ledger and CHANGELOG diff in this
+  stretch is **0 deletions** except the deliberate correction of one now-stale sentence in the R-15 changelog
+  entry and one rate-limit line in `docs/api.md`.
+
+**BLOCKERS NEEDING A HUMAN**, unchanged except where noted: export non-empty deploy tokens (then the census in
+`docs/hosted-demo.md` is the acceptance); approve or refuse R-13's a11y devDependency; the §188 lifecycle
+stall belongs to its owner and is still exactly three tests red on the runner -- which is now also blocking
+§197's own instrument from being the last word on the funnel; decide whether the public demo counts visitors
+(both switches exist, both are off); recruit for Studies 1-3, whose kits remain frozen and `NOT CONDUCTED`.
+
+**Where the next session should start:** Lane E, task-tracked as R-04 first (`dsa ui`), whose premise this
+session measured but did not act on: `dsa --help` builds its surface in `dsa_evaluation/cli.py` through
+`sub.add_parser` (demo, external-validation, verify, research, doctor, init, analyze, profile, benchmark, repro,
+plugin, mcp) and has **no `ui` entry**, so the plan's premise holds. R-08's owner columns are likewise absent
+from both ORM models, and R-05 has no BYOK path in either direction today -- keys are read only from
+`OPENAI_API_KEY` / `DSA_OPENAI_COMPAT_API_KEY` at `providers.py:116,262`, and no `api_key` field exists anywhere
+in `apps/web` or `apps/api`.
+
+**Free tier, whole session:** nothing purchased, no service created or reconfigured, no dependency added, no
+workflow file or gate mirror touched, no tag or release cut.
