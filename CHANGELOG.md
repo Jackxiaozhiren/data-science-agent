@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — `dsa ui`: the whole product locally, one command, loopback by default (R-04)
+
+- `dsa ui` starts the API and the dashboard together, prints the one URL to open, and stops both on a single
+  interrupt. Data lives in one directory the user chooses (`--data-dir`, default `~/.dsa/ui`), so a laptop run
+  needs no Docker and no hosted box, and nothing is uploaded anywhere: the only outbound request is the model
+  endpoint that person configures, and `DSA_LLM_MODE` unset means the deterministic planner answers.
+- Measured on a real run: ready in 6 s, `/health` answering, `/` serving 60,623 bytes, an uploaded CSV
+  reaching `COMPLETED` in 4 s, its markdown export 200, 23 artifact files plus a 643 KB database under the
+  chosen directory, and **both ports free with zero surviving processes** after a single `SIGTERM`.
+- Two failure modes that would have made it worse than the demo it replaces are refused *before* spawning:
+  a missing **or stale** bundle (the freshness rule the browser tour already enforces, so a user is never
+  served the previous product), and an `--api-port` the built client cannot reach — `NEXT_PUBLIC_API_URL` is
+  compiled into the bundle, so the wrong port yields a page that loads and then fails every request.
+- Teardown takes the whole child process group, and the supervisor is *not* in it: the first spike proved why,
+  because signalling a group you belong to kills the terminal with it. `SIGINT` and `SIGTERM` are both
+  handled; the original version caught only `KeyboardInterrupt`, so a `SIGTERM` ended the supervisor, its
+  cleanup never ran, and the ports stayed held.
+- `build_parser()` is now a real seam (the gap `tests/unit/test_cli_help_surface.py` had recorded): the
+  surface is inspectable without dispatching, which is how the loopback default and the port-8000 default are
+  pinned as defaults rather than as prose.
+- Fifteen guards, and two of them were broken instruments before they were finished. The `SIGTERM` guard sent
+  the signal to the pytest process itself, so removing the handler produced a crashed run at rc 143 with no
+  verdict — it now runs in a child process and fails with a named assertion. The escalation guard's child was
+  killed before it could install `SIG_IGN`, so the guard passed with the escalation deleted; the child now
+  announces it is ignoring `SIGTERM`, and the assertion demands `SIGKILL` specifically.
+- Cost check: the first draft spent 6 exception handlers and 4 suppressions against ceilings of 185/42 that
+  had 1 and 0 slots of headroom. Rather than raise a ceiling, the module was restructured to need none —
+  `connect_ex` returns a code where `bind` would raise, `os.access` asks permission where a write-and-catch
+  would report it, `contextlib.suppress` covers the two process-race successes, and two `# noqa: S603`
+  comments were deleted once `packages/evaluation/**` was found to ignore that rule already. Measured after:
+  `exceptHandlers` 184, `suppressionDirectives` 42 — both back to the pre-change reading.
+
 ### Added (post-4.5.0) — the funnel's last link, with two switches that both start off (R-15)
 
 - `arrival` is now instrumented end to end: `POST /api/v1/events` relays the one event only a browser can

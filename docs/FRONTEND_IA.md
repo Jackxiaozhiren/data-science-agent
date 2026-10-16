@@ -12,8 +12,8 @@ Both shapes serve the same routes; only the origin of the API and the lifetime o
 
 | | Local | Hosted demo |
 |---|---|---|
-| Web | `npm run dev` / `next start` on `:3000` | Vercel |
-| API | `uvicorn dsa_api.main:app` on `:8000` | Render free instance |
+| Web | `dsa ui`, or `npm run dev` / `next start` on `:3000` | Vercel |
+| API | `dsa ui` (supervised), or `uvicorn dsa_api.main:app` on `:8000` | Render free instance |
 | API origin | `NEXT_PUBLIC_API_URL`, baked at web build time | same, pointing at the Render URL |
 | CORS | `DSA_CORS_ORIGINS` must list the web origin, per port | set in the service env |
 | Reasoning mode | whatever `DSA_LLM_MODE` says | `heuristic`: no model is called, so a run costs nothing |

@@ -109,6 +109,36 @@ print(result.report_markdown)  # prose + charts, every claim cited
 print(result.evidence)  # Insight → Evidence → ToolCall → Dataset(hash)
 ```
 
+## Run the whole thing with one command
+
+```bash
+dsa ui                              # API on :8000, dashboard on :3000, data in ~/.dsa/ui
+dsa ui --data-dir ./my-analysis     # same, with the database and artifacts somewhere you choose
+dsa ui --json                       # preflight only: what would stop a start, then exit
+```
+
+One process supervises both, binds loopback, prints the single URL to open, and stops both on one `Ctrl-C`
+(or a `SIGTERM`) — the ports are free again afterwards, with nothing left listening. Your data never leaves the
+machine: DSA makes no outbound request except the model endpoint you configure, and with `DSA_LLM_MODE` unset
+the run is answered by the deterministic planner, so nothing is billed. Checked on the locally served pages
+(`/`, `/datasets`, `/analysis`): none of them loads a third-party script, style or font — the only
+non-loopback reference in the markup is the repository link in the header, which is a link, not a fetch.
+
+Two things are checked before anything starts, because both fail confusingly otherwise:
+
+- **The dashboard bundle.** It is built by Node, not by this package: `dsa ui` refuses and names
+  `npm --prefix apps/web run build` when `.next` is missing **or older than the sources**, rather than serving
+  you the previous product.
+- **The API port.** `NEXT_PUBLIC_API_URL` is compiled into the client, so a bundle built for `:8000` cannot be
+  pointed at `:9000` from the command line. `--api-port` is refused until you rebuild with that variable set.
+
+```bash
+dsa ui --port 3100 --api-port 8100 --web-dir apps/web --no-browser   # non-default ports, scripted
+```
+
+Choosing `--port`/`--api-port` is fine when you also rebuild; `--host` to something other than loopback needs
+`--allow-public` as well, and `DSA_AUTH_TOKEN` should be set before you do that.
+
 ## Run the API server
 
 ```bash
