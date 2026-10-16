@@ -11322,3 +11322,128 @@ them "set" because it tested the variable's existence instead of its length, whi
 ledger keeps naming. The conclusion stands, now with evidence: no session here can redeploy until the
 maintainer exports non-empty tokens, and `docs/hosted-demo.md`'s census is the verification to run after they
 do.
+
+## 191. Session close (Lane F): three requirements shipped, the product counts for the first time, and the demo is still stale by measurement
+
+```
+LANE: F   DATE: 2026-10-15 → 16   HEAD AT START: 66fd064   HEAD AT END: 0680cb9
+```
+
+**PREMISES RE-VERIFIED** -- one line each, command and observation from this session, not from the plan.
+
+- R-14's second renderer -> `dsa_mcp/app.py`'s report card did `report_markdown.slice(0, 3000)` into a `<pre>`
+  -> held, and §189 records the fix plus the byte-equality assertion that replaced it.
+- R-15's "no analytics present" -> no event, no counter, no usage logger anywhere in `apps/api` or `packages/`
+  -> B14's hardest form: ten requirements had landed with no instrument for whether anyone used them.
+- Does the vocabulary ship? -> root `pyproject.toml:197` and `apps/api/pyproject.toml:12` both set
+  `[tool.hatch.build.targets.wheel] packages = [...]` to a directory, and hatchling takes every file under it
+  -> `product_events.json` travels in the `dsa_api` wheel and in `_vendor`; no packaging change was needed,
+  and none was made.
+- Did R-15 add a dependency edge? -> `grep '^from dsa_' apps/api/src` -> `services/demo_seed.py:58` already
+  imported `dsa_llm.providers.resolve_llm_mode` -> telemetry's import adds nothing new.
+- What does CI actually fail at -> `gh run view 38767413578 --log --job 116534123009` at `2e4280c`, before any
+  R-15 commit -> exactly the three §188 lifecycle ids; R-14 and R-07 grew nothing.
+- Can this session redeploy -> Render API 400 (with a `render-request-id`, so reachable) and Vercel API 403,
+  with both tokens `${#VAR}` = 0 -> no. Recorded above because §186 had asserted it without measuring.
+- What a stranger sees today -> `GET /version` answers `4.5.0`, `storage.durable: false`, `reasoning_mode.stub:
+  true`, and `GET /api/v1/datasets/` returns a `live-probe.csv` row with no sample marker -> the live demo is
+  still **pre-R-01**: the seeded first screen has never been visible outside a repository checkout.
+
+**DELIVERED** -- three major requirements, which is §15's cap for one session.
+
+- **§12 kits** (`3eb32b0`, ledger §187, formatter follow-up `9ce20e0`): Study 2's paired-blind kit and Study 3's
+  reviewer kit, each with a results schema, both reusing Study 1's `RESULTS_SCHEMA` shape; every kit stays
+  `NOT CONDUCTED` because recruiting is a human action. The kit-schema guard stopped being a typed list -- it
+  enumerates the directory, so a new kit cannot arrive unclassified.
+- **R-14** (`70bc45c`, ledger §189): the MCP App's report view *is* `export_html(state)`, asserted byte-for-byte
+  equal to the web's offline download, so the product has one rendering. Honest half: no MCP chat client
+  exists here, so the spec's capture from a real client is owed, not implied.
+- **R-15** (`0022d4e` + `0680cb9`, ledger §190): vocabulary published as data, consent gate that writes nothing
+  by default, emit-time refusals ordered prohibited-before-undeclared, three emission sites including the
+  terminal choke point, eight guards, and the demo left un-counted on purpose.
+
+**NOT DELIVERED**
+
+- **R-13** (bilingual first-run copy + accessibility floor): `apps/web` has no locale layer and no a11y
+  tooling, and the plan's guard wants an automated check wired into the web lane -- that needs a new
+  devDependency, which §19.1 puts on the must-ask list. Not installed, not worked around.
+- The funnel's **top two links**: `arrival` and `starter_question_used` are declared `emitter: web, status:
+  planned` and the API raises if asked to emit them. Three of five links are live; a web-side emitter is the
+  exact next slice, and the vocabulary already carries both events.
+- **Any usage number at all.** Nothing has run with consent on, so the honest report is "no data" -- which is
+  what §12's record says, and R-15 changes the instrument, not the finding.
+
+**FULL LANE RESULT** -- counts exactly as printed, and where they were printed.
+
+- Local, this machine, macOS/arm64, `uv run --frozen python -m pytest -q --cov --cov-report=term-missing`:
+  exit 0, **1016 tests** (derived by counting the progress glyphs in `build/r15fix-pytest.log`, because this
+  repo's `-q` run prints no trailing counts line), **0 FAILED**, `Required test coverage of 79.0% reached.
+  Total coverage: 84.12%`.
+- `ruff check` / `ruff format --check` over `packages apps/api tests src apps/jupyter scripts`: "All checks
+  passed!" / "286 files already formatted". `mypy`: "Success: no issues found in 128 source files".
+- `scripts/audit_facts.py --check`: "facts ratchet: OK" (184 counted handlers against the 185 ceiling, after
+  telemetry's single `contextlib.suppress` -- which is not what the ratchet counts).
+- `uv lock --check`: "Resolved 192 packages", rc 0. `check_public_claims.py --require-released-tags`: "0 issues
+  (scanned 47 file(s); 59 skipped as historical)". `find_orphan_reads.py --check`: rc 0, 14 declared keys.
+- `sync_vendor.py --check`: **rc 1**, `dsa_evaluation: 1 file(s) differ [external_validation.py]` -- another
+  session's uncommitted source, left unrepaired on purpose. `dsa_api`'s four mirrored files are byte-exact.
+- Runner, `gh run view 38881127848` at `0680cb9`: `web-regression` **success**, `ci` **failure** on one step
+  ("Run uv run pytest..."), failing set **exactly** the three §188 ids
+  (`test_api_analysis_flow`, `test_progress_and_evidence_trace`, `test_sse_events_and_json_fallback`). The
+  same query at `0022d4e` printed **five** ids, two of them mine -- so R-15's regression on the runner is
+  reverted, back to the pre-existing baseline. The deterministic funnel test cannot skip (`pytest.skip` appears
+  once in that file, inside the real-loop helper it does not use) and is absent from the failing set, so it
+  ran green there.
+- Runner, live demo, read-only: `/version` answers `4.5.0` with `storage.durable: false` and
+  `reasoning_mode.stub: true`; `/api/v1/datasets/` answers a `live-probe.csv` row and no sample marker.
+  Everything this lane built is on `main` and nowhere else.
+
+**FALSIFICATION PROOF** -- each plant reverted from a byte snapshot, `git diff --stat` empty after every one.
+
+- `git ls-files` guard on the vocabulary -> file deliberately untracked -> guard red with "the event vocabulary
+  is not in git" -> green once committed; the commit is what makes it pass, which is the point.
+- `export_taken` emission deleted from the markdown branch -> the deterministic funnel test and the real-loop
+  accept both red.
+- `run_completed` emission deleted from `run_lifecycle._write` -> the same two red.
+- `_check_payload` neutered **and** a spaced free-text value emitted -> the emit-time refusal test red *and*
+  the disk re-check red, which is what proves the two layers are two layers: the disk half can only fire once
+  the emit half is already broken.
+- Consent gate -> `DSA_TELEMETRY` unset, `off`, and `OFF` all write nothing and create no file; asserted by
+  `not Path(log).exists()`, so a silently-created empty file would also be red.
+
+**FILES OTHER SESSIONS OWN** -- `README.md`, `packages/evaluation/src/dsa_evaluation/external_validation.py`,
+`tests/evals/test_external_validation.py` (all three dirty in this worktree at every commit, never staged, and
+`sync_vendor --check` was left red for `dsa_evaluation` rather than repaired with `--all`, which would have
+copied their uncommitted source into `_vendor`); `WEB_PRODUCT_MASTER_PROMPT.md` and the four `项目经历-*.md`
+files (untracked, untouched). **Declared exception:** `apps/api/src/dsa_api/services/run_lifecycle.py` and its
+vendored copy received 7 additive lines -- the `is_terminal` emission at `_write`, no control flow changed --
+because that is where the funnel's third link belongs; §190 names it rather than burying it.
+
+**SHARED-STATE ACTIONS UNDER §19.1**
+
+- push -> `0022d4e` and `0680cb9` to `main`, both by explicit path; no force-push, no PR opened, none merged.
+- deploy -> **none.** No credential exists in this environment (measured above), so neither demo service was
+  touched; `git log` advancing is not a deploy, and the live demo still answers 4.5.0 pre-R-01.
+- env vars -> **none set or changed** on any service. `DSA_TELEMETRY` is documented as the operator's switch
+  and left off; no `.env`, secret or workflow file was edited.
+- money/services/dependencies -> none. Free tier only: the counter is a JSON file and a JSONL path on disk the
+  instance already has.
+
+**BLOCKERS NEEDING A HUMAN**
+
+1. **Redeploy the two demo services** -> needs non-empty `RENDER_API_KEY` / `VERCEL_TOKEN` exported into the
+   shell (never pasted into chat). Without it, R-01's seeded first screen, R-07's download button and R-10's
+   navigation are invisible to every visitor. Verification after: `docs/hosted-demo.md`'s census plus
+   `GET /api/v1/datasets/` answering the marked rows with their starter questions.
+2. **R-13's a11y devDependency** -> the specific approval sought is one `--save-dev` install in `apps/web`, or
+   an explicit instruction to build the check dependency-free.
+3. **The lifecycle stall (§188)** -> the family's owner needs the runner evidence: at `2e4280c` the three ids
+   fail with a run parked at `VALIDATION` and `live tasks on THIS loop: {}`. Until it is fixed, no test on any
+   branch can prove a completed run on the runner, which is why R-15's accept now declines instead of lying.
+4. **Turning counting on for the public demo** -> a consent decision about strangers' sessions, deliberately
+   not made in code.
+5. **Study 1/2/3 recruitment** -> the kits are frozen and unusable until people are recruited; only the
+   maintainer can do that.
+
+**Free tier, whole session:** nothing purchased, no service created or reconfigured, no dependency added, no
+workflow or gate mirror touched, no release or tag cut.
