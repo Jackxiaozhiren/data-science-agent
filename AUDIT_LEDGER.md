@@ -11645,3 +11645,51 @@ about a test count, and §190's 1016 and §191's counts were read from logs at t
 produced it, and if the artifact does not print it, the derivation is part of the claim. Guessing a total from
 "a bit more than last time" is transcription dressed as measurement -- the same failure §181 recorded for
 identifiers and §189 for counts, arriving here in a commit message rather than in documentation.
+
+## 197. The loop a run was scheduled on is now a recorded fact, which is the datum §194 said was missing
+
+**What was added, and where it lives.** `conftest.py` gained `_SCHEDULED_ON: dict[str, asyncio.AbstractEventLoop]`
+and a session-scoped autouse `record_scheduled_loop()`, which replaces `schedule_run` with a wrapper that records
+`task.get_loop()` under the run id before returning the task, and restores the original at teardown. `_stall_evidence`
+prints one more line, in three states: `scheduled loop: 0x…; same as polling loop=<True|False>; that loop
+closed=<True|False>` for a recorded run, and `scheduled loop: never recorded for <run>; N run(s) recorded this
+session ([…])` when nothing was recorded. `tests/contract/test_stall_evidence.py` gained two tests and one extra
+required substring in each of two existing ones.
+
+**Why the wrapper sits on three modules and not one.** `apps/api/src/dsa_api/routers/analysis.py:27` does
+`from dsa_api.services.run_lifecycle import … schedule_run` and calls that name at line 73; `demo_seed.py:57` does
+the same. Wrapping only the definition would therefore record nothing for exactly the runs the report exists to
+explain -- the call-time-resolution trap §194's own sibling commit (`fa04f2e`) had to handle for the session
+factory. This is not reasoned from the imports alone: with `analysis_router` removed from the wrapper's target
+list, the new wiring test went red with `the router's binding recorded None, not the loop that ran it`, and went
+green again once it was added back. A test that stayed green either way would have proved nothing about the
+binding.
+
+**Why the record is in the test harness and not in the shipped module.** The datum has no production consumer --
+its whole job is to let a stalled test say which loop owned the writer. And a module-level container in shipped
+code is not free here: `tests/test_process_global_isolation.py` scans `apps/api/src` (its `_SCAN_ROOTS`) for
+module-level containers written after import, and a subscript assignment such as `loop_of[run_id] = loop` is one
+of its two criteria, so a fifth cache would have to be added to `_ISOLATED_GLOBALS` -- where the fixture's
+snapshot/restore would start discarding a per-test history that is only meaningful session-wide. `conftest.py`
+itself is outside those roots, which is why `_LIFECYCLE_RECORDS` already lives there for the same reason.
+
+**What was measured locally.** `tests/contract/test_stall_evidence.py`, `tests/unit/test_run_lifecycle_cancellation.py`
+and `tests/test_process_global_isolation.py`: 14 passed. `tests/contract/test_product_events.py`,
+`tests/integration/test_analysis_run_lifecycle.py` and `tests/integration/test_demo_seeding.py` -- the suites that
+stub or drive `schedule_run`, and so the ones a session-wide wrapper could disturb: 43 passed. `ruff check` and
+`ruff format --check` on both edited files: rc 0 each (conftest.py is outside the gate's path list at
+`scripts/run_gates.sh:28-29`, so it was linted explicitly). `python scripts/audit_facts.py --check`: rc 0, "facts
+ratchet: OK" -- no new `except`, no new checker, no shipped file touched.
+
+**What the next CI sample will decide, stated before reading it.** The orphan reading §194 left standing predicts
+`same as polling loop=False; that loop closed=True` on a run whose wait expired. If the sample says that, the
+reading is observed rather than consistent, and the fix belongs to whoever owns the loop the demo seeds on. If it
+says `same as polling loop=True`, or `never recorded`, the orphan hypothesis dies too and the remaining candidates
+are the ones §194 enumerated (a writer that finished without writing, or a session that never scheduled the run).
+Either way the report no longer has to argue from an absence.
+
+**Limits worth keeping in view.** The registry is per-process and per-test-session, so a stall in a deployed API
+still has no such line; the wrapper is installed for the session, and a test that replaces `schedule_run` with its
+own stub bypasses it, which is why the report prints "never recorded" rather than guessing. One run id, one loop:
+a run rescheduled later on a different loop overwrites its own entry, which is the truth about the last writer and
+not about the first.

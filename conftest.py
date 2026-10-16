@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import logging
 import sys
@@ -165,6 +166,43 @@ def count_lifecycle_log_lines():
     logger.removeHandler(handler)
 
 
+_SCHEDULED_ON: dict[str, asyncio.AbstractEventLoop] = {}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def record_scheduled_loop():
+    """Note which loop each run was scheduled on -- the datum the registry cannot give back once it is empty.
+
+    Every CI timeout read `no task for <run>` plus an empty `all_tasks()` census plus no lifecycle line, and the
+    leading reading was an orphan: the coroutine was suspended on a loop that had already closed, so no census
+    on the polling loop could see it and no thread scan could show a frame. That reading is unfalsifiable with
+    the registry alone -- a closed loop leaves no trace there. The loop object itself is the thing to keep, and
+    `schedule_run` is the last moment it is still knowable.
+
+    Installed on every module that holds the name, not only the definition: the router imported `schedule_run`
+    directly, so patching `run_lifecycle` alone would record nothing for the runs the route actually creates.
+    """
+    from dsa_api.routers import analysis as analysis_router
+    from dsa_api.services import demo_seed, run_lifecycle
+
+    targets = [run_lifecycle, analysis_router, demo_seed]
+    originals = [(module, module.schedule_run) for module in targets]
+
+    def _wrap(original):
+        def schedule_run(run_id: str):
+            task = original(run_id)
+            _SCHEDULED_ON[run_id] = task.get_loop()
+            return task
+
+        return schedule_run
+
+    for module, original in originals:
+        module.schedule_run = _wrap(original)
+    yield
+    for module, original in originals:
+        module.schedule_run = original
+
+
 def _stall_evidence(run_id: str) -> str:
     """Name the condition the timeout is actually in, instead of leaving it to be inferred from a traceback.
 
@@ -210,6 +248,22 @@ def _stall_evidence(run_id: str) -> str:
         )
         for entry in [e.strip() for e in frame.getvalue().splitlines() if e.strip()][-4:]:
             lines.append(f"    await: {entry}")
+
+    # The line the CI samples have been missing: with no registry entry the census and the thread scan can only
+    # say "not here", which fits both "the writer finished" and "the writer is parked on a loop that closed".
+    # The loop captured at schedule time discriminates them -- `same as polling loop=False, closed=True` is the
+    # orphan, and `True` says the run was on the loop that is still asking about it.
+    scheduled = _SCHEDULED_ON.get(run_id)
+    if scheduled is None:
+        lines.append(
+            f"  scheduled loop: never recorded for {run_id}; "
+            f"{len(_SCHEDULED_ON)} run(s) recorded this session ({list(_SCHEDULED_ON)[:4]})"
+        )
+    else:
+        lines.append(
+            f"  scheduled loop: {id(scheduled):#x}; same as polling loop={scheduled is running}; "
+            f"that loop closed={scheduled.is_closed()}"
+        )
 
     # The discriminator the registry alone cannot supply: an absent entry means either "the writer finished" or
     # "the writer is running and nothing points at it", and those two have different owners. So ask the loop
