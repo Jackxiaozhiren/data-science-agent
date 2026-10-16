@@ -23,6 +23,7 @@ from dsa_api.services.analysis_service import (
     sse_event_identity,
     sse_events_for_state,
 )
+from dsa_api.services.demo_seed import is_starter_question
 from dsa_api.services.run_lifecycle import is_terminal, read_run, schedule_run
 from dsa_api.services.telemetry import record_event
 from dsa_llm.providers import resolve_llm_mode
@@ -70,8 +71,16 @@ async def create_analysis(
         ) from None
     if started:
         schedule_run(str(result["id"]))
+        if is_starter_question(body.user_query):
+            # Ahead of run_started, because that is the funnel's own order. The matcher reads the tracked
+            # catalog and compares; the question text is exactly what the log must never carry, so it is
+            # consumed here and dropped.
+            record_event("starter_question_used", dataset_id=str(body.dataset_id))
         record_event(
-            "run_started", dataset_id=str(body.dataset_id), reasoning_mode=resolve_llm_mode().mode
+            "run_started",
+            dataset_id=str(body.dataset_id),
+            reasoning_mode=resolve_llm_mode().mode,
+            initiated_by="user",
         )
     else:
         response.status_code = 200

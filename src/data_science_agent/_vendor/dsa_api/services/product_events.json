@@ -42,9 +42,11 @@
       "emitter": "api",
       "status": "active",
       "answers": "funnel: run started",
+      "counts": "One record per run this instance created, whichever path created it -- the endpoint for a visitor (`initiated_by: user`) and the boot seeder for its own example runs (`initiated_by: seeding`). Without the second the funnel would report more completions than starts, because the seeder writes through the service rather than the endpoint.",
       "payload": {
         "dataset_id": "string identifier of the dataset row",
-        "reasoning_mode": "the effective reasoning mode at creation"
+        "reasoning_mode": "the effective reasoning mode at creation",
+        "initiated_by": "user | seeding"
       }
     },
     {
@@ -77,9 +79,10 @@
     },
     {
       "name": "starter_question_used",
-      "emitter": "web",
-      "status": "planned",
+      "emitter": "api",
+      "status": "active",
       "answers": "funnel: starter question used",
+      "counts": "A run started whose question equals, after stripping, one of the questions the tracked catalog publishes. The click itself is not counted -- a visitor who opens a starter question and never submits leaves no record -- and neither is a question that merely resembles a published one. The denominator is therefore runs, not clicks.",
       "payload": {
         "dataset_id": "string identifier of the dataset row"
       }

@@ -119,6 +119,37 @@ def test_the_vocabulary_is_tracked_and_well_formed() -> None:
         )
 
 
+def test_every_active_api_event_has_a_call_site_in_the_shipped_api() -> None:
+    """A declared-but-never-emitted event is §182's silent no-op with a schema attached.
+
+    `status: active` is a promise that some code path makes the record; this reads the API's own source and
+    refuses a vocabulary entry nobody calls. `arrival` is exempt by construction -- its emitter is the web,
+    and nothing here may emit it, which the companion test pins from the other side.
+    """
+    spec = json.loads(EVENTS_FILE.read_text(encoding="utf-8"))
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in (REPO / "apps/api/src/dsa_api").rglob("*.py")
+    )
+    for event in spec["events"]:
+        if event["emitter"] != "api" or event["status"] != "active":
+            continue
+        assert f'"{event["name"]}"' in source, (
+            f"{event['name']} is declared active but no API source names it: the funnel would answer zero "
+            "for a step nobody records"
+        )
+
+
+def test_the_planned_event_cannot_be_emitted_by_the_api() -> None:
+    """`arrival` is the web's; a server-side call that reaches for it must be refused, not silently dropped."""
+    from dsa_api.services import telemetry
+
+    spec = json.loads(EVENTS_FILE.read_text(encoding="utf-8"))
+    planned = [event["name"] for event in spec["events"] if event["status"] != "active"]
+    assert planned == ["arrival"], f"the planned set moved: {planned}"
+    with pytest.raises(ValueError, match="not active"):
+        telemetry.record_event("arrival", page="landing")
+
+
 def test_the_prohibited_list_covers_the_classes_the_spec_names() -> None:
     spec = json.loads(EVENTS_FILE.read_text(encoding="utf-8"))
     banned = set(spec["prohibited_payload_keys"])
@@ -259,6 +290,115 @@ async def _drive_three_sites(env: dict[str, Any], monkeypatch: pytest.MonkeyPatc
     assert report.status_code == 200, report.text[:200]
 
 
+def _a_published_starter_question() -> tuple[str, str]:
+    """(dataset filename, question) read straight from the producer's own catalog.
+
+    The alternative -- typing a question into this file -- is the fixture-shape mistake in reverse: the guard
+    would certify a string the product may no longer publish.
+    """
+    from dsa_api.services.demo_seed import catalog_questions
+
+    grouped = catalog_questions(REPO)
+    for filename, entries in sorted(grouped.items()):
+        if entries:
+            return filename, entries[0]["question"]
+    raise AssertionError("the tracked catalog published no questions at all")
+
+
+async def _start_one_run(
+    env: dict[str, Any], monkeypatch: pytest.MonkeyPatch, question: str, filename: str
+) -> None:
+    import dsa_api.routers.analysis as analysis_router
+
+    def _no_schedule(run_id: str) -> None:
+        return None
+
+    monkeypatch.setattr(analysis_router, "schedule_run", _no_schedule)
+    path = REPO / "benchmarks/v2/datasets" / filename
+    blob = path.read_bytes() if path.is_file() else CSV_BYTES
+    r = await env["client"].post("/api/v1/datasets/", files={"file": (filename, blob, "text/csv")})
+    assert r.status_code == 201, r.text
+    dataset_id = r.json()["id"]
+    r = await env["client"].post(
+        "/api/v1/analysis/", json={"dataset_id": dataset_id, "user_query": question}
+    )
+    assert r.status_code == 202, r.text
+
+
+@pytest.mark.asyncio
+async def test_a_starter_question_run_records_the_link_before_the_run(
+    loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The funnel's second link, inferred where it is exact: the question the screen published, verbatim."""
+    filename, question = _a_published_starter_question()
+    await _start_one_run(loop_env, monkeypatch, question, filename)
+    events = _log(loop_env)
+    names = [e["event"] for e in events]
+    assert names == ["starter_question_used", "run_started"], (
+        f"the funnel recorded {names} for a published starter question"
+    )
+    used = events[0]["payload"]
+    assert set(used) == {"dataset_id"}, f"the starter link carries {sorted(used)}"
+    assert "question" not in str(used), "the question text reached the log"
+
+
+@pytest.mark.asyncio
+async def test_a_typed_question_records_no_starter_link(
+    loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The other direction: the matcher is not an always-true counter."""
+    filename, _ = _a_published_starter_question()
+    await _start_one_run(
+        loop_env, monkeypatch, "Why did churn rise in the western region last quarter?", filename
+    )
+    names = [e["event"] for e in _log(loop_env)]
+    assert names == ["run_started"], f"a question nobody published recorded {names}"
+
+
+@pytest.mark.asyncio
+async def test_the_boot_seeder_records_its_own_starts_and_no_starter_link(
+    loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pairing invariant: every run this instance creates records a start, machine or visitor.
+
+    Only the endpoint emits for visitors, and the seeder writes through the service -- so a completion could
+    be recorded with no matching start. The agent itself is stubbed here (the real `_run_example` awaits it
+    for up to 45 s, and §188's runner cannot finish one at all); what is under test is the emission at that
+    call site, not the analysis.
+    """
+    import dsa_api.services.demo_seed as demo_seed
+    from dsa_api.core import database
+
+    def _no_schedule(
+        run_id: str,
+    ):  # the real one returns a Task; _run_example shields and awaits it
+        async def _done() -> None:
+            return None
+
+        return _done()
+
+    monkeypatch.setattr(demo_seed, "schedule_run", _no_schedule)
+    filename, question = _a_published_starter_question()
+    path = REPO / "benchmarks/v2/datasets" / filename
+    blob = path.read_bytes() if path.is_file() else CSV_BYTES
+    r = await loop_env["client"].post(
+        "/api/v1/datasets/", files={"file": (filename, blob, "text/csv")}
+    )
+    assert r.status_code == 201, r.text
+    dataset_id = r.json()["id"]
+
+    async with database.AsyncSessionLocal() as session:
+        await demo_seed._run_example(session, dataset_id, question)
+
+    events = _log(loop_env)
+    names = [e["event"] for e in events]
+    assert names == ["run_started"], f"the seeder recorded {names}"
+    assert events[0]["payload"]["initiated_by"] == "seeding"
+    assert "starter_question_used" not in names, (
+        "an example run the machine started read as a visitor using a starter question"
+    )
+
+
 @pytest.mark.asyncio
 async def test_the_three_emission_sites_record_the_funnel_without_the_agent_task(
     loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
@@ -287,7 +427,8 @@ async def test_a_full_loop_produces_the_funnel_sequence_with_clean_payloads(
     names = [e["event"] for e in events]
     assert names == ["run_started", "run_completed", "export_taken"], f"the funnel recorded {names}"
     started = events[0]["payload"]
-    assert set(started) == {"dataset_id", "reasoning_mode"}
+    assert set(started) == {"dataset_id", "reasoning_mode", "initiated_by"}
+    assert started["initiated_by"] == "user", "a run created through the endpoint is a visitor's"
     assert re.fullmatch(r"[A-Za-z0-9._:/-]{0,64}", started["reasoning_mode"])
     completed = events[1]["payload"]
     assert completed["run_status"] == "COMPLETED"

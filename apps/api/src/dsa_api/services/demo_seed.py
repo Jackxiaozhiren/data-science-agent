@@ -55,6 +55,7 @@ from dsa_api.models.dataset import DatasetORM
 from dsa_api.services.analysis_service import create_pending_run
 from dsa_api.services.dataset_service import save_dataset
 from dsa_api.services.run_lifecycle import read_run, schedule_run
+from dsa_api.services.telemetry import record_event
 from dsa_llm.providers import resolve_llm_mode
 
 log = logging.getLogger(__name__)
@@ -157,6 +158,31 @@ def catalog_questions(root: Path) -> dict[str, list[dict[str, str]]]:
     for entries in grouped.values():
         entries.sort(key=lambda entry: (entry["category"] != "EDA", entry["task_id"]))
     return grouped
+
+
+_published_questions: frozenset[str] | None = None
+
+
+def starter_questions() -> frozenset[str]:
+    """Every question the tracked catalog publishes -- the funnel's starter link reads this (R-15).
+
+    Cached because the catalog is a tracked file that does not change while a process runs and the create path
+    asks on every run. An empty set is a real answer: a tree whose catalog is absent records no starter links
+    rather than guessing that some question was one.
+    """
+    global _published_questions
+    if _published_questions is None:
+        _published_questions = frozenset(
+            entry["question"]
+            for entries in catalog_questions(repo_root()).values()
+            for entry in entries
+        )
+    return _published_questions
+
+
+def is_starter_question(user_query: str) -> bool:
+    """Exact equality after stripping: the link counts a question the product published, not a near one."""
+    return user_query.strip() in starter_questions()
 
 
 def _tasks_for(root: Path, filename: str, sha: str) -> list[dict[str, str]]:
@@ -342,6 +368,15 @@ async def _run_example(session: AsyncSession, dataset_id: str, question: str) ->
     created, started = await create_pending_run(session, dataset_id, question)
     run_id = str(created["id"])
     if started:
+        # R-15: the seeder's own run is a run this instance created, so it records a start -- labelled
+        # `seeding`, because it is not a visitor and must never read as one. Without this line the funnel
+        # would report more completions than starts, since only the endpoint emits for visitors.
+        record_event(
+            "run_started",
+            dataset_id=dataset_id,
+            reasoning_mode=resolve_llm_mode().mode,
+            initiated_by="seeding",
+        )
         # Shielded, not awaited bare: a boot that gives up on a slow run must not leave a row frozen in a
         # non-terminal status. The task keeps writing, and the next boot links whatever it finished.
         await asyncio.wait_for(asyncio.shield(schedule_run(run_id)), timeout=EXAMPLE_BUDGET_SECONDS)

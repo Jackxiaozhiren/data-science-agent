@@ -2,11 +2,33 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — the funnel's fourth link, and the starts that were going uncounted (R-15, continued)
+
+- `starter_question_used` is now recorded: a run whose question equals — after stripping — one of the 100
+  questions the tracked catalog publishes records the link **before** `run_started`, because that is the
+  funnel's own order. The matcher reads the catalog and compares; the question text is consumed and dropped,
+  so the log still carries only `dataset_id`.
+- Its denominator is written into the vocabulary: *runs, not clicks*. A visitor who opens a starter question
+  and never submits leaves no record, and a question that merely resembles a published one is not counted.
+  The alternative — implying clicks from a submit — is the kind of number §18 refuses to let prose carry.
+- `run_started` gains `initiated_by` (`user` | `seeding`) and the boot seeder now emits it for its own example
+  runs. Until this, only the endpoint recorded a start while `run_completed` fired from the terminal choke
+  point the seeder also passes through — so a counting instance reported **more completions than starts**, a
+  funnel that could exceed 100% and did not say so.
+- Two derived guards: every event declared `active` with an API emitter must be named by shipped API source
+  (a vocabulary entry nobody calls is §182's silent no-op with a schema attached), and the planned set is
+  pinned to `["arrival"]` with the refusal asserted from the other side — the API cannot emit the web's event.
+- Four plants, each reverted from a byte snapshot: removing the endpoint's starter emission reddened the
+  positive test only; making the matcher always-true reddened the negative one only; removing the seeder's
+  emission reddened the pairing test; and declaring an `active` event nobody emits reddened the call-site
+  guard. `arrival` remains **not built**: it needs a page-view signal from the client, and that is a decision
+  about a stranger's session rather than a line of code.
+
 ### Added (post-4.5.0) — the product can count, but only if it was asked to (R-15)
 
 - `apps/api/src/dsa_api/services/product_events.json` publishes the **event vocabulary as data**: five
-  funnel events (`run_started`, `run_completed`, `export_taken` emitted by the API; `arrival` and
-  `starter_question_used` declared as web-side and marked *planned*), each with its payload fields, plus the
+  funnel events (`run_started`, `run_completed`, `export_taken`, `starter_question_used` emitted by the API;
+  `arrival` declared web-side and still *planned*), each with its payload fields, plus the
   list of keys that may never be logged and the value rule that keeps free text out of the log.
 - `apps/api/src/dsa_api/services/telemetry.py` is the one emitter. `record_event` validates **before** the
   consent gate and appends only when `DSA_TELEMETRY=on`: any other value, including the default, writes

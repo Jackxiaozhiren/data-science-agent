@@ -11447,3 +11447,52 @@ because that is where the funnel's third link belongs; §190 names it rather tha
 
 **Free tier, whole session:** nothing purchased, no service created or reconfigured, no dependency added, no
 workflow or gate mirror touched, no release or tag cut.
+
+## 192. R-15's fourth link, and the funnel that could have reported more completions than starts
+
+§191 closed the lane with three of five links live and named the fourth as "a web-side emitter is the exact
+next slice". Building it turned into a different change than planned, and the reason is the part worth keeping.
+
+**The inference beats the instrument here.** `starter_question_used` looked like a browser event -- a click on
+a published question -- but the product already knows something better at the moment it matters: the run
+arrives with the question text in hand, and the catalog of published questions is a tracked file this process
+can read. So the API compares and records. A click that never becomes a run is not counted, which is why the
+vocabulary now states the denominator in its own words: *runs, not clicks*. That sentence is the guard against
+someone later reading the number as engagement; the plan's funnel arrow does not say which of the two it
+wanted, and a metric whose meaning depends on the reader is the class of defect §18 exists to stop.
+
+**The defect this surfaced, rather than the feature it added.** With `run_completed` emitted at
+`run_lifecycle._write` -- the choke point every terminal exit passes through -- and `run_started` emitted only
+in the endpoint, the boot seeder's example runs wrote a completion with **no start**. On any counting
+instance the funnel would therefore report more finishes than begins and never mention why. That is the shape
+of number a reader would have trusted. The fix is a labelled start rather than a filtered completion:
+`initiated_by` takes `user` or `seeding`, and `_run_example` records its own start. Machine runs stay visible
+as machine runs instead of vanishing from one column of the same table.
+
+**Two derived guards, because the vocabulary is now the contract.** A declared-`active` API event that no
+shipped source names is the §182 silent no-op wearing a schema, so the suite reads the API tree and refuses
+it; the plant that proved the guard was an extra `session_ping` entry nobody calls. And the planned set is
+pinned to `["arrival"]` with `record_event("arrival", ...)` asserted to raise -- the API cannot reach across
+into the browser's own signal, and if somebody later flips an event to planned, the set moves and the test
+says so.
+
+**Four plants, four directions.** Endpoint emission removed -> the positive starter test red, the negative
+green. Matcher forced always-true -> the negative red, the positive green. Seeder emission removed -> the
+pairing test red. Bogus active event added -> the call-site guard red. Every one reverted from a byte
+snapshot, and the residue check is a `git diff --numstat` that came back identical to the feature's own shape
+(10/1, 35/0, 6/3) with no `PLANT` or `session_ping` string left in `apps/api/src`.
+
+**A mistake this section should own.** Inserting the matcher used an `Edit` whose `old_string` ended on
+`_tasks_for`'s signature line, and the tool took the docstring's opening with it -- 25 lines added, and a
+file that no longer parsed. `ast.parse` caught it one command later; the repair restored the docstring inside
+the insertion, and `git diff --numstat` then read 25/0, which is the only proof that matters for an
+append-shaped edit. The heading-swallowing failure mode is already in this ledger's habits; it still happened.
+
+**What is still not built, and why it is a human question.** `arrival` needs a page view from the browser.
+The plumbing is knowable (a small POST the client makes only when it was *built* with counting on, so nothing
+leaves a browser by default) but the signal is about a stranger's session, and the plan's "unless the user
+opts in" does not say whether that user is the operator or the visitor. Shipping the pipe decides the question
+in practice, so it is named in §191's blockers instead of answered in code.
+
+**Free tier:** no service, no dependency, no money. The matcher reads the catalog the repository already
+tracks, cached in one module-level frozenset, and the vocabulary gained fields rather than infrastructure.
