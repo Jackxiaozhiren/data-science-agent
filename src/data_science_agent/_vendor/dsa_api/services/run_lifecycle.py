@@ -102,6 +102,13 @@ async def _write(
         if error is not None:
             row.error = error
         await session.commit()
+        # R-15 funnel: the run reached a terminal status. One choke point, because every terminal write --
+        # success, task failure, write failure, non-terminal graph return -- passes through here, and a
+        # funnel that counted only the happy path would be a lie with a file behind it.
+        if is_terminal(status):
+            from dsa_api.services.telemetry import record_event
+
+            record_event("run_completed", run_status=status)
 
 
 async def persist_state(state: AnalysisState) -> None:

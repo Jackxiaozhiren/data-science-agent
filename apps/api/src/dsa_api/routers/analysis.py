@@ -24,6 +24,8 @@ from dsa_api.services.analysis_service import (
     sse_events_for_state,
 )
 from dsa_api.services.run_lifecycle import is_terminal, read_run, schedule_run
+from dsa_api.services.telemetry import record_event
+from dsa_llm.providers import resolve_llm_mode
 
 #: Names this endpoint publishes for canonical fields, kept explicit at the boundary.
 REST_RUN_ALIASES = {"markdown": "report_markdown", "validation": "validation_results"}
@@ -68,6 +70,9 @@ async def create_analysis(
         ) from None
     if started:
         schedule_run(str(result["id"]))
+        record_event(
+            "run_started", dataset_id=str(body.dataset_id), reasoning_mode=resolve_llm_mode().mode
+        )
     else:
         response.status_code = 200
     response.headers["Location"] = f"/api/v1/analysis/{result['id']}"
@@ -194,6 +199,7 @@ async def get_analysis_report(
     plain = mode == "findings"
     md: str | None = state.get("report_markdown")
     if format == "markdown":
+        record_event("export_taken", export_format=format, mode=mode)
         if plain:
             # Rendered on read rather than stored: the plain document is a view of the run, and keeping a
             # second copy in the row is how the two would start to disagree.
@@ -205,6 +211,7 @@ async def get_analysis_report(
             raise HTTPException(status_code=404, detail="Report not yet generated")
         return PlainTextResponse(content=md, media_type="text/markdown; charset=utf-8")
     if format == "html":
+        record_event("export_taken", export_format=format, mode=mode)
         if plain:
             raise HTTPException(
                 status_code=400,

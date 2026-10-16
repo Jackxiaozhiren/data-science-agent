@@ -91,6 +91,19 @@ DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
 
 If an existing Blueprint has a failed deploy, keep the same Blueprint and use **Manual sync** or **Manual Deploy** after the repository fix is merged. Do not create a second Blueprint for the same service.
 
+### Product events are off on the demo unless the operator turns them on
+
+The API can count the funnel (`run_started` → `run_completed` → `export_taken`; vocabulary:
+`apps/api/src/dsa_api/services/product_events.json`). The switch is `DSA_TELEMETRY`, and its default is `off`,
+which means **nothing is written and no file is created** -- the current deployment does not set the variable,
+so the public demo records nothing about whoever visits it. Setting `DSA_TELEMETRY=on` on the Render service
+makes it append one JSONL line per event to `DSA_EVENT_LOG` (default `data/events/events.jsonl`, which on the
+free tier is the ephemeral `/tmp`-class disk, so the log vanishes on restart like everything else there).
+
+That is a decision about a stranger's session, not a deployment detail, so it is left to the maintainer. The
+payload contract does not change with it: query text, dataset content and any user-identifying value are
+refused at emit time, before the consent check, whether or not counting is on.
+
 ### Verify a deploy from the outside
 
 A deploy is not confirmed by the dashboard going green; confirm the artifact answers. Run these after the

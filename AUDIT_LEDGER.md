@@ -11226,3 +11226,62 @@ from at least one real client" is **not** produced; what is produced is the byte
 suites, and this statement. The client capture stays on R-14's ledger as owed, not implied.
 
 **Free tier:** no dependency, no service, no money; the report view renders from the in-process store.
+
+## 190. R-15 shipped: the vocabulary is a file, the refusals run before the consent gate, and the counting is still off
+
+**What the plan asked for and what the repo actually had.** R-15's evidence line said "no analytics present";
+grep confirmed it -- no event, no counter, no logger that records usage. B14 was therefore still true in its
+hardest form: every one of the ten requirements shipped this week landed without any way to know whether
+anyone used it. The plan's own phrasing for the fix is the part worth keeping in the record: *publish the event
+list as data, and derive every reported count from it rather than typing a number into a document.* So the
+vocabulary is a JSON file beside the emitter, not a Python enum, and §18's census guards keep the prose honest
+about the numbers it does not yet have.
+
+**The decision that made the emitter worth having: validate before the gate.** `record_event` checks the
+payload against the vocabulary **first**, and only then asks whether this instance is allowed to write. The
+alternative -- gate, then check -- is the quietly worse one: a payload that carries query text would pass
+silently on every deployment that has consent off, which is all of them by default, and the defect would
+surface the moment someone turned counting on in production. Enforcing before the gate means the rule is
+tested by the very configuration nobody ships, so it cannot rot behind the default. The docstring says this in
+those words.
+
+**Two refusals, ordered on purpose.** A key in a prohibited class (`query`, `content`, `user_id`, `ip`, ...)
+is refused before the per-event undeclared-key check, because the prohibited message is the one that names
+what must never be logged; `page` on `run_started` -- legal elsewhere, absent here -- gets the undeclared
+message. The value rule is a second, independent net: null, boolean, integer, or a ≤ 64-character
+`[A-Za-z0-9._:/-]` string. Free text is unreachable by construction, so `"The user asked about churn in the
+west region last quarter"` is refused on the *value*, not because somebody remembered to forbid a key called
+`user_query`. Disk failures are the one `contextlib.suppress` in the module -- an unreachable log must not turn
+a finished analysis into a 500 -- and it is written as a suppression because the debt ratchet counts every
+`except` in shipped code (184 against a ceiling of 185; a real handler here would have reddened the gate).
+
+**Where the emissions went, and the fence around one of them.** `run_started` at creation (carrying the
+*effective* reasoning mode from R-02's owner function, not the requested one), `export_taken` in both
+markdown and html branches, and `run_completed` at `run_lifecycle._write` -- the single choke point all four
+terminal exits already pass through, so the funnel cannot record only the happy path. That last line is 7
+lines inside another session's active file (§188's lifecycle family is red on the runner and they own it). It
+is additive, it does not touch any control flow the red tests exercise, and the alternative -- a wrapper around
+`_write` that every caller would have to adopt -- would have been a wider change to their surface than one
+call at the point that already knows the status. Recorded here because it is the kind of edit that needs a
+name on it, not because it was contentious; `git diff --numstat` for that file is 7/0.
+
+**The tracked-file guard is the §182 lesson applied before the fact.** The demo's evidence source read a
+gitignored directory, worked only on the machine that wrote it, and reddened CI (Lane D). This time the guard
+asserts `git ls-files` names the vocabulary, so the commit that adds it is the commit that makes the guard
+green -- it was red for exactly the reason it exists, and that is the falsification.
+`test_process_global_isolation.py` did *not* demand `_loaded` be registered, and the reason is in the guard's
+own AST: it scans for module-level **literal** containers, and the spec cache is initialised to `None`.
+Checked rather than assumed, because an unregistered module global in a request path is exactly the shape that
+guard exists to catch.
+
+**What is not done, stated plainly.** (1) `arrival` and `starter_question_used` are declared with
+`emitter: web` and `status: planned`, and the API *refuses to emit them* -- a declared-but-inactive event
+raises. So the funnel has a real top-of-funnel hole until the web side grows an emitter; three of five links
+are live. (2) No count of anything is reported anywhere, because nothing has run with consent on. (3) The
+hosted demo still records nothing: `DSA_TELEMETRY` is a **new** variable for that service, and turning it on
+changes what happens to a stranger's session. That is on the must-ask list ("改变用户看到的结论的产品岔路"),
+so it is documented in `docs/hosted-demo.md` as the maintainer's call with the one-line how, and left off.
+
+**Free tier:** no dependency, no service, no money -- one JSON file, one module, one JSONL path on whatever
+disk the instance already has, and on Render's free tier that disk is ephemeral, which the docs say out loud
+rather than pretending the log accumulates.

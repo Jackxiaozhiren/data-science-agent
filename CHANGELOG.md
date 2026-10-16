@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — the product can count, but only if it was asked to (R-15)
+
+- `apps/api/src/dsa_api/services/product_events.json` publishes the **event vocabulary as data**: five
+  funnel events (`run_started`, `run_completed`, `export_taken` emitted by the API; `arrival` and
+  `starter_question_used` declared as web-side and marked *planned*), each with its payload fields, plus the
+  list of keys that may never be logged and the value rule that keeps free text out of the log.
+- `apps/api/src/dsa_api/services/telemetry.py` is the one emitter. `record_event` validates **before** the
+  consent gate and appends only when `DSA_TELEMETRY=on`: any other value, including the default, writes
+  nothing and creates no file, so local mode ships silent. Shape errors raise in the caller's path — a
+  payload that would carry query text is a code defect whether or not this instance is counting.
+- Emission points: run creation records the effective reasoning mode, both report-export branches record
+  format and mode, and `run_lifecycle._write` records every terminal status from the one choke point that all
+  four exits (success, task failure, write failure, non-terminal graph return) already pass through. A funnel
+  that counted only the happy path would be a lie with a file behind it.
+- Measured, not asserted: one full loop on an in-memory database (`upload → analyze → poll → export`) produced
+  exactly `["run_started", "run_completed", "export_taken"]` with payloads
+  `{dataset_id, reasoning_mode}`, `{run_status: "COMPLETED"}`, `{export_format: "markdown", mode: "audited"}`,
+  and the same records were re-checked from the bytes on disk against the pattern extracted from the
+  vocabulary itself. With consent off the log file does not exist. Four refusals are asserted: unknown event,
+  prohibited key, undeclared key, non-identifier value.
+- The vocabulary is asserted **tracked in git** — the demo's first evidence source read a gitignored directory
+  and worked only on the machine that wrote it (§182), and a clone that emitted nothing would have looked like
+  "nobody used it".
+- Enabling counting on the hosted demo is deliberately **not** done here: `DSA_TELEMETRY` is a new variable
+  for that service, and turning it on changes what a real visitor's session does with their activity. It is
+  recorded as the maintainer's decision, with the one-line how in `docs/hosted-demo.md`.
+
 ### Changed (post-4.5.0) — the MCP App's report is the product's one rendering (R-14)
 
 - `GET /mcp-app/report/{run_id}` serves the run's report through `dsa_agent.report_export.export_html` —
