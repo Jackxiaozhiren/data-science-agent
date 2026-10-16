@@ -86,8 +86,18 @@ No model credential or CORS value is required to get the API itself healthy. Fir
 For the current public deployment:
 
 ```bash
-DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
+DSA_CORS_ORIGINS=https://data-science-agent-web-rr93.vercel.app
+DSA_DATABASE_URL=sqlite+aiosqlite:////tmp/dsa.db
+DSA_DATASET_DIR=/tmp/datasets
+DSA_ARTIFACT_ROOT=/tmp/artifacts
 ```
+
+All three writable roots sit on the free instance's container filesystem, which is ephemeral: a restart, an
+idle shutdown or a redeploy clears them together. They are named explicitly rather than left to the image
+default because `/app/...` is not a path the app recognises as throwaway, and the disclosure in `/version` --
+the `not kept` badge in the shell -- reports only the roots it can tell apart. Unsetting them would make the
+badge quieter, not the storage safer. `deploy/render-persistent.example.yaml` is the configuration that moves
+all three onto a real disk.
 
 If an existing Blueprint has a failed deploy, keep the same Blueprint and use **Manual sync** or **Manual Deploy** after the repository fix is merged. Do not create a second Blueprint for the same service.
 

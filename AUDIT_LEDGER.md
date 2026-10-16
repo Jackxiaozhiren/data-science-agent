@@ -11496,3 +11496,43 @@ in practice, so it is named in §191's blockers instead of answered in code.
 
 **Free tier:** no service, no dependency, no money. The matcher reads the catalog the repository already
 tracks, cached in one module-level frozenset, and the vocabulary gained fields rather than infrastructure.
+
+## 193. The free demo now names all three of the roots it will lose, having been measured to say only one
+
+**What was wrong, measured rather than reasoned.** After the redeploy, the live instance reported
+`{"durable":false,"ephemeral_roots":["database"]}` and the shell badge read "not kept. This instance keeps its
+database…", while the bundle it had just produced carried `"artifact_root": "/app/artifacts"`. That is §175's
+rule behaving exactly as designed and still under-telling the truth: the predicate recognises throwaway paths
+(`/tmp`, `/var/folders` and their macOS spellings), and the free instance's two other writable roots were left
+at the image default under `/app` -- a container filesystem that is cleared by the same restart, idle shutdown
+or redeploy. The disclosure was accurate about what it could see and silent about the rest, which is what a
+visitor reads as "only the database is at risk".
+
+**The change, in the blueprint not the code.** `render.yaml` now names `DSA_DATASET_DIR=/tmp/datasets` and
+`DSA_ARTIFACT_ROOT=/tmp/artifacts` beside the existing `DSA_DATABASE_URL=…//tmp/dsa.db`. Moving them to `/tmp`
+buys nothing in durability -- the whole filesystem is temporary -- what it buys is that the app's own predicate
+can see them, so `/version` reports three roots and the badge says so. The comment in the file and the
+documentation both point at `deploy/render-persistent.example.yaml` as the change that actually buys durability,
+so nobody reads this as the persistence fix.
+
+**Guarded, not loose.** `tests/contract/test_persistence_blueprint_covers_writable_roots.py` is the owner of
+this surface: `persistence_issues` demands all three roots on the mount for a paid blueprint, and
+`example_drift_issues` refuses an example that drops a live env key -- which is why adding two to the live
+blueprint is safe only because the example already carried both. Both files now declare the same eight keys,
+the planted-defect tests still fire, and those 28 tests plus `test_storage_disclosure.py` are green;
+`mkdocs build --strict` rc 0.
+
+**One stale claim corrected in passing.** `docs/hosted-demo.md` showed the live CORS origin as
+`https://data-science-agent-web.vercel.app`; `render.yaml` carries `…-rr93.vercel.app` and the deployed
+frontend answers at that host (measured by reading the API base baked into the live page). The doc now matches
+the file and the deployment, and the env block lists all three roots with the sentence explaining that naming
+them makes the badge honest rather than the storage safe.
+
+**Still owed by the operator's hand, and it is one click.** This lands only on the next **Manual Deploy** of
+`data-science-agent-api`; until then the live badge keeps saying one root. The check after deploying is
+`curl -s $A/version` -- the expected answer is `ephemeral_roots` naming `artifacts`, `database` and `datasets`
+in that order, which is what §175's contract test already pins as the free-tier reading. A visitor-visible side
+effect worth stating: newly uploaded datasets and generated charts move to `/tmp` too, so an existing run whose
+artifacts live under `/app/artifacts` will find them outside the root and the bundle will name them as
+`outside the artifact root` -- a truthful exclusion, not a lost file, and it self-heals for every run made after
+the deploy.
