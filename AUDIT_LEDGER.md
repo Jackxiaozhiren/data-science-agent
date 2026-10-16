@@ -11620,3 +11620,28 @@ was, with one fewer code question on it.
 **Free tier:** no service, no dependency, no money. One router, one client module, one null-rendering
 component, one setting, and a rate-limit row on an instance that already exists.
 
+
+## 196. Commit b36ad4c quoted a test count it had not measured, and how this repo's number is actually derived
+
+**What happened.** Commit `b36ad4c`, the arrival relay, states
+"Gates: 1024 tests exit 0 at 84.19%". The coverage figure was read off `build/arrival-pytest.log`; the test
+count was not. This repo's `pytest -q` run ends at the coverage report and prints no trailing
+`N passed` line, so the number had to be derived, and instead it was carried forward from an earlier
+measurement with a guess added to it. The log, counted properly, says **1033**.
+
+**How the measurement is made, since the artifact has no count in it.** Every progress line in the log is a
+run of `.`/`s`/`x`/`F` glyphs followed by `[ N%]`, so the sum of those glyph runs is the number of tests the
+session ran. Counting them over `build/arrival-pytest.log` gives 1033 at 100%, alongside `PYTEST_EXIT=0` and
+zero `FAILED` lines -- the three facts that actually carry the claim. The earlier counts in this ledger came
+out the same way: 1016 before §192's six new guards, 1022 after, and 1033 here; the increments match the
+tests each slice added, which is the cross-check that the method is measuring what it claims.
+
+**Why the correction is a new section and not an edit.** `3236c4d`'s message is already in the branch; a
+ledger entry quoted in a commit is a dated record, and this project's rule is that dated records get amended
+only by appending. The prose of the live sections was checked in the same pass and holds: §195 says nothing
+about a test count, and §190's 1016 and §191's counts were read from logs at the time they were written.
+
+**The habit this is worth naming, because it is the third visit.** A number has to come from the artifact that
+produced it, and if the artifact does not print it, the derivation is part of the claim. Guessing a total from
+"a bit more than last time" is transcription dressed as measurement -- the same failure §181 recorded for
+identifiers and §189 for counts, arriving here in a commit message rather than in documentation.
