@@ -4,6 +4,8 @@ import logging
 import sys
 import tomllib
 import warnings
+import weakref
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -167,6 +169,26 @@ def count_lifecycle_log_lines():
 
 
 _SCHEDULED_ON: dict[str, asyncio.AbstractEventLoop] = {}
+_SCHEDULED_OUTCOME: dict[str, tuple[str, str]] = {}
+#: A weak reference on purpose: whether the task object is still alive is a separate fact from how it ended,
+#: and holding it strongly would change the very lifetime this report is trying to observe.
+_SCHEDULED_TASK: dict[str, weakref.ref] = {}
+
+
+def _record_outcome(run_id: str, finished: asyncio.Task) -> None:
+    """How the lifecycle task itself ended, read off the task instead of off the log.
+
+    Every exit of the shipped `execute` either writes a terminal status or emits a line naming the run, and the
+    CI samples showed neither -- a row frozen in flight with an empty registry, which the enumeration says is
+    unreachable. An inference drawn from the absence of a log inherits every assumption about how that log is
+    captured, so this asks the task directly. `cancelled()` is consulted first because `exception()` on a
+    cancelled task raises rather than returns; no handler is needed, and none is added.
+    """
+    if finished.cancelled():
+        _SCHEDULED_OUTCOME[run_id] = ("cancelled", "-")
+        return
+    error = finished.exception()
+    _SCHEDULED_OUTCOME[run_id] = ("raised", type(error).__name__) if error else ("returned", "-")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -192,6 +214,8 @@ def record_scheduled_loop():
         def schedule_run(run_id: str):
             task = original(run_id)
             _SCHEDULED_ON[run_id] = task.get_loop()
+            _SCHEDULED_TASK[run_id] = weakref.ref(task)
+            task.add_done_callback(partial(_record_outcome, run_id))
             return task
 
         return schedule_run
@@ -264,6 +288,25 @@ def _stall_evidence(run_id: str) -> str:
             f"  scheduled loop: {id(scheduled):#x}; same as polling loop={scheduled is running}; "
             f"that loop closed={scheduled.is_closed()}"
         )
+    # The line that settles the enumeration. `execute` has no exit that both leaves the row in flight and stays
+    # silent, so "no lifecycle line for this run" was carrying the whole argument -- and an argument carried by
+    # a log inherits every assumption about how logs get captured. This asks the task object instead. An absent
+    # outcome is itself an answer: the coroutine reached no done state on this loop, or the loop stopped before
+    # running the callbacks that would have said so.
+    outcome = _SCHEDULED_OUTCOME.get(run_id)
+    ended = (
+        "not recorded (no done callback ran)" if outcome is None else f"{outcome[0]} ({outcome[1]})"
+    )
+    # "not recorded" has two very different causes -- the coroutine is still in flight, or it ended and the loop
+    # dropped the callbacks -- so the object itself is asked, through a weak reference that cannot keep it alive.
+    held = _SCHEDULED_TASK.get(run_id)
+    alive = held() if held is not None else None
+    task_state = (
+        "never scheduled here"
+        if held is None
+        else ("garbage-collected" if alive is None else f"done={alive.done()}")
+    )
+    lines.append(f"  how the lifecycle task ended: {ended}; task object: {task_state}")
 
     # The discriminator the registry alone cannot supply: an absent entry means either "the writer finished" or
     # "the writer is running and nothing points at it", and those two have different owners. So ask the loop

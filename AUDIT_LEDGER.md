@@ -11874,3 +11874,64 @@ says a collision is reported, not edited around.
 elsewhere: `ui.py` adds ~200 shipped statements whose supervisory path (`serve`, `_main`) is exercised by the
 live accept above rather than by the suite, so the aggregate dilutes. It stays well above the 79% floor, and
 naming the cause is cheaper than having someone rediscover it.
+
+## 200. The loop hypothesis was falsified by its own datum, and the exit enumeration now says the report is the suspect
+
+**The sample, and what it settled.** CI 38891693163 on `4a3b588` and 38893715124 on `d883c7d` each failed the
+same three waits -- `test_agent_analysis.py::test_api_analysis_flow`, `test_phase6_api.py::test_progress_and_evidence_trace`,
+`test_phase6_api.py::test_sse_events_and_json_fallback` -- six stalls, and every one of them read
+`scheduled loop: 0x…; same as polling loop=True; that loop closed=False` alongside
+`task registry: no task for run-…; 0 registered ([])`, `live tasks on THIS loop …: {}`,
+`threads still inside the lifecycle or the graph: 0`. **The orphan-on-a-closed-loop reading §194 left standing
+is dead**: the writer was created on the very loop that is polling it, and that loop never closed. §197 predicted
+this outcome as one of the two readings that would kill the hypothesis, so the hypothesis is retired rather than
+caveated.
+
+**What the remaining payload says.** The stalled row is not a create-time stub: `last seen` carries the evidence
+chain, four `validation_results` all passed, insights, `tool_call_count: 4`, and `report_markdown: None`, with
+`status: VALIDATION` and `updated_at` frozen 30s before the timeout. So `persist_state` was landing writes in the
+database the poller reads, the graph was in the validation stage, and nothing after that landed.
+
+**The enumeration, which is the finding.** Walked against `apps/api/src/dsa_api/services/run_lifecycle.py` at
+this revision, every exit of `execute` either writes a terminal status or emits a line naming the run: unknown
+row (`:133`, WARNING), graph raised (`:149`, ERROR), terminal write failed (`:159`, ERROR), non-terminal graph
+return (`:168`, ERROR), `_write` found no row (`:86`, ERROR), cancelled (`_finish:191`, ERROR), normal return
+(`:157`, no line but a terminal write). `_TASKS` has exactly two writers -- `schedule_run` at `:217` and
+`_finish`'s pop at `:190` -- and no other module touches it, so an empty registry means the outer task ended.
+There is no app shutdown path that cancels in-flight runs. **The observed state is therefore unreachable in the
+code as shipped**, which makes the instrument, not the coroutine, the thing to examine next: for three sections
+the argument has run through "no lifecycle line was emitted for this run", and that is an absence read out of a
+log.
+
+**Two ways that absence could lie, and what was measured.** (1) Something reconfigured logging and disabled the
+logger: `grep` over `apps/api/src`, `packages`, `src`, `scripts` for `dictConfig|fileConfig|disable_existing_loggers|basicConfig|logging.config`
+returned nothing, and the same session demonstrably did hear other runs' lines -- `run-1ecca477c5: analysis task
+failed` and `run-never-stored: analysis task started for an unknown run` are in the session-wide sample. (2) The
+line could exist with a different `run_id` key, so it would not match the filter: not the case for the two lines
+that did arrive, and `_finish`/`execute` all pass `extra={"run_id": run_id}` from the same id.
+
+**The new instrument, and why it does not depend on logging.** The wrapper now also keeps a weak reference to
+the task and adds its own done callback that records how the task ended -- `returned`, `raised (<type>)`,
+`cancelled` -- so the report prints `how the lifecycle task ended: …; task object: done=<bool> |
+garbage-collected | never scheduled here`. Weak rather than strong because keeping the task alive would change
+the lifetime being observed.
+
+**Falsified before shipping.** With `task.add_done_callback(...)` removed from the wrapper, the report on a task
+that had genuinely completed read `not recorded (no done callback ran)` -- which is exactly the ambiguity the
+lifetime clause exists to break, so that clause is asserted too: a live parked task reads `done=False`, one whose
+last strong reference was dropped reads `garbage-collected`, and a run nobody scheduled through the wrapper reads
+`never scheduled here`. `tests/contract/test_stall_evidence.py` covers all four outcome readings plus the real
+path (`returned (-); task object: done=True` on a run the router's own binding scheduled).
+
+**Measured locally.** ruff check and format --check on both edited files: rc 0. `tests/contract/test_stall_evidence.py`
++ `tests/unit/test_run_lifecycle_cancellation.py` + `tests/test_process_global_isolation.py`: 15 passed.
+`test_product_events.py` + `test_analysis_run_lifecycle.py` + `test_demo_seeding.py`: 43 passed.
+`audit_facts.py --check`: rc 0. No shipped file, gate list, dependency or coverage source was touched.
+
+**What the next sample will decide, stated before reading it.** Four outcomes and each one closes a different
+door: `returned (-)` means `execute` ended normally without a terminal write, so this enumeration is missing an
+exit and the defect is in the shipped module. `raised (X)` or `cancelled` with the row still in flight means the
+ERROR line for that branch never reached a handler, which voids every log-absence conclusion in §183, §194 and
+§197 and forces them to be re-read. `not recorded … task object: done=True` is a sixth shape nobody has claimed:
+the coroutine finished but the loop dropped its callbacks. `task object: done=False` means the writer really is
+still in flight while `all_tasks()` reports none, and then §194's census correction is the thing on trial.

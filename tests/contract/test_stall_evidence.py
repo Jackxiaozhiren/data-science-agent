@@ -9,8 +9,10 @@ discrimination, so a future edit that drops a line, or restores an over-claiming
 from __future__ import annotations
 
 import asyncio
+import gc
 import logging
 import sys
+import weakref
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -51,6 +53,8 @@ async def test_the_report_names_every_discriminator_it_prints(
     for required in (
         "task registry:",
         "scheduled loop:",
+        "how the lifecycle task ended:",
+        "task object:",
         "live tasks on THIS loop (all_tasks() cannot see another loop's tasks):",
         "threads still inside the lifecycle or the graph:",
         "engine pool:",
@@ -119,6 +123,8 @@ async def test_the_loop_is_recorded_through_the_name_the_route_calls() -> None:
     try:
         task = analysis_router.schedule_run("run-wiring")
         await task
+        # A done callback is queued with `call_soon`, not run inline with the await that observed the result.
+        await asyncio.sleep(0)
     finally:
         database.AsyncSessionLocal = previous
         await engine.dispose()
@@ -129,6 +135,11 @@ async def test_the_loop_is_recorded_through_the_name_the_route_calls() -> None:
     )
     text = conftest._stall_evidence("run-wiring")
     assert "same as polling loop=True; that loop closed=False" in text, text
+    # The same wrapper's second hook, proven on the shipped path rather than on a fabricated task: `execute`
+    # returned after naming the unknown run, so the recorder has to read it as a normal return.
+    assert "how the lifecycle task ended: returned (-)" in text, text
+    # The lifetime clause, on a task the shipped `schedule_run` really made and really finished.
+    assert "task object: done=True" in text, text
 
 
 async def test_the_line_tells_an_orphan_on_a_closed_loop_from_the_polling_loop() -> None:
@@ -153,3 +164,59 @@ async def test_the_line_tells_an_orphan_on_a_closed_loop_from_the_polling_loop()
     finally:
         del conftest._SCHEDULED_ON["run-orphan"]
         del conftest._SCHEDULED_ON["run-here"]
+
+
+async def test_the_outcome_is_read_off_the_task_for_all_three_endings() -> None:
+    """`returned`, `raised`, `cancelled` and `not recorded` have to read four different ways.
+
+    The shipped `execute` has no exit that both leaves a row in flight and stays silent, so for three sections
+    the argument has run through "no lifecycle line was emitted for this run". That is an absence read out of a
+    log, and a log line can be missing for reasons that have nothing to do with the coroutine. Asking the task
+    object is the second, independent reading -- so this drives each ending through the real recorder and
+    requires the report to distinguish them, including the fourth: a task whose callbacks never ran.
+    """
+    done_ok: asyncio.Task = asyncio.ensure_future(_returns())
+    done_raised: asyncio.Task = asyncio.ensure_future(_raises())
+    done_cancelled: asyncio.Task = asyncio.ensure_future(_parks())
+    await asyncio.wait({done_ok, done_raised})
+    done_cancelled.cancel()
+    await asyncio.wait({done_cancelled})
+    conftest._record_outcome("run-returned", done_ok)
+    conftest._record_outcome("run-raised", done_raised)
+    conftest._record_outcome("run-cancelled", done_cancelled)
+
+    for run_id, expected in (
+        ("run-returned", "how the lifecycle task ended: returned (-)"),
+        ("run-raised", "how the lifecycle task ended: raised (ValueError)"),
+        ("run-cancelled", "how the lifecycle task ended: cancelled (-)"),
+    ):
+        text = conftest._stall_evidence(run_id)
+        assert expected in text, f"{run_id} read {text!r}"
+    never = conftest._stall_evidence("run-callbacks-never-ran")
+    assert "how the lifecycle task ended: not recorded (no done callback ran)" in never, never
+    assert "task object: never scheduled here" in never, never
+
+    # An outcome can be recorded while the object is already gone, and the report has to say both: this is the
+    # reading that separates "it ended and nothing kept it" from "it is still in flight".
+    parked: asyncio.Task = asyncio.ensure_future(_parks())
+    conftest._SCHEDULED_TASK["run-in-flight"] = weakref.ref(parked)
+    in_flight = conftest._stall_evidence("run-in-flight")
+    assert "task object: done=False" in in_flight, in_flight
+    parked.cancel()
+    await asyncio.wait({parked})
+    del parked
+    gc.collect()
+    gone = conftest._stall_evidence("run-in-flight")
+    assert "task object: garbage-collected" in gone, gone
+
+
+async def _returns() -> None:
+    return None
+
+
+async def _raises() -> None:
+    raise ValueError("instrument")
+
+
+async def _parks() -> None:
+    await asyncio.Event().wait()
