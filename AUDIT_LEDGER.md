@@ -11285,3 +11285,40 @@ so it is documented in `docs/hosted-demo.md` as the maintainer's call with the o
 **Free tier:** no dependency, no service, no money -- one JSON file, one module, one JSONL path on whatever
 disk the instance already has, and on Render's free tier that disk is ephemeral, which the docs say out loud
 rather than pretending the log accumulates.
+
+**Same-section addendum, measured after the push (0022d4e).** CI came back with `web-regression` green and the
+`ci` job's pytest step red on **five** tests, not three: §188's family (`test_api_analysis_flow`,
+`test_progress_and_evidence_trace`, `test_sse_events_and_json_fallback`) plus **two of my own** --
+`test_a_full_loop_produces_the_funnel_sequence_with_clean_payloads` and
+`test_the_logged_records_recheck_clean_from_disk`. Both failed on the same line, the 30-second
+terminal-status wait, with the runner's payload reading `'status': 'VALIDATION'`. So R-15's first version grew
+the workspace's known-red set from 3 to 5, and that is this section's own defect, not the lifecycle owner's.
+
+**Why waiting longer is not the fix.** §188's three samples print `live tasks on THIS loop: {}` and
+`threads still inside: 0` -- the coroutine is not on the loop at all, so a larger budget buys nothing. What
+the funnel actually needs to be guarded on is *where each event records and what it carries*, and none of that
+depends on the agent completing. The suite therefore split the promise in two:
+`test_the_three_emission_sites_record_the_funnel_without_the_agent_task` stubs the router's `schedule_run`
+(same call shape -- the router does not await it) and terminalises through `persist_state`, which is the very
+function the real task calls and hence the same `is_terminal` branch that records `run_completed`; and the
+spec's real-loop accept keeps its exact-equality assertions but **declines with §188 named in the skip message**
+where the machine cannot finish a run. The disk re-check moved onto the deterministic driver, so it runs on
+every machine and asserts non-empty before checking anything.
+
+**Falsification, because a guard that only re-arranges itself is not a guard.** Three plants, each reverted
+from a byte snapshot (`git diff --stat` empty after every one): deleting the `export_taken` emission reddened
+the deterministic test; removing the lifecycle `run_completed` emission reddened it too; and neutering
+`_check_payload` while emitting a spaced free-text value reddened *both* the emit-time refusal test and the
+disk re-check -- the layering is real, since the disk half can only fire when the emit half is already broken.
+Eight guards now, `sync_vendor --check` still red for `dsa_evaluation` alone (another session's uncommitted
+source, left unrepaired), and the plant snapshots live in the ignored `build/` rather than a scratch dir the OS
+may reclaim.
+
+**One premise corrected the same afternoon.** §186 wrote that the demo redeploy is the maintainer's action.
+Probed rather than inherited this time: `api.render.com/v1/services` answers 400 with a `render-request-id`
+(so the request reaches Render) and `api.vercel.com` answers 403, while both `RENDER_API_KEY` and
+`VERCEL_TOKEN` measure **zero characters**. They are declared-but-empty placeholders -- the first probe called
+them "set" because it tested the variable's existence instead of its length, which is the instrument bug this
+ledger keeps naming. The conclusion stands, now with evidence: no session here can redeploy until the
+maintainer exports non-empty tokens, and `docs/hosted-demo.md`'s census is the verification to run after they
+do.

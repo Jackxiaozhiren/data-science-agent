@@ -25,6 +25,13 @@
 - The vocabulary is asserted **tracked in git** — the demo's first evidence source read a gitignored directory
   and worked only on the machine that wrote it (§182), and a clone that emitted nothing would have looked like
   "nobody used it".
+- The funnel is guarded twice, because the CI runner cannot finish a run (§188: three samples, the task never
+  reaches the loop). A deterministic driver stubs the router's `schedule_run` and terminalises through
+  `persist_state` — the same function the real task calls, hence the same `is_terminal` branch — so the
+  emission wiring is asserted on every machine; the spec's real-loop accept keeps its exact assertions but
+  declines with §188 named where a run cannot complete. Deleting any one of the three emissions reddens the
+  deterministic test (verified by three plants), and neutering the emit-time check while logging a free-text
+  value reddens both the refusal test and the disk re-check.
 - Enabling counting on the hosted demo is deliberately **not** done here: `DSA_TELEMETRY` is a new variable
   for that service, and turning it on changes what a real visitor's session does with their activity. It is
   recorded as the maintainer's decision, with the one-line how in `docs/hosted-demo.md`.
