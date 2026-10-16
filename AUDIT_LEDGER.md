@@ -11536,3 +11536,23 @@ effect worth stating: newly uploaded datasets and generated charts move to `/tmp
 artifacts live under `/app/artifacts` will find them outside the root and the bundle will name them as
 `outside the artifact root` -- a truthful exclusion, not a lost file, and it self-heals for every run made after
 the deploy.
+
+## 194. §184's conclusion was falsified by the instrument §184 shipped, and the instrument still has one blind spot
+
+CI 38885697425 on `346941c` failed with the same three waits, and for each of them the per-run filter read
+`lifecycle lines emitted for run-… anywhere in this process: none` -- including my own new
+`the graph returned a non-terminal state` line. **So the graph returning in flight is not the mechanism**, and
+§184's "the fork is closed" was wrong on the strength of its own report. The earlier green (38749097329 on
+`044b157`) was the flake passing, not the seam enforcement working; §193's "still owed" note about one click was
+accurate, this one was not.
+
+What survives is the enforcement itself, which is still correct hardening: a non-terminal return, if it ever
+happens, now becomes a FAILED row naming its last status instead of freezing. What must be retracted is the
+inference that produced it.
+
+The blind spot the data exposes is mine: `asyncio.all_tasks()` sees one loop and `sys._current_frames()` sees one
+*running* thread, so a coroutine suspended on an event loop that has already closed is invisible to both -- the
+reading "no task, no frames, no log" is therefore consistent with an orphaned task on a dead loop, and CI's own
+logs showed `RuntimeError: Event loop is closed` inside aiosqlite's worker thread from the first red samples.
+Naming that needs one more datum, not one more inference: record the loop the run was scheduled on and report
+whether that loop is closed. Held as the next step, not taken on the strength of a guess.
