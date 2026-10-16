@@ -10,7 +10,7 @@ Conventions:
 - Lists accept `?limit=` (1–1000, default 100) + `?offset=` (default 0) and
   return `{..., "total": n}` alongside the array (additive; old clients keep working).
 - Errors keep the `{detail: string}` envelope (the web UI renders `detail`).
-- Expensive `POST`s are IP rate-limited (analysis 60/min, upload 30/min;
+- Expensive `POST`s are IP rate-limited (analysis 60/min, upload 30/min, events 120/min;
   429 + `Retry-After`; disable with `DSA_RATE_LIMIT_ENABLED=false`).
 - Opt-in auth: set `DSA_AUTH_TOKEN` to require
   `Authorization: Bearer <token>` on all `/api/*` routes
@@ -37,6 +37,7 @@ Conventions:
 | GET | `/api/v1/experiments/` | list + `total` (paginated, optional `?run_id=`) |
 | GET | `/api/v1/experiments/{id}` | one record |
 | POST | `/api/v1/experiments/compare` | rank records by shared metric (`{ids}`) |
+| POST | `/api/v1/events` | `{event, payload}` → **202**. The relay for the one funnel link only a browser can observe (`arrival`); see `apps/api/src/dsa_api/services/product_events.json` for the vocabulary. It is a transport, not a second authority: the payload passes the same checks the in-process emitter applies — declared keys only, the prohibited classes (query text, dataset content, user-identifying values), the identifier-shaped value rule, and the choice list the vocabulary declares for each field — and an event the vocabulary says the **api** emits is refused with a 400, so a client cannot write `run_started`, `run_completed`, `export_taken` or `starter_question_used`. An invalid payload is a 400 whose `detail` is the vocabulary's own sentence. When this instance runs without `DSA_TELEMETRY=on` the answer is the same 202 and **nothing is written**, so the route is not a way to ask whether an operator is counting. The client half is gated at build time by `NEXT_PUBLIC_TELEMETRY=on`: a bundle that was not built with it sends no request at all, so the default deployment reports nothing about whoever opens it |
 | GET | `/api/v1/benchmarks/baseline` | the frozen aggregate, verbatim from `benchmarks/baseline/summary.json` (read-only) |
 | GET | `/api/v1/benchmarks/catalog` | `{tasks, by_category, datasets, source}` computed from `benchmarks/v2/catalog.json` |
 | GET | `/api/v1/research/experiments` | `{experiments, total}` -- `ablation_*` files under `research/results`, first 10 by name |

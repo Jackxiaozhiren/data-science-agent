@@ -64,17 +64,18 @@
       "status": "active",
       "answers": "funnel: export taken",
       "payload": {
-        "export_format": "markdown | html | json | bundle",
-        "mode": "findings | audited, for the markdown exports"
+        "export_format": "markdown | html",
+        "mode": "findings | audited"
       }
     },
     {
       "name": "arrival",
       "emitter": "web",
-      "status": "planned",
+      "status": "active",
       "answers": "funnel: arrival",
+      "counts": "One record per page view, relayed by POST /api/v1/events because only the browser knows it. This is the one event a human being's browsing produces rather than a computation the server performed, so two switches stand in front of it and both default off: the client sends nothing at all unless it was BUILT with NEXT_PUBLIC_TELEMETRY=on, and the instance writes nothing unless it RUNS with DSA_TELEMETRY=on. A visitor on the public demo is therefore not counted by default, and turning it on is the operator's disclosure obligation, not a deployment detail. No identifier, session token, referrer, user agent or URL path is accepted; `page` is the vocabulary's own short label.",
       "payload": {
-        "page": "landing | datasets | analysis | runs | reports"
+        "page": "landing | datasets"
       }
     },
     {

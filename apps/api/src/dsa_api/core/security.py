@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 _DEFAULT_RULES: tuple[tuple[str, str, int], ...] = (
     ("/api/v1/analysis", "POST", 60),
     ("/api/v1/datasets", "POST", 30),
+    ("/api/v1/events", "POST", 120),
     ("/api/v1/experiments", "POST", 60),
 )
 
@@ -98,6 +99,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 want = {
                     "/api/v1/analysis": settings.rate_limit_analysis_per_min,
                     "/api/v1/datasets": settings.rate_limit_upload_per_min,
+                    "/api/v1/events": settings.rate_limit_events_per_min,
                     "/api/v1/experiments": settings.rate_limit_analysis_per_min,
                 }[prefix]
                 if _limiters[i].max_requests != want:

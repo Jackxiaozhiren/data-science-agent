@@ -139,17 +139,6 @@ def test_every_active_api_event_has_a_call_site_in_the_shipped_api() -> None:
         )
 
 
-def test_the_planned_event_cannot_be_emitted_by_the_api() -> None:
-    """`arrival` is the web's; a server-side call that reaches for it must be refused, not silently dropped."""
-    from dsa_api.services import telemetry
-
-    spec = json.loads(EVENTS_FILE.read_text(encoding="utf-8"))
-    planned = [event["name"] for event in spec["events"] if event["status"] != "active"]
-    assert planned == ["arrival"], f"the planned set moved: {planned}"
-    with pytest.raises(ValueError, match="not active"):
-        telemetry.record_event("arrival", page="landing")
-
-
 def test_the_prohibited_list_covers_the_classes_the_spec_names() -> None:
     spec = json.loads(EVENTS_FILE.read_text(encoding="utf-8"))
     banned = set(spec["prohibited_payload_keys"])
@@ -178,11 +167,17 @@ def test_consent_off_writes_nothing_at_all(
     from dsa_api.services.telemetry import record_event
 
     monkeypatch.setenv("DSA_TELEMETRY", "off")
-    record_event("run_started", dataset_id="abc-123", reasoning_mode="heuristic")
+    record_event(
+        "run_started", dataset_id="abc-123", reasoning_mode="heuristic", initiated_by="user"
+    )
     monkeypatch.delenv("DSA_TELEMETRY", raising=False)
-    record_event("run_started", dataset_id="abc-123", reasoning_mode="heuristic")
+    record_event(
+        "run_started", dataset_id="abc-123", reasoning_mode="heuristic", initiated_by="user"
+    )
     monkeypatch.setenv("DSA_TELEMETRY", "OFF")  # case-insensitive off spellings
-    record_event("run_started", dataset_id="abc-123", reasoning_mode="heuristic")
+    record_event(
+        "run_started", dataset_id="abc-123", reasoning_mode="heuristic", initiated_by="user"
+    )
     assert not Path(loop_env["log"]).exists(), (
         "the consent gate let a write through: no variable may mean counting"
     )
@@ -205,13 +200,18 @@ def test_the_emitter_refuses_what_the_vocabulary_does_not_declare() -> None:
         # `page` is neither declared for run_started nor in a prohibited class: it is simply not part of
         # this event -- the vocabulary is per-event, not global.
         telemetry.record_event(
-            "run_started", dataset_id="abc", reasoning_mode="heuristic", page="landing"
+            "run_started",
+            dataset_id="abc",
+            reasoning_mode="heuristic",
+            initiated_by="user",
+            page="landing",
         )
     with pytest.raises(ValueError, match="identifier-like"):
         telemetry.record_event(
             "run_started",
             dataset_id="abc",
             reasoning_mode="The user asked about churn in the west region last quarter",
+            initiated_by="user",
         )
 
 
@@ -397,6 +397,98 @@ async def test_the_boot_seeder_records_its_own_starts_and_no_starter_link(
     assert "starter_question_used" not in names, (
         "an example run the machine started read as a visitor using a starter question"
     )
+
+
+def test_a_web_emitter_event_cannot_be_recorded_from_server_code() -> None:
+    """`arrival` describes a browser's action; a server path that claimed it would be fabricating one.
+
+    The relay endpoint is the only place that may take a web-emitted event, and it does so through
+    `record_client_event`, which re-checks the emitter. This guard pins the refusal on the ordinary emitter.
+    """
+    from dsa_api.services import telemetry
+
+    spec = json.loads(EVENTS_FILE.read_text(encoding="utf-8"))
+    web_events = [event["name"] for event in spec["events"] if event["emitter"] == "web"]
+    assert web_events, "no event is owned by the browser, so the relay has nothing to guard"
+    for name in web_events:
+        with pytest.raises(ValueError, match="emitted by the web client"):
+            telemetry.record_event(name, page="landing")
+
+
+@pytest.mark.asyncio
+async def test_the_relay_records_the_browsers_own_arrival(loop_env: dict[str, Any]) -> None:
+    r = await loop_env["client"].post(
+        "/api/v1/events", json={"event": "arrival", "payload": {"page": "landing"}}
+    )
+    assert r.status_code == 202, r.text
+    assert Path(loop_env["log"]).is_file(), "the relay accepted an arrival and wrote nothing"
+    events = _log(loop_env)
+    assert [e["event"] for e in events] == ["arrival"], (
+        f"the relay recorded {[e['event'] for e in events]}"
+    )
+    assert events[0]["payload"] == {"page": "landing"}
+
+
+@pytest.mark.asyncio
+async def test_the_relay_refuses_an_event_the_browser_does_not_own(
+    loop_env: dict[str, Any],
+) -> None:
+    """A client must not be able to write the server's own links -- that is how a funnel gets forged."""
+    for forged in ("run_started", "run_completed", "export_taken", "starter_question_used"):
+        r = await loop_env["client"].post(
+            "/api/v1/events", json={"event": forged, "payload": {"dataset_id": "abc"}}
+        )
+        assert r.status_code == 400, f"{forged} was accepted from a client"
+    assert not Path(loop_env["log"]).exists(), "every refusal still left a record behind"
+
+
+@pytest.mark.asyncio
+async def test_the_relay_refuses_what_the_vocabulary_refuses(loop_env: dict[str, Any]) -> None:
+    for body in (
+        {"event": "arrival", "payload": {"query": "why did churn rise"}},
+        {"event": "page_viewed", "payload": {"page": "landing"}},
+        {"event": "arrival", "payload": {"page": "The user asked about churn in the west region"}},
+        {"event": "arrival", "payload": {}},
+    ):
+        r = await loop_env["client"].post("/api/v1/events", json=body)
+        assert r.status_code == 400, f"{body} was accepted: {r.text[:120]}"
+
+
+@pytest.mark.asyncio
+async def test_the_relay_is_indistinguishable_when_counting_is_off(
+    loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Consent off must not become a probe: the answer is the same and nothing is written."""
+    monkeypatch.setenv("DSA_TELEMETRY", "off")
+    r = await loop_env["client"].post(
+        "/api/v1/events", json={"event": "arrival", "payload": {"page": "landing"}}
+    )
+    assert r.status_code == 202, "a non-counting instance answered differently than a counting one"
+    assert not Path(loop_env["log"]).exists()
+
+
+@pytest.mark.asyncio
+async def test_the_relay_is_rate_limited_like_the_other_public_writes(
+    loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An unauthenticated append-to-disk route needs the same ceiling as the upload route, in force.
+
+    The limiter table and the settings map are two lists that must agree; a prefix missing from the second is
+    a KeyError on every request, so this drives the route rather than reading the table.
+    """
+    from dsa_api.core.config import settings
+
+    monkeypatch.setattr(settings, "rate_limit_events_per_min", 3)
+    codes = [
+        (
+            await loop_env["client"].post(
+                "/api/v1/events", json={"event": "arrival", "payload": {"page": "landing"}}
+            )
+        ).status_code
+        for _ in range(5)
+    ]
+    assert codes[:3] == [202, 202, 202], f"the first three were not accepted: {codes}"
+    assert 429 in codes, f"the events route is unlimited: {codes}"
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — the funnel's last link, with two switches that both start off (R-15)
+
+- `arrival` is now instrumented end to end: `POST /api/v1/events` relays the one event only a browser can
+  observe, and `apps/web/app/lib/productEvents.ts` reports it from the root layout's beacon. The funnel has
+  all five links.
+- **Nothing leaves the browser by default.** `NEXT_PUBLIC_*` is inlined at build time, so a bundle not built
+  with `NEXT_PUBLIC_TELEMETRY=on` compiles the check to `false` and cannot reach the network at all; the API
+  gates a second time on `DSA_TELEMETRY`. Two deliberate acts are required to count a visitor, and the
+  vocabulary says so in the event's own `counts` text rather than in a comment nobody deploys.
+- The relay is a transport, not a second authority: the same `_payload_refusal` the in-process emitter uses
+  checks declared keys, the prohibited classes, the value shape and — new — **the choice list each field
+  declares**, so a payload naming `page: "settings"` is refused because the vocabulary never offered it.
+  Every declared payload key is now required, which caught three of this lane's own call sites the moment
+  `initiated_by` joined `run_started`.
+- An event the vocabulary says the **api** emits is refused from the client, so `run_completed` cannot be
+  written by whoever is reading the page. The refusal is checked before status, and the boundary asks for a
+  *message* instead of catching an exception — the emitter and the endpoint now share one predicate, and the
+  debt ratchet stayed at 184 of 185 because no handler was added to get there.
+- A counting-off instance answers the same **202** and writes nothing: the route is not a way to ask whether
+  an operator chose to count. The events route is IP rate-limited like the upload route (120/min, with a test
+  that drives it to 429 rather than reading the table).
+- Guarded in both directions across corpora, in the style of `test_web_fetch_outcome_vocabulary.py`: labels
+  the client may send equal the vocabulary's declared choices exactly, each label keys a route whose page file
+  exists, the beacon is mounted and renders `null`, the module posts only web-owned events, and the URL the
+  client calls is the path the API ships. Five plants reddened exactly the guards meant to catch them.
+
 ### Added (post-4.5.0) — the funnel's fourth link, and the starts that were going uncounted (R-15, continued)
 
 - `starter_question_used` is now recorded: a run whose question equals — after stripping — one of the 100

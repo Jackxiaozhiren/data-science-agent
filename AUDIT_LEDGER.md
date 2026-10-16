@@ -11556,3 +11556,67 @@ reading "no task, no frames, no log" is therefore consistent with an orphaned ta
 logs showed `RuntimeError: Event loop is closed` inside aiosqlite's worker thread from the first red samples.
 Naming that needs one more datum, not one more inference: record the loop the run was scheduled on and report
 whether that loop is closed. Held as the next step, not taken on the strength of a guess.
+
+## 195. R-15 finished: the funnel's fifth link, and the consent question that had to be asked before it could be built
+
+**The decision was the work, this time.** §192 left `arrival` unbuilt because the plan's own sentence --
+"nothing at all in local mode unless the user opts in" -- does not say *which* user, and a page-view counter
+answers that question in code whether anyone means to or not. It was put to the maintainer as three numbered
+options with their costs, and the pick was "build it, but default to zero egress". That is recorded here
+because the shape of what got built follows it exactly: the event exists, the route exists, and no byte leaves
+a browser until somebody chooses twice.
+
+**Two switches, and they are not the same kind of choice.** `NEXT_PUBLIC_*` is inlined by the bundler, so a
+client not built with `NEXT_PUBLIC_TELEMETRY=on` compiles the check to `false` -- the request site is not
+"blocked at runtime", it is unreachable code in the shipped bundle. `DSA_TELEMETRY` is the server's runtime
+choice. Both default off, which is why a stranger on the public demo is counted by neither, and why turning
+it on is a deployment act plus a disclosure rather than a flag flip. The vocabulary carries that in the
+event's `counts` field, where the product's own data says what the product does.
+
+**The relay is a transport, not a second authority.** An unauthenticated POST that appends to a file is only
+acceptable if it cannot accept more than the vocabulary allows, so the same predicate the in-process emitter
+uses checks it: declared keys, the prohibited classes, the identifier-shaped value rule, and the *ownership*
+of the event -- `run_completed` is refused because the API observes completions, not the page. Ownership is
+checked before status, since "not active" would describe the wrong defect.
+
+**Getting there without spending a handler.** The boundary needs the refusal *message* to answer 400, and the
+obvious shape is `try: record_client_event(...) except ValueError as e: raise HTTPException(400, str(e))` --
+one more counted handler, which would have taken `debt.exceptHandlers` from 184 to 185 and left the shared
+branch no headroom for whoever edits next. Instead the validation core now returns messages
+(`_payload_refusal`, `_declaration_refusal`, `_declared_value_refusal`), the in-process door raises from the
+message it gets back, and the boundary reads the same predicate directly. Measured after the change:
+`exceptHandlers` **184**, ceiling 185, unchanged.
+
+**Two rules the vocabulary did not enforce before, and the first one caught me.** A field whose text reads
+`landing | datasets` is now a *choice list*, not prose: `page: "settings"` is refused, which matters only once
+a browser supplies the value. And every declared payload key is required. That rule reddened three of this
+lane's own call sites within seconds of landing, because `initiated_by` had joined `run_started` one commit
+earlier and the tests had not followed -- which is precisely the behavior a contract is supposed to have, and
+the reason it stayed rather than being relaxed to make the suite pass.
+
+**Cross-corpus guards, because the two halves live in different languages.** In the shape
+`test_web_fetch_outcome_vocabulary.py` already establishes: labels the client may send equal the vocabulary's
+declared choices in both directions; every label keys a route whose `page.tsx` actually exists; the beacon is
+mounted in `layout.tsx` and renders `null` (a component that renders *something* could move what the tour and
+the accessibility reads see); the module posts only web-owned events; the URL the client calls is the path the
+API ships; and the limiter is proven by driving it to 429 rather than by reading the table -- because
+`_DEFAULT_RULES` and the settings map inside the middleware are two lists that must agree, and a prefix
+missing from the second is a KeyError on every request to that route.
+
+**Five plants, five reds, nothing left behind.** Consent gate removed → the gating guard. A label renamed to
+one the vocabulary never declared → the label-equality guard. Beacon unmounted → the mounted guard (the
+endpoint would have been live and dead at once). `client_event_refusal` pointed at the wrong owner → the
+forge-resistance guards. The required-keys rule neutralised → the empty-payload refusal. Each reverted from a
+byte snapshot, and `cmp` says the client and telemetry files came back identical while `git diff --numstat`
+shows only the feature's own shape.
+
+**What this does not claim.** `arrival` counts loads of two routes, because that is the denominator the
+vocabulary declares; soft navigation to any other page reports nothing, and widening it means declaring the
+new labels first. A failed event POST is dropped, not queued -- the counter is never allowed to become the
+reader's problem, and no retry logic hides it. And the live demo still counts nothing: `NEXT_PUBLIC_TELEMETRY`
+is unset in the deployed bundle and `DSA_TELEMETRY` unset on the service, so §191's blocker list stays as it
+was, with one fewer code question on it.
+
+**Free tier:** no service, no dependency, no money. One router, one client module, one null-rendering
+component, one setting, and a rate-limit row on an instance that already exists.
+
