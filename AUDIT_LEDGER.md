@@ -11988,3 +11988,66 @@ is stuck while the reader still answers, which points at the pool rather than at
 
 **Limits.** Test-side only: a stall in a deployed API produces none of this. And the head that gets sampled
 carries other lanes' commits, so this reading is single-variable for the lifecycle only, not for the suite.
+
+## 202. The writer's own database says the run never finished, so §200's enumeration of `execute` was incomplete
+
+**The sample.** CI 38928025420 on `205815d` -- three stalls, same three tests, and each one now reads:
+
+    how the lifecycle task ended: returned (-); task object: garbage-collected
+    writer-side row for run-… (same session factory the lifecycle writes through): status=VALIDATION updated_at=…
+    factory identity: id(AsyncSessionLocal)=140416172735808 id(engine)=140417493868048 factory bind is that
+    engine=False url=sqlite+aiosqlite:///./data/dsa.db
+
+**§201's second reading is the one that fired.** The database the lifecycle writes through holds the row at
+VALIDATION with the same `updated_at` the client kept polling -- so nothing was written after the last
+intermediate state, and the split-brain/snapshot theory is dead. `factory bind is that engine=False` is the
+fixtures' own rebinding and not an accident: both stalling files build an in-memory engine, rebind
+`database.AsyncSessionLocal` *and* override `get_session` to that same maker (`test_agent_analysis.py:88-101`,
+`test_phase6_api.py:28-49`), so reader and writer are demonstrably one database. The url still names
+`./data/dsa.db` because it is read off the module engine, which no fixture replaces -- that is why the identity
+clause, not the url clause, is the one that answers.
+
+**Which means the enumeration in §200 is missing something.** `execute` returned, its own database has no
+terminal row for the run, and no line named it. Of the exits listed there, only the normal path can return
+without logging, and that path is `written = await asyncio.gather(persist_state(attempt.result()), …)` followed
+by the non-terminal check -- either of which must move `updated_at` or emit a line. So the reading now turns on
+what `run_analysis` handed back, and nothing in the harness has ever measured that.
+
+**The instrument added for it.** `_observe_graph_call()` awaits the graph and records `(how it ended, the status
+of the state returned, that state's own run_id)`, plus the `status@run_id` sequence of every `on_update`
+awaited. It is installed on `dsa_agent.graph.run_analysis`, which is the attribute `execute` resolves through
+its in-function import. Two design points, both deliberate: it awaits the real coroutine directly rather than
+wrapping it in a second task, because an extra task would change the very await shape under investigation --
+and it records inside a `try` then re-raises unchanged, so cancellation and exceptions propagate exactly as
+shipped. The conftest corpus is outside `audit_facts`' `SHIPPED` paths (`scripts/audit_facts.py:422-425`), so
+that handler costs the ratchet nothing; `audit_facts.py --check` still exits 0.
+
+**Guards.** `test_the_recorder_is_on_the_name_execute_imports_at_call_time` drives a real call through the
+shipped name with a dataset that does not exist -- no model, no tools, no database -- and requires a record
+keyed on that run id; it is also what caught me assuming the failure mode, since the graph *returns* for a
+missing file rather than raising, and the test had to be written to the measured behavior.
+`test_the_recorder_distinguishes_returned_raised_and_cancelled` pins all four readings, including
+`on_update awaited [PLANNING@run-stub, VALIDATION@run-other]` -- the case where the state carried back is not
+the row being polled.
+
+**Measured locally.** `test_stall_evidence.py` (10) plus `test_run_lifecycle_cancellation.py`,
+`test_process_global_isolation.py`, `test_product_events.py`, `test_analysis_run_lifecycle.py`,
+`test_demo_seeding.py`, `test_agent_analysis.py`, `test_phase6_api.py`: 71 passed together, rc 0. ruff check and
+format --check on both edited files: rc 0. `audit_facts.py --check`: rc 0.
+
+**The local full-suite mimic, recorded because it is the third non-reproduction and one new fact.** Running the
+CI command verbatim aborted before any test ran: `tests/contract/test_owner_scoped_storage.py:33` does
+`from sqlalchemy import create_async_engine`, and this venv's SQLAlchemy 2.0.52 does not export that name at
+top level (`hasattr(sqlalchemy, "create_async_engine")` is False; only `AsyncAdaptedQueuePool` and
+`FallbackAsyncAdaptedQueuePool` carry "async" there), while `sqlalchemy.ext.asyncio.create_async_engine`
+exists. That file is untracked, so CI is unaffected; with it ignored the same command finished `PYTEST_EXIT=0`
+and zero stalls. Two separate things, kept apart on purpose: a harness-wide blocker that is another lane's WIP,
+and a CI-only stall this lane still cannot reproduce locally.
+
+**What the next sample decides.** `returned status=COMPLETED state.run_id=<this run>` with the row unchanged
+means the write was issued and lost -- a persistence-path defect. `returned status=… state.run_id=<another id>`
+means the state came back for a different run, which would explain a silent normal return and a frozen row at
+once, and points at the graph's own bookkeeping. `raised CancelledError` with `execute` returning normally would
+contradict the lifecycle reading and put the harness back on trial. `not recorded (no wrapped run_analysis
+carried this id)` means the graph was never called for the polled run at all -- and then the question becomes
+what `execute` awaited.

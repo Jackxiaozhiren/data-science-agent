@@ -355,3 +355,83 @@ async def test_a_wait_that_expires_prints_what_the_writer_database_holds(
     assert "status=COMPLETED" in message, message
     assert "last seen: {'id': 'run-completed-here', 'status': 'VALIDATION'}" in message, message
     assert "scheduled loop:" in message and "how the lifecycle task ended:" in message, message
+
+
+async def _state(status: Any, run_id: str) -> Any:
+    from dsa_agent.state import AnalysisState, AnalysisStatus
+
+    return AnalysisState(
+        run_id=run_id,
+        dataset_id="ds",
+        user_query="q",
+        status=status if isinstance(status, AnalysisStatus) else AnalysisStatus.VALIDATION,
+    )
+
+
+async def test_the_recorder_is_on_the_name_execute_imports_at_call_time() -> None:
+    """Proved by calling the shipped path, not by reading an attribute.
+
+    `execute` does `from dsa_agent.graph import run_analysis` inside its body, so the binding that matters is
+    the module attribute resolved while the task runs. This drives a real call through that name with a dataset
+    that does not exist -- no model, no tool work, no database -- and requires the record, which cannot exist
+    unless the wrapper is what the import picks up. The id it is keyed on is asserted too, because the reading
+    this recorder exists to make is "did the state come back for *this* run".
+    """
+    import dsa_agent.graph as graph
+
+    assert graph.run_analysis.__name__ == "_wrapped", (
+        "the session fixture did not install the recorder"
+    )
+    await graph.run_analysis(
+        dataset_path="/tmp/no-such-dataset-for-the-recorder.csv",
+        dataset_id="ds",
+        user_query="q",
+        run_id="run-guard-absent-file",
+    )
+    recorded = conftest._GRAPH_RETURN.get("run-guard-absent-file")
+    assert recorded is not None, "the call through the shipped name was not recorded"
+    assert recorded[0] == "returned" or recorded[0].startswith("raised "), recorded
+    assert recorded[2] == "run-guard-absent-file", recorded
+
+
+async def test_the_recorder_distinguishes_returned_raised_and_cancelled() -> None:
+    """The three endings have to be readable, because the CI sample says `returned` and asks what returned.
+
+    A stub graph stands in for the real one here on purpose: what is under test is the classification, and the
+    installation is pinned by the test above. A state handed back records its own status and run id -- that pair
+    is the datum that separates "written terminal under another id" from "handed back still in flight" -- and a
+    cancelled run is recorded as it propagates, unchanged.
+    """
+    from dsa_agent.state import AnalysisStatus
+
+    async def _returns(**kwargs: Any) -> Any:
+        await kwargs["on_update"](await _state(AnalysisStatus.PLANNING, "run-stub"))
+        await kwargs["on_update"](await _state(AnalysisStatus.VALIDATION, "run-other"))
+        return await _state(AnalysisStatus.COMPLETED, "run-stub")
+
+    outcome = await conftest._observe_graph_call(
+        _returns, "run-stub", {"on_update": None, "run_id": "run-stub"}
+    )
+    assert outcome.status is AnalysisStatus.COMPLETED, outcome
+    assert conftest._GRAPH_RETURN["run-stub"] == ("returned", "COMPLETED", "run-stub")
+    assert conftest._ON_UPDATE_SEQUENCE["run-stub"] == ["PLANNING@run-stub", "VALIDATION@run-other"]
+
+    async def _raises(**kwargs: Any) -> Any:
+        raise ValueError("graph")
+
+    with pytest.raises(ValueError):
+        await conftest._observe_graph_call(_raises, "run-boom", {})
+    assert conftest._GRAPH_RETURN["run-boom"] == ("raised ValueError", "-", "-")
+
+    async def _hangs(**kwargs: Any) -> Any:
+        await asyncio.Event().wait()
+
+    waiter = asyncio.ensure_future(conftest._observe_graph_call(_hangs, "run-hang", {}))
+    await asyncio.sleep(0)
+    waiter.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiter
+    assert conftest._GRAPH_RETURN["run-hang"] == ("raised CancelledError", "-", "-")
+
+    text = conftest._stall_evidence("run-id-nobody-ran")
+    assert "graph call for run-id-nobody-ran: not recorded" in text, text

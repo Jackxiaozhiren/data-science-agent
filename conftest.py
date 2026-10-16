@@ -264,6 +264,55 @@ def record_scheduled_loop():
         module.schedule_run = original
 
 
+_GRAPH_RETURN: dict[str, tuple[str, str, str]] = {}
+_ON_UPDATE_SEQUENCE: dict[str, list[str]] = {}
+
+
+async def _observe_graph_call(original: object, run_id: str, named: dict[str, object]) -> object:
+    """Await the graph and record how it ended, then hand the outcome back unchanged.
+
+    This is the last unknown the CI samples cannot answer: `execute` returns normally, the lifecycle's own
+    database still says the run is in flight, and no line names the run. The only readings left differ in what
+    `run_analysis` handed back -- a terminal state written under another id, a non-terminal state that should
+    have tripped the enforcement in `execute`, or a call that never returned. The recorder must not change the
+    shape it observes, so it awaits the real coroutine directly: no extra task, and the `raise` after recording
+    leaves cancellation and exceptions propagating exactly as shipped.
+    """
+    inner_update = named.get("on_update")
+
+    async def _observe(state: object) -> None:
+        _ON_UPDATE_SEQUENCE.setdefault(run_id, []).append(f"{state.status.value}@{state.run_id}")
+        if inner_update is not None:
+            await inner_update(state)
+
+    named["on_update"] = _observe
+    try:
+        state = await original(**named)  # type: ignore[operator]
+    except BaseException as ended:
+        _GRAPH_RETURN[run_id] = (f"raised {type(ended).__name__}", "-", "-")
+        raise
+    _GRAPH_RETURN[run_id] = ("returned", str(state.status.value), str(state.run_id))
+    return state
+
+
+@pytest.fixture(scope="session", autouse=True)
+def record_graph_return():
+    """Install `_observe_graph_call` on the name `execute` imports at call time."""
+    import dsa_agent.graph as graph
+
+    original = graph.run_analysis
+    names = ("dataset_path", "dataset_id", "user_query", "run_id", "on_update")
+
+    async def _wrapped(*args: object, **kwargs: object) -> object:
+        named = dict(zip(names, args, strict=False))
+        named.update(kwargs)
+        return await _observe_graph_call(original, str(named.get("run_id") or "-"), named)
+
+    graph.run_analysis = _wrapped
+    yield
+    graph.run_analysis = original
+
+
 def _stall_evidence(run_id: str) -> str:
     """Name the condition the timeout is actually in, instead of leaving it to be inferred from a traceback.
 
@@ -398,6 +447,18 @@ def _stall_evidence(run_id: str) -> str:
         "  lifecycle module objects loaded: "
         f"{sorted(m for m in sys.modules if m.endswith('dsa_api.services.run_lifecycle'))}"
     )
+    returned = _GRAPH_RETURN.get(run_id)
+    sequence = _ON_UPDATE_SEQUENCE.get(run_id) or []
+    if returned is None:
+        lines.append(
+            f"  graph call for {run_id}: not recorded (no wrapped run_analysis carried this id); "
+            f"{len(_GRAPH_RETURN)} id(s) recorded ({list(_GRAPH_RETURN)[:3]})"
+        )
+    else:
+        lines.append(
+            f"  graph call for {run_id}: {returned[0]} status={returned[1]} state.run_id={returned[2]}; "
+            f"on_update awaited {len(sequence)}x, last three {sequence[-3:]}"
+        )
     seen_for_run = sorted({m for rid, m in _LIFECYCLE_RECORDS if rid == run_id})
     sample = [f"{rid}: {m}" for rid, m in _LIFECYCLE_RECORDS[:4]]
     lines.append(
