@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Database, Hash, Table2, FileDigit, ArrowRight, Fingerprint } from "lucide-react";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/app/components/ui/tabs";
@@ -41,7 +42,7 @@ type AnalysisItem = { id: string; status: string; user_query: string; created_at
 
 async function fetchOne(id: string): Promise<{ record: DatasetDetail | null; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/datasets/${id}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/datasets/${id}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { record: null, failure };
     return { record: (await res.json()) as DatasetDetail, failure: null };
@@ -52,7 +53,7 @@ async function fetchOne(id: string): Promise<{ record: DatasetDetail | null; fai
 
 async function fetchAnalyses(datasetId: string): Promise<{ analyses: AnalysisItem[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/analysis/?dataset_id=${datasetId}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/analysis/?dataset_id=${datasetId}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { analyses: [], failure };
     const data = (await res.json()) as { analyses: AnalysisItem[] };

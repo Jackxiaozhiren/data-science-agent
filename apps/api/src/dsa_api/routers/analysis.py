@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dsa_agent.report_export import EXPORT_MODES, export_html, export_markdown
 from dsa_agent.run_summary import run_summary
 from dsa_api.core.database import get_session
+from dsa_api.core.ownership import resolve_owner
 from dsa_api.services.analysis_service import (
     analysis_progress,
     create_pending_run,
@@ -50,6 +51,7 @@ async def create_analysis(
     body: CreateAnalysisBody,
     response: Response,
     session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
     """Accept a run: the row exists and is executing when this returns, not after it finishes.
 
@@ -59,7 +61,9 @@ async def create_analysis(
     if not body.dataset_id or not body.user_query.strip():
         raise HTTPException(status_code=400, detail="dataset_id and user_query required")
     try:
-        result, started = await create_pending_run(session, body.dataset_id, body.user_query)
+        result, started = await create_pending_run(
+            session, body.dataset_id, body.user_query, owner=owner
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception:
@@ -94,16 +98,19 @@ async def list_analyses(
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
     items, total = await list_analysis_runs(
-        session, dataset_id=dataset_id, limit=limit, offset=offset
+        session, dataset_id=dataset_id, limit=limit, offset=offset, owner=owner
     )
     return {"analyses": items, "total": total}
 
 
 @router.get("/{run_id}")
-async def get_analysis(run_id: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
-    row = await get_analysis_run(session, run_id)
+async def get_analysis(
+    run_id: str, session: AsyncSession = Depends(get_session), owner: str = Depends(resolve_owner)
+) -> dict[str, Any]:
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return row
@@ -111,9 +118,9 @@ async def get_analysis(run_id: str, session: AsyncSession = Depends(get_session)
 
 @router.get("/{run_id}/progress")
 async def get_analysis_progress(
-    run_id: str, session: AsyncSession = Depends(get_session)
+    run_id: str, session: AsyncSession = Depends(get_session), owner: str = Depends(resolve_owner)
 ) -> dict[str, Any]:
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return analysis_progress(row)
@@ -153,9 +160,12 @@ async def analysis_event_frames(
 
 @router.get("/{run_id}/events")
 async def get_analysis_events(
-    run_id: str, request: Request, session: AsyncSession = Depends(get_session)
+    run_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> StreamingResponse:
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
@@ -195,8 +205,9 @@ async def get_analysis_report(
         ),
     ),
     session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> Any:
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     if mode not in EXPORT_MODES:
@@ -246,9 +257,9 @@ async def get_analysis_report(
 
 @router.get("/{run_id}/artifacts")
 async def get_analysis_artifacts(
-    run_id: str, session: AsyncSession = Depends(get_session)
+    run_id: str, session: AsyncSession = Depends(get_session), owner: str = Depends(resolve_owner)
 ) -> dict[str, Any]:
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     state = row.get("state") or {}
@@ -263,9 +274,12 @@ async def get_analysis_artifacts(
 
 @router.get("/{run_id}/evidence/{evidence_id}")
 async def get_evidence_trace(
-    run_id: str, evidence_id: str, session: AsyncSession = Depends(get_session)
+    run_id: str,
+    evidence_id: str,
+    session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     traced = evidence_trace_for_state(row, evidence_id)
@@ -276,9 +290,12 @@ async def get_evidence_trace(
 
 @router.post("/{run_id}/approve")
 async def approve_analysis(
-    run_id: str, body: dict[str, Any] | None = None, session: AsyncSession = Depends(get_session)
+    run_id: str,
+    body: dict[str, Any] | None = None,
+    session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     if row.get("status") != "HUMAN_REVIEW":

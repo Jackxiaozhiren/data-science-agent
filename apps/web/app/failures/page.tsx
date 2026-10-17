@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -33,7 +34,7 @@ const FAILURES_FAILURE_MESSAGE: Record<ApiFailure, string> = {
 async function fetchFailureStats(): Promise<FailureStats> {
   const empty: FailureStats = { failure: null, runsScanned: 0, failedCalls: 0, byTool: [] };
   try {
-    const listRes = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
+    const listRes = await serverFetch("/api/v1/analysis/", { cache: "no-store" });
     const listFailure = classifyResponse(listRes);
     if (listFailure) return { ...empty, failure: listFailure };
     const ids = ((await listRes.json()) as { analyses: { id: string }[] }).analyses.map((a) => a.id);
@@ -42,7 +43,7 @@ async function fetchFailureStats(): Promise<FailureStats> {
     await Promise.all(
       ids.map(async (id) => {
         try {
-          const r = await fetch(apiUrl(`/api/v1/analysis/${id}/artifacts`), { cache: "no-store" });
+          const r = await serverFetch(`/api/v1/analysis/${id}/artifacts`, { cache: "no-store" });
           if (!r.ok) return;
           const d = (await r.json()) as { tool_calls?: ToolCall[] };
           for (const tc of d.tool_calls ?? []) {

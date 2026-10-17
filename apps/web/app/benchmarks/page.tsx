@@ -6,6 +6,7 @@ import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { CompareBarChart, DonutChart } from "@/app/components/ui/chart";
 import { CopyButton } from "@/app/benchmarks/CopyButton";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 
 type Baseline = {
   n: number;
@@ -26,7 +27,7 @@ type Fetch<T> = { ok: true; value: T } | { ok: false; failure: ApiFailure };
 
 async function getJson<T>(path: string): Promise<Fetch<T>> {
   try {
-    const res = await fetch(apiUrl(path), { cache: "no-store" });
+    const res = await serverFetch(path, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { ok: false, failure };
     return { ok: true, value: (await res.json()) as T };

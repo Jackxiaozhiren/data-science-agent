@@ -13,6 +13,22 @@ from dsa_execution.guardrails import contains_prompt_injection, rewrite_unsuppor
 from dsa_execution.python_sandbox import execute_python
 
 
+@pytest.fixture(autouse=True)
+async def _clean_limiter():
+    """The counters are module-level and keyed by client IP, so they outlive the fixture that filled them.
+
+    Every suite here imports the same `app`, and the upload rule is 30 per minute -- a run of the whole gate
+    crosses that line on the way to this file, and `429` then arrives where these tests assert `400` or `201`.
+    The sibling `apps/api/tests/test_security.py` resets for the same reason. Nothing is loosened here: the
+    assertions still demand the rejection, and this only makes the request they measure the one this file sent.
+    """
+    from dsa_api.core.security import clear_rate_limit_state
+
+    await clear_rate_limit_state()
+    yield
+    await clear_rate_limit_state()
+
+
 @pytest.fixture
 async def ac():
     from dsa_api.core import database

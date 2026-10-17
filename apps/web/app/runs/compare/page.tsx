@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GitCompareArrows } from "lucide-react";
-import { API_BASE_URL, apiUrl } from "@/lib/api";
+import { clientFetch, API_BASE_URL, apiUrl } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -58,7 +58,7 @@ function CompareWorkspace() {
     setLoading(true);
     Promise.all(
       [aId, bId].map((id) =>
-        fetch(apiUrl(`/api/v1/analysis/${id}`)).then((r) => (r.ok ? (r.json() as Promise<Full>) : null))
+        clientFetch(`/api/v1/analysis/${id}`).then((r) => (r.ok ? (r.json() as Promise<Full>) : null))
       )
     )
       .then(([ra, rb]) => {

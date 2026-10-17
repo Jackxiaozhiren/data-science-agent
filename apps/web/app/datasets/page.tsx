@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FileUp, Database, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION } from "@/lib/api";
+import { clientFetch, API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Progress } from "@/app/components/ui/feedback";
@@ -74,7 +74,7 @@ export default function DatasetsPage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch(apiUrl("/api/v1/datasets/"));
+      const res = await clientFetch("/api/v1/datasets/");
       const failure = classifyResponse(res);
       if (failure) {
         setErr(`${FAILURE_PRESENTATION[failure]} Check API diagnostics below.`);
@@ -98,7 +98,7 @@ export default function DatasetsPage() {
     const fd = new FormData();
     fd.append("file", f);
     try {
-      const res = await fetch(apiUrl("/api/v1/datasets/"), { method: "POST", body: fd });
+      const res = await clientFetch("/api/v1/datasets/", { method: "POST", body: fd });
       if (!res.ok) {
         const msg = await errorMessage(res);
         setQueue((q) => q.map((it) => (it.key === key ? { ...it, status: "error" as const, note: msg } : it)));
@@ -178,6 +178,13 @@ export default function DatasetsPage() {
         <CardHeader>
           <CardTitle className="text-sm">Upload CSV, Parquet, JSON, or Excel (≤100MB)</CardTitle>
           <CardDescription className="text-xs">Drag a file onto the drop zone or browse. Accepted: .csv .parquet .json .xlsx .xls</CardDescription>
+          {/* R-08, said plainly: what the id does, and what it does not do. A line that only promised privacy here
+              would be the half-measure the plan warns about, so it names the cookie and the limit together. */}
+          <p className="mt-1 text-xs text-zinc-500">
+            Your uploads are kept apart from the next visitor&apos;s by a random id stored in a first-party cookie on
+            this browser, which the app sends with every request. It is not an account: anyone holding that id reads
+            the same rows, and clearing site data loses them for you too.
+          </p>
         </CardHeader>
         <CardContent>
           <div

@@ -388,6 +388,16 @@ async def test_the_boot_seeder_records_its_own_starts_and_no_starter_link(
     dataset_id = r.json()["id"]
 
     async with database.AsyncSessionLocal() as session:
+        from dsa_api.core.ownership import OWNER_SHARED
+        from dsa_api.models.dataset import DatasetORM
+
+        # `_run_example` publishes under the shared owner, which is only sound for a dataset the demo
+        # itself published -- so the row goes through the same relabelling `seed_demo_data` performs on
+        # the sample it just uploaded, rather than the helper being loosened for the test.
+        row = await session.get(DatasetORM, dataset_id)
+        assert row is not None
+        row.owner = OWNER_SHARED
+        await session.commit()
         await demo_seed._run_example(session, dataset_id, question)
 
     events = _log(loop_env)

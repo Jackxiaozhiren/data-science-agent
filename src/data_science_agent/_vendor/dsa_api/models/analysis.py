@@ -35,6 +35,7 @@ class AnalysisRunORM(Base):
         return {
             "id": self.id,
             "dataset_id": self.dataset_id,
+            "owner": self.owner,
             "dataset_path": self.dataset_path,
             "user_query": self.user_query,
             "status": self.status,

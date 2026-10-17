@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BarChart3, MessageCircleQuestion, ShieldCheck, ArrowRight, Github } from "lucide-react";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -14,7 +15,7 @@ type AnalysisSummary = { id: string; status: string; user_query: string; created
 
 async function fetchRecent(): Promise<{ recent: AnalysisSummary[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/analysis/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { recent: [], failure };
     const data = (await res.json()) as { analyses: AnalysisSummary[] };
@@ -27,10 +28,10 @@ async function fetchRecent(): Promise<{ recent: AnalysisSummary[]; failure: ApiF
 async function fetchCounts(): Promise<{ analyses: number | null; datasets: number | null }> {
   try {
     const [a, d] = await Promise.all([
-      fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" }).then(async (r) =>
+      serverFetch("/api/v1/analysis/", { cache: "no-store" }).then(async (r) =>
         r.ok ? (((await r.json()) as { analyses: unknown[] }).analyses.length as number) : null
       ),
-      fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" }).then(async (r) =>
+      serverFetch("/api/v1/datasets/", { cache: "no-store" }).then(async (r) =>
         r.ok ? (((await r.json()) as { datasets: unknown[] }).datasets.length as number) : null
       ),
     ]);
@@ -51,7 +52,7 @@ type DatasetRow = { id: string; metadata?: unknown };
 /** R-01: the sample data the API rebuilt on boot, read through the one marker owner. */
 async function fetchSamples(): Promise<{ samples: { id: string; sample: SampleInfo }[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/datasets/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { samples: [], failure };
     const data = (await res.json()) as { datasets: DatasetRow[] };

@@ -208,6 +208,33 @@ A production deployment should replace ephemeral local dataset/artifact storage 
 
 For the recommended low-risk path from the current single-instance demo to durable storage, see [Production Persistence Hardening](production-hardening.md). The first stage deliberately keeps SQLite and local-file semantics, but moves them under one persistent `/var/data` mount before introducing Postgres or object storage.
 
+## Visitors are separated by an id, not by an account
+
+R-08 does not add a sign-in. It adds an owner to every stored row. The sample datasets and the example runs this
+project publishes are marked `shared`; anything a visitor uploads or runs is marked with an id that belongs to
+that one browser.
+
+- **Where the id comes from.** The web app's proxy mints a random id and sets it in a **first-party cookie**
+  before the first render, and every API call carries it in the `X-DSA-Owner` header. The three report links
+  that open in a new tab carry it as `?owner=` instead, because a browser navigation cannot add a header -- that
+  is the only place it appears in a URL. There is nothing for an operator to configure.
+- **What no id means.** A request with no header -- `curl`, the CLI, a browser that refused the cookie -- acts as
+  the `local` owner, which is also the value every pre-R-08 row was backfilled to. So a plain `curl` reads the
+  published sample and whatever was uploaded without an id, and none of what a scoped visitor uploaded.
+- **What this stops.** The next visitor listing your datasets, opening your run, reading your report, downloading
+  your bundle, or approving your run. Every one of those answers with the same `404` and the same words an id
+  that was never issued would get, so a stranger cannot even learn that your run exists. Starting a run on
+  someone else's dataset is refused the same way, and one visitor's duplicate-submit suppression never answers
+  for another's.
+- **What this does not stop.** Anyone holding your cookie, or reading the `owner=` parameter out of a shared
+  machine's browser history. It is a bearer value with nothing behind it: there is no password to check, because
+  the free demo has no user table to check it against. Clearing site data loses the rows for you as well -- the
+  files sit on the instance until it restarts, and nothing lets you reclaim them under a fresh id.
+- **`shared` is reserved.** A client that sends `X-DSA-Owner: shared` is normalised to `local`, so a visitor can
+  read the published sample but cannot publish their own file to everyone, and cannot claim the reserved rows.
+- **The promise a deployment can make** is "visitors cannot see each other's uploads", not "your data is private
+  on this server". `/datasets` says it in the browser, at the upload control, in those terms.
+
 ## Required configuration
 
 ### Web

@@ -570,3 +570,109 @@ async def test_two_boots_leave_one_example_run_per_seeded_dataset(seed_env: dict
         body = (await seed_env["client"].get(f"/api/v1/analysis/{run_id}")).json()
         assert body["status"] == "COMPLETED", body["status"]
         assert body["dataset_id"] == row["id"], "the example run is attached to a different dataset"
+
+
+@pytest.mark.asyncio
+async def test_a_visitor_with_an_id_of_their_own_still_sees_the_published_sample(
+    seed_env: dict[str, Any],
+) -> None:
+    """R-08 that empties R-01's first screen is a different product, so the sample is published, not owned.
+
+    The pair matters: the sample has to be readable by an id the demo never issued, and a visitor's own row
+    must not become readable while it is.
+    """
+    from dsa_api.core.ownership import OWNER_HEADER
+
+    examples = await _seed_and_examples(seed_env)
+    assert examples, "the boot produced no example to look at"
+    visitor = {OWNER_HEADER: "0f1e2d3c4b5a-4e8f-9d3d"}
+
+    rows = (await seed_env["client"].get("/api/v1/datasets/", headers=visitor)).json()["datasets"]
+    samples = [row for row in rows if MARKER in (row.get("metadata") or {})]
+    assert samples, f"a visitor holding their own id saw {rows!r}, none of it published"
+
+    for row in samples:
+        linked = (row["metadata"][MARKER] or {}).get("example_run_id")
+        if not linked:
+            continue
+        run = await seed_env["client"].get(f"/api/v1/analysis/{linked}", headers=visitor)
+        assert run.status_code == 200, (
+            f"the example link on {row['filename']} is a {run.status_code}"
+        )
+        assert run.json()["owner"] == "shared"
+
+    private = await seed_env["client"].post(
+        "/api/v1/datasets/",
+        files={"file": ("mine.csv", b"a,b\n1,2\n", "text/csv")},
+        headers=visitor,
+    )
+    assert private.status_code == 201, private.text
+    mine = str(private.json()["id"])
+    assert mine not in [row["id"] for row in samples]
+    as_local = await seed_env["client"].get(f"/api/v1/datasets/{mine}")
+    assert as_local.status_code == 404, "a visitor's upload is readable by the local owner too"
+
+
+@pytest.mark.asyncio
+async def test_a_sample_row_from_before_the_owner_column_is_republished(
+    seed_env: dict[str, Any],
+) -> None:
+    """The migration backfills old rows to `local` -- including the demo's own, which the seeder must fix.
+
+    Without the relabelling the upgraded instance keeps a correct-looking database and an empty first screen,
+    and nothing but this test notices. `how == "reused"` is the load-bearing assertion: it is only reachable
+    if the example run itself became published, because a run the seeder cannot see would be re-executed and
+    would arrive as a new id.
+    """
+    from sqlalchemy import select
+
+    from dsa_api.core.ownership import OWNER_DEFAULT, OWNER_HEADER, OWNER_SHARED
+    from dsa_api.models.analysis import AnalysisRunORM
+    from dsa_api.models.dataset import DatasetORM
+
+    first = await _seed_and_examples(seed_env)
+    visitor = {OWNER_HEADER: "0f1e2d3c4b5a-4e8f-9d3d"}
+
+    async with seed_env["factory"]() as session:
+        for row in (await session.execute(select(DatasetORM))).scalars().all():
+            row.owner = OWNER_DEFAULT
+        for row in (await session.execute(select(AnalysisRunORM))).scalars().all():
+            row.owner = OWNER_DEFAULT
+        await session.commit()
+
+    hidden = (await seed_env["client"].get("/api/v1/datasets/", headers=visitor)).json()["datasets"]
+    assert hidden == [], f"the pre-R-08 state was not reproduced: {hidden!r}"
+
+    second = await _seed(seed_env)
+
+    visible = (await seed_env["client"].get("/api/v1/datasets/", headers=visitor)).json()[
+        "datasets"
+    ]
+    local_rows = await _rows(seed_env)
+    assert sorted(row["filename"] for row in visible) == sorted(
+        row["filename"] for row in local_rows
+    ), "the local owner can see the sample but a visitor holding an id cannot"
+    assert {row["owner"] for row in visible} == {OWNER_SHARED}, (
+        f"the sample rows were not republished: {[(r['filename'], r['owner']) for r in visible]}"
+    )
+    assert [row["id"] for row in visible] == [row["id"] for row in local_rows], (
+        f"the repair rebuilt the sample instead of relabelling it: {second}"
+    )
+
+    async with seed_env["factory"]() as session:
+        run_owners = {row[0] for row in (await session.execute(select(AnalysisRunORM.owner))).all()}
+    assert run_owners == {OWNER_SHARED}, f"{sorted(run_owners)}: a published run is still private"
+    assert {entry["run_id"] for entry in first} == {
+        (row["metadata"][MARKER] or {}).get("example_run_id")
+        for row in visible
+        if (row["metadata"][MARKER] or {}).get("example_run_id")
+    }, "the relabelled rows no longer link the examples the boot produced"
+
+    for row in visible:
+        linked = (row["metadata"][MARKER] or {}).get("example_run_id")
+        if not linked:
+            continue
+        run = await seed_env["client"].get(f"/api/v1/analysis/{linked}", headers=visitor)
+        assert run.status_code == 200 and run.json()["status"] == "COMPLETED", (
+            f"the example link a visitor is shown answers {run.status_code}"
+        )

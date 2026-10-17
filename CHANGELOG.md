@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — one visitor's upload is no longer the next visitor's data (R-08)
+
+- The hosted demo answers without credentials, so until now `GET /api/v1/datasets/` from any browser listed
+  every other visitor's file, and a run id was the only thing between a stranger and your report, bundle and
+  approval button. Every row now carries an `owner`: `datasets`, `analysis_runs` and `experiments` each gained
+  the column, and every route that reads or writes one resolves the caller first.
+- **The migration is the part that usually gets faked.** The lifespan creates tables with `create_all`, which is
+  *checkfirst* and never `ALTER`s, so an `owner` column added only to the models would be a silent no-op on every
+  database that already exists -- including the deployed one. A startup step now adds the column in one
+  transaction before `create_all`, backfills existing rows to the single local owner, and refuses to boot if the
+  file cannot be written rather than serving a half-migrated schema. It is idempotent, because the free tier
+  restarts constantly.
+- **Who the caller is.** The web app mints a random id in a first-party cookie before the first render and sends
+  it as `X-DSA-Owner` on every request; the three report links that open in a new tab use `?owner=`, because a
+  navigation cannot carry a header. No id means the `local` owner, which is also what the backfill assigns, so
+  `curl` and the CLI keep working unchanged.
+- **`shared`, and why the demo did not go blank.** Scoping everything would have emptied the first screen R-01
+  shipped: a visitor holding their own id would see no datasets and no examples. The sample datasets and the
+  example runs are therefore published under a reserved owner that every request can read and no client can be
+  given -- `X-DSA-Owner: shared` normalises to `local`, so a visitor can read the sample but cannot publish their
+  own file to everyone. Rows the migration backfilled to `local` are relabelled on the next boot, marker by
+  marker, which is what keeps an upgraded instance from presenting a correct-looking database and an empty page.
+- **What it is not.** Not an account, and not confidentiality against someone who takes the cookie: it is a
+  bearer id with nothing behind it. `docs/hosted-demo.md` says so, and the same sentence now sits at the upload
+  control, because a promise the interface does not make is the half-measure this requirement is about.
+- Pinned by `tests/contract/test_owner_scoped_storage.py` (the old-file upgrade, the route census, and two
+  simulated browsers against one deployed demo -- including the check that every run route answers a stranger
+  with the *same* 404 an unknown id gets, so a 409 cannot confirm a run exists) and
+  `tests/contract/test_web_owner_identity.py` (the client half: no page may fetch the API without the id, the
+  header name is compared against the Python constant, and the URL transport is limited to those three links).
+- **Not yet live.** The deployed demo is still the pre-R-08 build: this workspace has no `RENDER_API_KEY` or
+  `VERCEL_TOKEN`, so the redeploy that would put this on the public URL has not happened. See the handoff in
+  `docs/hosted-demo.md`'s launch checklist.
+
 ### Fixed (post-4.5.0) -- a client's poll could erase the run's own final write
 
 - `sqlite+aiosqlite:///:memory:` resolves to StaticPool, which hands every session in a test the *same* DBAPI

@@ -33,6 +33,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dsa_api.core.database import get_session
+from dsa_api.core.ownership import resolve_owner
 from dsa_api.services.analysis_service import get_analysis_run
 
 router = APIRouter(tags=["analysis"])
@@ -76,6 +77,7 @@ def _classify(
 async def download_run_bundle(
     run_id: str,
     session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> Response:
     """`report.md`, `experiment.json`, `reproduce.sh`, the notebook, the evidence graph and the charts.
 
@@ -86,7 +88,7 @@ async def download_run_bundle(
 
     if not RUN_ID_SHAPE.match(run_id):
         raise HTTPException(status_code=404, detail="Analysis not found")
-    row = await get_analysis_run(session, run_id)
+    row = await get_analysis_run(session, run_id, owner=owner)
     if row is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 

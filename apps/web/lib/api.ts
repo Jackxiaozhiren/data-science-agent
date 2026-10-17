@@ -1,3 +1,5 @@
+import { browserOwnerId, withOwner } from "./owner";
+
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
 export const API_BASE_URL = (configuredApiUrl || "http://localhost:8000").replace(/\/$/, "");
@@ -5,6 +7,13 @@ export const API_BASE_URL = (configuredApiUrl || "http://localhost:8000").replac
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_BASE_URL}${normalizedPath}`;
+}
+
+// R-08: a request the browser makes itself carries this visitor's owner id, so the API answers with their rows
+// rather than with everyone's. Server-rendered pages cannot use this -- they are not running where the cookie
+// lives, and call `serverFetch` from `@/lib/serverApi` instead.
+export function clientFetch(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(apiUrl(path), withOwner(init, browserOwnerId()));
 }
 
 // Fetch outcomes, owned here. "no data" is a fact about the payload; a 401, a 500 and an unreachable
@@ -29,7 +38,8 @@ export function classifyResponse(res: Response): ApiFailure | null {
 // at a reader, and no raw response body is carried through.
 export const FAILURE_PRESENTATION: Record<ApiFailure, string> = {
   unauthorized:
-    "The API is reachable but rejected the request (401/403). This client does not send credentials yet.",
+    "The API is reachable but rejected the request (401/403). This demo does not ask you to sign in, so a " +
+    "rejection here means the instance is configured with an access token this page does not hold.",
   notFound: "The API answered 404 — the requested record or endpoint does not exist.",
   serverError: "The API failed while answering (5xx). This data may be temporarily unavailable.",
   clientError: "The API answered with a client error (4xx). The request was not accepted.",

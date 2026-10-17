@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dsa_api.core.database import get_session
+from dsa_api.core.ownership import resolve_owner
 from dsa_api.services.dataset_service import get_dataset, list_datasets, save_dataset
 from dsa_datasets.errors import (
     DatasetError,
@@ -23,16 +24,19 @@ async def list_datasets_route(
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
-    items, total = await list_datasets(session, limit=limit, offset=offset)
+    items, total = await list_datasets(session, limit=limit, offset=offset, owner=owner)
     return {"datasets": items, "total": total}
 
 
 @router.get("/{dataset_id}")
 async def get_dataset_route(
-    dataset_id: str, session: AsyncSession = Depends(get_session)
+    dataset_id: str,
+    session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
-    ds = await get_dataset(session, dataset_id)
+    ds = await get_dataset(session, dataset_id, owner=owner)
     if ds is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
     return ds
@@ -43,6 +47,7 @@ async def create_dataset_route(
     response: Response,
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_session),
+    owner: str = Depends(resolve_owner),
 ) -> dict[str, Any]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename required")
@@ -66,7 +71,7 @@ async def create_dataset_route(
     ct = file.content_type
     try:
         result = await save_dataset(
-            session, file.filename, tmp_path, size, content_type=ct, head=head
+            session, file.filename, tmp_path, size, content_type=ct, head=head, owner=owner
         )
         response.headers["Location"] = f"/api/v1/datasets/{result['id']}"
         return result

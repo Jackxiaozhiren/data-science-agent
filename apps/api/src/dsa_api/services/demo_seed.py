@@ -50,6 +50,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dsa_api.core.ownership import OWNER_SHARED
 from dsa_api.models.analysis import AnalysisRunORM
 from dsa_api.models.dataset import DatasetORM
 from dsa_api.services.analysis_service import create_pending_run
@@ -262,6 +263,20 @@ async def seed_demo_data(
             None,
         )
         if existing is not None and existing.sha256 == sha and Path(existing.path).is_file():
+            if existing.owner != OWNER_SHARED:
+                # Rows written before R-08 -- including every row the migration backfilled -- are the demo's
+                # own published samples. Left owned by `local`, they are invisible to a visitor with an id of
+                # their own, and the first screen R-01 promises would be empty for them. The marker is what
+                # proves this row is ours rather than a visitor's, and the run it names was created by us.
+                existing.owner = OWNER_SHARED
+                linked = (json.loads(existing.meta_json or "{}").get(MARKER) or {}).get(
+                    "example_run_id"
+                )
+                if linked:
+                    example = await session.get(AnalysisRunORM, str(linked))
+                    if example is not None:
+                        example.owner = OWNER_SHARED
+                await session.commit()
             current = json.loads(existing.meta_json or "{}").get(MARKER) or {}
             if current.get("starter_questions") != payload[MARKER]["starter_questions"]:
                 meta = json.loads(existing.meta_json or "{}")
@@ -286,6 +301,7 @@ async def seed_demo_data(
             size_bytes=path.stat().st_size,
             content_type=None,
             head=path.read_bytes()[:4096],
+            owner=OWNER_SHARED,
         )
         row = await session.get(DatasetORM, created["id"])
         if row is None:  # pragma: no cover - save_dataset commits the row it returns
@@ -348,11 +364,18 @@ def run_is_clean(row: dict[str, Any] | None) -> bool:
 async def _clean_existing(
     session: AsyncSession, dataset_id: str, question: str
 ) -> AnalysisRunORM | None:
+    """A published run that already answers the question cleanly, if there is one.
+
+    The owner filter carries weight: the starter question and the sample dataset are the same strings for
+    every visitor, so without it a visitor's run would be adopted as the demo's example -- and the next
+    visitor to open that example link would be told the run does not exist.
+    """
     statement = (
         select(AnalysisRunORM)
         .where(
             AnalysisRunORM.dataset_id == dataset_id,
             AnalysisRunORM.user_query == question,
+            AnalysisRunORM.owner == OWNER_SHARED,
             AnalysisRunORM.status == "COMPLETED",
         )
         .order_by(AnalysisRunORM.created_at.desc())
@@ -365,7 +388,7 @@ async def _clean_existing(
 
 async def _run_example(session: AsyncSession, dataset_id: str, question: str) -> str | None:
     """Ask one question through the same path a client uses, and return the row id if it came out clean."""
-    created, started = await create_pending_run(session, dataset_id, question)
+    created, started = await create_pending_run(session, dataset_id, question, owner=OWNER_SHARED)
     run_id = str(created["id"])
     if started:
         # R-15: the seeder's own run is a run this instance created, so it records a start -- labelled
@@ -448,6 +471,7 @@ async def _last_attempt(
         .where(
             AnalysisRunORM.dataset_id == dataset_id,
             AnalysisRunORM.user_query == question,
+            AnalysisRunORM.owner == OWNER_SHARED,
         )
         .order_by(AnalysisRunORM.created_at.desc())
         .limit(1)

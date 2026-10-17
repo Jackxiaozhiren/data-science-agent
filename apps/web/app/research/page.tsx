@@ -8,12 +8,13 @@ import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { ExperimentsTable } from "@/app/research/ExperimentsTable";
 import { TrackedExperimentsTable } from "@/app/research/TrackedExperimentsTable";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 
 type Tracked = { id: string; name: string; run_id: string; created_at: string | null };
 
 async function fetchTracked(): Promise<{ rows: Tracked[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/experiments/?limit=20"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/experiments/?limit=20", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { rows: [], failure };
     const d = (await res.json()) as { experiments: Tracked[] };
@@ -27,7 +28,7 @@ async function fetchTracked(): Promise<{ rows: Tracked[]; failure: ApiFailure | 
 // API that now carries it (audit §168). The cap stays where the page had it.
 async function fetchExperiments(): Promise<{ files: string[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/research/experiments"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/research/experiments", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { files: [], failure };
     const d = (await res.json()) as { experiments: string[] };

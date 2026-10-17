@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plug2 } from "lucide-react";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -24,7 +25,7 @@ const MCP_FAILURE_MESSAGE: Record<ApiFailure, string> = {
 
 async function fetchTools(): Promise<{ tools: McpTool[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/mcp/tools"), { cache: "no-store" });
+    const res = await serverFetch("/mcp/tools", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { tools: [], failure };
     const d = (await res.json()) as { tools: McpTool[] };

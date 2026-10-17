@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch, ownerFromRequest } from "@/lib/serverApi";
+import { withOwnerParam } from "@/lib/owner";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { ErrorState } from "@/app/components/data/States";
 import { Button } from "@/app/components/ui/button";
@@ -7,7 +9,7 @@ import { RunInspector, type RunDetail } from "@/app/analysis/[runId]/RunInspecto
 
 async function fetchRun(id: string): Promise<{ record: RunDetail | null; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/analysis/${id}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/analysis/${id}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { record: null, failure };
     return { record: (await res.json()) as RunDetail, failure: null };
@@ -45,8 +47,15 @@ export default async function TracePage({ params, searchParams }: { params: Prom
     );
   }
 
-  const reportUrl = apiUrl(`/api/v1/analysis/${runId}/report?format=markdown`);
-  const findingsUrl = apiUrl(`/api/v1/analysis/${runId}/report?format=markdown&mode=findings`);
-  const htmlUrl = apiUrl(`/api/v1/analysis/${runId}/report?format=html`);
+  // The three report links open in a new tab, which is a navigation a script cannot attach a header to, so the
+  // id travels in the query here and nowhere else. `rel="noreferrer"` on the anchors keeps it out of the
+  // `Referer` header; what it cannot avoid is the browser's own history, and `docs/hosted-demo.md` says so.
+  const owner = await ownerFromRequest();
+  const reportUrl = withOwnerParam(apiUrl(`/api/v1/analysis/${runId}/report?format=markdown`), owner);
+  const findingsUrl = withOwnerParam(
+    apiUrl(`/api/v1/analysis/${runId}/report?format=markdown&mode=findings`),
+    owner,
+  );
+  const htmlUrl = withOwnerParam(apiUrl(`/api/v1/analysis/${runId}/report?format=html`), owner);
   return <RunInspector run={run} reportUrl={reportUrl} findingsUrl={findingsUrl} htmlUrl={htmlUrl} fromRunId={from} />;
 }

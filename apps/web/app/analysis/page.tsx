@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Play, ShieldCheck, Repeat2, Zap } from "lucide-react";
-import { API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { clientFetch, API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Select, Textarea } from "@/app/components/ui/input";
@@ -65,7 +65,7 @@ function AnalysisWorkspace() {
   const { phase, copy, retry } = useBackendProbe();
 
   useEffect(() => {
-    fetch(apiUrl("/api/v1/datasets/"))
+    clientFetch("/api/v1/datasets/")
       .then(async (r) => {
         const failure = classifyResponse(r);
         if (failure) {
@@ -89,7 +89,7 @@ function AnalysisWorkspace() {
       return;
     }
     let cancelled = false;
-    fetch(apiUrl(`/api/v1/datasets/${datasetId}`))
+    clientFetch(`/api/v1/datasets/${datasetId}`)
       .then(async (r) => {
         if (!r.ok) return;
         const d = (await r.json()) as { profile?: { column_profiles?: { name: string }[] } | null };
@@ -115,7 +115,7 @@ function AnalysisWorkspace() {
     }
     setRunning(true);
     try {
-      const res = await fetch(apiUrl("/api/v1/analysis/"), {
+      const res = await clientFetch("/api/v1/analysis/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset_id: datasetId, user_query: query }),

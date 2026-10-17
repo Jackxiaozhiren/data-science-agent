@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dsa_api.core.ownership import visible_to
 from dsa_api.models.dataset import DatasetORM
 from dsa_datasets.hash_utils import sha256_file
 from dsa_datasets.models import DatasetFormat
@@ -33,9 +34,18 @@ def _dataset_available(row: DatasetORM) -> bool:
 
 
 async def list_datasets(
-    session: AsyncSession, limit: int = 100, offset: int = 0
+    session: AsyncSession, limit: int = 100, offset: int = 0, *, owner: str
 ) -> tuple[list[dict[str, Any]], int]:
-    result = await session.execute(select(DatasetORM).order_by(DatasetORM.created_at.desc()))
+    """The requester's datasets, plus the demo's published samples.
+
+    `owner` has no default on purpose: a forgotten argument at a call site is a TypeError on the first
+    request, which is loud, where a default would have been a silently unscoped route.
+    """
+    result = await session.execute(
+        select(DatasetORM)
+        .where(DatasetORM.owner.in_(visible_to(owner)))
+        .order_by(DatasetORM.created_at.desc())
+    )
     rows = result.scalars().all()
     # Runtime uploads live on ephemeral storage on the free hosted demo. If an
     # instance restart removes a file, do not keep offering its stale DB record
@@ -44,8 +54,19 @@ async def list_datasets(
     return available[offset : offset + limit], len(available)
 
 
-async def get_dataset(session: AsyncSession, dataset_id: str) -> dict[str, Any] | None:
-    result = await session.execute(select(DatasetORM).where(DatasetORM.id == dataset_id))
+async def get_dataset(
+    session: AsyncSession, dataset_id: str, *, owner: str
+) -> dict[str, Any] | None:
+    """The row, if it exists, is available, and is the requester's own or published. Otherwise nothing.
+
+    Returning None for someone else's row is a deliberate 404 rather than a 403: the difference tells a
+    caller whether the id exists at all, which is the same leak in smaller print.
+    """
+    result = await session.execute(
+        select(DatasetORM).where(
+            DatasetORM.id == dataset_id, DatasetORM.owner.in_(visible_to(owner))
+        )
+    )
     row = result.scalars().first()
     if row is None or not _dataset_available(row):
         return None
@@ -59,6 +80,8 @@ async def save_dataset(
     size_bytes: int,
     content_type: str | None = None,
     head: bytes | None = None,
+    *,
+    owner: str,
 ) -> dict[str, Any]:
     fmt = validate_file(filename, size_bytes, content_type=content_type, head=head)
     sha = sha256_file(tmp_path)
@@ -90,6 +113,7 @@ async def save_dataset(
         cols=profile.columns,
         profile_json=profile.model_dump_json(),
         meta_json=json.dumps({}),
+        owner=owner,
     )
     session.add(orm)
     await session.commit()

@@ -36,5 +36,6 @@ class ExperimentORM(Base):
             "params": json.loads(self.params_json) if self.params_json else {},
             "metrics": json.loads(self.metrics_json) if self.metrics_json else {},
             "artifact_path": self.artifact_path,
+            "owner": self.owner,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

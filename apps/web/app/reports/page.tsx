@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -18,7 +19,7 @@ const REPORTS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
 
 async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/analysis/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { runs: [], failure };
     const d = (await res.json()) as { analyses: RunItem[] };
@@ -30,7 +31,7 @@ async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | nul
 
 async function fetchDatasetNames(): Promise<{ names: Map<string, string>; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/datasets/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { names: new Map(), failure };
     const d = (await res.json()) as { datasets: { id: string; filename: string }[] };

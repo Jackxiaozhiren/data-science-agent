@@ -12163,3 +12163,74 @@ instrument head `728ef57` -- and coverage 83.24% over the 79% floor. `tests/inte
 collects 3 items in CI (the two tests that had been failing, plus the same-tick guard), so the guard did not
 merely exist in the tree: it ran, and it passed. Four sections of inference from one absence are closed by a
 mechanism that is now both measured in isolation and pinned in the suite.
+
+## 205. R-08 shipped on both halves, and the empty-first-screen trap was the reason the second half exists
+
+Part 1 landed the column and the migration. Part 2 is the part a visitor can feel, and writing it produced the
+one decision in this lane that no test suggested: **scoping every row to its owner empties the demo's first
+screen**, because the sample datasets and example runs are rows too. A new visitor holding a fresh id would have
+read `{"datasets": []}` -- B4's original symptom, reintroduced by the fix for B7. That is a product regression
+dressed as a security improvement, and it is exactly the kind of thing that stays invisible to a suite where
+every fixture uses the same owner.
+
+**How it was decided.** The sample content is not a visitor's data, so it does not belong to a visitor's owner.
+It gets its own reserved owner, `shared`: readable from every request (`visible_to(owner)` returns the
+requester plus `shared`) and never grantable to one, so `X-DSA-Owner: shared` normalises to `local`. A visitor
+can read the published sample and cannot publish their own file to everyone. Rows the migration backfilled to
+`local` are relabelled on the next boot, marker by marker, together with the example run each marker names.
+Without the relabel the boot would re-execute the agent for every sample -- supported, but slow and a different
+example than the one a returning reader already saw.
+
+**Transports, and why three of them.** A header for everything the app fetches itself, because the web origin and
+the API origin differ and a cookie between them would be third-party -- blocked outright in Safari. A first-party
+cookie on the web origin for the server-rendered pages, because half of this app fetches during render, in a
+process that cannot see `localStorage`, and a custom header cannot be attached to the browser's own navigation.
+A query parameter for exactly the three report links that open in a new tab, because a navigation can carry
+neither header nor cookie to a different origin. That last one is the weakest link and is written down as such:
+the id appears in that tab's history. `RunInspector` already downloads the bundle through `fetch` + blob, so the
+one route that could avoid a URL id did, and the census in `test_web_owner_identity.py` refuses a fourth place.
+
+**Measured, then falsified.** Every guard here was run against the code with the fix removed, not just alongside
+it:
+
+| Mutation | Test that went red | What it proves |
+|---|---|---|
+| `get_analysis_run` drops its owner filter | the run-route matrix | the 404s are the scoping, not a stub |
+| dedupe matches any owner's in-flight row | the two-visitor duplicate guard, showing B handed A's run id | the courtesy is per-browser |
+| `normalise` grants `shared` | the forged-owner test, with a stranger's upload becoming public | the reservation carries weight |
+| dataset list drops its filter | the visitor list/404 pair | the census routes are the ones that read |
+| seeder stops relabelling | the old-row boot, `[] == ['sales.csv','titanic.csv']` | the empty first screen is real, and named |
+| run relabel only | the published-run owner assertion | the example link survives without re-running the agent |
+| a page fetches `apiUrl(...)` directly | the client census | a new unscoped page cannot land quietly |
+
+Each restoration was md5-verified against the pre-mutation copy, so no control left a changed file behind.
+
+**Numbers for the record.** `pytest apps/api/tests tests/contract tests/integration` clean; the owner suite is
+13 guards, the client suite 8. `npm run build` succeeds and the route table now lists `ƒ Proxy (Middleware)`,
+which is the cookie being minted before render. 29 fetch call sites across 15 web files were rewritten to the
+two wrappers; three files keep a raw call and each one states why in `RAW_CALL_EXCEPTIONS`, and the census
+asserts the exemptions are still needed rather than merely permitted.
+
+**Not done, and not hidden.** The public demo is still the pre-R-08 build. `RENDER_API_KEY` and `VERCEL_TOKEN`
+are both length 0 in this workspace, so the redeploy that would put this on the live URL cannot be run from
+here; the CHANGELOG says so in the same breath as the feature. Until it happens, `https://data-science-agent-api
+.onrender.com` continues to list one visitor's upload to the next, and the fix is in the repository only.
+
+**Addendum -- the new uploads collided with a rate limiter that has no per-suite state, and the fix is a reset.**
+
+The full sweep went red in four tests of `tests/security/test_security_phase8.py`, every one of them a `429`
+where the test asserts `400` or `201`. Not a scoping failure: the limiter's counters live at module level and are
+keyed by client IP, so every suite that imports `dsa_api.main` shares them, and the upload rule is 30 per minute.
+Counting the corpus's own upload calls gives 18 sites in 8 files, several of them loops -- the suite sits close to
+the ceiling, and this lane's ~10 more POSTs crossed it.
+
+Measured both ways rather than argued. The same five files, same order: with the reset, 57 passed; with the reset
+body reduced to `yield`, `test_human_review_approve` fails on `429` and the captured log reads
+`rate limit exceeded`. So the reset is load-bearing, the collision is reproducible at a fraction of the suite's
+cost, and the mutation was restored from a byte copy (md5 verified).
+
+`apps/api/tests/test_security.py` already does exactly this; `test_security_phase8.py` did not, which is the
+latent half: a suite whose assertions depend on how many uploads *other* files happened to send in the last
+sixty seconds. Nothing was loosened -- the tests still demand the rejection, and an honestly-limited request is
+not the same measurement as a starved one. If a future lane adds more upload tests, the ceiling is a shared
+resource and the reset belongs to whoever asserts about it.

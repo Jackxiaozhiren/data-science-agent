@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -21,7 +22,7 @@ type RunSummary = {
 
 async function fetchRun(id: string): Promise<{ record: RunSummary | null; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/analysis/${id}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/analysis/${id}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { record: null, failure };
     return { record: (await res.json()) as RunSummary, failure: null };

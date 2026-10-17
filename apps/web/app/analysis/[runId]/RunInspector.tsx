@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { clientFetch, apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -75,7 +75,7 @@ function useLiveProgress(runId: string, initialStatus: string) {
     let stop = false;
     const tick = async () => {
       try {
-        const r = await fetch(apiUrl(`/api/v1/analysis/${runId}/progress`), { cache: "no-store" });
+        const r = await clientFetch(`/api/v1/analysis/${runId}/progress`, { cache: "no-store" });
         if (!r.ok || stop) return;
         const p = (await r.json()) as Progress;
         setProg(p);
@@ -162,7 +162,7 @@ function ApprovalCard({ runId }: { runId: string }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(apiUrl(`/api/v1/analysis/${runId}/approve`), {
+      const res = await clientFetch(`/api/v1/analysis/${runId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note }),
@@ -282,7 +282,7 @@ function FollowUpBox({ run }: { run: RunDetail }) {
     }
     setBusy(true);
     try {
-      const res = await fetch(apiUrl("/api/v1/analysis/"), {
+      const res = await clientFetch("/api/v1/analysis/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset_id: run.dataset_id, user_query: q }),
@@ -420,7 +420,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
   async function downloadBundle() {
     setBundle("sending");
     try {
-      const res = await fetch(apiUrl(`/api/v1/analysis/${run.id}/bundle`), { cache: "no-store" });
+      const res = await clientFetch(`/api/v1/analysis/${run.id}/bundle`, { cache: "no-store" });
       const failure = classifyResponse(res);
       if (failure) {
         setBundle(failure);

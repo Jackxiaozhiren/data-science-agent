@@ -37,6 +37,7 @@ class DatasetORM(Base):
             "format": self.format,
             "path": self.path,
             "sha256": self.sha256,
+            "owner": self.owner,
             "size_bytes": self.size_bytes,
             "rows": self.rows,
             "cols": self.cols,

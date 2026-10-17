@@ -15,6 +15,13 @@ Conventions:
 - Opt-in auth: set `DSA_AUTH_TOKEN` to require
   `Authorization: Bearer <token>` on all `/api/*` routes
   (`/health`, `/ready`, `/version` stay public). Empty = public demo mode.
+- **Visitor scoping (R-08):** every stored row carries an `owner`, and a read returns that owner's rows plus the
+  published sample. Send `X-DSA-Owner: <id>` on the dataset, analysis, experiment, report and bundle routes -- or
+  `?owner=<id>` on a link the browser opens itself, where no header is possible. A request with no id acts as the
+  `local` owner. Someone else's id answers `404` with the same detail an id that never existed would get, so the
+  API does not confirm that a run or upload is real. `shared` names the demo's own published content and is
+  reserved: a client cannot be given it. Threat model, in the operator's words, is in
+  [hosted-demo.md](hosted-demo.md).
 - Responses carry `X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`, and a minimal `Content-Security-Policy`.
 
