@@ -2,6 +2,52 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) — a model credential you set inside the product, on your own machine (R-05)
+
+- Until now the only way to see the real product was to export variables before the server started: a developer
+  act. **`/settings`** replaces it for a private instance -- choose a provider, name a model and endpoint, paste
+  the key, save. No shell, no restart, and the suggested first option is **Ollama**, because that is the free
+  and local answer and the requirement says to make cost and privacy explicit rather than assuming you arrive
+  with a hosted key.
+- **The credential is write-only.** `GET /api/v1/provider` reports the provider, the model, the endpoint and
+  *whether* a key is present -- never the value, and not a fragment of it. That forces the save to be a merge
+  rather than a replace: a form that cannot read the key back must not delete it when you change the model. An
+  explicit empty value removes it, which is the only way to express that from a page that never sees it.
+- It lives in `provider.json` **inside the `--data-dir` you already chose**, written `0600`, never in the
+  database -- a row in `dsa.db` would ride along in every copy and support bundle of that file, and the rule is
+  that the secret appears in no serialized artifact. The page reports the file if it stops being private.
+- Saving does not contact the provider. A "verify" button would spend your credit or send your data out without
+  being asked, so the response says it was checked for shape only, and the first run is the test.
+- **The hosted demo refuses, in the interface as well as the API.** `PUT /api/v1/provider` answers 403 whenever
+  `DSA_PROVIDER_CONFIG` is unset, which is how the process knows it is a shared box, and `/settings` renders
+  that reason instead of a form that would fail. Partial support -- accept the key, keep it in memory, lose it
+  on the next idle restart -- is what the requirement refuses to build.
+- **`source` joins the effective mode** (`stored` / `environment` / `default`), and the run row now records the
+  mode that produced it (`state.reasoning`) rather than whatever `/version` reports later. Two knobs can set the
+  mode now, and a reader is not left inferring which one answered.
+- **A defect this found on the way:** `plan_analysis` re-read `DSA_LLM_MODE` itself instead of going through
+  `configured_llm_mode()`, so the planner could answer heuristically while `/version` reported `real`. That is
+  the two-readings defect R-02 was raised to remove, and it is now measured: `test_a_real_mode_run_plans_from_
+  the_stored_credential_and_differs_from_the_stub` saves a configuration through the route, runs against a
+  scripted local endpoint, asserts the endpoint received the stored credential, and asserts the resulting plan
+  differs from the heuristic plan on the same question. (The endpoint is scripted, not a paid model -- the
+  project stays on free tiers, and the mechanism proved is the routing of the plan, not the model's quality.)
+- **Two defects that only a browser could catch, both found by driving the real page.** `allow_methods` shipped
+  as `GET, POST, OPTIONS`, so a `PUT` from the UI was refused at the preflight while curl answered 200 -- every
+  pytest in this repo uses an ASGI transport and performs no preflight. It is now derived-and-checked
+  (`test_every_method_the_routes_declare_is_a_method_the_browser_may_use`), against the methods the routes
+  declare rather than a transcription. And the settings page's Ollama placeholder (`http://localhost:11434/v1`)
+  was read by the bundle-origin probe as the *configured* API origin, which made both `dsa ui`'s preflight and
+  the browser tour refuse a correct build; the probe now matches an origin, not any loopback URL.
+- Pinned by `tests/contract/test_provider_settings.py`: 16 guards, each falsified by removing the fix it
+  describes -- echoing the key back, replacing instead of merging, accepting a write in hosted mode, env-first
+  precedence, an unrecorded mode, a credential-bearing field in the page, and a method the browser may not use.
+  Verified live as well: on a running `dsa ui`, saving flipped the page from
+  `heuristic · stub · decided by environment` to `real · openai-compat · decided by stored`, the typed
+  credential disappeared from the DOM (`outerHTML` checked, not just the rendered text), the field emptied
+  itself, a reload reported "one is already stored" without showing it, and the file landed `0600` in the
+  chosen data directory.
+
 ### Fixed (post-4.5.0) — `dsa ui` printed a URL whose origin its own API refused
 
 - `dsa ui` hands the user `http://127.0.0.1:3000`, while `DSA_CORS_ORIGINS` ships as `http://localhost:3000`,

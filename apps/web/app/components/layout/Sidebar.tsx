@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, Database, FlaskConical, GitCompare, History, FileText, Gauge, ScrollText, ServerCog, Bug } from "lucide-react";
+import { Boxes, Database, FlaskConical, GitCompare, History, FileText, Gauge, ScrollText, ServerCog, SlidersHorizontal, Bug } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // R-10: the analyst's loop first, the author's ledgers behind a label that says what they are.
@@ -41,6 +41,12 @@ export const NAV_GROUPS = [
       { href: "/datasets/compare", label: "Compare datasets", icon: GitCompare },
       { href: "/mcp", label: "MCP", icon: ServerCog },
     ],
+  },
+  {
+    label: "On this machine",
+    key: "local",
+    hint: "Settings that belong to the instance you are talking to, not to the analysis.",
+    items: [{ href: "/settings", label: "Model settings", icon: SlidersHorizontal }],
   },
 ] as const;
 

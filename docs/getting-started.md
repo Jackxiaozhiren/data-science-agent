@@ -139,6 +139,28 @@ dsa ui --port 3100 --api-port 8100 --web-dir apps/web --no-browser   # non-defau
 Choosing `--port`/`--api-port` is fine when you also rebuild; `--host` to something other than loopback needs
 `--allow-public` as well, and `DSA_AUTH_TOKEN` should be set before you do that.
 
+### Choose what produces the plan
+
+`dsa ui` starts in `heuristic` mode: the deterministic planner answers, nothing leaves the machine, and no
+provider is contacted. To run a model instead, open **Model settings** in the sidebar (or
+`http://127.0.0.1:3000/settings`) and save the provider there -- no shell variables, no restart.
+
+- The suggested first option is **Ollama**: free, local, and it keeps your data on the machine. Start it with
+  `ollama serve`, pull a model (`ollama pull qwen3:8b`), then set the mode to `real` and the endpoint to
+  `http://localhost:11434/v1`.
+- Any OpenAI-compatible endpoint works the same way (endpoint, model name, credential). A hosted endpoint means
+  your question and your data go to it; the mode selector on that page says which of the two you are choosing.
+- The credential is stored in `provider.json` **inside the `--data-dir` you chose, with mode 0600**, and is
+  never sent back to the browser: the page cannot display it, so leaving the field blank means "keep the stored
+  one" and the checkbox next to it means "remove it". Deleting the data directory deletes the key.
+- Saving does not contact the provider. A test call would spend your credit or send your data out without being
+  asked, so the page says the configuration was checked for shape only, and the first run is the real test.
+- The mode that produced a finished run is recorded on the run (`reasoning`, with `source: stored` when the
+  settings answered), so a plan from a model and a plan from the deterministic planner can be told apart after
+  the fact rather than by memory.
+- The hosted demo refuses this feature and says why on the same page: an instance with nowhere to keep a secret
+  between visits should not accept one.
+
 ## Run the API server
 
 ```bash

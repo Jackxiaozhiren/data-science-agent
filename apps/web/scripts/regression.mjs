@@ -63,6 +63,7 @@ const ROUTES = [
   "/evaluations",
   "/failures",
   "/mcp",
+  "/settings",
 ];
 
 // Every entry the navigation can send a visitor to must be walked here, so the list is checked against the
@@ -285,7 +286,10 @@ function assertBundleMatchesThisTree() {
   }
   const foreign = new Set();
   for (const chunk of chunks) {
-    for (const match of readFileSync(chunk, "utf8").matchAll(/https?:\/\/(?:localhost|127\.0\.0\.1):(\d{2,5})/g)) {
+    // An origin, not any URL: `API_BASE_URL` compiles to a bare `http://localhost:PORT`, while an endpoint
+    // written in interface text carries a path (`http://localhost:11434/v1` is the Ollama placeholder on the
+    // settings page). Without the lookahead the tour reads a placeholder as a configured origin and refuses.
+    for (const match of readFileSync(chunk, "utf8").matchAll(/https?:\/\/(?:localhost|127\.0\.0\.1):(\d{2,5})(?![\d./-])/g)) {
       if (Number(match[1]) !== API_PORT) foreign.add(match[0]);
     }
   }
@@ -450,7 +454,14 @@ try {
             const loading = document.querySelector(
               '[aria-label="Loading table"], [aria-label="Loading page"], [aria-busy="true"]'
             );
-            return text.length > 20 && !loading;
+            // A second, route-local sign that nothing has decided yet: this page's own first render says it is
+            // checking the backend, and that text is longer than 20 characters and carries no aria-busy
+            // attribute, so the predicate above let it through. Measured once under load: the header dot flipped
+            // to "unreachable" at 0.1s while the main region still read "Checking API…", and the notice this
+            // scenario asks for had not been rendered yet -- which is a passing-looking sample of a page that
+            // had not made up its mind.
+            const pending = text.includes("Checking API");
+            return text.length > 20 && !loading && !pending;
           },
           null,
           { timeout: 15000, polling: 100 }

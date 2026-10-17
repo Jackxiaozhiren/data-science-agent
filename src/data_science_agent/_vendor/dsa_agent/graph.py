@@ -21,6 +21,7 @@ from dsa_agent.state import (
     AnalysisStatus,
     Artifact,
     Insight,
+    ReasoningRecord,
     ToolCallRecord,
     ValidationResult,
 )
@@ -28,6 +29,7 @@ from dsa_agent.tool_evidence import build_tool_evidence
 from dsa_datasets.artifact_paths import artifact_root
 from dsa_datasets.loader import load_dataframe
 from dsa_datasets.validate import detect_format
+from dsa_llm.providers import resolve_llm_mode
 
 
 def _get_columns(dataset_path: str | None) -> list[str]:
@@ -172,6 +174,7 @@ async def run_analysis(
         tools_bootstrap()
 
     rid = run_id or f"run-{uuid.uuid4().hex[:10]}"
+    resolved_mode = resolve_llm_mode()
     state = AnalysisState(
         run_id=rid,
         dataset_id=dataset_id,
@@ -179,6 +182,12 @@ async def run_analysis(
         user_query=user_query,
         objective=user_query[:500],
         status=AnalysisStatus.UNDERSTANDING,
+        reasoning=ReasoningRecord(
+            mode=resolved_mode.mode,
+            provider=resolved_mode.provider,
+            model=resolved_mode.model,
+            source=resolved_mode.source,
+        ),
     )
 
     # UNDERSTANDING -> PLANNING

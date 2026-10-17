@@ -235,6 +235,21 @@ that one browser.
 - **The promise a deployment can make** is "visitors cannot see each other's uploads", not "your data is private
   on this server". `/datasets` says it in the browser, at the upload control, in those terms.
 
+### The demo takes no model key, and says so on the page
+
+`PUT /api/v1/provider` answers 403 on this deployment, and `/settings` renders the refusal rather than a form
+that would fail. The rule is mechanical: the API accepts a credential only when `DSA_PROVIDER_CONFIG` names a
+file to keep it in, and the hosted service never sets it. An instance with nowhere to store a secret between
+visits should not collect one -- accepting a key, holding it in memory, and losing it at the next idle restart
+is a worse experience than refusing, and a stranger's key sitting in a shared process is the same exposure R-08
+just closed for data.
+
+Consequences an operator should state rather than imply: the public demo runs on the deterministic planner
+(`heuristic`), so what a visitor sees is the product's reasoning *shape* without a model's; provider
+credentials belong to a private instance started with `dsa ui`, where the key is stored 0600 in that user's own
+data directory. `GET /version`'s `reasoning_mode.source` tells a reader which knob decided the mode on the
+instance they are talking to.
+
 ## Required configuration
 
 ### Web

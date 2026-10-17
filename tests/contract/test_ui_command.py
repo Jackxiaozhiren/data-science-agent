@@ -409,3 +409,31 @@ def test_the_origin_this_command_prints_is_an_origin_the_api_answers(tmp_path, m
     assert kept["DSA_CORS_ORIGINS"] == "https://example.test", (
         "an operator's explicit origin list was overwritten by a default"
     )
+
+
+def test_the_origin_probe_reads_an_origin_and_not_a_placeholder(tmp_path) -> None:
+    """The instrument that refuses a mismatched `--api-port` must not be fooled by interface text.
+
+    Found the hard way: the settings page's Ollama placeholder, `http://localhost:11434/v1`, compiled into a
+    chunk made both this probe and the browser tour read a *described* endpoint as the *configured* origin, so
+    the tour refused to run against a bundle that was in fact correct. A bare origin is the signal; a path means
+    somebody is talking about an endpoint rather than calling one.
+    """
+    from dsa_evaluation.ui import baked_api_port
+
+    chunks = tmp_path / ".next" / "static" / "chunks"
+    chunks.mkdir(parents=True)
+    (chunks / "app.js").write_text(
+        'const API="http://localhost:8000";'
+        'const hint="http://localhost:11434/v1";'
+        'const other="http://127.0.0.1:9/v1/chat/completions";',
+        encoding="utf-8",
+    )
+    assert baked_api_port(tmp_path) == 8000, (
+        "the probe took a URL with a path for the compiled API origin"
+    )
+
+    (chunks / "app.js").write_text('const hint="http://localhost:11434/v1";', encoding="utf-8")
+    assert baked_api_port(tmp_path) is None, (
+        "with only a placeholder in the bundle the probe still claimed to have found an origin"
+    )

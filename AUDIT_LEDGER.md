@@ -12274,3 +12274,95 @@ developer is doing, and a background server is a legitimate thing to be doing.
 visible in the log -- including `pytest -q --cov`, `sync_vendor.py --check`, `ruff format --check`, and the
 `web-regression` job that boots the built app and walks it in a browser, which is the suite that would have
 caught a broken `proxy.ts` or a page that fetched without an id.
+
+## 206. R-05 landed, and the settings page found a second reading of the mode that R-02 had missed
+
+The requirement is a sentence: bring your own key, never through the browser. What it forced into the open is
+that "the effective mode" was not one fact in one place. `plan_analysis` read `DSA_LLM_MODE` itself:
+
+```
+mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()   # planner.py:469, before this section
+```
+
+while `resolve_llm_mode()` owned the answer everywhere else. Under R-05 that is not merely untidy -- a stored
+`mode: real` would have made `/version`, the settings page, the run's telemetry and the web badge all say
+`real` while the planner quietly produced the heuristic plan. The first draft of the differential test failed
+exactly that way: no request reached the endpoint, `seen_auth` was empty, and the run reported
+`mode='real' source='stored'` in its own provenance. The state was a lie before the fix, and only a test that
+looks at the *transport* caught it.
+
+So the planner now calls `configured_llm_mode()`, and the guard is the transport itself: the scripted endpoint
+records the `Authorization` header it received, and the test asserts it is the credential stored through the
+route. A mode string could be fabricated by any of the readers; the header cannot.
+
+**Precedence, decided and written down.** The stored configuration outranks the environment for the names it
+carries, because `dsa ui` puts `DSA_LLM_MODE=heuristic` into its child's environment: an env-first rule would
+make a choice taken in the interface unreachable forever, and the launcher's guess would outrank the person's
+decision. `LlmMode.source` (`stored` / `environment` / `default`) is what makes that visible instead of implied.
+
+**Write-only credential, therefore merge semantics.** Because no response carries the key, a `PUT` that replaced
+the stored object would delete the credential every time a user changed the model name. Omitting `api_key`
+keeps it; sending an empty string removes it. Both directions are pinned, and the refusal path checks the
+*merged* result, so `mode: real` with no credential anywhere is a `400` at the settings page rather than a
+crash at the first run.
+
+**Falsification, eight mutations, every file restored by byte comparison:**
+
+| Removed / changed | Guard that went red |
+|---|---|
+| `public_view` returns the key | the round-trip guard |
+| `PUT` replaces instead of merges | the keep-vs-clear guard |
+| hosted accepts the write | the 403-before-any-file guard |
+| env outranks the stored mode | the differential and the mode-source guard |
+| the run records no mode | the provenance guard |
+| the credential field is plain text | the browser guard |
+| the tour stops visiting `/settings` | the linked-and-walked guard |
+| the refusal branch is dropped | the "says no and names `dsa ui`" guard |
+
+**What the differential actually showed.** Same CSV, same question, two runs. Heuristic:
+`profile_dataset, correlation_analysis, feature_importance, create_chart, export_artifact` with
+`reasoning.source = environment`. Stored-and-real against the scripted endpoint:
+`profile_dataset, correlation_analysis` -- the two steps the endpoint asked for, and the endpoint received
+`Bearer <the stored credential>`. The endpoint is scripted, not a model: the project stays on free tiers, so
+the mechanism proved here is the routing of a plan through a configured provider, not the quality of a model's
+plan. A reader who wants the second half should run it once against Ollama on their own machine, which costs
+nothing and is the documented path in `docs/getting-started.md`.
+
+**Open in this lane.** The hosted demo still runs `heuristic` and refuses keys, and it is still the pre-R-08
+build for the reason §205 records -- no `RENDER_API_KEY`/`VERCEL_TOKEN` in this workspace. The redeploy and the
+`docs/hosted-demo.md` census after it are the maintainer's to run.
+
+**Addendum -- what driving the real page caught that 15 pytest guards did not.**
+
+The API test client in this repository is `httpx` over `ASGITransport`. It performs no CORS preflight, never
+runs a browser, and does not import the vendored copy of the API. Three of R-05's four user-visible pieces
+survived that; two defects did not:
+
+1. **`allow_methods` shipped as `GET, POST, OPTIONS`.** `PUT /api/v1/provider` answered 200 to curl and was
+   blocked in the browser: the preflight refused the method, so `clientFetch` threw and the page fell into its
+   transport-error branch while the field still held the typed key. Fixed by adding `PUT`/`DELETE`, and fixed
+   *properly* by a guard that reads the methods off `app.routes` and compares them with the middleware's list,
+   because "someone will add a method to a route and not to CORS" is exactly the shape of this bug. The guard
+   was then falsified by restoring the old list: red, as it must be.
+2. **The bundle-origin probe read a placeholder as a configuration.** `baked_api_port` and the tour's own
+   preflight scan compiled chunks for `http://localhost:<port>`. The settings page contains the Ollama
+   placeholder `http://localhost:11434/v1` as *text*, so both tools reported an API origin of 11434 and refused
+   to run against a bundle that was in fact correct. Both now require the port to end the URL, which is what
+   distinguishes an origin from an endpoint, and `test_the_origin_probe_reads_an_origin_and_not_a_placeholder`
+   feeds the probe a fixture containing both and asserts it returns 8000 -- then a placeholder-only fixture and
+   asserts it returns None rather than guessing.
+3. **The live instance runs `src/data_science_agent/_vendor/dsa_api`, not `apps/api/src/dsa_api`.** My CORS
+   fix was in the source, `dsa ui`'s child imports through the wheel's vendor path hook, and the browser kept
+   failing identically until the vendor copy was synced. Every "verified live" claim in this session after that
+   point was made against a synced tree, and the ordering is worth writing down for the next lane: change the
+   source, `sync_vendor --package`, *then* boot. A gate that byte-compares the two copies exists; what did not
+   exist was any reason to think the running product might be the other copy.
+
+Final live reading, on a fresh `dsa ui --data-dir build/r05-ui`: the page went from
+`mode heuristic · provider stub · decided by environment` to `mode real · provider openai-compat ·
+model scripted-model · decided by stored` on one click, with no restart. `outerHTML` searched for the typed
+credential: **absent**, before and after a reload; the password field was empty after the save; the reloaded
+page said "(one is already stored)" while still not showing it; `provider.json` landed `-rw-------`, 148 bytes,
+holding exactly the five keys it should. `/version` published the mode, provider, model and `source`, and no
+credential. `tests/contract/test_provider_settings.py` is 16 guards; the browser tour is 32/32; the perf
+suite is untouched by this run because the servers were stopped and the ports verified free first.

@@ -19,6 +19,7 @@ from dsa_api.routers.datasets import router as datasets_router
 from dsa_api.routers.events import router as events_router
 from dsa_api.routers.experiments import router as experiments_router
 from dsa_api.routers.health import router as health_router
+from dsa_api.routers.provider import router as provider_router
 
 try:
     from dsa_mcp.server import app as mcp_app
@@ -67,7 +68,7 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_origin_regex=settings.cors_origin_regex or None,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 app.add_middleware(RateLimitMiddleware)
@@ -80,6 +81,7 @@ app.include_router(events_router)
 app.include_router(analysis_router)
 app.include_router(bundles_router)
 app.include_router(experiments_router)
+app.include_router(provider_router)
 app.include_router(artifacts_router)
 if mcp_app is not None:
     app.mount("/mcp", mcp_app)

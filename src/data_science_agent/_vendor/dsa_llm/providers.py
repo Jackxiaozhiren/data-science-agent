@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from dsa_llm import LLMProvider
+from dsa_llm import LLMProvider, provider_store
 
 # `get_call_log`/`reset_call_log` are re-exported, not used here: `dsa_llm.providers` is the path
 # dsa_evaluation's benchmark harness and two tests import from. `import X as X` says "deliberate" to
@@ -33,8 +33,47 @@ _STUB_MODES = {"stub", "offline", "heuristic"}
 
 
 def configured_llm_mode() -> str:
-    """The one reading of ``DSA_LLM_MODE``: consumers classify this token, none re-reads the variable."""
+    """The one reading of the effective mode: what the interface stored, else ``DSA_LLM_MODE``, else stub.
+
+    Stored-first is a deliberate inversion of the usual precedence, and `dsa_llm.provider_store` carries the
+    reason: `dsa ui` puts `DSA_LLM_MODE=heuristic` into its child's environment, so an env-first rule would
+    make a mode chosen in the product impossible to reach. `resolve_llm_mode().source` says which answered.
+    """
+    stored = provider_store.value(provider_store.read()[0], "mode")
+    if stored:
+        return stored.strip().lower()
     return os.getenv("DSA_LLM_MODE", "stub").strip().lower()
+
+
+def llm_mode_source() -> str:
+    """Which of the two knobs produced the mode, so a reader is not left guessing."""
+    if provider_store.value(provider_store.read()[0], "mode"):
+        return "stored"
+    return "environment" if os.getenv("DSA_LLM_MODE", "").strip() else "default"
+
+
+def configured_llm_provider() -> str:
+    """The provider the effective configuration names: stored, else ``DSA_LLM_PROVIDER``, else openai."""
+    stored = provider_store.value(provider_store.read()[0], "provider")
+    if stored:
+        return stored.strip().lower()
+    return os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower()
+
+
+def _stored_settings(provider: str) -> dict[str, Any]:
+    """The stored configuration, but only when it is *this* provider's.
+
+    One file holds one provider's settings; handing its credential to another provider would send a key to
+    the wrong endpoint, which is worse than a missing one.
+    """
+    settings, _unreadable = provider_store.read()
+    if str(settings.get("provider") or "").strip().lower() != provider:
+        return {}
+    return settings
+
+
+def _stored_value(provider: str, field: str) -> str | None:
+    return provider_store.value(_stored_settings(provider), field)
 
 
 def _unsupported_mode_note(mode: str) -> str:
@@ -113,7 +152,9 @@ class OpenAIResponsesProvider(LLMProvider):
         base_url: str | None = None,
         timeout_s: float = 90.0,
     ) -> None:
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        # Argument, then what the interface stored, then the environment -- the same precedence
+        # `configured_llm_mode` uses, so `source` means one thing for every field it names.
+        self.api_key = api_key or _stored_value("openai", "api_key") or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise RuntimeError(
                 "OPENAI_API_KEY is required when DSA_LLM_MODE=real. "
@@ -121,6 +162,7 @@ class OpenAIResponsesProvider(LLMProvider):
             )
         self.model = (
             model
+            or _stored_value("openai", "model")
             or os.getenv("DSA_OPENAI_MODEL")
             or os.getenv("OPENAI_MODEL")
             or DEFAULT_OPENAI_MODEL
@@ -389,6 +431,7 @@ class EnvLLMProvider(LLMProvider):
     def __init__(self, fallback: LLMProvider | None = None) -> None:
         self.fallback = fallback or StubLLMProvider()
         self.mode = configured_llm_mode()
+        self.mode_source = llm_mode_source()
         self.active_provider = "stub"
         self.active_model: str | None = None
         self.inner: LLMProvider = self.fallback
@@ -398,7 +441,7 @@ class EnvLLMProvider(LLMProvider):
         if self.mode not in _REAL_MODES:
             raise RuntimeError(_unsupported_mode_note(self.mode))
 
-        provider_name = os.getenv("DSA_LLM_PROVIDER", "openai").strip().lower()
+        provider_name = configured_llm_provider()
         real_provider: Any
         if provider_name == "openai":
             real_provider = OpenAIResponsesProvider()
@@ -407,8 +450,12 @@ class EnvLLMProvider(LLMProvider):
             # (`ollama serve` + `ollama pull $DSA_OLLAMA_MODEL`); without them
             # calls fail loudly with connection errors, never silently stubbed.
             real_provider = OpenAIChatProvider(
-                model=os.getenv("DSA_OLLAMA_MODEL") or "qwen3:8b",
-                base_url=os.getenv("DSA_OLLAMA_BASE_URL") or "http://localhost:11434/v1",
+                model=_stored_value("ollama", "model")
+                or os.getenv("DSA_OLLAMA_MODEL")
+                or "qwen3:8b",
+                base_url=_stored_value("ollama", "base_url")
+                or os.getenv("DSA_OLLAMA_BASE_URL")
+                or "http://localhost:11434/v1",
                 local=True,
                 think=os.getenv("DSA_OLLAMA_THINK", "1").strip().lower()
                 not in {"0", "false", "no", "off"},
@@ -418,19 +465,26 @@ class EnvLLMProvider(LLMProvider):
             real_provider.provider_name = "ollama"
         elif provider_name == "openai-compat":
             # Free-tier hosted lane (e.g. Gemini/Groq OpenAI-compatible endpoints).
-            base_url = os.getenv("DSA_OPENAI_COMPAT_BASE_URL", "").strip()
+            base_url = (
+                _stored_value("openai-compat", "base_url")
+                or os.getenv("DSA_OPENAI_COMPAT_BASE_URL", "").strip()
+            )
             if not base_url:
                 raise RuntimeError(
                     "DSA_OPENAI_COMPAT_BASE_URL is required for DSA_LLM_PROVIDER=openai-compat."
                 )
-            api_key = os.getenv("DSA_OPENAI_COMPAT_API_KEY")
+            api_key = _stored_value("openai-compat", "api_key") or os.getenv(
+                "DSA_OPENAI_COMPAT_API_KEY"
+            )
             if not api_key and "localhost" not in base_url and "127.0.0.1" not in base_url:
                 raise RuntimeError(
                     "DSA_OPENAI_COMPAT_API_KEY is required for non-localhost endpoints."
                 )
             real_provider = OpenAIChatProvider(
                 api_key=api_key,
-                model=os.getenv("DSA_OPENAI_COMPAT_MODEL") or "default",
+                model=_stored_value("openai-compat", "model")
+                or os.getenv("DSA_OPENAI_COMPAT_MODEL")
+                or "default",
                 base_url=base_url,
             )
             real_provider.provider_name = "openai-compat"
@@ -457,6 +511,7 @@ class EnvLLMProvider(LLMProvider):
         details = inner_metadata() if callable(inner_metadata) else {}
         return {
             "mode": self.mode,
+            "mode_source": self.mode_source,
             "provider": self.active_provider,
             "model": self.active_model,
             **details,
@@ -469,13 +524,20 @@ def auto_provider() -> LLMProvider:
 
 @dataclass(frozen=True)
 class LlmMode:
-    """What would actually produce the next plan, as the provider resolves it."""
+    """What would actually produce the next plan, as the provider resolves it.
+
+    `source` names the knob that decided the mode -- ``stored`` for a configuration saved through the
+    interface, ``environment`` for ``DSA_LLM_MODE``, ``default`` for neither. R-02's rule is that an interface
+    must show the effective mode rather than a hoped-for one, and once two places can set it, a reader needs
+    to know which one answered.
+    """
 
     mode: str
     stub: bool
     provider: str
     model: str | None
     error: str | None = None
+    source: str = "environment"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -484,6 +546,7 @@ class LlmMode:
             "provider": self.provider,
             "model": self.model,
             "error": self.error,
+            "source": self.source,
         }
 
 
@@ -496,8 +559,9 @@ def resolve_llm_mode() -> LlmMode:
     model would answer when every call would raise.
     """
     mode = configured_llm_mode()
+    source = llm_mode_source()
     if mode in _STUB_MODES:
-        return LlmMode(mode=mode, stub=True, provider="stub", model=None)
+        return LlmMode(mode=mode, stub=True, provider="stub", model=None, source=source)
     if mode not in _REAL_MODES:
         return LlmMode(
             mode=mode,
@@ -505,6 +569,7 @@ def resolve_llm_mode() -> LlmMode:
             provider="unsupported",
             model=None,
             error=_unsupported_mode_note(mode),
+            source=source,
         )
     provider: EnvLLMProvider | None = None
     # The construction refusal is the state being reported here, so it is suppressed rather than
@@ -524,7 +589,12 @@ def resolve_llm_mode() -> LlmMode:
                 "credential or endpoint is missing -- so a run started here would raise, not answer. "
                 "DSA never silently substitutes a stub."
             ),
+            source=source,
         )
     return LlmMode(
-        mode=mode, stub=False, provider=provider.active_provider, model=provider.active_model
+        mode=mode,
+        stub=False,
+        provider=provider.active_provider,
+        model=provider.active_model,
+        source=source,
     )

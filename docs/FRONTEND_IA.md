@@ -121,11 +121,13 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
 
 Deliberately not built, each with the reason, so the next reader finds a decision rather than an omission.
 
-- **Auth, accounts, projects, settings.** There are no accounts. R-08 gave every row an owner -- a random id in a
-  first-party cookie, sent as `X-DSA-Owner`, which keeps one visitor's uploads and runs away from the next
-  visitor's, and `docs/hosted-demo.md` states what it does not do. It is still not an identity: no login, no
-  recovery, nothing to sign a token against, so a settings surface has no subject to store preferences under.
-  Ownership is the precondition for that surface, and this is the half of it that ships.
+- **Accounts, projects, and a per-visitor settings surface.** There are no accounts. R-08 gave every row an
+  owner -- a random id in a first-party cookie, sent as `X-DSA-Owner`, which keeps one visitor's uploads and
+  runs away from the next visitor's, and `docs/hosted-demo.md` states what it does not do. It is still not an
+  identity: no login, no recovery, nothing to sign a token against, so preferences have no subject to live
+  under. R-05 shipped the one setting that is not per-visitor: `/settings` configures the instance's own model
+  provider, and only when the instance is a private one. What stays deferred is a settings page belonging to a
+  person rather than to a machine.
 - **Deleting a dataset.** There is no `DELETE` route and no delete control; `tests/integration/test_demo_seeding.py`
   pins both surfaces refusing one until seeded rows get an explicit read-only rule.
 - **Queue or worker execution.** Runs execute in the API process. A broker would be a new dependency and a new

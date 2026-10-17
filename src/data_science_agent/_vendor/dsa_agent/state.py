@@ -98,6 +98,22 @@ class Budget(BaseModel):
     max_tokens: int = 50000
 
 
+class ReasoningRecord(BaseModel):
+    """What produced this run, captured when it began.
+
+    R-02 made the effective mode a fact the process reports rather than a label the operator sets, and R-05
+    added a second place a mode can come from. Neither is auditable from a later reading: a row computed by
+    the deterministic planner and a row computed by a model look identical otherwise, and `/version` answers
+    with whatever the process resolves *now*. `source` says which knob answered -- the settings stored through
+    the interface, the environment, or neither.
+    """
+
+    mode: str
+    provider: str
+    model: str | None = None
+    source: str = "environment"
+
+
 class AnalysisState(BaseModel):
     run_id: str
     project_id: str = "default"
@@ -120,6 +136,7 @@ class AnalysisState(BaseModel):
     retry_count: int = 0
     tool_call_count: int = 0
     budget: Budget = Field(default_factory=Budget)
+    reasoning: ReasoningRecord | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

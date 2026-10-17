@@ -35,6 +35,18 @@ def _group_items(source: str, key: str) -> list[str]:
     return re.findall(r'href: "([^"]+)"', source[items_at:end])
 
 
+def _all_group_items(source: str) -> list[str]:
+    """Every href in every declared group.
+
+    The orphan check used to enumerate the two groups that existed when it was written, which made it correct
+    only while the sidebar stayed at two. A third group -- R-05's local settings -- was then an orphan it
+    reported even though the route was linked, so the check reads the declaration instead of a transcription.
+    """
+    keys = re.findall(r'key: "([^"]+)"', source)
+    assert keys, "NAV_GROUPS no longer declares keyed groups, so this guard is blind"
+    return [href for key in keys for href in _group_items(source, key)]
+
+
 def _route_dirs() -> set[str]:
     """Routes that exist as page files, in URL form: ``app/benchmarks/page.tsx`` -> ``/benchmarks``."""
     routes: set[str] = set()
@@ -92,7 +104,7 @@ def test_no_route_is_left_unlinked() -> None:
     The five routes that had no nav entry at all before this change are named here rather than counted, so a
     route added later has to be placed in a group instead of quietly joining the orphan list.
     """
-    linked = set(_group_items(_source(), "analyst")) | set(_group_items(_source(), "system"))
+    linked = set(_all_group_items(_source()))
     for href in (
         "/benchmarks",
         "/evaluations",

@@ -37,7 +37,10 @@ from typing import Any
 DEFAULT_API_PORT = 8000
 DEFAULT_UI_PORT = 3000
 _LOOPBACK = {"127.0.0.1", "localhost", "::1"}
-_BAKED_ORIGIN = re.compile(r"http://(?:localhost|127\.0\.0\.1):(\d{1,5})")
+#: An origin, not any loopback URL: the compiled `API_BASE_URL` is a bare `scheme://host:port`, while interface
+#: text can name an endpoint with a path (the settings page's Ollama placeholder). Requiring the port to end the
+#: match is what keeps a UI string from being read as a configured origin.
+_BAKED_ORIGIN = re.compile(r"http://(?:localhost|127\.0\.0\.1):(\d{1,5})(?![\d./-])")
 _WEB_SOURCES = ("app", "lib")
 _WEB_SUFFIXES = {".tsx", ".ts", ".css"}
 
@@ -237,6 +240,10 @@ def environment_for(
             "DSA_DATABASE_URL": f"sqlite+aiosqlite:///{data_dir / 'dsa.db'}",
             "DSA_DATASET_DIR": str(data_dir / "datasets"),
             "DSA_ARTIFACT_ROOT": str(data_dir / "artifacts"),
+            # R-05: the settings page needs somewhere to keep a credential, and this is the one directory the
+            # user chose and can delete. An instance that never sets this variable has nowhere to put a secret,
+            # which is how the API recognises the hosted demo and refuses to accept a key there.
+            "DSA_PROVIDER_CONFIG": str(data_dir / "provider.json"),
             "API_PORT": str(api_port),
             "NEXT_PUBLIC_API_URL": env.get("NEXT_PUBLIC_API_URL", f"http://localhost:{api_port}"),
         }
