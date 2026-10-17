@@ -12154,3 +12154,12 @@ nothing to measure against.
 for the first time, which is the first green prediction this thread has made rather than a red one. If a stall
 returns and the report reads `raised (...)` or `cancelled (-)`, that is a different defect from §204 and the
 line will already say which. The shipped default database is unaffected either way.
+
+**Addendum -- the CI sample landed, and it is the first green this thread has predicted.** Run 38996500292 on
+`cb57fb2`: CI `success`, Secret Scan `success`, CodeQL `success`, both jobs green (`ci`, `web-regression`). The
+step log derives **1059 tests** from the progress glyphs with zero `FAILED` and zero
+`never reached a terminal status` -- against 1053 derived with 4 `FAILED` and 9 stall-waits on the previous
+instrument head `728ef57` -- and coverage 83.24% over the 79% floor. `tests/integration/test_phase6_api.py`
+collects 3 items in CI (the two tests that had been failing, plus the same-tick guard), so the guard did not
+merely exist in the tree: it ran, and it passed. Four sections of inference from one absence are closed by a
+mechanism that is now both measured in isolation and pinned in the suite.
