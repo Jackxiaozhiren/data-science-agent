@@ -12112,3 +12112,45 @@ is what eliminated a hypothesis, and §203 only exists because they disagreed wi
 inside the failing tests, which is what C does. And the fix's scope is the test harness -- the product's own
 durability question (a process dying mid-run, `sweep_abandoned_runs`) is unaffected and still documented as it
 was.
+
+## 204. A+C shipped: the guard fails on the in-memory URL and passes on a file one, which is the whole claim in two lines
+
+**Approved and executed in that order -- C first, while still red.** `test_a_terminal_write_survives_a_client_poll_on_the_same_tick`
+in `tests/integration/test_phase6_api.py` starts `run_lifecycle._write(..., status="COMPLETED")` and a concurrent
+`read_run(...)` on the same tick and requires the row to read `COMPLETED`. With `_database_url` still returning
+`sqlite+aiosqlite:///:memory:`, it failed with the exact CI reading:
+
+    AssertionError: the concurrent reader rolled the terminal write back: the row still reads VALIDATION
+      (updated_at 2026-10-17T02:42:11.884561) -- see audit §203
+
+which is the in-situ confirmation §203 said was missing: the mechanism is not an isolated curiosity, it is what
+the failing tests were doing. Pointing the same helper at a per-test file database turned it green with no other
+change, so the guard is the proof and the fix is not a claim.
+
+**A, as measured.** The URL is owned by one function, `_database_url`, used by both the `ac` fixture and the
+guard, so it cannot drift into two owners -- the same single-owner rule that made
+`tests/test_process_global_isolation.py` read `conftest.py`'s registry out of the AST instead of restating it.
+`tests/integration/test_agent_analysis.py` got the same treatment inline (`tmp_path`, a file URL, a comment
+naming §203), because that test also runs a background task and polls it in one body. Both files now contain
+zero `:memory:` occurrences; the remaining 17 sites elsewhere in the suite were left alone deliberately -- the
+defect needs a background writer *and* a concurrent reader, and those two files were the only ones with both,
+which is also exactly the set that had been failing.
+
+**Verified.** `tests/integration/test_phase6_api.py` + `tests/integration/test_agent_analysis.py` +
+`tests/contract/test_stall_evidence.py` + `tests/unit/test_run_lifecycle_cancellation.py`: 24 passed, rc 0.
+Full suite with CI's own invocation (`pytest -q --cov --cov-report=term-missing`): **1061 tests** derived from the
+progress glyphs, `PYTEST_EXIT=0`, zero `FAILED` lines, coverage 82.35% against a 79% floor. ruff check and
+format --check on both changed files: rc 0. `audit_facts.py --check`: rc 0 -- note this now passes on the working
+tree, where the §203 round had seen `debt.suppressionDirectives: actual=43` from another lane's in-flight file;
+that directive is gone, so the reading was theirs and temporary, not a claim about this change.
+
+**Kept on purpose.** The four lifecycle instruments from §197--§203 stay in `conftest.py`. Each one retired a
+hypothesis -- loop identity killed §194's orphan, the writer-side read killed §201's split-brain, the graph
+return killed §202's missing exit -- and the report line `how the lifecycle task ended: …` is what tells a future
+reader that a stall is *not* this one. Removing them because the cause is known would leave the next silence with
+nothing to measure against.
+
+**Open, not silently dropped.** A CI sample on this head is the last step: it should show the three tests pass
+for the first time, which is the first green prediction this thread has made rather than a red one. If a stall
+returns and the report reads `raised (...)` or `cancelled (-)`, that is a different defect from §204 and the
+line will already say which. The shipped default database is unaffected either way.

@@ -81,10 +81,13 @@ async def test_critic_evidence_coverage() -> None:
 
 
 @pytest.mark.asyncio
-async def test_api_analysis_flow(await_terminal_run: Callable[..., Any]) -> None:
+async def test_api_analysis_flow(await_terminal_run: Callable[..., Any], tmp_path: Any) -> None:
     from dsa_api.core import database
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    # A file, not ``:memory:``: the in-memory URL resolves to StaticPool, which gives every session in this
+    # test one shared DBAPI connection -- so a poll's closing rollback discards the run task's flushed write
+    # and its commit then commits nothing, silently. Audit §203; §202's CI sample was reading exactly this.
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'flow.db'}", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)

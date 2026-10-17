@@ -25,11 +25,23 @@ def _sse_data_frames(body: str) -> list[dict[str, object]]:
     return frames
 
 
+def _database_url(tmp_path: Any) -> str:
+    """The database this file's tests run against, owned by one function.
+
+    An in-memory sqlite URL resolves to StaticPool, which gives every session in a test the same DBAPI
+    connection -- so a client request that opens and closes a session rolls back whatever the run's task had
+    flushed but not yet committed, and that task's own commit then commits nothing, without an error and
+    without a log (audit §203). Both roles have to be able to see the same *committed* rows, which is what a
+    file database gives them: one connection per session, real transaction isolation.
+    """
+    return f"sqlite+aiosqlite:///{tmp_path / 'phase6.db'}"
+
+
 @pytest.fixture
-async def ac():
+async def ac(tmp_path: Any):
     from dsa_api.core import database
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    engine = create_async_engine(_database_url(tmp_path), echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -132,3 +144,52 @@ async def test_progress_and_evidence_trace(
     assert r7.status_code == 404
     r8 = await ac.get("/api/v1/analysis/not-exist/events")
     assert r8.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_terminal_write_survives_a_client_poll_on_the_same_tick(tmp_path: Any) -> None:
+    """A concurrent reader must not be able to erase the lifecycle's terminal write (audit §203).
+
+    Driven through the two functions the run task and the request path actually use, started on the same tick,
+    because that is the shape that loses the write when both roles share one DBAPI connection. Nothing here
+    depends on the router: the defect was never in the request handling, it is in what the database hands the
+    second session.
+    """
+    import asyncio
+
+    from dsa_api.core import database
+    from dsa_api.models.analysis import AnalysisRunORM
+    from dsa_api.services import run_lifecycle
+
+    engine = create_async_engine(_database_url(tmp_path), echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = maker
+    try:
+        async with maker() as session:
+            session.add(
+                AnalysisRunORM(
+                    id="run-same-tick",
+                    dataset_id="ds",
+                    dataset_path="/tmp/does-not-matter.csv",
+                    user_query="q",
+                    status="VALIDATION",
+                )
+            )
+            await session.commit()
+
+        await asyncio.gather(
+            run_lifecycle._write("run-same-tick", status="COMPLETED"),
+            run_lifecycle.read_run("run-same-tick"),
+        )
+        row = await run_lifecycle.read_run("run-same-tick")
+        assert row is not None
+        assert row["status"] == "COMPLETED", (
+            f"the concurrent reader rolled the terminal write back: the row still reads "
+            f"{row['status']} (updated_at {row['updated_at']}) -- see audit §203"
+        )
+    finally:
+        database.AsyncSessionLocal = previous
+        await engine.dispose()

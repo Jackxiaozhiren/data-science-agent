@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fixed (post-4.5.0) -- a client's poll could erase the run's own final write
+
+- `sqlite+aiosqlite:///:memory:` resolves to StaticPool, which hands every session in a test the *same* DBAPI
+  connection. A request that opened and closed a session therefore rolled back whatever the run's task had
+  flushed but not yet committed, and that task's own `commit()` then committed nothing -- no error, no log, and
+  a row that stayed `VALIDATION` while its report content was already written. The two integration fixtures that
+  run a background task and poll it in the same test now use a per-test temporary **file** database, where each
+  session holds its own connection: `tests/integration/test_phase6_api.py` (one `_database_url` owner, shared by
+  the fixture and the guard) and `tests/integration/test_agent_analysis.py`.
+- The invariant is pinned rather than described: `test_a_terminal_write_survives_a_client_poll_on_the_same_tick`
+  races `run_lifecycle._write(status="COMPLETED")` against a concurrent `read_run` started on the same tick and
+  requires the row to read `COMPLETED`. Held at the in-memory URL it fails with exactly the CI reading --
+  `the concurrent reader rolled the terminal write back: the row still reads VALIDATION` -- and passes against
+  the file URL, so the guard can fail and names the shape it protects.
+- Nothing in `apps/` or `packages/` chose that URL, so the product was never exposed: its default is a file
+  database, which resolves to `AsyncAdaptedQueuePool` (measured), one connection per session, so a reader
+  cannot reach another session's transaction. Counted across the suite, the in-memory URL appears at 19 sites in
+  15 test files; two of them paired it with concurrent polling, and those are the two that had been failing.
+
 ### Added (post-4.5.0) — `dsa ui`: the whole product locally, one command, loopback by default (R-04)
 
 - `dsa ui` starts the API and the dashboard together, prints the one URL to open, and stops both on a single
