@@ -12445,3 +12445,29 @@ visitor can see and say: R-08 had to keep the first screen full while scoping it
 secret while never showing one. Each of the four defects found along the way was invisible to exactly one kind
 of check -- an unscoped route to a suite that used one owner, a preflight to an ASGI transport, a placeholder
 to an origin probe, and a second reading of the mode to a page that only displayed it.
+
+## 205. Correcting my own census: the third candidate was prose, and no remaining test pairs `:memory:` with a polling loop
+
+**Why this section exists.** After §204 shipped, the natural next question was whether other fixtures still
+carry the §203 hazard. The first sweep used `grep`, and it returned a third file:
+`tests/integration/test_analysis_run_lifecycle.py` appeared to build a `sqlite+aiosqlite:///:memory:` engine *and*
+poll a live run (`_wait_for`, `client.get` + `asyncio.sleep(0.02)`, 200 attempts). It does neither. The single
+match is line 68, inside the docstring of a fixture that chose a file database precisely to avoid this class of
+artifact -- its own words are that with `:memory:` "a background session would be reading a different (empty)
+file from the one the request wrote -- a test artifact that would look exactly like a lost write." That is
+independent corroboration of §203 from a file written before it, and it is also the second time in this thread
+that a structural claim was made from a line scan: §198's rule is to parse, so this one was re-derived with `ast`
+(counting string constants in the tree, not substring hits in the text).
+
+**The corrected numbers.** Code-level `:memory:` construction now lives in **12 files** (AST), against the
+grep-level 19 sites / 15 files quoted in §203 and §204 -- the difference is docstrings and the two files §204
+already moved to a file database. Of those 12, the ones containing any scheduling or waiting at all are
+`tests/contract/test_product_events.py`, `tests/unit/test_run_lifecycle_cancellation.py` and
+`tests/contract/test_stall_evidence.py`, and each has **zero `while` loops**, so none of them reads a row on a
+timer while a background task writes it. `test_product_events.py` stubs `schedule_run` outright (`:268`, `:316`,
+`:380`), which removes the writer rather than leaving it racing. §204's denominator -- two files paired the URL
+with concurrent polling, and those were the two that failed -- therefore holds, and it was reached by a filter
+(`await_terminal_run`) that happened to be right for the wrong reason; the AST sweep is the one that proves it.
+
+**What changed.** Nothing in the code: this section records a measurement and retracts a grep reading. No fix
+was needed at the third candidate, and inventing one would have been the cheaper mistake to keep.
