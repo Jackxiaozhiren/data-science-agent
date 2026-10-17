@@ -12051,3 +12051,64 @@ once, and points at the graph's own bookkeeping. `raised CancelledError` with `e
 contradict the lifecycle reading and put the harness back on trial. `not recorded (no wrapped run_analysis
 carried this id)` means the graph was never called for the polled run at all -- and then the question becomes
 what `execute` awaited.
+
+## 203. Root cause: the harness's `:memory:` engine gives every session one connection, and a client's request rollback erases the lifecycle's committed write
+
+**The sample that closed it.** CI 38930713534 on `728ef57` -- three stalls, each reading:
+
+    graph call for run-…: returned status=COMPLETED state.run_id=run-…; on_update awaited 6x, last three
+      ['ANALYSIS@run-…', 'ANALYSIS@run-…', 'VALIDATION@run-…']
+    writer-side row for run-… (same session factory the lifecycle writes through): status=VALIDATION …
+    how the lifecycle task ended: returned (-); task object: garbage-collected
+
+So the terminal write was issued, for the right row, with a terminal status, and `execute` returned believing
+it had landed. §200's "no exit can do this" was right about the control flow and wrong about where the loss
+lives: it is not an exit at all, it is a commit that succeeds over an empty transaction.
+
+**Mechanism, measured with the shipped functions.** `sqlite+aiosqlite:///:memory:` resolves to **StaticPool**
+(`type(engine.pool).__name__`, measured; a file URL on the same driver resolves to `AsyncAdaptedQueuePool`).
+StaticPool hands every session in that test the *same* DBAPI connection, so the request path and the lifecycle
+share one transaction: the client's `async with session` exit rolls back, and that rollback discards the
+lifecycle's already-flushed UPDATE. Its `commit()` then commits nothing -- no error, so no `except`, no log, no
+terminal row. Driven through `run_lifecycle._write` and `run_lifecycle.read_run` themselves:
+
+| concurrent client reads | result |
+|---|---|
+| 0 (control) | 0/40 writes lost |
+| 1, started on the same tick | **40/40 lost** |
+| 3, same tick | **40/40 lost** |
+| 3, staggered by 1ms | 0/40 lost |
+
+The last row is why this reads as "red only in CI, green locally": the loss needs the poll and the write to
+start in the same loop iteration, and the runner's load is what produces that. It also matches the frozen row's
+`updated_at`, which is the last *committed* intermediate state rather than the terminal one.
+
+**Blast radius, counted.** `aiosqlite:///:memory:` appears at 19 sites across 15 test files, but pairing it
+with concurrent polling narrows it to the two failing files: `tests/integration/test_agent_analysis.py:88-101`
+and `tests/integration/test_phase6_api.py:28-49` -- which is also exactly the set of tests that fail. Nothing in
+`apps/` or `packages/` chooses that URL: the shipped default is the file database, where each session gets its
+own connection and this rollback cannot reach another session's transaction.
+
+**What this retires.** §194's orphan-on-a-closed-loop, §201's writer/reader split-brain or stale snapshot, and
+§202's "the enumeration of `execute` is missing an exit" -- all three were inferences from the same absence,
+and all three are now replaced by a mechanism measured in-process. The instruments added for them stay: each one
+is what eliminated a hypothesis, and §203 only exists because they disagreed with each other.
+
+**Decision proposal, not implemented (register: no implementation without consent).**
+- **A. Give the two stalling fixtures a temporary *file* database instead of `:memory:`** -- first files
+  `tests/integration/test_agent_analysis.py:88-101`, `tests/integration/test_phase6_api.py:28-49`; 2 sites, no
+  shipped code, no CI list, no coverage source. Each session then holds its own connection with real
+  transaction isolation, so the race cannot be expressed. Cost: a `tmp_path` argument and file cleanup,
+  milliseconds per test. **Recommended.**
+- B. Keep `:memory:` and split the engines per role -- rejected: two separate empty databases, which breaks
+  the fixtures' own premise.
+- C. Add the pin first, then A: one contract test that runs `await_terminal_run` against a fixture while
+  asserting the terminal write lands. It is red by design today (40/40 in the isolated form), and green after
+  A -- so A ships with evidence rather than with a claim. Cost: one new test file.
+- D. Leave it: CI keeps failing three tests, and every future reader re-derives a lifecycle defect from the
+  same silence.
+
+**Limits.** The mechanism is proven in isolation with the shipped functions; it has not been observed *in situ*
+inside the failing tests, which is what C does. And the fix's scope is the test harness -- the product's own
+durability question (a process dying mid-run, `sweep_abandoned_runs`) is unaffected and still documented as it
+was.
