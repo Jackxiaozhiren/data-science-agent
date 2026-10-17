@@ -12366,3 +12366,82 @@ page said "(one is already stored)" while still not showing it; `provider.json` 
 holding exactly the five keys it should. `/version` published the mode, provider, model and `source`, and no
 credential. `tests/contract/test_provider_settings.py` is 16 guards; the browser tour is 32/32; the perf
 suite is untouched by this run because the servers were stopped and the ports verified free first.
+
+## 207. Session close (Lane E): R-08 and R-05 shipped and CI-witnessed; the two things left need a human
+
+```
+LANE: E   DATE: 2026-10-17   HEAD AT START: f041dec   HEAD AT END: 8535e14
+
+PREMISES RE-VERIFIED
+  B7/B8 one visitor reads another's rows -> two browser contexts + `X-DSA-Owner` probes on a live `dsa ui`
+      -> stranger 404 / no-header 404 / owner 200 (`"owner"` echoed back as the browser's own id)
+  B4's cure must survive scoping (R-01)  -> fresh cookie id on `/datasets` and `/` -> the two published
+      samples render; `ensure_example_runs` links stay readable (`test_demo_seeding`, plus the live page)
+  B17 config needs a shell              -> `/settings` flipped a running instance from
+      `heuristic · stub · environment` to `real · openai-compat · stored` with no restart
+  the shipped wheel runs the vendored copy -> `curl` preflight still refused PUT after `main.py` was edited,
+      and answered correctly after `sync_vendor --package dsa_api`; `dsa ui`'s child imports `_vendor`
+  pre-existing, not mine                 -> `sync_vendor --check` reports only
+      `dsa_evaluation/external_validation.py`, another session's uncommitted source
+
+DELIVERED
+  R-08: owner column + migration (f041dec, prior turn) and owner-scoped routes, a browser identity, and the
+        reserved `shared` owner that keeps the first screen full -- red captured at the run-route matrix
+        (`test_every_route_onto_a_run_answers_the_same_404_to_a_stranger`), green at the same node
+  R-05: a local-only provider settings surface, write-only credential, hosted refusal, mode provenance --
+        red at `test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub` before the
+        planner's second reading of the mode was removed, green after
+  defect: `dsa ui` printed an origin its own API refused -- red observed live in 12 console errors and an empty
+        list, green observed as `access-control-allow-origin: http://127.0.0.1:3000` plus a listed sample
+  defect: `allow_methods` omitted PUT/DELETE, and the bundle-origin probe read a placeholder as a config
+
+NOT DELIVERED
+  R-13: no accessibility devDependency was added -- §19.1 puts adding a dependency behind the user. Next
+        command once approved: `npm --prefix apps/web i -D axe-core && uv run --frozen python -m pytest
+        tests/contract/test_web_accessibility.py`
+  redeploy of both demos: impossible from this workspace, see blockers. Next command after tokens are
+        exported: the `docs/hosted-demo.md` "Verify a deploy from the outside" census.
+
+FULL LANE RESULT
+  `uv run python -m pytest -q --cov --cov-report=term-missing` -> 1096 tests as derived from the progress
+        glyphs (0 x, 0 F, 0 s), coverage 83.71% against the 79% floor, on this Mac with `NO_PROXY='*'`
+  `node apps/web/scripts/regression.mjs` -> `regression: 32/32 checks passed (26 route/viewport + 3
+        interaction + 3 backend-probe)` on two consecutive runs
+  ruff check / ruff format --check / mypy / audit_facts / check_public_claims / mkdocs --strict /
+        sync_vendor (for `dsa_api`, `dsa_llm`, `dsa_agent`, `dsa_evaluation/ui.py`) -> rc 0 each
+  CI: run 39013165018 on b1ceeb1, 39014148947 on 33bd669, 39018233030 on 8535e14 -- all `success`, both jobs
+        (`ci`, `web-regression`)
+
+FALSIFICATION PROOF
+  thirteen guards were made red by deleting the fix and restored by byte comparison, all recorded in §205 and
+  §206: the unscoped read, the cross-owner dedupe, a grantable `shared`, the unscoped list, the seeder's two
+  relabels, an unscoped page, a credential echoed/replaced/displayed, a hosted write accepted, env-first
+  precedence, an unrecorded mode, a refused tour route, and a method CORS would block.
+
+FILES OTHER SESSIONS OWN (untouched)
+  README.md, packages/evaluation/src/dsa_evaluation/external_validation.py,
+  tests/evals/test_external_validation.py -> uncommitted when this session started, and the vendor drift is
+  theirs; `sync_vendor --all` was never run for exactly that reason
+  WEB_PRODUCT_MASTER_PROMPT.md and the four untracked 项目经验 documents -> left untracked; publishing them is
+  the maintainer's call, not a lane's
+
+SHARED-STATE ACTIONS UNDER §19.1
+  push    -> b1ceeb1, 33bd669, 8535e14 to main (each CI-green afterwards)
+  PR      -> none
+  deploy  -> none. `RENDER_API_KEY` and `VERCEL_TOKEN` are both length 0 here, so neither service could be
+             redeployed and no post-deploy acceptance re-probe was possible. The hosted demo therefore still
+             runs the pre-R-08 build and leaks one visitor's upload to the next, while the repository does not.
+             Every claim in the CHANGELOG about what is live says so in the same breath.
+
+BLOCKERS NEEDING A HUMAN
+  redeploy both demos -> export a non-empty `RENDER_API_KEY` and `VERCEL_TOKEN` into the shell (never into
+      chat: history and screenshots keep plaintext), then the §12 census in `docs/hosted-demo.md`
+  R-13 accessibility  -> approval to add one devDependency
+  Studies 1-3          -> the kits are frozen and waiting for participants; recruiting is a person's task
+```
+
+**Lane E's shape, in one line.** Two requirements that look like backend work and were really about what a
+visitor can see and say: R-08 had to keep the first screen full while scoping it, and R-05 had to accept a
+secret while never showing one. Each of the four defects found along the way was invisible to exactly one kind
+of check -- an unscoped route to a suite that used one owner, a preflight to an ASGI transport, a placeholder
+to an origin probe, and a second reading of the mode to a page that only displayed it.
