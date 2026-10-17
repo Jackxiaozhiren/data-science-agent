@@ -378,3 +378,34 @@ def test_dsa_ui_json_refuses_instead_of_exiting_zero_silently(tmp_path: Path) ->
     payload = json.loads(proc.stdout)
     assert payload["ok"] is False, f"the JSON claimed success: {payload}"
     assert any("build" in check["fix"] for check in payload["checks"] if not check["ok"]), payload
+
+
+def test_the_origin_this_command_prints_is_an_origin_the_api_answers(tmp_path, monkeypatch) -> None:
+    """`localhost` and `127.0.0.1` are different CORS origins, and this command hands the user the address form.
+
+    Measured live against a running instance: `http://127.0.0.1:3000` loaded the page and then had every
+    request refused, because the API's shipped default allows only `http://localhost:3000`. A preflight failure
+    is invisible in the page and obvious in the console, which is the worst combination for a first run.
+    """
+    from pathlib import Path
+
+    from dsa_evaluation import ui
+
+    for key in ("DSA_CORS_ORIGINS", "DSA_LLM_MODE", "DSA_DEMO_SEEDING", "NEXT_PUBLIC_API_URL"):
+        monkeypatch.delenv(key, raising=False)
+
+    env = ui.environment_for(Path("apps/web"), tmp_path, 8000, 3000)
+    origins = env["DSA_CORS_ORIGINS"].split(",")
+    assert "http://localhost:3000" in origins, f"the shipped default origin is missing: {origins}"
+    assert "http://127.0.0.1:3000" in origins, (
+        f"the URL this command prints is not an allowed origin, so following it breaks every request: {origins}"
+    )
+
+    named = ui.environment_for(Path("apps/web"), tmp_path, 8000, 3001, host="192.168.1.20")
+    assert "http://192.168.1.20:3001" in named["DSA_CORS_ORIGINS"], named["DSA_CORS_ORIGINS"]
+
+    monkeypatch.setenv("DSA_CORS_ORIGINS", "https://example.test")
+    kept = ui.environment_for(Path("apps/web"), tmp_path, 8000, 3000)
+    assert kept["DSA_CORS_ORIGINS"] == "https://example.test", (
+        "an operator's explicit origin list was overwritten by a default"
+    )

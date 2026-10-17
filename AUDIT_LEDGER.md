@@ -12234,3 +12234,43 @@ latent half: a suite whose assertions depend on how many uploads *other* files h
 sixty seconds. Nothing was loosened -- the tests still demand the rejection, and an honestly-limited request is
 not the same measurement as a starved one. If a future lane adds more upload tests, the ceiling is a shared
 resource and the reset belongs to whoever asserts about it.
+
+**Addendum 2 -- verified in a real browser, and the verification found a separate defect in `dsa ui`.**
+
+The HTTP-level guards prove what the routes do; they cannot prove that a browser actually carries an id. So the
+product was booted with the command that ships it (`dsa ui --data-dir build/r08-ui`) and driven through
+Playwright, with a CSV uploaded through the drag-and-drop control:
+
+| Reading on the live instance | Value |
+|---|---|
+| cookie the proxy set | `dsa_owner=f0bcdd34-373f-41b1-b58f-3a3444ae81fc` |
+| a second origin (`localhost` vs `127.0.0.1`) | a different id, `99bb379e-...` |
+| list seen by the uploading browser | `sales.csv`, `titanic.csv`, `visitor-a-only.csv` |
+| that private row fetched with a stranger id | `404` |
+| the same row fetched with no header (`local`) | `404` |
+| the same row fetched by its owner | `200`, `"owner": "f0bcdd34-..."` |
+| the published sample fetched by a stranger | `200` |
+| list seen by a stranger | `sales.csv`, `titanic.csv` -- nothing private |
+
+The last two lines are the R-01 coupling measured rather than argued: a brand-new id sees the showcase and none
+of a previous visitor's uploads.
+
+**The defect this found.** The first attempt, on `http://127.0.0.1:3000/datasets`, rendered an empty dataset list
+with 12 console errors -- and `dsa ui` prints exactly that URL. `localhost` and `127.0.0.1` are distinct CORS
+origins, and `DSA_CORS_ORIGINS` ships as `http://localhost:3000`, so the origin the command hands the user was
+the one its own API refused. R-04's live measurement missed it because that run used the name form. Fixed in
+`environment_for`, which now allows both spellings plus any `--host` value and leaves an explicitly set
+`DSA_CORS_ORIGINS` alone; the header was re-read from the running server after the fix
+(`access-control-allow-origin: http://127.0.0.1:3000`), and the page then listed the samples.
+
+**One red that was my instrument, not the code.** The sweep after the fix reported
+`test_no_orphaned_process_on_analysis` failing on `abs(after - before) <= 2` with a delta of 3. It counted the
+processes on the machine -- including the uvicorn and `next start` this lane had started for the browser check
+and was still shutting down while the suite ran. With nothing else running, `tests/perf/test_w9_performance.py`
+passes 6/6. Recorded rather than smoothed over: a test that measures the whole box is sensitive to what the
+developer is doing, and a background server is a legitimate thing to be doing.
+
+**CI witness for `b1ceeb1`.** Run 39013165018, workflow `CI`, both jobs green, with the 17-gate step list
+visible in the log -- including `pytest -q --cov`, `sync_vendor.py --check`, `ruff format --check`, and the
+`web-regression` job that boots the built app and walks it in a browser, which is the suite that would have
+caught a broken `proxy.ts` or a page that fetched without an id.

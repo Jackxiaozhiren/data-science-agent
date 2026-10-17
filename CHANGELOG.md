@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Fixed (post-4.5.0) — `dsa ui` printed a URL whose origin its own API refused
+
+- `dsa ui` hands the user `http://127.0.0.1:3000`, while `DSA_CORS_ORIGINS` ships as `http://localhost:3000`,
+  and `localhost` and `127.0.0.1` are two different origins to CORS. Measured live: following the printed link
+  loaded the page and then refused every request -- 12 console errors and an empty dataset list, which reads as
+  "the product has nothing in it". `environment_for` now allows both spellings on the UI port, plus any host
+  named with `--host`, and leaves an explicit `DSA_CORS_ORIGINS` untouched.
+- Verified on the running instance: `GET /api/v1/datasets/` with `Origin: http://127.0.0.1:3000` answers
+  `access-control-allow-origin: http://127.0.0.1:3000`, and the same page then lists the sample datasets.
+  `test_the_origin_this_command_prints_is_an_origin_the_api_answers` pins all three cases, including the one
+  where an operator set the variable themselves.
+
 ### Added (post-4.5.0) — one visitor's upload is no longer the next visitor's data (R-08)
 
 - The hosted demo answers without credentials, so until now `GET /api/v1/datasets/` from any browser listed

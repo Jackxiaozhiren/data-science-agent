@@ -227,7 +227,9 @@ def preflight(
     return checks
 
 
-def environment_for(web_dir: Path, data_dir: Path, api_port: int, ui_port: int) -> dict[str, str]:
+def environment_for(
+    web_dir: Path, data_dir: Path, api_port: int, ui_port: int, host: str = "127.0.0.1"
+) -> dict[str, str]:
     """The two processes' shared configuration, built here so `serve` and the launcher cannot drift."""
     env = dict(os.environ)
     env.update(
@@ -239,6 +241,16 @@ def environment_for(web_dir: Path, data_dir: Path, api_port: int, ui_port: int) 
             "NEXT_PUBLIC_API_URL": env.get("NEXT_PUBLIC_API_URL", f"http://localhost:{api_port}"),
         }
     )
+    # `localhost` and `127.0.0.1` are different origins to CORS, and this command prints the address form while
+    # the API's shipped default allows only the name. Measured live: following the printed link loaded a page
+    # whose every request was refused, so an operator who configured nothing wrong got a broken first screen.
+    # Both spellings are therefore allowed by default, plus any host the operator named; an explicit value in
+    # the environment is left exactly as it is.
+    if not env.get("DSA_CORS_ORIGINS", "").strip():
+        names = ["localhost", "127.0.0.1"]
+        if host not in _LOOPBACK:
+            names.append(host)
+        env["DSA_CORS_ORIGINS"] = ",".join(f"http://{name}:{ui_port}" for name in names)
     # The demo's seeded example runs are the hosted showcase. A private instance is showing the user their
     # own data, and the sample files are not shipped in the wheel -- so seeding is asked for only when the
     # catalogue is actually present.
@@ -364,7 +376,7 @@ def serve(
     stop_requested = threading.Event()
     install_stop_handlers(stop_requested)
 
-    env = environment_for(web_dir, data_dir, api_port, ui_port)
+    env = environment_for(web_dir, data_dir, api_port, ui_port, host)
     api = spawn_group(api_argv(host, api_port), env=env)
     children = [api]
     try:
