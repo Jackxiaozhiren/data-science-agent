@@ -12743,3 +12743,45 @@ a green gate:
   published as of 03:34Z. `data-science-agent-web.vercel.app` could not be reached from this machine at all
   (three attempts, `http=000`), so no claim is made here about which build it serves -- the API alone is enough
   to keep the visitor-isolation defect live in production, and the redeploy stays the human action §207 named.
+
+## 212. R-14's other half: the client surface could render a run but not see one, and the fix cost a second commit
+
+The requirement says the MCP App must show *the same run result the web produces*, through one renderer. The
+renderer was already single (`dsa_agent.report_export.export_html`) -- so the requirement read as delivered.
+The state behind it was not: `dsa_mcp.app.report_view` looked the run up in `_STATE_STORE`, the dict this process
+fills when a client drives the analyze tool, so nothing else existed to it. Measured on a live `dsa ui`:
+`run-65becae7af` returned 200 with 32,755 bytes at `/api/v1/analysis/{id}/report?format=html&mode=audited` and
+404 `No stored analysis for this run_id` at `/mcp-app/report/{id}` -- one process, one database, one run, two
+answers. A "single renderer" claim can pass while the *reading* is second-owned; that is the half this section
+records.
+
+Fix shape, and why: the host hands the App a loader instead of the App importing the API
+(`dsa_api` imports `dsa_mcp`, never the reverse), and the loader reads the session factory as
+`database.AsyncSessionLocal` at call time -- a `from dsa_api.core.database import AsyncSessionLocal` would have
+bound the module's original factory at import, while every suite that boots the app rebinds that attribute to
+its own temp database afterwards. The read is scoped to the published rows, because the App surface has no
+visitor identity: without the scope it is a way around R-08 rather than a demo affordance.
+
+Three measurements from this that are worth keeping:
+
+- **A denial assertion is void until the resource is in the state where only denial explains it.** The parity
+  test also asserts the App answers 404 for another owner's run. Planted unscoped, the loader still produced a
+  green: the run had just been POSTed, so it had no renderable state, and the 404 came from emptiness rather
+  than from ownership. Forced to `COMPLETED` and shown exportable by its own owner first, the same plant turned
+  the assertion red on the right line (`assert 200 == 404`).
+- **A new test can spend a budget a later suite pays.** CI's next run failed on
+  `tests/integration/test_phase6_api.py::test_progress_and_evidence_trace` with `429 Rate limit exceeded`
+  where it asserts 201, and the previous revision's pytest gate had passed whole -- so the delta was this
+  lane's two extra writes. The counters are module-level and keyed by client IP (uploads: 30/minute), and the
+  gate reaches that file with the bucket nearly full. Fixed with the reset the security suites already use,
+  requested by name rather than `autouse`, because one test in this file is synchronous. No assertion was
+  loosened: each still demands the status it names.
+- **The wheel question keeps recurring, so it stays answered by artifact listing.** `uv build --wheel` at this
+  revision produced `jack_data_science_agent-4.6.0-py3-none-any.whl`; the §211 check on the translations file
+  still holds, and the release lane's `4.6.0` currency commits (announcement copy in nav, README link) are what
+  turned the local `check_public_claims` and docs-nav reds green again in this shared worktree.
+
+Local full suite at `542c554`: `1117 passed` in 91.5s, exit 0. CI at that revision -- run **39096802644** --
+came back `completed/success` on both jobs (`ci`, `web-regression`), which is the second half of the 429
+diagnosis: the line that had failed for want of a bucket went green once this lane stopped spending it, so the
+cause was measured before and after rather than asserted. Main is green again at `542c554`.
