@@ -12935,3 +12935,39 @@ measured after it was written.
   the suite; it does not say anything about §215's option, because nothing in CI changed to make it so -- with
   `uv sync --dev` still ahead of the check, the gate would have exited 0 whether or not `329d758` had fixed the
   lock. That is the asymmetry that makes the step inert, stated from the run that proves it.
+
+## 216. §215's option 1 shipped, and three of §215's own claims did not survive measuring it
+
+Approved as "挪顺序", shipped as `068e7ee`: `uv lock --check` now runs **above** `uv sync --dev` in `ci.yml`, and
+the two guides that contributors copy-paste swapped the same two lines, because the recipe they documented was
+the inert one. The step is pinned by a reader in `tests/test_ci_gate_integrity.py` that names the violation
+(`lock check is step N, after the sync at step M`) and is asserted both against the workflow and against a sample
+in the old order -- writing that control was not decoration: the first version of the helper returned "no
+violation" when either step was missing, so a workflow that simply dropped the gate would have kept the test
+green. Before pushing, the check at its new position was run against a clean `git archive HEAD` export with the
+runner's own uv version and exited 0, so this change makes the step *able* to fail rather than failing.
+
+Three corrections to §215, which was written earlier the same day from a narrower measurement:
+
+- **"The gap is one place, not two."** Wrong in a way that matters. `scripts/run_gates.sh` runs `uv sync --dev` in
+  its `SETUP` array (line 18) and `SETUP` precedes every gate, including `GATES[0] = uv lock --check` (line 24);
+  `CONTRIBUTING.md` and `docs/contributing.md` listed sync-then-check as the copy-paste recipe. So the drift was
+  invisible to CI, to the one-command local runner, **and** to a contributor following the guide -- three owners of
+  the same mute ordering, not one.
+- **"Option 3: the runner's gate 1 already catches this locally."** It did not. That claim is what I wrote before
+  reading where `SETUP` sat relative to `GATES`, and it was the reason option 3 looked like an acceptable resting
+  place. Measured against `af4a725`, the local runner would have reported the stale lock as clean.
+- **"Local and CI both ran uv 0.11.7."** Never verified, and false: `ci.yml:76` pins `pip install "uv==0.12.7"`.
+  Re-measured with both versions installed -- the stale export exits **1** under uv 0.11.7 *and* under 0.12.7. The
+  conclusion stands (the checker is not blind, the ordering was), but it now rests on the version CI actually uses
+  instead of on my machine's.
+
+What the reorder could not fix, and why it is a different change: in the runner the check is already the first
+gate, so "move it above the sync" is not expressible without touching the phase structure -- `SETUP` runs to
+completion before the gate loop starts. `test_command_surface.py::test_the_runner_covers_exactly_the_ci_gate_set`
+compares the runner's `GATES` against CI's classified gate set as **sets**, so deleting the line from `GATES` to
+put it earlier would report a missing gate. Two shapes, both small, awaiting the same call: a `PRECHECK` phase run
+before `SETUP` with the gate array left as the faithful copy of CI's set (and the ordering invariant asserted by
+that test's reader, which is where the set comparison already lives), or `uv sync --dev --frozen` in `SETUP`,
+which makes the environment step itself refuse a stale lock but changes what every later gate installs. §215's
+recommendation of option 1 for CI is unaffected; this is the second owner, not a retraction of it.
