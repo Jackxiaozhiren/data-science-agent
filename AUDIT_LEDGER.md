@@ -12714,3 +12714,32 @@ BLOCKERS NEEDING A HUMAN
       "accessibility scan" R-13's Accept line names.
   §188's lifecycle-family stall and the Studies 1-3 recruitment -> unchanged owners, unchanged asks.
 ```
+
+**Addendum, same session, after §211 was committed.** Two things worth recording because neither was covered by
+a green gate:
+
+- **The release carries the language layer, and that had to be measured on the artifact.** A concurrent lane cut
+  `v4.6.0` while this lane was closing, so `git merge-base --is-ancestor 12271ef v4.6.0` was run: R-13 is inside
+  the tag. Whether the tag carries the *translations file* is a separate question -- the seeder reads it with
+  `Path(__file__).with_name("starter_questions_zh.json")` and falls back to republishing the English text when
+  the file is absent, so a wheel that omitted it would have passed every test in the suite while quietly
+  delivering no Chinese questions. Measured instead: `uv build --wheel` produced
+  `jack_data_science_agent-4.6.0-py3-none-any.whl`, whose listing contains
+  `data_science_agent/_vendor/dsa_api/services/starter_questions_zh.json` (the precedent, `product_events.json`,
+  sits beside it), and importing the **extracted** copy -- with `module.__file__` asserted to be inside the
+  extracted tree, so the probe cannot be measuring the source -- reports 64 translations loaded,
+  `is_starter_question("哪个地区的总营收最高？") == True`, and the same sentence with a suffix appended
+  refused. A new non-`.py` asset is only shipped if someone lists the wheel.
+- **What the CI witness for this lane actually is.** `f4126b7` (this section) was pushed at 03:29:26Z and its
+  `CI` and `CodeQL` runs were reported `cancelled` two minutes later, when the release push (`79e343e`) arrived
+  on the same branch under `cancel-in-progress`. The authoritative green witness for R-13 is therefore run
+  **39092857711 on `12271ef`**: `ci` success and `web-regression` success, the latter printing
+  `regression: 47/47 checks passed (26 route/viewport + 3 interaction + 3 backend-probe + 15 accessibility)` on
+  the runner. A cancelled run is not a failure and not a pass; recording which run carries the verdict is the
+  difference.
+- **The public demo's staleness was re-measured, not inherited.** `https://data-science-agent-api.onrender.com/health`
+  answers `{"status":"ok", ... "version":"4.5.0"}` (first two attempts timed out at 30 s on this network, the
+  third answered in 1.8 s), and PyPI's own JSON still advertises `4.5.0` as latest, so the release had not
+  published as of 03:34Z. `data-science-agent-web.vercel.app` could not be reached from this machine at all
+  (three attempts, `http=000`), so no claim is made here about which build it serves -- the API alone is enough
+  to keep the visitor-isolation defect live in production, and the redeploy stays the human action §207 named.
