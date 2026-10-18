@@ -12971,3 +12971,49 @@ before `SETUP` with the gate array left as the faithful copy of CI's set (and th
 that test's reader, which is where the set comparison already lives), or `uv sync --dev --frozen` in `SETUP`,
 which makes the environment step itself refuse a stale lock but changes what every later gate installs. §215's
 recommendation of option 1 for CI is unaffected; this is the second owner, not a retraction of it.
+
+## 217. The runner got the same order, and this time the fix was measured before and after
+
+`4ae111b` gives `scripts/run_gates.sh` a `PRECHECK` phase that runs ahead of `SETUP`, moves
+`uv lock --check` out of `GATES` into it, and teaches `tests/test_command_surface.py`'s reader both arrays in run
+order. Out of `GATES` rather than duplicated, because
+`test_the_runner_covers_exactly_the_ci_gate_set` compares the runner against `ci.yml`'s classified gate set as
+**sets**: deleting the line would report a runner missing a gate, and leaving a copy in both arrays would put an
+entry in the report that can only agree with the one that graded anything.
+
+The pair was measured in one copy of `HEAD` with the lock forged back to `4.5.0`, same fixture both sides:
+
+| runner | what the run reported | the lock afterwards |
+| --- | --- | --- |
+| as shipped at `HEAD` (check inside `GATES`) | 18 gates run, check exited 0, drift never mentioned | rewritten to `4.6.0` by `SETUP` |
+| with `PRECHECK` | exits 1 at `=== pre-check: uv lock --check`, before any repair | still `4.5.0` |
+
+So §215's muting is now reproduced *and* closed in the contributor's own one command, not only in the workflow.
+The two reds in the first row's run were `pytest` and the claims gate, and both are artifacts of running inside an
+archive copy -- no `.git` for the release-line rules, no credential for the live-mode test -- not findings about
+the lock; naming them keeps the row from reading as three defects.
+
+One control here was void and got rewritten. The first version of the ordering test asserted facts about the forged
+fixture (`the edit landed`, `the line is now in GATES`) and never fed that fixture to the reader, which is the
+shape where a guard reports a defect nobody could have detected. It now runs the same helper over both texts:
+clean on the shipped script, and a named violation on the forged one.
+
+Local full suite on this tree: **1124 passed, 1 failed** (1125 progress glyphs). Disclosed rather than smoothed:
+the working tree still carries another lane's uncommitted `apps/web/*` edits, so that count is not a clean
+measurement of `4ae111b` alone. The witness for the commit is CI run `39121497629` -- `run: completed success`,
+`ci: completed success`, `web-regression: completed success` -- and its log still shows `Run uv lock --check` at
+line 233, ahead of the sync.
+
+`dsa verify-release v4.6.0` re-run at this revision, closing what §213 had left open: **16/17 PASS**, one FAIL,
+`pytest`, whose traceback ends in `packages/agent/src/dsa_agent/planner.py:482` in `_real_llm_plan` -- the live
+chat-completions endpoint, the same environment condition as
+`tests/contract/test_provider_settings.py::test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub`.
+The exit code came from the log file (`VERIFY_EXIT=1`), not from a pipeline whose `tail` would have reported 0 --
+the mistake §213 recorded while writing this same report.
+
+One looseness found and deliberately left: `CONTRIBUTING.md:39` says the runner "ends with
+`scripts/sync_vendor.py --check`", while `GATES` ends with `mkdocs build --strict` and the vendor check sits
+second. Measured, not inferred -- and it is a pre-existing inaccuracy that this change neither created nor
+corrected: the sentence reads as advice about when to mirror, not as a description of array order. It is named here
+instead of quietly reworded, because the next reader who takes it literally will otherwise trust a claim about the
+tail of a list that this section just reordered.
