@@ -12525,3 +12525,33 @@ falsification paragraph cited its example number literally, and the checker read
 citation. The prose now names the shape rather than the number. That is the rule working as designed, not an
 edge case to exempt -- a scanner cannot tell an illustrative number from a claim, and resolving that belongs to
 the writer, not to a second exemption list.
+
+## 210. The α re-freeze, measured for the release: the frozen 50-task baseline reproduces exactly, so there is nothing to re-freeze
+
+**What was run, and how to repeat it.** `uv run --frozen dsa --limit 50 --out build/alpha-460
+--catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets`,
+rc 0, artifacts kept in the repo's ignored `build/` (not `/tmp`, per §196's lesson about a reboot costing a day
+of compute): `results.json`, `summary.json`, `run_manifest.json`, `raw_runs.json`. The run manifest matches the
+frozen one field for field on catalog, datasets directory, `n_tasks=50` and `execution.llm_mode=stub`, so the
+two numbers describe the same configuration rather than two configurations that happen to share a name.
+
+**The comparison.** Every contract field is identical between `benchmarks/baseline/results.json` and today's
+run: `task_success_rate 1.0`, `statistical_accuracy 1.0`, `sql_accuracy 1.0`, `code_execution_success 1.0`,
+`evidence_coverage 1.0`, `unsupported_claim_rate 0.0`, and zero per-task failures in both (the per-task field is
+`results[i].metrics.task_success`; an earlier reading of mine keyed on a nonexistent top-level `task_success`
+and reported all 50 as failures -- the instrument was wrong, not the run). The one field that moved is
+`mean_latency_ms`, 142.9 → 79.9, which §86 already declared non-comparable and which no contract asserts.
+
+**Why that matters more than "no change".** §86's problem was never the number, it was the number's provenance:
+the stored `1.0` had been produced by the pre-`c1c7680` formula, which ignored the agent's own verdict, and the
+honest evaluator had measured 0.92. Since then the four named failures (`eda-01`, `stats-06`, `clf-03`,
+`viz-01`) stopped failing, and today the *current* evaluator reproduces 1.0/50 on the same catalog. So the
+baseline's headline claim is now backed by a run under the metric that does not lie, which is the thing α was
+supposed to buy -- and §86's coupling ("re-freezing requires a version bump") is moot for the metrics, because
+there is no metric delta to freeze. Nothing in `benchmarks/baseline/` was edited by this section.
+
+**What is still owed.** The release itself: `pyproject.toml` and `CITATION.cff` still declare 4.5.0,
+`README.md` still links the v4.5.0 release (a file this lane may not edit, and `check_public_claims.py` reads
+it as `newest-or-current`, so it is legal now and stale the moment a v4.6.0 tag exists), and `ROADMAP.md:22`
+still says "Release 4.4.0 is current". `mkdocs.yml` carries no version at all, which corrects the handoff's
+list of files a bump must touch. Held for the user's release decision rather than resolved here: tagging publishes to PyPI, and the README line that goes stale with it is not this lane's file to touch.
