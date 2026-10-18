@@ -23,6 +23,7 @@ uv run python scripts/sync_vendor.py --check
 uv run python scripts/check_npm_workspace_lock.py
 uv run python scripts/check_public_claims.py --require-released-tags
 uv run python scripts/find_orphan_reads.py --check
+uv run python scripts/check_ledger_identifiers.py --check
 uv run ruff check packages apps/api tests src apps/jupyter scripts
 uv run ruff format --check packages apps/api tests src apps/jupyter scripts
 uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports

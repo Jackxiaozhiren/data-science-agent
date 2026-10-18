@@ -89,6 +89,7 @@ jobs:
       # from in docs/audit/orphan-reads.json, and a declared key that gains a producer must be
       # pruned (audit §102).
       - run: uv run python scripts/find_orphan_reads.py --check
+      - run: uv run python scripts/check_ledger_identifiers.py --check  # a ledger section number is issued once (audit §208)
       # Node deps: tests/vscode runs `npm run compile` (tsc) and the web build
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps

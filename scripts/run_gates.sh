@@ -31,6 +31,7 @@ GATES=(
   "uv run pytest -q --cov --cov-report=term-missing"
   "uv run python scripts/check_public_claims.py --require-released-tags"
   "uv run python scripts/find_orphan_reads.py --check"
+  "uv run python scripts/check_ledger_identifiers.py --check"
   "uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets"
   "npm --prefix apps/web run build"
   "node apps/web/scripts/regression.mjs"

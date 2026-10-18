@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added (post-4.5.0) -- the ledger's section numbers are now a gate, not a habit
+
+- `scripts/check_ledger_identifiers.py` holds three things over the canonical `## N. ` run (in use since §62):
+  a number is issued once, the run has no undeclared gap, and a body citation above the floor resolves. The
+  two existing collisions (§178, §179) and the one historic dangling citation (§83) are exempted by number,
+  each with the section that decided it -- the exemption covers the recorded past, so a third §178 still fails.
+- Wired into `.github/workflows/ci.yml`, `scripts/run_gates.sh` and both contributor guides in one commit, as
+  `tests/test_ci_gate_integrity.py` and `tests/test_command_surface.py` require; the checker's own executable
+  bit was the first thing caught, and `debt.unwiredCheckers` returns to 0 only because the workflow names it.
+- Prose below the §62 floor is out of scope by declaration. Two scans of the same file disagreed about what
+  was dangling (62 under a strict heading pattern, 8 under a permissive one) because dates and version strings
+  leak into either, so the gate states the form it can read instead of guessing at the rest.
+
 ### Added (post-4.5.0) — a model credential you set inside the product, on your own machine (R-05)
 
 - Until now the only way to see the real product was to export variables before the server started: a developer

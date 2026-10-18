@@ -173,6 +173,8 @@ def _classify(tokens: set[str]) -> str | None:
         return "vendor"
     if any(tok.endswith("check_npm_workspace_lock.py") for tok in tokens):
         return "workspace-lock"
+    if any(tok.endswith("check_ledger_identifiers.py") for tok in tokens):
+        return "ledger-identifiers"
     if any(tok.endswith("generate_sbom.py") for tok in tokens):
         return "sbom"
     if "lock" in tokens and "--check" in tokens:

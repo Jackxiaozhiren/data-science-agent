@@ -12446,7 +12446,7 @@ secret while never showing one. Each of the four defects found along the way was
 of check -- an unscoped route to a suite that used one owner, a preflight to an ASGI transport, a placeholder
 to an origin probe, and a second reading of the mode to a page that only displayed it.
 
-## 205. Correcting my own census: the third candidate was prose, and no remaining test pairs `:memory:` with a polling loop
+## 208. Correcting my own census: the third candidate was prose, and no remaining test pairs `:memory:` with a polling loop
 
 **Why this section exists.** After §204 shipped, the natural next question was whether other fixtures still
 carry the §203 hazard. The first sweep used `grep`, and it returned a third file:
@@ -12471,3 +12471,57 @@ with concurrent polling, and those were the two that failed -- therefore holds, 
 
 **What changed.** Nothing in the code: this section records a measurement and retracts a grep reading. No fix
 was needed at the third candidate, and inventing one would have been the cheaper mistake to keep.
+
+**Why this heading reads 208.** It was written as `## 205. `, and by the time it was committed another
+lane's `## 205.` (R-08, at an earlier line) was already in the file -- the shared-worktree collision §181
+named. This one is the later entry in file order, it is this session's own same-day record, and the two
+body citations of `§205` both point at the R-08 section (`build for the reason §205 records -- no
+`RENDER_API_KEY`/`VERCEL_TOKEN`, and "thirteen guards … recorded in §205"), so renumbering the later one
+strands no reference and edits nobody else's dated text. The earlier collision pairs are left exactly as
+§181 decided; §208 is what `scripts/check_ledger_identifiers.py` now keeps from happening again.
+
+## 209. The ledger's own numbering is now a gate, and this section's number is the proof it works
+
+**What was decided, and what was not.** §181 left the two collided numbers (§178, §179) alone on purpose:
+renaming a dated section rewrites text another section already cites, and the honest reading rule it recorded
+was "the numbers are not unique, the subjects are." That decision stands. What changes here is that the same
+accident cannot keep happening without a verdict: `scripts/check_ledger_identifiers.py` is now a CI gate
+(`.github/workflows/ci.yml`, `scripts/run_gates.sh`, and both contributor guides, in this one commit), and it
+holds three things over the canonical `## N. ` run -- which the file has used since §62:
+
+- a number is issued exactly once, except the two grandfathered pairs, named in the source with §181's reason;
+- the run has no undeclared gap, so deleting a heading fails rather than quietly shrinking what is checked;
+- a body citation above the floor resolves to a heading, except §83 -- the citation §181 traced to a paragraph
+  that only ever lived in a session memory note.
+
+Numbers below §62 are out of scope by declaration, not by accident: those sections are written as
+`## Baseline`, `## Lane L1`, `### D-L1-12`, and the two scans tried here disagreed about what was dangling
+(62 under the strict heading pattern, 8 under a permissive one) because dates and version strings leak into
+either. A gate whose scope depends on which regex you pick is not a gate, so the scope is stated and the
+parser only claims the form it can read.
+
+**The first thing it caught was this session's.** While this gate was being written, another lane appended
+`## 205. R-08 shipped on both halves` while my census entry had already been committed as `## 205. Correcting my
+own census` -- §181's shared-worktree race, reproduced live. The earlier entry in file order keeps the number;
+mine was renumbered to §208, because it is this session's own same-day record and both body citations of `§205`
+point at the R-08 section, so nothing strands. The exemption list did not grow: a collision the guard can fix
+by moving one's own later entry is not a collision to grandfather.
+
+**Measured.** `--check` on the real ledger: `146 headings issued, run §62-§208 … ledger identifiers: OK`, rc 0.
+Falsified on a copy in `/tmp`, rc 1 on each injected defect: reusing §207's number, deleting §191's heading
+(caught twice -- as a gap in the run *and* as 8 now-dangling citations), and citing a section number nobody issues. The
+gate itself was caught out first: `tests/test_command_surface.py` failed it for having a shebang without the
+executable bit, which is the pin working on a new arrival rather than on legacy text. `tests/test_ci_gate_integrity.py`
++ `test_command_surface.py` + `tests/unit/test_debt_ratchet.py`: 37 passed. `audit_facts.py --check`: rc 0, with
+`debt.unwiredCheckers` back to 0 only because the checker is referenced by the workflow -- a checker added
+without wiring is itself the failure mode that counter guards.
+
+**What this does not do.** It does not make the old pairs unique, does not edit any section another session
+wrote, and does not claim the pre-§62 prose is machine-readable. It makes the next collision, the next deleted
+heading and the next remembered citation cost a red run instead of a reader's confusion.
+
+**One more measurement, on myself.** The first draft of this section failed the gate it describes: the
+falsification paragraph cited its example number literally, and the checker read that as a live dangling
+citation. The prose now names the shape rather than the number. That is the rule working as designed, not an
+edge case to exempt -- a scanner cannot tell an illustrative number from a claim, and resolving that belongs to
+the writer, not to a second exemption list.
