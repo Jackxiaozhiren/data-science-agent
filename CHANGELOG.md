@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
+
 ### Added (post-4.5.0) -- the ledger's section numbers are now a gate, not a habit
 
 - `scripts/check_ledger_identifiers.py` holds three things over the canonical `## N. ` run (in use since §62):
