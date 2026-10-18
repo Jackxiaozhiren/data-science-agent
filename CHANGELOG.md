@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — a client can open a report the product already has (R-14)
+
+- `/mcp-app/report/{run_id}` has always gone through the product's one report renderer, and that was the half
+  the requirement named. The other half was broken: it read its state from the runs *this process* had produced
+  through the MCP tools, so a stored, COMPLETED run answered `No stored analysis for this run_id` while the same
+  instance handed the web 32,756 bytes for the same id. The host now hands the App a way to read a stored run --
+  an injected loader, because `dsa_api` imports `dsa_mcp` and never the reverse, and a second implementation of
+  "load this run" is the defect class R-02 removed.
+- That read is scoped to what the instance publishes. The App surface carries no visitor identity, so without
+  the scope it would be a way around the owner separation R-08 established: a visitor's own completed run is
+  200 for them and 404 for the client surface, asserted as parity between the two web-facing renderings rather
+  than as two green status codes.
+
 ## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
 
 ### Added (post-4.5.0) — the interface speaks two languages, and the keyboard reaches the evidence (R-13)

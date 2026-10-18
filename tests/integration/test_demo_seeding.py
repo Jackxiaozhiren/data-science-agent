@@ -25,6 +25,7 @@ and friends, which are not samples.
 from __future__ import annotations
 
 import hashlib
+import asyncio
 import json
 import subprocess
 from collections.abc import AsyncGenerator
@@ -46,6 +47,9 @@ MARKER = "dsa_sample_dataset"
 
 #: The path the first version trusted, kept here so the negative control can name it rather than describe it.
 IGNORED_BENCHMARK_RESULTS = "benchmarks/ds-agent-benchmark/results/dsa/raw_runs.json"
+
+#: A question the demo itself publishes, so the run below is asked to do something the mode can finish.
+STARTER = "Summarize the sales dataset: rows, columns, missing values and duplicates."
 
 
 def _sha(path: Path) -> str:
@@ -676,3 +680,85 @@ async def test_a_sample_row_from_before_the_owner_column_is_republished(
         assert run.status_code == 200 and run.json()["status"] == "COMPLETED", (
             f"the example link a visitor is shown answers {run.status_code}"
         )
+
+
+@pytest.mark.asyncio
+async def test_the_mcp_app_shows_a_stored_run_with_the_bytes_the_export_hands_over(
+    seed_env: dict[str, Any],
+) -> None:
+    """R-14: the client-facing App surface has to show the runs the product has, not only the ones a client
+    drove through this process's own tools.
+
+    Measured before it was fixed, on a live `dsa ui`: `run-65becae7af` answered 200 with 32,755 bytes at
+    `/api/v1/analysis/{id}/report?format=html&mode=audited` and 404 `No stored analysis for this run_id` at
+    `/mcp-app/report/{id}` -- same process, same database, one run. The renderer was already shared; the
+    *reading* was not, which is the half a single-renderer claim can miss while every existing test stays green.
+
+    The byte equality is the point, so this is asserted as parity rather than two 200s: the App is the same
+    document, and a client that embeds it is not being shown a second, quieter rendering of the run.
+
+    Lives here rather than in a file of its own because the completed run it needs is what this fixture already
+    builds -- the demo's own example, produced by the seeder on this test's loop.
+    """
+    from dsa_api.core.ownership import OWNER_HEADER
+
+    visitor = {OWNER_HEADER: "0f1e2d3c4b5a-4e8f-9d3d"}
+    published = await _seed_and_examples(seed_env)
+    run_ids = {entry["run_id"] for entry in published if entry.get("run_id")}
+    assert run_ids, "the demo produced no example run, so there is nothing for the App to show"
+
+    client = seed_env["client"]
+    example = sorted(run_ids)[0]
+    web = await client.get(f"/api/v1/analysis/{example}/report?format=html&mode=audited")
+    assert web.status_code == 200, web.text
+    assert "evidence" in web.text.lower(), "the audited rendering lost the material it is named for"
+
+    app_view = await client.get(f"/mcp-app/report/{example}")
+    assert app_view.status_code == 200, (
+        f"the MCP App cannot open a run the product stored and the web just rendered: {app_view.status_code} "
+        f"{app_view.text[:160]}"
+    )
+    assert app_view.text == web.text, (
+        "the App and the export no longer hand over the same bytes -- the second renderer is back, by way of a "
+        "different document rather than different code"
+    )
+
+    # The other half of the claim: this surface has no visitor identity, so it must read published rows only.
+    private = await client.post(
+        "/api/v1/datasets/",
+        files={"file": ("private-sales.csv", (SAMPLES / "sales.csv").read_bytes(), "text/csv")},
+        headers=visitor,
+    )
+    assert private.status_code == 201, private.text
+    started = await client.post(
+        "/api/v1/analysis/",
+        json={"dataset_id": private.json()["id"], "user_query": STARTER},
+        headers=visitor,
+    )
+    assert started.status_code == 202, started.text
+    theirs = str(started.json()["id"])
+
+    # The premise has to be forced, not assumed: an assertion that the App answers 404 is worthless while the
+    # run has no rendered state yet, because then it 404s for a reason that has nothing to do with ownership.
+    # Measured -- with the loader deliberately un-scoped, this assertion still passed, until the run was waited
+    # for. So: the visitor's own export proves the row is renderable, and only then is the App asked for it.
+    for _ in range(120):
+        status = (await client.get(f"/api/v1/analysis/{theirs}", headers=visitor)).json()["status"]
+        if status in {"COMPLETED", "FAILED"}:
+            break
+        await asyncio.sleep(0.25)
+    assert status == "COMPLETED", (
+        f"the private run ended {status}, so it proves nothing about scoping"
+    )
+    theirs_report = await client.get(
+        f"/api/v1/analysis/{theirs}/report?format=html&mode=audited", headers=visitor
+    )
+    assert theirs_report.status_code == 200, (
+        f"the owner cannot even export their own run: {theirs_report.status_code} {theirs_report.text[:120]}"
+    )
+
+    via_app = await client.get(f"/mcp-app/report/{theirs}")
+    assert via_app.status_code == 404, (
+        f"an unidentified client surface read a visitor's completed run ({theirs}): the App loader is not "
+        "scoped to what the instance publishes, and R-08 has a hole in it"
+    )

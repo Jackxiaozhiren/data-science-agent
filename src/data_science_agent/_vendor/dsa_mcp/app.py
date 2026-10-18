@@ -5,7 +5,17 @@ R-14: the report a client sees here is rendered by the product's one report rend
 the web's download button hands over. This page assembles no report HTML of its own;
 its job is the flow (dataset → question → evidence) and staying inside a client's UI
 budget by embedding, not re-implementing.
+
+One renderer is only half of "the same run result". The state behind it used to come from
+``dsa_mcp.resources._STATE_STORE`` alone -- the runs this process produced by being *asked* --
+so a run the product had already stored and the web could show answered 404 here. Measured on
+``dsa ui``: ``run-65becae7af`` returned 32,755 bytes at ``/api/v1/analysis/{id}/report`` and
+``No stored analysis for this run_id`` at ``/mcp-app/report/{id}``, from the same process. The
+loader below is how the host that owns the database hands that reading to the App.
 """
+
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -14,6 +24,20 @@ from dsa_agent.report_export import export_html
 from dsa_mcp.resources import get_state
 
 app = FastAPI(title="DSA MCP App", version="0.1.0")
+
+_stored_run: Callable[[str], Awaitable[dict[str, Any] | None]] | None = None
+
+
+def set_stored_run_loader(loader: Callable[[str], Awaitable[dict[str, Any] | None]]) -> None:
+    """Let the embedding application hand this App a way to read a stored run (R-14).
+
+    The direction is deliberate: ``dsa_api`` imports this module and never the reverse, so the App asks its
+    host how to read a run instead of reaching into someone else's session factory. A second implementation of
+    "load this run" is the defect R-02 was about -- two owners reading one fact and disagreeing.
+    """
+    global _stored_run
+    _stored_run = loader
+
 
 HTML = """<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -169,12 +193,23 @@ async def root() -> str:
 
 @app.get("/report/{run_id}", response_class=HTMLResponse)
 async def report_view(run_id: str) -> HTMLResponse:
-    """One run's report through the product's single renderer (R-14)."""
-    state = get_state(run_id)
+    """One run's report through the product's single renderer (R-14).
+
+    Asked for in this order on purpose: a run the client drove through the tools is already in memory, and a
+    run the product stored is read through the host's loader -- which is scoped to what the instance publishes,
+    so an unidentified client surface cannot reach a visitor's private rows (R-08).
+    """
+    state: Any = get_state(run_id)
+    if state is None and _stored_run is not None:
+        row = await _stored_run(run_id)
+        state = (row or {}).get("state") if row else None
     if state is None:
         raise HTTPException(
             status_code=404,
-            detail="No stored analysis for this run_id. Run the analyze tool first, then reopen.",
+            detail=(
+                "No stored analysis for this run_id. Run the analyze tool first, then reopen -- or ask for a "
+                "report the instance itself publishes."
+            ),
         )
     return HTMLResponse(content=export_html(state))
 

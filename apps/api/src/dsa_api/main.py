@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -86,6 +87,24 @@ app.include_router(artifacts_router)
 if mcp_app is not None:
     app.mount("/mcp", mcp_app)
 if mcp_app_v4 is not None:
+    # R-14: a client opening a report should see the runs this product actually has. Until now the App could
+    # only show what the same process had produced through its own tools, so a stored, COMPLETED run answered
+    # 404 here while the web rendered it. The host owns how a run is read, so the reading is handed over rather
+    # than duplicated -- and it is scoped to the published rows, because this surface carries no visitor
+    # identity and must not become a way around R-08.
+    from dsa_api.core import database
+    from dsa_api.core.ownership import OWNER_SHARED
+    from dsa_api.services.analysis_service import get_analysis_run
+    from dsa_mcp.app import set_stored_run_loader
+
+    async def _published_run(run_id: str) -> dict[str, Any] | None:
+        # Attribute lookup at call time, not a name bound here: every suite that boots this app rebinds
+        # ``database.AsyncSessionLocal`` to its own temp file after import, and a from-import would have
+        # captured the developer's real database at import time and quietly read that instead.
+        async with database.AsyncSessionLocal() as session:
+            return await get_analysis_run(session, run_id, owner=OWNER_SHARED)
+
+    set_stored_run_loader(_published_run)
     app.mount("/mcp-app", mcp_app_v4)
 
 
