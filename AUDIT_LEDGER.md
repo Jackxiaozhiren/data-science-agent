@@ -12555,3 +12555,162 @@ there is no metric delta to freeze. Nothing in `benchmarks/baseline/` was edited
 it as `newest-or-current`, so it is legal now and stale the moment a v4.6.0 tag exists), and `ROADMAP.md:22`
 still says "Release 4.4.0 is current". `mkdocs.yml` carries no version at all, which corrects the handoff's
 list of files a bump must touch. Held for the user's release decision rather than resolved here: tagging publishes to PyPI, and the README line that goes stale with it is not this lane's file to touch.
+
+## 211. Session close (Lane F): R-13 shipped and CI-witnessed -- after two defects in the accessibility instrument itself
+
+The language layer and the keyboard floor are the deliverable, but the session's real finding is in the guard.
+Both new rules were **false-negative by construction**, and a planted regression -- not a red run -- is what
+revealed each, because the code under test was correct and only the instrument was wrong:
+
+- **A focus indicator was being judged by `outline-style` and `outline-width` alone.** This Tailwind builds
+  `focus-visible:outline-none` as `outline: rgba(0, 0, 0, 0) solid 2px` (read out of the built stylesheet, and
+  confirmed on the focused element: `outlineStyle=solid`, `outlineWidth=2px`, `outlineColor=rgba(0, 0, 0, 0)`).
+  Style and width both look present, so the sweep called an invisible ring a visible indicator and stayed green
+  on the plant. The rule now also reads the colour, and compares `box-shadow` and `border-color` against a
+  baseline captured *before* focus -- an input carries `shadow-sm` at rest, so comparing a focused shadow to
+  `none` would certify a control whose ring never appears.
+- **Client rects were being treated as tab order.** Chromium lays out the links inside a *closed* `<details>`,
+  so `/datasets` reported 36 "visible" focusables and the keyboard reached 33: the three missing stops were
+  `/health`, `/metrics`, `/version` under the collapsed API-diagnostics disclosure. `checkVisibility()` returns
+  false for exactly those elements. With the predicate fixed, the sweep visits every stop it marks -- which is
+  what let the earlier `visited >= 3` floor be replaced by a real coverage assertion, the form that catches a
+  focus trap or a control that moves focus on Tab.
+
+The same falsification discipline found a third bug, in the badge census written for "status is a word, not a
+colour": the self-closing test looked for `/` at the end of the opening tag *including* its `>`, so it never
+fired -- and it stayed hidden because the corpus had no self-closing `<Badge/>` until the mutation created one.
+That mutation reddened two guards instead of the intended one, which is also why the word rule now strips
+elements before looking for a word: `{" "}` is a badge that renders a space.
+
+One measured defect is recorded and deliberately **not** gated. `<Link>` wrapping `<Button>` -- the idiom used
+across this app's navigation and actions -- puts both elements in the tab order, so the sweep sees adjacent
+stops on the same visual control ("Compare datasets" `a` then `button`; "Skip to Step 2 · Ask →" the same pair;
+the drop zone `div[role=button]` then "Browse files" then the file input). axe rates that `nested-interactive`,
+serious rather than critical, and R-13's spec asks for reachability, which the pairs do provide. Fixing it means
+restructuring every link-action composition in `apps/web`, so it is named here instead of gated half-heartedly.
+
+```
+LANE: F   DATE: 2026-10-18   HEAD AT START: 342d361   HEAD AT END: 12271ef
+
+PREMISES RE-VERIFIED
+  the seeder's published questions are keyed by task id, not by wording
+      -> `catalog_questions` + `_tasks_for` walked on the real tree -> 6 questions offered (two sample files
+         whose bytes match their catalog twin), 30 sample files contribute none
+  a translated button must not send a different sentence than it shows
+      -> live `dsa ui` at 127.0.0.1:3000 with `dsa_locale=zh`: the landing's primary action carried
+         「对 Titanic 数据集做探索性分析，重点关注生还模式。」 and that exact text arrived in `?q=` and in the
+         Ask textarea
+  the interface language has to be known before render
+      -> `GET /datasets` and `/analysis` with `Cookie: dsa_locale=zh` (no browser) -> the server HTML already
+         carries 「上传一个数据集」 and 「提出一个真正的数据科学问题」, so nothing re-paints
+  status badges convey state in words
+      -> `StatusBadge.tsx` renders `{status}` in all four branches and the pulsing dot is `aria-hidden`;
+         census of every `<Badge>` element in `apps/web` accounts for the same number as a substring count of
+         `<Badge` in the same corpus
+  the shipped wheel reads the vendored copy
+      -> `sync_vendor.py --package dsa_api` wrote `demo_seed.py` + `starter_questions_zh.json`, and both
+         pairs are byte-identical afterwards (`diff -q` clean)
+
+DELIVERED
+  R-13a: first-run copy, starter questions and the Ask/upload screens in en+zh, one owner
+      -- red captured at build/a11y-falsify-plants.log:11 (SSR `lang="fra"` reddens the document-rule check on
+         all five routes) / green at build/r13-gates2.log (regression 47/47) and in CI job 39092857711
+  R-13a: the funnel knows both spellings
+      -- red at the neutered matcher (`At index 0 diff: 'run_started' != 'starter_question_used'`) / green
+         `tests/contract/test_product_events.py` 18 passed
+  R-13b: keyboard floor wired into the existing web lane
+      -- red captured at build/a11y-falsify-coverage.log:21 and build/a11y-falsify-focus.log:21 / green
+         47/47 locally and on the runner
+  R-13b: status is a word, not a colour (badge census, one owner)
+      -- red captured as mutations A/B/C below / green `test_web_analysis_status_vocabulary.py` 11 passed
+  R-13: caveat severity in both languages
+      -- green `test_web_limitation_severity.py` 6 passed
+
+NOT DELIVERED
+  translated failure prose -- `FAILURE_PRESENTATION` and each page's transport line are still English. Decision
+      recorded in `docs/FRONTEND_IA.md` (Deferred), with the reason: those owners are shared by every page and
+      asserted in their exact English words by the browser guards, so they move together or not at all.
+      Next command: `rg -l FAILURE_PRESENTATION apps/web` to size the move before starting it.
+  axe-core itself -- not installed. The Accept line asks for "an accessibility scan"; the scan that ran is
+      Playwright against real DOM, and each rule names the axe rule it reproduces. Adding the dependency needs
+      the user's approval (§19.1).
+  hosted redeploy -- unchanged from §207. Both demos still serve the pre-R-08 build.
+
+FULL LANE RESULT
+  ./scripts/run_gates.sh  ->  18 gate(s) run, 1 failed. The failure is
+      `uv run python scripts/sync_vendor.py --check` reporting `dsa_evaluation: 1 file(s) differ
+      [external_validation.py]`, which is a concurrent session's uncommitted edit in this shared worktree, not
+      this lane's file: `git show HEAD:packages/evaluation/src/dsa_evaluation/external_validation.py` matches
+      the vendored copy, so at the pushed revision the two agree. Everything else passed, including
+      `ruff format --check` (299 files) and `ruff check` ("All checks passed!").
+  uv run pytest -q --cov  ->  1116 passed, derived from the progress glyphs (`-q` prints no counts line, the
+      §156 trap), coverage 83.70% against the 79.0% floor, run locally on macOS with nothing else listening
+      (no `dsa ui` up, per §165's process-count coupling).
+  node apps/web/scripts/regression.mjs  ->  47/47 checks passed (26 route/viewport + 3 interaction +
+      3 backend-probe + 15 accessibility). Per-route keyboard coverage: / 32/32, /analysis 31/31, /runs 27/27,
+      /reports 27/27, /datasets 33/33 with 1 drill-down opened by Enter. Same line printed on the runner:
+      CI job 39092857711 `web-regression`, 47/47.
+  tool and version actually used for the accessibility scan: Playwright 1.63.0, bundled Chromium
+      153.0.8010.12 (as `browser.version()` reports it), Next.js 16.3.8. Screenshots:
+      `output/r13a/home-zh.png`, `analysis-zh.png`, `datasets-zh.png`, `run-zh.png`, `datasets-en.png`;
+      earlier-language pair at `output/r13/home-en.png`, `home-zh.png`.
+  live acceptance on `dsa ui` (heuristic mode, `--data-dir build/r13a-ui`) ->
+      `R13A_ACCEPTANCE_PASS`, exit 0: the Chinese starter run reached COMPLETED (`run-494970ee19`), zero console
+      errors, and the English pair still renders "Bring a dataset" with the original drop-zone aria-label the
+      tour matches.
+
+FALSIFICATION PROOF
+  a11y keyboard coverage -> neuter `checkVisibility()` back to client rects in `collectStops` -> 46/47,
+      process exit 1, message "the sweep reached 33 of 36 marked tab stops before focus left the document";
+      script restored byte-identically (sha256 e5c345fa...).
+  a11y document rules -> plant `<html lang="fra">` in `app/layout.tsx` -> 5 failures naming the locale owner's
+      declared values; `TOUR_EXIT=1`.
+  a11y accessible names -> blank the language toggle's labels -> "2 unnamed control(s) [button, button]" on all
+      five routes; `TOUR_EXIT=1`.
+  a11y focus indicator -> plant `focus-visible:outline-none` on a real control: FIRST run stayed green, which
+      is how the colour blind spot was found; after the fix, 32/47 with "no visible focus indicator
+      (outline=solid 2px rgba(0, 0, 0, 0), box-shadow=\"none\" and border ... unchanged from resting)".
+      All three plants restored byte-identically (verified by sha256 comparison, `ALL_RESTORED_IDENTICAL`).
+  badge census -> mutation A: drop `aria-hidden` from the amber dot -> 1 failed / 8 passed, and the *other* new
+      guard stayed green (correct attribution). Mutation B: make a branch self-closing -> 2 failed. Mutation C:
+      render `{" "}` -> 2 failed after the word rule was fixed, 1 failed before, which is how the
+      brace-expression false negative was caught. `StatusBadge.tsx` restored to sha256 f056a1f5... each time.
+  starter-question link -> replace `starter_question_spellings()` with the English-only set inside
+      `is_starter_question` -> `FAILED tests/contract/test_product_events.py::test_the_chinese_wording_of_a_
+      starter_records_the_same_link`; `demo_seed.py` restored byte-identically (sha256 verified) and the vendor
+      copy re-checked.
+  the locale coverage guard is keyed on what the product offers: deleting `eda-01` (an offered id) from the
+      alias table -> `1 failed, 7 passed`, and the failure is
+      `test_every_offered_question_has_chinese_wording`; renaming `clf-02` -- which the seeder does not offer --
+      to `zz-404` -> `1 failed, 7 passed` on `test_translation_ids_name_a_real_catalog_task` alone, so the two
+      directions are separately falsifiable and neither is decoration. The JSON was restored byte-identically
+      both times (sha256 verified, `A_RESTORED_IDENTICAL` / `B_RESTORED_IDENTICAL`) and the vendor copy
+      re-checked against it (`diff -q` clean). One mutation attempt failed to apply at all -- a `python3` run
+      without the workspace packages on its path, whose following "8 passed" was therefore measuring an
+      untouched file. It was redone under `uv run` and the real plant confirmed; the earlier line is recorded
+      because a command that did not run is not a result.
+
+FILES OTHER SESSIONS OWN (untouched)
+  README.md, CITATION.cff, ROADMAP.md, pyproject.toml, release/sbom.json, release/sbom.cyclonedx.json,
+      scripts/check_public_claims.py, src/data_science_agent/__init__.py, src/data_science_agent/sdk.py,
+      packages/evaluation/src/dsa_evaluation/external_validation.py, tests/evals/test_external_validation.py
+      -> all still dirty and not in 12271ef; the commit was made with an explicit path list and `git status`
+      re-read afterwards, because the same worktree is being committed to concurrently (§207 records the
+      hazard). `WEB_PRODUCT_MASTER_PROMPT.md` and the four 项目经历-DSA-*.md files remain untracked: the first
+      is the plan document this lane executes rather than ships, and the second set is another lane's.
+
+SHARED-STATE ACTIONS UNDER §19.1
+  push    -> 12271ef to main (github.com:443 refused three connections first; the retry loop that succeeded is
+               the only write, and `ahead=0` after a fresh `git fetch` is the evidence, not the loop's echo)
+  PR      -> none: the lane works on main directly, as §19.1 permits for a self-authored green change
+  deploy  -> none. Both demo services still run the pre-R-08 build; `gh`/platform tokens are absent on this
+               machine (length 0), so the redeploy named in §207 remains a human action.
+  ledger  -> this section, committed after the CI witness was read, not predicted
+
+BLOCKERS NEEDING A HUMAN
+  redeploy the Vercel web app and the Render API -> the user's platform tokens exported to their shell (never
+      pasted into chat), then `docs/hosted-demo.md`'s census re-run against the live URLs.
+  axe-core as a devDependency -> approval to add it, or approval to accept Playwright-implemented rules as the
+      "accessibility scan" R-13's Accept line names.
+  §188's lifecycle-family stall and the Studies 1-3 recruitment -> unchanged owners, unchanged asks.
+```
