@@ -16,8 +16,8 @@ If you want to learn the extension surface, [Build a Hello-World Plugin](plugin-
 `tests/test_ci_gate_integrity.py` pins the two together)
 
 ```bash
-uv sync --dev
 uv lock --check
+uv sync --dev
 uv run python scripts/audit_facts.py --check
 uv run python scripts/sync_vendor.py --check
 uv run python scripts/check_npm_workspace_lock.py

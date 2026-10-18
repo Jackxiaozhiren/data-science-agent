@@ -6,8 +6,8 @@ Before PR — these mirror `.github/workflows/ci.yml` verbatim, and
 `tests/test_ci_gate_integrity.py` fails if the two ever drift apart:
 
 ```bash
-uv sync --dev
 uv lock --check                                  # §46 dependency pinning
+uv sync --dev                                    # keep it after the line above: this rewrites uv.lock
 uv run python scripts/audit_facts.py --check
 uv run python scripts/sync_vendor.py --check     # vendored dsa_* must match source
 uv run python scripts/check_npm_workspace_lock.py
