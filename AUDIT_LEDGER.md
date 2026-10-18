@@ -12785,3 +12785,141 @@ Local full suite at `542c554`: `1117 passed` in 91.5s, exit 0. CI at that revisi
 came back `completed/success` on both jobs (`ci`, `web-regression`), which is the second half of the 429
 diagnosis: the line that had failed for want of a bucket went green once this lane stopped spending it, so the
 cause was measured before and after rather than asserted. Main is green again at `542c554`.
+
+## 213. v4.6.0 is published, and the bump surface turned out to be eight version fields plus three documents
+
+The release lane finished: tag `v4.6.0` peels to `15a236a` (tag object `4029a525`) and is reachable from
+`origin/main`; the publish run `39095477995` completed success across all 21 steps, including Trusted Publishing
+to PyPI, the post-publish version check, attaching distributions to the Release without clobbering them, and the
+step that verifies the announcement copy ships with the tag. GitHub shows the Release created
+`2026-10-18T03:57:13Z` with four assets -- `jack_data_science_agent-4.6.0-py3-none-any.whl`, its sdist, and one
+`.publish.attestation` per file; PyPI reports `info.version: 4.6.0`, upload time `2026-10-18T04:01:20Z`.
+
+What a version bump actually touches is recorded here because it was not known going in, and each item below is
+named by the gate that went red when it was missing rather than by a checklist:
+
+- eight version fields -- `pyproject.toml`, `CITATION.cff` (both `version` and `date-released`),
+  `src/data_science_agent/__init__.py`, `sdk.py`, `release/sbom.json`, `release/sbom.cyclonedx.json`, and
+  `EXPECTED["version"]` in `scripts/check_public_claims.py`;
+- `CHANGELOG.md` heading, `docs/announcements/v4.6.0.md` **and** `latest.md`, the README release link, and a
+  `mkdocs.yml` nav entry. The last two are the ones a release commit misses: `test_announcement_currency`
+  refuses a tag whose copy does not exist yet, and `test_docs_nav_coverage` refuses a file that is in `docs/`
+  but not in the nav.
+
+Three attempts were refused before the one that held, and the refusals are the useful part:
+
+- cut before the merge -- the verifier's own check rejected it: the tag was not reachable from `origin/main`;
+- cut before the copy existed -- `test_announcement_currency` went red, so the tag was deleted and verified gone
+  (`gh release view` reported no release, PyPI still served `4.5.0`) before re-cutting;
+- nav entry absent -- `test_docs_nav_coverage` red, fixed by `15a236a`.
+
+`README.md` is gated to the **newest release tag**, not to the declared version, which is why the copy commit
+`54c92d2` failed its own CI run (`39094697168`: `git tag mismatch: v4.5.0-113-g54c92d2 base v4.5.0 != v4.6.0`,
+plus `README.md:16 cites '4.6.0' ... but the newest release tag is '4.5.0'`). That red is structural, not a
+defect to fix: the commit that puts the release copy on the default branch necessarily precedes the tag, so the
+claim gate can only go green afterwards. `15a236a`'s own run `39095473653` was then cancelled by
+`cancel-in-progress` when R-14 landed, so **the tag commit has no green main-branch pytest witness of its own**.
+What witnesses it instead: PR #84's `ci` job green on `0be8b85` (same content; that PR's `build-and-publish`
+check is red in run `39093809535`, and correctly so -- publish on a branch with no tag can only fail those same
+two currency gates), and the publish workflow's own tree verification, which re-checks the claims against the
+checkout it publishes from.
+
+`dsa verify-release v4.6.0` on this machine: **16/17 PASS** -- mypy, ruff, npm build, docker validation, security
+suite, MCP conformance, benchmark smoke, demo, tables, figures, mkdocs, and the five §93 artifact gates; the one
+FAIL was `pytest`, whose cause §214 names and fixes. Two honesty notes about this run. First, my initial reading
+of its exit code was wrong: the command was piped into `tail`, which reported 0 for the pipeline; the real status
+is `${pipestatus[1]}`, and the report itself said `pytest: FAIL` in the same output I had just trimmed. Second,
+nothing here says the hosted demo runs 4.6.0 -- the redeploy is still the human action §207 named, and no claim
+is made about the instance's `/version`.
+
+One thing the bump did leave behind, found while writing this: `uv.lock` still recorded
+`jack-data-science-agent 4.5.0` while `pyproject.toml` declared 4.6.0. Fixed in `329d758`; §215 explains why CI
+could not see it.
+
+## 214. A shared per-minute budget, and the isolation census that could not see it
+
+CI measured the symptom on `a11f6be` (run `39095869808`): `tests/integration/test_phase6_api.py`
+`::test_progress_and_evidence_trace` asserted `201` and got `429 Rate limit exceeded` on a dataset upload. The
+lane that owned R-14 fixed the traffic it had added (`542c554`, CI `39096802644` success), so **this section is
+not the unblock** -- it is the measurement underneath it and the guard hole that let it exist.
+
+Measured with a probe that prints the limiter's own window on every hit, over the same targets CI failed on:
+`dsa_api.core.security._limiters` is module-global, and every `TestClient` request presents the same host, so an
+entire pytest session shares one key -- `127.0.0.1:/api/v1/datasets`, budget 30 per 60 s.
+
+| run | datasets peak | analysis peak | denied |
+| --- | --- | --- | --- |
+| `a11f6be`, no per-test reset | 30/30 (reached at `test_phase6_api.py::test_sse_events_and_json_fallback`) | 24/60 | 1 (`test_progress_and_evidence_trace`) |
+| same targets, per-test reset installed | 2/30 | 3/60 | 0 |
+
+The window is 60 s of wall clock, which is why this reads as a flake: on a slower machine the early uploads age
+out and the peak stays under 30. It is not load-sensitive behaviour worth keeping -- it is one budget shared by
+40 files, spent by whichever suite happens to run second.
+
+Why the existing guard did not catch it is the more useful half. `tests/test_process_global_isolation.py` claims
+completeness by scanning shipped code for module-level containers written at runtime, but its criterion was
+`isinstance(value, (ast.List, ast.Set, ast.Dict))` -- container *literals*. `_limiters` is bound by a list
+comprehension, so it never entered the census, and the completeness test passed while reporting that every
+process-global cache was isolated. Widening the criterion to comprehensions costs exactly one entry on this tree
+(6 -> 7); adding `ast.Call` would add none. Both numbers were measured before the edit, not asserted after it.
+
+It could not simply be registered in `_ISOLATED_GLOBALS`: `_snapshot`/`_restore` copy the list and hand back the
+same `RateLimiter` objects with their `_hits` intact, so the entry would read as isolated and reset nothing --
+the §76 green-but-never-ran shape, in a new costume. It is therefore declared as `_ISOLATED_RESETS` and reset by
+a fixture that walks that tuple, and the same AST reader now compares `census minus (registry union resets)` so
+a third store of either kind turns the check red. The reset is deliberately **synchronous**: the shipped
+`clear_rate_limit_state()` is a coroutine, and an async autouse fixture does not run for the synchronous tests
+that also upload (`tests/unit/test_more_coverage.py` 3 sync tests, `test_more_gaps.py` 2, `test_product_events.py`
+6 of 18) -- which is the same reason `542c554` requested its fixture by name instead of `autouse`. An async
+version of this fix would have isolated part of the suite and looked like it isolated all of it.
+
+Falsification, twice. Emptying `_ISOLATED_RESETS` turns three reds: the completeness test names
+`('dsa_api.core.security', '_limiters')`, the reset-membership test refuses an empty declaration, and the
+fill-then-check pair reports a window carried across the boundary. The first round of that experiment caught a
+defect in my own guard: `test_b1_...` iterated `_conftest_resets()` and, finding it empty, checked nothing and
+passed. It now asserts its own denominator before the loop, which is the §82 rule applied to a test I wrote
+fifteen minutes earlier. `conftest.py` was restored byte-identical after the plant (`a2b453a134f3...` before and
+after).
+
+Full suite at `542c554` plus this change: **1119 passed, 1 failed** (1120 glyphs, which is the 1117 that commit
+reported plus the three guards here). The one failure is
+`tests/contract/test_provider_settings.py::test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub`,
+red with `HTTP 502` from the live chat-completions endpoint and red in isolation as well -- an environment
+condition on this machine, not ordering, and not something this change touched.
+
+What this section does **not** change: the product's 30-uploads-per-minute default is untouched, so a real client
+behind one IP that bursts past it still gets a 429 with `Retry-After: 60`. Whether that default is right for the
+hosted demo is a product decision, and §215 keeps it separate from the gate finding.
+
+## 215. Decision proposal: `uv lock --check` cannot fail in the job that runs it
+
+**Measured.** At `542c554`/`af4a725`, a clean `git archive HEAD` export exits **1** on `uv lock --check`
+(`The lockfile at 'uv.lock' needs to be updated` -- the release bump left the lock at 4.5.0), while CI's step of
+the same name exits **0** on those same revisions. The reason is order, not uv: `ci.yml` runs `uv sync --dev` at
+line ~70 and `uv lock --check` at line 78, and a non-frozen sync rewrites the lock in the checkout first
+(`uv sync --dev --dry-run` on the export prints `Would update lockfile at: uv.lock`). The §46 dependency-pinning
+gate therefore measures a lockfile its own previous step just repaired, and it has been unable to fail for as
+long as that order holds. Local and CI both ran uv 0.11.7, so this is not a version-skew reading.
+
+**Already handled, partially:** `329d758` commits the one-line lock so the current tree is consistent. That fixes
+this instance; it does not make the gate live, and the next version bump or dependency edit will drift again with
+nothing to catch it.
+
+**Options, with cost.**
+1. *Reorder*: move `uv lock --check` above `uv sync --dev`. One line moved; the gate becomes able to fail, and it
+   fails on any drift. Cheapest and closest to the original intent (§46).
+2. *Make the sync non-mutating*: change the step to `uv sync --dev --frozen`. Same effect, and it also makes the
+   install honest about the lock, but it will red immediately on any stale lock rather than silently repairing,
+   which is the point -- and it changes what every later step installs.
+3. *Leave it and add a check that cannot be repaired*: a `uv lock --check` in `scripts/run_gates.sh` already
+   exists (gate 1) and catches this locally -- the gap is CI only, so this option is really "accept that the
+   local gate is the owner".
+
+**Recommendation:** option 1, plus one line of comment naming why the order matters. It edits CI step order, not
+a threshold, an exclusion, or a gate list entry, so nothing is loosened -- but it is still a CI change, and the
+register puts those behind your consent, so it is written up rather than shipped.
+
+**First files if you say go:** `.github/workflows/ci.yml` (move the line-78 step above the `uv sync --dev`
+step), `scripts/run_gates.sh` (reorder its `GATES` list the same way, so the local runner witnesses the same
+ordering), and the ledger addendum naming the run id that proves the gate can fail -- which needs a deliberately
+stale lock to be pushed, so it is a branch-only demonstration, not a main red.
