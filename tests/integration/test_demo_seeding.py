@@ -52,6 +52,26 @@ IGNORED_BENCHMARK_RESULTS = "benchmarks/ds-agent-benchmark/results/dsa/raw_runs.
 STARTER = "Summarize the sales dataset: rows, columns, missing values and duplicates."
 
 
+@pytest.fixture
+async def limiter_left_as_found():
+    """This file writes over the same transport the API rate-limits, so the next suite pays for it.
+
+    The counters are module-level and keyed by client IP: the upload rule is 30 per minute, and the R-14 parity
+    test pushes a second upload plus a started run onto the bucket the whole gate already filled. Measured, not
+    guessed -- on CI, `tests/integration/test_phase6_api.py::test_progress_and_evidence_trace` came back
+    `429 Rate limit exceeded` where it asserts `201`, the first time that line moved red, and both extra writes
+    belong to this test. `tests/security/test_security_phase8.py` and `apps/api/tests/test_security.py` reset for
+    the same reason. Nothing is loosened: the assertions still demand the status each names, and this only makes
+    the bucket this test's own. Requested by name rather than autouse because one test in this file is
+    synchronous, and an async autouse fixture would have been applied to it too.
+    """
+    from dsa_api.core.security import clear_rate_limit_state
+
+    await clear_rate_limit_state()
+    yield
+    await clear_rate_limit_state()
+
+
 def _sha(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -684,7 +704,7 @@ async def test_a_sample_row_from_before_the_owner_column_is_republished(
 
 @pytest.mark.asyncio
 async def test_the_mcp_app_shows_a_stored_run_with_the_bytes_the_export_hands_over(
-    seed_env: dict[str, Any],
+    seed_env: dict[str, Any], limiter_left_as_found: None
 ) -> None:
     """R-14: the client-facing App surface has to show the runs the product has, not only the ones a client
     drove through this process's own tools.
