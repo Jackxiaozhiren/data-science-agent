@@ -8,11 +8,19 @@
 # the suite. The commands are written out literally rather than extracted from the YAML at run time:
 # a reader should see exactly what executes, and nothing here evaluates workflow text.
 #
-#   scripts/run_gates.sh          run setup, then every gate, report each exit code
-#   scripts/run_gates.sh --list   print the gate commands and exit 0 without running anything
+#   scripts/run_gates.sh          run the pre-check, then setup, then every gate, report each exit code
+#   scripts/run_gates.sh --list   print the pre-check and gate commands and exit 0 without running anything
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 9
+
+# The order is the gate. A non-frozen `uv sync` rewrites `uv.lock` in the tree it is run from, so a lock check
+# that runs after `SETUP` inspects a lockfile this very script just repaired -- which is how `af4a725`'s stale
+# 4.5.0 lock passed here as it passed in CI (audit §215, §216). It runs before `SETUP`, and it is not in `GATES`:
+# the pre-check is the operative step, and `GATES` stays the set of gates CI classifies.
+PRECHECK=(
+  "uv lock --check"
+)
 
 SETUP=(
   "uv sync --dev"
@@ -21,7 +29,6 @@ SETUP=(
 )
 
 GATES=(
-  "uv lock --check"
   "uv run python scripts/audit_facts.py --check"
   "uv run python scripts/sync_vendor.py --check"
   "uv run python scripts/check_npm_workspace_lock.py"
@@ -42,9 +49,19 @@ GATES=(
 )
 
 if [[ "${1:-}" == "--list" ]]; then
-  printf '%s\n' "${GATES[@]}"
+  printf '%s\n' "${PRECHECK[@]}" "${GATES[@]}"
   exit 0
 fi
+
+for cmd in "${PRECHECK[@]}"; do
+  printf '\n=== pre-check: %s\n' "$cmd"
+  if ! bash -c "$cmd"; then
+    # Aborting rather than continuing: the setup phase rewrites the lock, so a later pass of this same check
+    # would agree with nothing in the tree and the finding would disappear from the report.
+    printf 'PRECHECK FAILED: %s -- the setup phase below rewrites uv.lock, so continuing would report on a lockfile this script just repaired\n' "$cmd" >&2
+    exit 1
+  fi
+done
 
 for cmd in "${SETUP[@]}"; do
   printf '\n=== setup: %s\n' "$cmd"

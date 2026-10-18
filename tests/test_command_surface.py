@@ -33,18 +33,26 @@ def _gate_readers():
     return module
 
 
-def _runner_gates(text: str) -> list[str]:
-    """The quoted entries of the runner's GATES array, in order."""
-    marker = "GATES=("
-    assert marker in text, "the runner no longer declares a GATES array"
+def _runner_array(text: str, marker: str) -> list[str]:
+    """The quoted entries of one declared array, in script order."""
+    assert marker in text, f"the runner no longer declares a {marker[:-2]} array"
     body = text.split(marker, 1)[1]
     commands = []
     for line in body.split(")\n", 1)[0].splitlines():
         stripped = line.strip()
         if stripped.startswith('"') and stripped.endswith('"'):
             commands.append(stripped[1:-1])
-    assert commands, "the GATES array parsed empty -- the reader broke"
+    assert commands, f"the {marker[:-2]} array parsed empty -- the reader broke"
     return commands
+
+
+def _runner_gates(text: str) -> list[str]:
+    """The runner's verdict commands, in the order the script runs them: `PRECHECK` then `GATES`.
+
+    Both arrays are gates -- CI's step list puts the lock check above `uv sync --dev` for the same reason (§215)
+    -- and reading only `GATES` would let the pre-check drop out of every comparison below without a signal.
+    """
+    return _runner_array(text, "PRECHECK=(") + _runner_array(text, "GATES=(")
 
 
 def test_a_gate_runner_exists_and_is_executable() -> None:
@@ -194,3 +202,62 @@ def test_every_runner_command_names_a_real_invocation() -> None:
             if not (ROOT / token).exists():
                 offenders.append(f"{cmd[:44]}... -> missing {token!r}")
     assert not offenders, "\n".join(offenders)
+
+
+def _array(text: str, marker: str) -> list[str]:
+    """The quoted entries of one declared array, empty when the array is gone."""
+    if marker not in text:
+        return []
+    body = text.split(marker, 1)[1].split(")\n", 1)[0]
+    return [
+        line.strip()[1:-1]
+        for line in body.splitlines()
+        if line.strip().startswith('"') and line.strip().endswith('"')
+    ]
+
+
+def _lock_check_is_after_the_sync(text: str) -> str | None:
+    """Name the ordering violation in the runner, or None when the check precedes what repairs the lock.
+
+    The script runs PRECHECK, then SETUP, then GATES -- that is the loop order -- so the phases below are the
+    execution order, not merely the declaration order.
+    """
+    phases = [
+        ("PRECHECK", _array(text, "PRECHECK=(")),
+        ("SETUP", _array(text, "SETUP=(")),
+        ("GATES", _array(text, "GATES=(")),
+    ]
+    lock = next(
+        (name for name, cmds in phases if any("uv lock --check" in cmd for cmd in cmds)), None
+    )
+    sync = next(
+        (name for name, cmds in phases if any(cmd.startswith("uv sync") for cmd in cmds)), None
+    )
+    if lock is None or sync is None:
+        return f"lock check in {lock!r}, sync in {sync!r} -- one of them is not in a declared array"
+    lock_at = next(i for i, (name, _) in enumerate(phases) if name == lock)
+    sync_at = next(i for i, (name, _) in enumerate(phases) if name == sync)
+    if lock_at >= sync_at:
+        return f"`uv lock --check` is in {lock}, which runs after {sync} rewrote uv.lock"
+    return None
+
+
+def test_the_lock_check_runs_before_the_setup_that_repairs_the_lock() -> None:
+    """`uv sync` rewrites `uv.lock`, so a check that runs after `SETUP` grades a file this script just fixed.
+
+    The same asymmetry §215 measured in `ci.yml`, and the reason the pre-check is a phase of its own rather than
+    `GATES[0]`. Asserted through the reader above, and asserted to fire: without the second half this test would
+    also pass on a runner whose arrays had been deleted entirely.
+    """
+    text = RUNNER.read_text(encoding="utf-8")
+    violation = _lock_check_is_after_the_sync(text)
+    assert violation is None, violation
+
+    forged = text.replace('PRECHECK=(\n  "uv lock --check"\n)\n\nSETUP=(', "SETUP=(", 1).replace(
+        "GATES=(\n", 'GATES=(\n  "uv lock --check"\n', 1
+    )
+    assert forged != text, "the fixture edit did not land -- this control proves nothing"
+    reported = _lock_check_is_after_the_sync(forged)
+    assert reported is not None and "GATES" in reported, (
+        f"the reader accepted the pre-fix arrangement: {reported!r}"
+    )
