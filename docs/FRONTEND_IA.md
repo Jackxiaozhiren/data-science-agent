@@ -99,6 +99,12 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
 - The starter questions are this project's own benchmark tasks: `benchmarks/v2/catalog.json` names a dataset
   per task, and a task is offered for a sample only when `benchmarks/v2/datasets/<name>` is byte-identical to
   it. Questions are never written for a page.
+- Each marker carries the questions twice: `starter_questions` and `starter_questions_zh`, position-for-position,
+  the second derived from `starter_questions_zh.json` keyed by catalog task id (R-13). The button the reader
+  sees is the sentence that gets sent, so a Chinese interface starts a Chinese run rather than putting a label
+  over different content -- and `is_starter_question` matches either spelling, because a funnel that recognised
+  only English would keep counting the half that stayed English and read as a smaller product instead of a
+  broken measurement.
 - The example report is a run the instance makes itself at startup, in a mode that calls no model and spends
   nothing. It is linked only if its own row shows no errored tool call and no failing validation check;
   recorded runs from the benchmark history are not replayed, because the ones on these bytes are stale --
@@ -108,12 +114,23 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
 
 ## UI principles
 
+- Two languages, one owner for the words. `app/lib/locale.ts` declares `en` and `zh`, and the choice is a
+  first-party `dsa_locale` cookie read by the server before render -- `<html lang>`, the tab title and the page
+  copy all come from that one answer, because a language the server cannot see produces English markup that
+  re-paints in Chinese. A key no locale defines renders visibly as `⟨key⟩`: the failure is meant to be seen,
+  not quietly downgraded to the other language. The deliverable is not translated -- a report keeps the language
+  the run was asked in.
+- The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
+  routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
+  outline is not one) and every `<details>` drill-down to open on Enter.
 - Evidence before claim: every insight shows the evidence ids it rests on, and each one links to the tool call
   and the dataset behind it.
 - A caveat is sized to what it means. "Association does not imply causation" is a standing limit of the method
   and reads as a warning; a leak, a confound or an overfit is a defect in the analysis and reads as critical.
-  One owner: `app/lib/limitations.ts`. Claiming a causal conclusion is a different gate -- the
-  `unsupported_claim` validation check.
+  One owner: `app/lib/limitations.ts`, which carries the defect words in both languages the product runs in --
+  the Chinese ones are deliberately narrower than the English, because an over-matching keyword makes the loud
+  tier fire on everything, which is the failure this bullet exists to prevent. Claiming a causal conclusion is a
+  different gate -- the `unsupported_claim` validation check.
 - The trace is read-only and carries no chain-of-thought: concise agent messages, tool calls, evidence.
 - Failures are shown, not smoothed over: a run with gaps says so on the same page that shows its findings.
 
@@ -139,3 +156,13 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   Reports therefore render from the database row, and the artifact links on a page are the instance's own.
 - **Per-run evidence coverage on the landing page.** The stat card shows `—` until a query exists that
   computes it across runs; the number is per-run today, on the run page.
+- **Translated failure prose.** The first-run path is bilingual (R-13: the landing, the Ask screen, the upload
+  screen, the starter questions); what is still English-only is the vocabulary of things going wrong --
+  `FAILURE_PRESENTATION` in `lib/api.ts`, each page's own transport line, the upload queue's per-file notes.
+  Those owners are shared by every page and are asserted by the browser guards in their exact English words, so
+  translating them means moving several owners and their guards in one change. Half-translating them -- the
+  screen in Chinese, the error in English, with no decision recorded -- is the worse option, so it is listed
+  here instead of done quietly.
+- **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
+  `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
+  would add a devDependency, and dependency changes are the user's call, not the agent's.

@@ -9,12 +9,19 @@
 import { cookies } from "next/headers";
 
 import { apiUrl } from "./api";
+import { LOCALE_COOKIE, normalizeLocale } from "./locale";
 import { OWNER_COOKIE, cookieValue, withOwner } from "./owner";
 
 /** The owner id this browser sent with the current navigation, or null before the proxy has set one. */
 export async function ownerFromRequest(): Promise<string | null> {
   const store = await cookies();
   return cookieValue(store.get(OWNER_COOKIE)?.value);
+}
+
+/** R-13: the language this browser chose, read off the request so server-rendered copy never lags it. */
+export async function serverLocale() {
+  const store = await cookies();
+  return normalizeLocale(store.get(LOCALE_COOKIE)?.value);
 }
 
 export async function serverFetch(path: string, init?: RequestInit): Promise<Response> {

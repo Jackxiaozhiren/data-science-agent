@@ -250,9 +250,22 @@ def test_the_datasets_entrance_states_the_wait_before_it_happens() -> None:
     "No datasets yet" is only allowed once the probe says the backend is ready.
     """
     source = DATASETS.read_text(encoding="utf-8")
-    assert re.search(r"sleeps|idle|wake", source, re.I), (
-        "the entrance says nothing about the cold start, so the first 45 seconds are unexplained"
+    # R-13 moved the sentence into the string owner so it can be said in Chinese as well; the entrance is still
+    # asserted to render it, and the wording is asserted where it now lives.
+    assert 't(locale, "ds.coldStart")' in " ".join(source.split()), (
+        "the entrance no longer renders the cold-start expectation through its owner"
     )
+    strings = " ".join((ROOT / "apps/web/lib/locale.ts").read_text(encoding="utf-8").split())
+    for locale in ("en", "zh"):
+        block = strings.split(f"{locale}: {{", 1)
+        assert len(block) == 2, (
+            f"UI_STRINGS has no {locale} block written the way this guard parses it"
+        )
+        sentence = block[1].split('"ds.coldStart":', 1)
+        assert len(sentence) == 2, f"no ds.coldStart defined for {locale}"
+        assert re.search(r"sleeps|idle|wake|休眠|空闲", sentence[1][:400], re.I), (
+            f"the {locale} entrance says nothing about the cold start, so the first 45 seconds are unexplained"
+        )
     assert re.search(r"phase === \"ready\"|isReady", source), (
         "the empty state does not depend on the probe answering -- an unreachable API still reads as 'empty'"
     )

@@ -87,6 +87,48 @@ def test_the_severe_words_still_catch_a_real_defect() -> None:
         )
 
 
+def test_a_chinese_caveat_is_graded_by_the_same_rule() -> None:
+    """R-13: the reader chooses the run's language, so severity may not be an English-only judgement.
+
+    What is measured is that a question asked in Chinese keeps its Chinese wording through the pipeline (the
+    landing's starter question, run end to end). A caveat the model writes in that run is written in the same
+    language; the deterministic boilerplate the emitters attach stays English either way. A one-language
+    keyword list is wrong for the first case and harmless for the second, so the list carries both.
+    """
+    words = _severe_words()
+    for sample in (
+        "训练集与测试集之间可能存在标签泄漏。",
+        "模型在小样本上过拟合。",
+        "处理组的分配受到季节混杂的影响。",
+    ):
+        assert _classifies_as_error(sample, words), (
+            f"{sample!r} names a defect in the analysis and no keyword in the severity list catches it"
+        )
+    # The other direction, in the same language: "correlation is not causation", said in Chinese, is the
+    # product's standing disclaimer and must stay a warning.
+    boilerplate = "相关不等于因果。"
+    assert not _classifies_as_error(boilerplate, words), (
+        "the Chinese standing disclaimer now reads as a critical finding on every report that carries it -- "
+        "the exact failure this file was written about"
+    )
+
+
+def test_severity_words_are_present_in_both_languages() -> None:
+    """A count, not a name list: the guard cannot be satisfied by deleting the half it is watching.
+
+    The two-sided test above can be answered by adding one Chinese word; this one asks that each script still
+    carry the defect families. Which words are in the list stays the owner file's business.
+    """
+    words = _severe_words()
+    english = sorted(w for w in words if w.isascii())
+    other = sorted(w for w in words if not w.isascii())
+    assert len(english) >= 5, f"the English defect families were trimmed: {english}"
+    assert len(other) >= 5, (
+        f"severity is English-only again ({other}) -- a caveat written in the other language the interface "
+        "invites would be graded as routine"
+    )
+
+
 def test_the_causal_gate_lives_where_claims_are_checked() -> None:
     """Removing "causal" from the caveat banner must not remove the product's causal-claim protection.
 

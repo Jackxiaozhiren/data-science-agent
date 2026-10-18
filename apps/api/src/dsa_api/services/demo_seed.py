@@ -182,8 +182,55 @@ def starter_questions() -> frozenset[str]:
 
 
 def is_starter_question(user_query: str) -> bool:
-    """Exact equality after stripping: the link counts a question the product published, not a near one."""
-    return user_query.strip() in starter_questions()
+    """Exact equality after stripping: the link counts a question the product published, not a near one.
+
+    Both published spellings count (R-13). A visitor who chooses the Chinese starter question sends the Chinese
+    sentence -- the interface and the run's objective are the same words -- and the funnel link would otherwise
+    go quiet for exactly the users the language layer was added for.
+    """
+    return user_query.strip() in starter_question_spellings()
+
+
+_QUESTION_LOCALE_FILE = Path(__file__).with_name("starter_questions_zh.json")
+_question_aliases: frozenset[str] | None = None
+
+
+def starter_question_spellings() -> frozenset[str]:
+    """Every wording the product may put in front of a visitor, in any offered language."""
+    global _question_aliases
+    if _question_aliases is None:
+        _question_aliases = starter_questions() | frozenset(
+            value for value in starter_question_translations().values() if value
+        )
+    return _question_aliases
+
+
+def starter_question_translations() -> dict[str, str]:
+    """`catalog task id` -> the Chinese wording of that question, as tracked beside the seeder.
+
+    Keyed by task id, not by the English sentence: the ids are what the catalog commits to, and a map keyed on
+    the question text would silently stop matching the day somebody rewords it. The file is part of the package
+    (`product_events.json` is the precedent), so a wheel carries its own translations.
+    """
+    if not _QUESTION_LOCALE_FILE.is_file():
+        return {}
+    document = json.loads(_QUESTION_LOCALE_FILE.read_text(encoding="utf-8"))
+    questions = document.get("questions") if isinstance(document, dict) else None
+    if not isinstance(questions, dict):
+        raise RuntimeError(f"{_QUESTION_LOCALE_FILE.name} holds no `questions` object")
+    return {str(key): str(value).strip() for key, value in questions.items() if str(value).strip()}
+
+
+def localized_questions(tasks: list[dict[str, str]]) -> list[str]:
+    """The Chinese wording for these tasks, position-for-position with the questions already published.
+
+    A task with no entry falls back to its own English question rather than shortening the list: the web reads
+    the two arrays by index, so a hole would show the next question's text under this question's button. The
+    contract test makes that fallback unreachable in a shipped tree; this only keeps a half-translated catalog
+    from mis-pairing the two lists.
+    """
+    translations = starter_question_translations()
+    return [translations.get(task["task_id"]) or task["question"] for task in tasks]
 
 
 def _tasks_for(root: Path, filename: str, sha: str) -> list[dict[str, str]]:
@@ -205,6 +252,7 @@ def _marker_payload(source: str, tasks: list[dict[str, str]]) -> dict[str, Any]:
             "source": source,
             "read_only": True,
             "starter_questions": [task["question"] for task in tasks],
+            "starter_questions_zh": localized_questions(tasks),
             "verified_by": [
                 {
                     "task_id": task["task_id"],
@@ -278,7 +326,12 @@ async def seed_demo_data(
                         example.owner = OWNER_SHARED
                 await session.commit()
             current = json.loads(existing.meta_json or "{}").get(MARKER) or {}
-            if current.get("starter_questions") != payload[MARKER]["starter_questions"]:
+            wanted = payload[MARKER]
+            # Both question lists, not just the English one: a row seeded before R-13 carries the canonical
+            # list only, and comparing that alone would leave a Chinese visitor looking at English buttons on
+            # a dataset the demo has already published.
+            offered = ("starter_questions", "starter_questions_zh")
+            if any(current.get(key) != wanted[key] for key in offered):
                 meta = json.loads(existing.meta_json or "{}")
                 meta[MARKER] = {
                     **payload[MARKER],

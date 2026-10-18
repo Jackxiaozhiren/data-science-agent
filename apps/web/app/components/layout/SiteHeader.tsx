@@ -15,10 +15,12 @@ import { ProvenanceStatus } from "@/app/components/layout/ProvenanceStatus";
 // benchmark/evaluation surfaces live in the sidebar group that says what they are. Structure reference:
 // TailAdmin / next-shadcn-dashboard topbar pattern.
 import { NAV_GROUPS } from "@/app/components/layout/Sidebar";
+import { LanguageToggle } from "@/app/components/layout/LanguageToggle";
+import { t, type Locale } from "@/lib/locale";
 
 const [analystGroup, systemGroup] = NAV_GROUPS;
 
-export function SiteHeader() {
+export function SiteHeader({ locale }: { locale: Locale }) {
   const [open, setOpen] = React.useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur">
@@ -45,10 +47,11 @@ export function SiteHeader() {
           </a>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageToggle locale={locale} />
           <ApiStatusDot />
           <ProvenanceStatus />
           <Link href="/datasets" className="hidden md:inline-flex">
-            <Button size="sm">Try DSA</Button>
+            <Button size="sm">{t(locale, "header.try")}</Button>
           </Link>
           <button
             type="button"

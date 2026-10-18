@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
+
+### Added (post-4.5.0) — the interface speaks two languages, and the keyboard reaches the evidence (R-13)
+
+- **A language switch in the header**, choosing between English and 中文 from a first-party `dsa_locale` cookie.
+  The cookie rather than a URL segment or `Accept-Language`: the pages are server-rendered, and a language the
+  server cannot see before render would produce English markup that immediately re-paints -- a hydration
+  mismatch and a flash on every navigation. `<html lang>` and the tab title follow the choice too, because a
+  reader who switches the page but not the voice is being told the translation is a decoration.
+- **Every string lives in one dictionary** (`apps/web/lib/locale.ts`), and a missing key renders as a visible
+  `⟨key⟩` rather than falling back quietly. That is what turned up the first omission during this very change:
+  a key a page asked for that no locale defined, caught on the screen instead of in a review.
+- **The starter questions are published in both languages, and the funnel knows both.** A Chinese interface that
+  sent the English question behind a Chinese button would be a label over different content, so the Chinese
+  wording is what gets sent. `starter_questions_zh.json` sits beside the seeder keyed by **catalog task id**,
+  not by the English sentence, so rewording a question cannot silently unmatch it. `is_starter_question` accepts
+  every published spelling -- the guard that matters is `test_the_chinese_wording_of_a_starter_records_the_same_link`:
+  a matcher that only knew English would keep counting the half that stayed English, so the funnel would read as
+  a smaller product rather than as a broken measurement.
+- **The Ask and upload screens are bilingual on the server**, not only after hydration: `apps/web/lib/locale.ts`
+  carries the copy and the root layout hands the choice down through a provider, so a client component reads its
+  language from the render rather than guessing it in the browser.
+- **An accessibility floor wired into the web lane.** `apps/web/scripts/regression.mjs` now walks five routes and
+  asserts, in a real browser: a declared and legal document language, a title and exactly one main region, an
+  accessible name on every interactive control and `alt` on every image, a *visible* focus indicator on every
+  keyboard stop, and that each `<details>` drill-down opens on Enter. No axe-core -- a new devDependency needs the
+  user's approval, so each rule is implemented against real DOM and names the axe rule it reproduces.
+- Two defects this found in its own tooling, recorded because they are the reason to run the falsification:
+  `checkVisibility()` rather than client rects is required, since Chromium still lays out the links inside a
+  *closed* `<details>` and those are not tab stops (a clean sweep read as 33 of 36 unreachable); and a focus
+  indicator must be measured by colour as well as style, because this Tailwind builds `outline-none` as
+  `outline: rgba(0,0,0,0) solid 2px` -- a check that reads only `outline-style` and `outline-width` calls a
+  transparent ring visible.
+- **A caveat's severity is no longer English-only.** `SEVERE_LIMITATIONS` carries the Chinese defect words
+  alongside the English ones, so a leak stated in Chinese does not render as a routine note. The Chinese words
+  are deliberately narrower than the English (`偏见`/`偏差`, never bare `偏`; never `混淆`, which also names a
+  confusion matrix) -- an over-matching keyword list reproduces the bug that section exists to prevent.
+
 ### Added (post-4.5.0) -- the ledger's section numbers are now a gate, not a habit
 
 - `scripts/check_ledger_identifiers.py` holds three things over the canonical `## N. ` run (in use since §62):

@@ -12,7 +12,9 @@ import { PageHeader } from "@/app/components/data/PageHeader";
 import { DataTable } from "@/app/components/data/DataTable";
 import { EmptyState, ErrorState, TableSkeleton } from "@/app/components/data/States";
 import { useBackendProbe } from "@/app/lib/backendProbe";
-import { sampleInfo, type SampleInfo } from "@/app/lib/sampleData";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
+import { sampleInfo, starterQuestionsFor, type SampleInfo } from "@/app/lib/sampleData";
 
 type Dataset = {
   id: string;
@@ -51,6 +53,7 @@ type QueuedFile = {
 };
 
 export default function DatasetsPage() {
+  const locale = useLocale();
   const [items, setItems] = useState<Dataset[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueuedFile[]>([]);
@@ -149,16 +152,16 @@ export default function DatasetsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 1 · Bring your data"
-        title="Bring a dataset"
-        description="Upload a file, then ask DSA a real question about it."
+        eyebrow={t(locale, "ds.eyebrow")}
+        title={t(locale, "ds.title")}
+        description={t(locale, "ds.description")}
         actions={
           <>
             <Link href="/datasets/compare">
-              <Button variant="secondary" size="sm">Compare datasets</Button>
+              <Button variant="secondary" size="sm">{t(locale, "ds.compare")}</Button>
             </Link>
             <Link href="/analysis">
-              <Button variant="secondary" size="sm">Skip to Step 2 · Ask →</Button>
+              <Button variant="secondary" size="sm">{t(locale, "ds.skipAsk")}</Button>
             </Link>
           </>
         }
@@ -168,29 +171,23 @@ export default function DatasetsPage() {
           on a free instance that sleeps when idle, so the first request can take the better part of a
           minute. Saying it at the entrance is what makes the wait readable instead of suspicious. */}
       <p className="text-xs leading-5 text-zinc-500" data-cold-start-notice="true">
-        {phase === "ready"
-          ? "This demo runs on a free instance that sleeps when idle, so the first request after a pause can take about a minute."
-          : copy}
+        {phase === "ready" ? t(locale, "ds.coldStart") : copy}
       </p>
 
       {/* Drag-and-drop upload card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Upload CSV, Parquet, JSON, or Excel (≤100MB)</CardTitle>
-          <CardDescription className="text-xs">Drag a file onto the drop zone or browse. Accepted: .csv .parquet .json .xlsx .xls</CardDescription>
+          <CardTitle className="text-sm">{t(locale, "ds.uploadTitle")}</CardTitle>
+          <CardDescription className="text-xs">{t(locale, "ds.uploadBody")}</CardDescription>
           {/* R-08, said plainly: what the id does, and what it does not do. A line that only promised privacy here
               would be the half-measure the plan warns about, so it names the cookie and the limit together. */}
-          <p className="mt-1 text-xs text-zinc-500">
-            Your uploads are kept apart from the next visitor&apos;s by a random id stored in a first-party cookie on
-            this browser, which the app sends with every request. It is not an account: anyone holding that id reads
-            the same rows, and clearing site data loses them for you too.
-          </p>
+          <p className="mt-1 text-xs text-zinc-500">{t(locale, "ds.ownerDisclosure")}</p>
         </CardHeader>
         <CardContent>
           <div
             role="button"
             tabIndex={0}
-            aria-label="Upload dataset: drag a file here or press Enter to browse"
+            aria-label={t(locale, "ds.dropZoneAria")}
             onClick={() => inputRef.current?.click()}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
@@ -210,15 +207,15 @@ export default function DatasetsPage() {
             <span className="flex size-10 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden>
               <FileUp className="size-5 text-zinc-500" />
             </span>
-            <p className="mt-3 text-sm font-medium">{dragging ? "Drop the files to upload" : "Drag & drop files here, or browse"}</p>
-            <p className="mt-1 text-xs text-zinc-500">Your files are sent to the DSA API for profiling — nothing is stored in the browser.</p>
+            <p className="mt-3 text-sm font-medium">{dragging ? t(locale, "ds.dropNow") : t(locale, "ds.dropHere")}</p>
+            <p className="mt-1 text-xs text-zinc-500">{t(locale, "ds.sendsToApi")}</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}>
-              Browse files
+              {t(locale, "ds.browse")}
             </Button>
-            <input ref={inputRef} type="file" multiple accept=".csv,.parquet,.json,.xlsx,.xls" onChange={onUpload} className="sr-only" aria-label="Dataset files" />
+            <input ref={inputRef} type="file" multiple accept=".csv,.parquet,.json,.xlsx,.xls" onChange={onUpload} className="sr-only" aria-label={t(locale, "ds.filesAria")} />
           </div>
           {queue.length > 0 && (
-            <ul className="mt-3 space-y-1.5" role="status" aria-label="Upload queue">
+            <ul className="mt-3 space-y-1.5" role="status" aria-label={t(locale, "ds.queueAria")}>
               {queue.slice(-5).map((it) => (
                 <li key={it.key} className="flex items-start gap-2 rounded-lg border border-zinc-100 px-2.5 py-1.5 text-xs">
                   {it.status === "done" ? (
@@ -234,7 +231,7 @@ export default function DatasetsPage() {
                     </span>
                     {it.status === "uploading" && <Progress value={60} className="mt-1 h-1.5" />}
                     {it.note && <span className={`mt-0.5 block leading-4 ${it.status === "error" ? "text-red-600" : "text-amber-700"}`}>{it.note}</span>}
-                    {it.status === "done" && <span className="text-emerald-700">Uploaded — profiled and listed below.</span>}
+                    {it.status === "done" && <span className="text-emerald-700">{t(locale, "ds.uploadedProfiled")}</span>}
                   </span>
                 </li>
               ))}
@@ -255,35 +252,32 @@ export default function DatasetsPage() {
       {samples.length > 0 && (
         <Card data-sample-panel="true">
           <CardHeader>
-            <CardTitle className="text-sm">Sample data shipped with this demo</CardTitle>
-            <CardDescription className="text-xs">
-              Copied from the repository at startup, so it is here after a redeploy that deletes uploads. The
-              questions below are this project&apos;s own benchmark tasks for these exact bytes, and the report
-              was run by this instance when it booted.
-            </CardDescription>
+            <CardTitle className="text-sm">{t(locale, "ds.sampleTitle")}</CardTitle>
+            <CardDescription className="text-xs">{t(locale, "ds.sampleBody")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {samples.map(({ id, filename, sample }) => (
               <div key={id} className="rounded-lg border bg-white p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <code className="block max-w-[220px] truncate font-mono text-xs font-medium" title={filename}>{filename}</code>
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] uppercase tracking-wide text-zinc-600">sample</span>
+                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] uppercase tracking-wide text-zinc-600">{t(locale, "ds.sampleChip")}</span>
                   {sample.exampleRunId && (
                     <Link href={`/analysis/${sample.exampleRunId}`} data-example-report={sample.exampleRunId} className="text-xs font-medium underline">
-                      Open its finished report →
+                      {t(locale, "ds.openReport")}
                     </Link>
                   )}
                 </div>
-                {sample.starterQuestions.length > 0 ? (
+                {starterQuestionsFor(sample, locale).length > 0 ? (
                   <ul className="mt-2 flex flex-wrap gap-2">
-                    {sample.starterQuestions.map((question) => (
+                    {starterQuestionsFor(sample, locale).map((question) => (
                       <li key={question}>
                         <Link
                           href={`/analysis?dataset=${encodeURIComponent(id)}&q=${encodeURIComponent(question)}`}
                           data-starter-question={question.slice(0, 24)}
                         >
                           <Button variant="secondary" size="sm" title={question}>
-                            Ask: {question.slice(0, 52)}
+                            {t(locale, "ds.askPrefix")}
+                            {question.slice(0, 52)}
                             {question.length > 52 ? "…" : ""}
                           </Button>
                         </Link>
@@ -291,10 +285,7 @@ export default function DatasetsPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-xs text-zinc-500">
-                    No benchmark task in the repository was written for this file&apos;s bytes, so no question
-                    is offered for it.
-                  </p>
+                  <p className="mt-2 text-xs text-zinc-500">{t(locale, "ds.noQuestionForFile")}</p>
                 )}
               </div>
             ))}
@@ -308,17 +299,17 @@ export default function DatasetsPage() {
           {loading && (phase === "warming" || phase === "probing") ? (
             <div role="status" aria-live="polite" className="space-y-2">
               <p className="text-sm text-amber-800">{copy}</p>
-              <p className="text-xs text-zinc-500">The table below fills in as soon as the API answers.</p>
+              <p className="text-xs text-zinc-500">{t(locale, "ds.tableFills")}</p>
             </div>
           ) : loading ? (
             <TableSkeleton rows={5} />
           ) : items.length === 0 && !err && phase === "ready" ? (
             <EmptyState
               icon={<Database className="size-5 text-zinc-400" aria-hidden />}
-              title="No datasets yet"
-              description="Upload one above to begin the demo flow: Bring → Ask → Inspect."
+              title={t(locale, "ds.emptyTitle")}
+              description={t(locale, "ds.emptyBody")}
               action={
-                <Button size="sm" onClick={() => inputRef.current?.click()}>Upload your first dataset</Button>
+                <Button size="sm" onClick={() => inputRef.current?.click()}>{t(locale, "ds.emptyUpload")}</Button>
               }
             />
           ) : items.length === 0 && !err ? (

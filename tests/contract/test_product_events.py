@@ -342,6 +342,43 @@ async def test_a_starter_question_run_records_the_link_before_the_run(
     assert "question" not in str(used), "the question text reached the log"
 
 
+def _a_published_starter_entry() -> dict[str, str]:
+    """A catalog entry with its dataset name, because R-13 publishes a second wording of the same task."""
+    from dsa_api.services.demo_seed import catalog_questions
+
+    grouped = catalog_questions(REPO)
+    for filename, entries in sorted(grouped.items()):
+        if entries:
+            return {**entries[0], "dataset": filename}
+    raise AssertionError("the tracked catalog published no questions at all")
+
+
+@pytest.mark.asyncio
+async def test_the_chinese_wording_of_a_starter_records_the_same_link(
+    loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The coupling R-13 creates and a funnel would never report: the Chinese button sends Chinese text.
+
+    `starter_question_used` is inferred by matching the published wording, so a second language the matcher
+    does not know silences the link for every visitor who chose it -- while the English half keeps counting and
+    the numbers look merely smaller. Asserting the same sequence for both spellings is the only way to see it.
+    """
+    from dsa_api.services.demo_seed import localized_questions
+
+    entry = _a_published_starter_entry()
+    question = localized_questions([entry])[0]
+    assert question != entry["question"], (
+        "the alias table returned English for this task, so the run below would repeat the test above and "
+        "prove nothing about the Chinese path"
+    )
+    await _start_one_run(loop_env, monkeypatch, question, entry["dataset"])
+    names = [e["event"] for e in _log(loop_env)]
+    assert names == ["starter_question_used", "run_started"], (
+        f"the funnel recorded {names} for the Chinese wording of a published starter question; the link is "
+        "supposed to know every spelling the product publishes"
+    )
+
+
 @pytest.mark.asyncio
 async def test_a_typed_question_records_no_starter_link(
     loop_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch

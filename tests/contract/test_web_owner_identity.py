@@ -201,13 +201,37 @@ def test_the_url_transport_is_limited_to_the_links_a_browser_opens() -> None:
 
 
 def test_the_upload_control_says_what_the_id_does_and_does_not_do() -> None:
-    """The sentence a visitor judges this by, pinned so a later copy edit cannot turn it into a promise."""
-    copy = " ".join(UPLOAD_PAGE.read_text(encoding="utf-8").split())
-    for phrase in ("first-party cookie", "not an account", "anyone holding that id"):
-        assert phrase in copy, (
-            f"the disclosure at the upload control no longer says {phrase!r}: the line has to name both the "
-            "mechanism and its limit, not just the reassuring half"
+    """The sentence a visitor judges this by, pinned so a later copy edit cannot turn it into a promise.
+
+    R-13 moved the wording into the string owner (`apps/web/lib/locale.ts`) so it can be said in Chinese too,
+    so the two halves are asserted where each now lives: the sentence in the owner, the fact that this control
+    still renders it in the key the owner declares. Both languages are read, because a disclosure that exists
+    only in English is a disclosure a Chinese visitor never gets.
+    """
+    page = " ".join(UPLOAD_PAGE.read_text(encoding="utf-8").split())
+    assert 't(locale, "ds.ownerDisclosure")' in page, (
+        "the upload card no longer renders the disclosure through its owner -- either the line is gone or a "
+        "second copy of it was written inline, and the inline copy is the one that drifts"
+    )
+    strings = " ".join((WEB / "lib/locale.ts").read_text(encoding="utf-8").split())
+    for locale in ("en", "zh"):
+        block = strings.split(f"{locale}: {{", 1)
+        assert len(block) == 2, (
+            f"the {locale} block of UI_STRINGS is not written the way this guard parses it"
         )
+        value = block[1].split('"ds.ownerDisclosure":', 1)
+        assert len(value) == 2, f"no ds.ownerDisclosure defined for {locale}"
+        text = value[1][:900]
+        phrases = (
+            ("first-party cookie", "not an account", "anyone holding that id")
+            if locale == "en"
+            else ("首方 cookie", "不是账号", "持有该 id")
+        )
+        for phrase in phrases:
+            assert phrase in text, (
+                f"the {locale} disclosure at the upload control no longer says {phrase!r}: the line has to "
+                "name both the mechanism and its limit, not just the reassuring half"
+            )
 
 
 def test_telemetry_never_carries_the_owner_id() -> None:

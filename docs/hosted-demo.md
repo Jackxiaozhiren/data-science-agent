@@ -58,6 +58,22 @@ A canonical acceptance question is:
 
 A successful run should show completed tool calls, evidence marked `verified`, no tool errors, and a final `COMPLETED` report. A causal check may deliberately return `causal_bar=fail`; that is a guardrail indicating that an observational difference is not sufficient to establish causation.
 
+## The same path in Chinese, and by keyboard
+
+The header offers English and 中文 (R-13). It is not a cosmetic switch: the starter questions are published in
+both wordings, and **the wording the reader sees is the wording that is sent**, so a Chinese visitor's run has a
+Chinese objective -- and the funnel's `starter_question_used` link matches either spelling, so choosing the other
+language does not silently drop the click out of the measurement. The interface language never rewrites a
+deliverable: a report stays in the language the run was asked in.
+
+Measured on a local `dsa ui` instance at `127.0.0.1:3000`: the server renders `/datasets` and `/analysis` already
+in Chinese (no English-then-Chinese re-paint), the landing's primary action carried
+`对 Titanic 数据集做探索性分析，重点关注生还模式。`, and the run it started reached `COMPLETED`. The keyboard half is a
+gate, not a screenshot: `apps/web/scripts/regression.mjs` walks the analyst's routes and requires a visible focus
+indicator on every tab stop and that each `<details>` drill-down opens on Enter.
+
+The public deployment above has not been redeployed since, so what it serves is still the earlier build.
+
 ## Product capture (30 s, recorded 2026-09-11 against the live deployment)
 
 <video src="assets/demo/dsa-demo-30s.webm" controls preload="metadata" width="100%"></video>

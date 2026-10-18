@@ -82,6 +82,7 @@ function assertNavRoutesWalked() {
   }
 }
 assertNavRoutesWalked();
+const LOCALES = readLocales();
 
 const VIEWPORTS = [
   { name: "desktop", width: 1280, height: 900 },
@@ -154,6 +155,153 @@ const PROBE_SCENARIOS = [
     forbid: ["No datasets yet", "Uploaded — profiled"],
   },
 ];
+
+// R-13 (access floor): the three things the requirement names -- a drill-down a keyboard can reach, a focus
+// state a keyboard can see, and status carried by text -- asserted against real DOM in the browser the tour
+// already boots. axe-core is deliberately NOT used: adding it would be a new devDependency, and the
+// permission contract reserves dependency changes for the user, so each rule below is implemented here and
+// names the axe rule it reproduces (html-has-lang, valid-lang, document-title, landmark-one-main,
+// link-name, button-name, label, image-alt).
+//
+// The routes are the analyst loop R-10 declares -- Ask, Runs, Reports, Datasets -- plus the landing, which
+// is where a starter question and the language toggle actually live. The tour is backend-independent, so
+// these pages render their empty and error states: that is enough for document rules, accessible names and
+// focus, and `/datasets` carries a real `<details>` drill-down that needs no API to be walked.
+const A11Y_PAGES = ["/", "/analysis", "/runs", "/reports", "/datasets"];
+const A11Y_CHECKS_PER_PAGE = 3;
+
+// The legal values of `<html lang>` come from the locale owner rather than a list typed here: a third
+// language added to the toggle must be accepted by the check on the same commit that adds it.
+function readLocales() {
+  const src = readFileSync(join(webDir, "lib", "locale.ts"), "utf8");
+  const block = src.match(/export const LOCALES[^=]*=\s*\[([^\]]*)\]/);
+  if (!block) {
+    throw new Error(
+      "LOCALES is no longer a bracketed array in apps/web/lib/locale.ts -- the lang check cannot know which " +
+        "values are legal, and a check that cannot fail is not a check"
+    );
+  }
+  const values = [...block[1].matchAll(/["']([^"']+)["']/g)].map((m) => m[1]);
+  if (values.length === 0) throw new Error(`LOCALES parsed empty from apps/web/lib/locale.ts`);
+  return values;
+}
+
+const TAB_LIMIT = 120;
+
+// Everything the keyboard can stop on, in document order, plus what it looks like *before* focus reaches it.
+// The baseline matters: an input with a resting `shadow-sm` already has a non-none box-shadow, so comparing
+// the shadow to `none` would certify a control whose ring never appears.
+//
+// `page.evaluate` ships a function's body to the browser and carries no closure over module scope, so every
+// helper that runs in the page takes what it needs as an argument instead of reading these constants.
+//
+// The visibility test is `checkVisibility()`, not client rects: Chromium still lays out and measures the
+// links inside a *closed* `<details>`, and those are not in the tab order. Measured on `/datasets` -- with
+// rects alone the sweep reported 33 of 36 and the three missing stops were the diagnostics links under the
+// collapsed disclosure, which made a clean run read like a focus trap.
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary, [role="button"], [role="tab"], [role="checkbox"], [role="switch"], [tabindex]:not([tabindex="-1"])';
+
+const collectStops = (selector) => {
+  const visible = (el) =>
+    typeof el.checkVisibility === "function"
+      ? el.checkVisibility({ checkOpacity: false })
+      : el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  return [...document.querySelectorAll(selector)]
+    .filter(visible)
+    .map((el, i) => {
+      el.setAttribute("data-a11y-stop", String(i));
+      const s = getComputedStyle(el);
+      return {
+        i,
+        outlineStyle: s.outlineStyle,
+        outlineWidth: s.outlineWidth,
+        outlineColor: s.outlineColor,
+        boxShadow: s.boxShadow,
+        borderColor: s.borderTopColor,
+        tag: el.tagName.toLowerCase(),
+      };
+    });
+};
+
+// A focus indicator is something a reader can see, so the outline's colour is part of the test and not an
+// afterthought: this Tailwind builds `outline-none` as `outline: rgba(0,0,0,0) solid 2px`, which leaves the
+// style and width looking present while painting nothing. Measured on a planted control -- a check that read
+// only outline-style and outline-width called that transparent ring visible and stayed green.
+const READ_FOCUS = () => {
+  const el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  const s = getComputedStyle(el);
+  return {
+    stop: el.getAttribute("data-a11y-stop"),
+    outlineStyle: s.outlineStyle,
+    outlineWidth: s.outlineWidth,
+    outlineColor: s.outlineColor,
+    boxShadow: s.boxShadow,
+    borderColor: s.borderTopColor,
+    focusVisible: el.matches(":focus-visible"),
+    aria: el.getAttribute("aria-label"),
+    text: (el.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 32),
+  };
+};
+
+// `rgb(r g b / 0)` and `rgba(r, g, b, 0)` are both things Chromium reports for a transparent colour.
+const isTransparent = (color) => {
+  const m = /rgba?\(([^)]*)\)/.exec(color ?? "");
+  if (!m) return false;
+  const parts = m[1].split(/[\s,/]+/).filter(Boolean);
+  if (parts.length < 4) return false;
+  return Number(parts[3]) === 0;
+};
+
+// axe's name computation, in the order it resolves one: labelledby, label, a button input's value, the
+// element's own text, then title. A placeholder counts as a name here -- axe accepts it too, while flagging
+// placeholder-only labels as a separate, lower-severity rule -- so a control named only by placeholder
+// passes and one named by nothing fails. Takes the interactive selector as an argument for the same reason
+// `collectStops` does.
+const accessibleNames = (selector) => {
+  const describe = (el) => {
+    const label = el.getAttribute("aria-label");
+    const text = (el.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 32);
+    return `${el.tagName.toLowerCase()}${label ? `[aria-label=${JSON.stringify(label)}]` : ""}${text ? ` "${text}"` : ""}`;
+  };
+  const visible = (el) =>
+    typeof el.checkVisibility === "function"
+      ? el.checkVisibility({ checkOpacity: false })
+      : el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  const nameOf = (el) => {
+    const by = el.getAttribute("aria-labelledby");
+    if (by) {
+      const joined = by
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent ?? "")
+        .join(" ")
+        .trim();
+      if (joined) return joined;
+    }
+    const label = el.getAttribute("aria-label");
+    if (label && label.trim()) return label.trim();
+    if (el instanceof HTMLInputElement && (el.type === "submit" || el.type === "button") && el.value.trim()) return el.value.trim();
+    if (el instanceof HTMLInputElement && el.labels?.length) {
+      const fromLabel = el.labels[0].textContent?.trim();
+      if (fromLabel) return fromLabel;
+    }
+    if (el instanceof HTMLInputElement && el.placeholder.trim()) return el.placeholder.trim();
+    if (el.tagName === "IMG") return (el.getAttribute("alt") ?? "").trim();
+    const inside = el.querySelector("img[alt]");
+    if (inside && inside.getAttribute("alt").trim()) return inside.getAttribute("alt").trim();
+    const text = (el.textContent ?? "").trim();
+    if (text) return text;
+    const title = el.getAttribute("title");
+    if (title && title.trim()) return title.trim();
+    return "";
+  };
+  const unnamed = [...document.querySelectorAll(selector)]
+    .filter((el) => visible(el) && !nameOf(el))
+    .map(describe);
+  const imgsWithoutAlt = [...document.querySelectorAll("img")].filter((el) => !el.hasAttribute("alt")).map(describe);
+  return { unnamed, imgsWithoutAlt };
+};
 
 async function expectFileChooser(page, act, want, timeoutMs = 5000) {
   let count = 0;
@@ -512,6 +660,147 @@ try {
       await probeContext.close();
     }
   }
+
+  // R-13: the access floor, one fresh context per route. A focus position or an open `<details>` left behind
+  // by the previous page would change what the next page's tab sweep measures, so nothing is shared.
+  for (const route of A11Y_PAGES) {
+    const a11yContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const a11yPage = await a11yContext.newPage();
+    try {
+      await a11yPage.goto(`http://localhost:${PORT}${route}`, { waitUntil: "networkidle", timeout: 45000 });
+      // Client components decide their own content a beat after the shell paints; the sweep needs the DOM
+      // the reader actually gets, not the prerendered skeleton.
+      await a11yPage.waitForTimeout(2000);
+
+      // 1. Document rules. With the language toggle in place, `<html lang>` is no longer a constant -- it is
+      // the one attribute that tells a screen reader which voice to use for the text under it.
+      const doc = await a11yPage.evaluate(() => ({
+        lang: document.documentElement.getAttribute("lang"),
+        title: (document.title ?? "").trim(),
+        mains: document.querySelectorAll("main").length,
+      }));
+      const docProblems = [];
+      if (!doc.lang) docProblems.push(`no lang on <html> (the page is ${JSON.stringify(doc.title)})`);
+      else if (!LOCALES.includes(doc.lang)) {
+        docProblems.push(`lang=${JSON.stringify(doc.lang)} is not one of the locales apps/web/lib/locale.ts declares (${LOCALES.join(", ")})`);
+      }
+      if (!doc.title) docProblems.push("empty <title>");
+      if (doc.mains !== 1) docProblems.push(`${doc.mains} <main> regions, wanted exactly 1`);
+      if (docProblems.length > 0) {
+        await a11yPage.screenshot({ path: join(OUT, `a11y-${slug(route)}-doc-FAILED.png`), fullPage: true });
+        failures.push(`a11y ${route} document rules: ${docProblems.join("; ")}`);
+      } else {
+        console.log(`a11y ${route}: document rules -- lang=${doc.lang} title ok main=1`);
+      }
+
+      // 2. Accessible names. A control whose only label is a colour-coded icon is unreachable for a reader
+      // who cannot see the colour, and axe rates it critical.
+      const names = await a11yPage.evaluate(accessibleNames, FOCUSABLE_SELECTOR);
+      if (names.unnamed.length > 0 || names.imgsWithoutAlt.length > 0) {
+        await a11yPage.screenshot({ path: join(OUT, `a11y-${slug(route)}-names-FAILED.png`), fullPage: true });
+        const parts = [];
+        if (names.unnamed.length > 0) parts.push(`${names.unnamed.length} unnamed control(s) [${names.unnamed.slice(0, 5).join(", ")}]`);
+        if (names.imgsWithoutAlt.length > 0) parts.push(`${names.imgsWithoutAlt.length} <img> without alt [${names.imgsWithoutAlt.slice(0, 5).join(", ")}]`);
+        failures.push(`a11y ${route} accessible names: ${parts.join("; ")}`);
+      } else {
+        console.log(`a11y ${route}: accessible names -- every interactive element named, every img has alt`);
+      }
+
+      // 3. Keyboard: every tab stop must *show* that it has focus, and every drill-down must open on Enter.
+      const stops = await a11yPage.evaluate(collectStops, FOCUSABLE_SELECTOR);
+      const baseline = new Map(stops.map((s) => [s.i, s]));
+      const focusProblems = [];
+      let visited = 0;
+      let lastStop = null;
+      // How the walk ended decides whether the coverage line below is a finding or an artifact: "document"
+      // is the normal end (the last stop handed focus to the browser), "repeat" and "budget" are not.
+      let ended = "budget";
+      for (let k = 0; k < TAB_LIMIT; k++) {
+        await a11yPage.keyboard.press("Tab");
+        const cur = await a11yPage.evaluate(READ_FOCUS);
+        // Focus has left the document: the last stop handed it to the browser, so the sweep is complete.
+        if (cur === null) {
+          ended = "document";
+          break;
+        }
+        const where = `${cur.stop === null ? "untracked " : `stop ${cur.stop} `}${cur.aria ? `[${cur.aria}]` : ""} ${cur.text}`.trim();
+        if (lastStop !== null && cur.stop === lastStop) {
+          focusProblems.push(`Tab did not move focus -- it stayed on ${where}`);
+          ended = "repeat";
+          break;
+        }
+        lastStop = cur.stop;
+        visited += 1;
+        const rest = cur.stop === null ? null : baseline.get(Number(cur.stop));
+        const outlineShown =
+          cur.outlineStyle !== "none" &&
+          (cur.outlineStyle === "auto" || cur.outlineWidth !== "0px") &&
+          !isTransparent(cur.outlineColor);
+        const ringShown = rest
+          ? cur.boxShadow !== rest.boxShadow || cur.borderColor !== rest.borderColor
+          : cur.boxShadow !== "none";
+        if (!outlineShown && !ringShown) {
+          focusProblems.push(
+            `${where}: no visible focus indicator (outline=${cur.outlineStyle} ${cur.outlineWidth} ` +
+              `${cur.outlineColor}, box-shadow=${JSON.stringify(cur.boxShadow.slice(0, 48))}` +
+              `${rest ? ` and border ${cur.borderColor} unchanged from resting` : ""}, :focus-visible=${cur.focusVisible})`
+          );
+        }
+      }
+      // Coverage, not a floor. The walk must account for every stop it marked: focus escaping the document
+      // partway through looks identical to finishing, from the outside, and the "< 3" version this replaced
+      // passed on a page where three stops were unreachable. `checkVisibility()` in the predicate is what
+      // makes the two agree -- see the note above collectStops.
+      if (ended === "budget") {
+        focusProblems.push(`the sweep spent its ${TAB_LIMIT}-keypress budget after ${visited} of ${stops.length} stops -- the walk never finished`);
+      } else if (ended === "document" && visited !== stops.length) {
+        focusProblems.push(
+          `the sweep reached ${visited} of ${stops.length} marked tab stops before focus left the document ` +
+            "-- a control that moves focus on Tab, or one the keyboard cannot reach at all"
+        );
+      }
+      if (stops.length < 3) {
+        focusProblems.push(`only ${stops.length} keyboard stop(s) on the page -- a walk of nothing proves nothing`);
+      }
+
+      // The drill-down assertion is the R-13 user consequence stated literally: "a reviewer with a keyboard
+      // must be able to reach the drill-down that is the whole product". Enter, not click.
+      const summaries = a11yPage.locator("details > summary");
+      const summaryCount = await summaries.count();
+      let toggled = 0;
+      for (let i = 0; i < summaryCount; i++) {
+        const summary = summaries.nth(i);
+        if (!(await summary.isVisible())) continue;
+        const before = await summary.evaluate((el) => el.parentElement.open);
+        await summary.focus();
+        await a11yPage.keyboard.press("Enter");
+        const after = await summary.evaluate((el) => el.parentElement.open);
+        if (after === before) {
+          focusProblems.push(
+            `drill-down ${JSON.stringify((await summary.innerText()).trim().slice(0, 32))} did not toggle with Enter (open stayed ${after})`
+          );
+          continue;
+        }
+        toggled += 1;
+        await a11yPage.keyboard.press("Enter");
+        const restored = await summary.evaluate((el) => el.parentElement.open);
+        if (restored !== before) {
+          focusProblems.push(`drill-down toggled on the first Enter but not back on the second (open=${restored}, wanted ${before})`);
+        }
+      }
+
+      if (focusProblems.length > 0) {
+        await a11yPage.screenshot({ path: join(OUT, `a11y-${slug(route)}-keyboard-FAILED.png`) });
+        failures.push(`a11y ${route} keyboard: ${focusProblems.join("; ")}`);
+      } else {
+        console.log(`a11y ${route}: keyboard -- ${visited}/${stops.length} tab stops visibly focussed, ${toggled} drill-down(s) opened by Enter`);
+      }
+    } catch (e) {
+      failures.push(`a11y ${route} harness: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      await a11yContext.close();
+    }
+  }
 } catch (e) {
   failures.push(`harness: ${e instanceof Error ? e.message : String(e)}\n${serverLog.slice(-1500)}`);
 } finally {
@@ -520,10 +809,12 @@ try {
 }
 
 const ROUTE_CHECKS = ROUTES.length * VIEWPORTS.length;
-const TOTAL_CHECKS = ROUTE_CHECKS + INTERACTIONS.length + PROBE_SCENARIOS.length;
+const A11Y_CHECKS = A11Y_PAGES.length * A11Y_CHECKS_PER_PAGE;
+const TOTAL_CHECKS = ROUTE_CHECKS + INTERACTIONS.length + PROBE_SCENARIOS.length + A11Y_CHECKS;
 console.log(
   `\nregression: ${TOTAL_CHECKS - failures.length}/${TOTAL_CHECKS} checks passed ` +
-    `(${ROUTE_CHECKS} route/viewport + ${INTERACTIONS.length} interaction + ${PROBE_SCENARIOS.length} backend-probe), screenshots in ${OUT}`,
+    `(${ROUTE_CHECKS} route/viewport + ${INTERACTIONS.length} interaction + ${PROBE_SCENARIOS.length} backend-probe ` +
+    `+ ${A11Y_CHECKS} accessibility), screenshots in ${OUT}`,
 );
 if (failures.length > 0) {
   console.error("FAILURES:\n- " + failures.join("\n- "));
