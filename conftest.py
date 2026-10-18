@@ -70,6 +70,14 @@ _ISOLATED_GLOBALS = (
     ("dsa_api.services.run_lifecycle", "_TASKS"),
 )
 
+# Containers the snapshot/restore above cannot isolate, because their state lives *inside* the objects the
+# container holds: `dsa_api.core.security._limiters` is a list of RateLimiter instances, and each one keeps
+# its own sliding-window deque in `limiter._hits`. Snapshotting that list hands back the same objects with
+# their windows intact, so an entry here would read as isolated while resetting nothing -- the green-but-
+# never-ran shape §76 caught. These are reset by the fixture below instead, and
+# `tests/test_process_global_isolation.py` asserts the set is complete against the same scan.
+_ISOLATED_RESETS: tuple[tuple[str, str], ...] = (("dsa_api.core.security", "_limiters"),)
+
 
 def _snapshot(obj: object) -> object:
     if isinstance(obj, dict):
@@ -609,3 +617,30 @@ def isolate_process_global_state():
     yield
     for obj, saved in live:
         _restore(obj, saved)
+
+
+@pytest.fixture(autouse=True)
+def isolate_rate_limit_windows():
+    """Give each test its own sliding-window budget, on both sides of the test.
+
+    Measured (audit §213): the suite crosses the shipped 30-uploads-per-minute rule inside one process,
+    because `_limiters` is module-global and every `TestClient` request presents the same host, so the key is
+    one shared `127.0.0.1:/api/v1/datasets` window for the whole run. The count reached 30/30 at
+    `tests/integration/test_phase6_api.py::test_sse_events_and_json_fallback` and the next upload in
+    `test_progress_and_evidence_trace` was answered 429 -- red, and red only in the order and at the speed the
+    run happened to have, which is why it looked like a flake rather than a budget.
+
+    Why the reset is synchronous: the shipped `clear_rate_limit_state()` is a coroutine, and an async autouse
+    fixture does not run for the sync tests that also upload (`tests/unit/test_more_coverage.py` among them),
+    so awaiting here would isolate a subset of the suite silently. The windows are plain deques and no request
+    is in flight at a fixture boundary, so clearing them needs no lock.
+    """
+
+    def _reset() -> None:
+        for module_name, attr in _ISOLATED_RESETS:
+            for holder in getattr(importlib.import_module(module_name), attr):
+                holder._hits.clear()
+
+    _reset()
+    yield
+    _reset()
