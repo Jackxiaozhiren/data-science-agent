@@ -12923,3 +12923,15 @@ register puts those behind your consent, so it is written up rather than shipped
 step), `scripts/run_gates.sh` (reorder its `GATES` list the same way, so the local runner witnesses the same
 ordering), and the ledger addendum naming the run id that proves the gate can fail -- which needs a deliberately
 stale lock to be pushed, so it is a branch-only demonstration, not a main red.
+
+**Addendum, same day, before the proposal goes anywhere.** Two corrections to what is written above, both
+measured after it was written.
+
+- The scope is one place, not two. `publish.yml` has no `uv lock --check` step at all -- its only lock-touching
+  step is `uv sync --dev` at line 55 -- so the inert gate is exactly `ci.yml:78`. Reordering that one step is the
+  whole of option 1; there is no second workflow to keep in step, which makes the change smaller than it read.
+- The witness for the shipped half is now in: run `39109508161` on `329d758` completed **success** (`ci` and
+  `web-regression` both green). That says the per-test reset and the lock line are consistent with the rest of
+  the suite; it does not say anything about §215's option, because nothing in CI changed to make it so -- with
+  `uv sync --dev` still ahead of the check, the gate would have exited 0 whether or not `329d758` had fixed the
+  lock. That is the asymmetry that makes the step inert, stated from the run that proves it.
