@@ -178,10 +178,10 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   page and its copy button -- read `apps/web/lib/locale.ts` (603 keys per locale, the two blocks key-identical).
   The last tier was the one the first counters could not see: **every table column head and caption, the eleven
   run-status labels, and the short labels of the secondary pages.** Two measures are quoted because they answer
-  different questions. In the source, `build/r13j-ast-inventory.mjs` walks the TypeScript AST and reports
+  different questions. In the source, `apps/web/scripts/locale-chrome-inventory.mjs` walks the TypeScript AST and reports
   reader-position string literals; it went from **57 multi-word candidates in 19 files to 2**, and both survivors
   are declared identifiers (`dataset_id ·`, the Ollama endpoint placeholder). On the rendered page,
-  `build/r13i-chrome-acceptance.mjs` reads only the regions the interface owns -- `th`, `option`, `summary`,
+  `apps/web/scripts/locale-chrome-acceptance.mjs` reads only the regions the interface owns -- `th`, `option`, `summary`,
   `label`, `h1`–`h3`, `button`, nav/header/footer -- on 17 routes in 中文 and 17 in English: **zero chrome regions
   show a Latin-only string outside the declared identifier set, and 74–94% of the chrome regions carry CJK.** Its
   exemption list is printed with every run (4–10 regions per route, and they are GitHub, the language switch's

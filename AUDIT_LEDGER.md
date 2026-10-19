@@ -13711,3 +13711,11 @@ pasted into chat). `test_provider_settings.py`'s order-dependent failure is a na
 single-token bucket (118 literals) is now known to be dominated by non-rendered values (`aria-live="polite"`,
 `<option value=>`, `{placeholder}` chunks, identifiers) rather than by copy, but the claim rests on the region
 instrument, not on that bucket being empty.
+
+Addendum (same day). Both instruments are now tracked so the closure claim is reproducible by anyone:
+`apps/web/scripts/locale-chrome-inventory.mjs` (AST source count) and
+`apps/web/scripts/locale-chrome-acceptance.mjs` (DOM-region page check, `R13I_STATS=1` prints the exemption
+breakdown). They were run from the repo after the move and reproduce the scratch copies' numbers exactly --
+inventory `duplicates=0, wordy=2 in 2 files, single-token=118, all=132`; acceptance `R13I_CHROME_ACCEPTANCE_PASS
+(34/34)` with 17 STATS lines. No absolute path survives in either file (the scratch copies hardcoded this
+worktree), and the citations above now point at the tracked paths.
