@@ -176,6 +176,12 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   locale context or threading a `locale` prop through every call site. That is a rendering-boundary change, and
   doing it halfway would leave the Chinese visitor reading English chrome -- the outcome this whole layer exists
   to prevent.
+- **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on seven English
+  strings (measured 2026-10-18: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
+  `nothing answered`, `Checking API`) and every one of them is now a dictionary value -- which is why this
+  requirement kept the `en` values byte-for-byte while moving them. The parity sweep walks `apps/web/app/**` and
+  does not see `scripts/`, so the coupling is real and unstated by any gate: rewording one of those seven is a
+  change to the tour as well as to the dictionary.
 - **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
   `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
   would add a devDependency, and dependency changes are the user's call, not the agent's.
