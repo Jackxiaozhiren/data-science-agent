@@ -1,8 +1,12 @@
+"use client";
+
 import * as React from "react";
 import { AlertTriangle, Inbox, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Skeleton } from "@/app/components/ui/feedback";
 import { Button } from "@/app/components/ui/button";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 // Unified EmptyState — every list/table reuses this, never a bare sentence.
@@ -32,6 +36,10 @@ export function EmptyState({
 }
 
 // Unified ErrorState — one human line, never dump raw HTML bodies.
+//
+// These components render on every route, so they read the visitor's language themselves instead of receiving it
+// from each caller. That is why this module is a client module; server pages may still render them, and the
+// locale arrives through `LocaleProvider` in the root layout -- the same route the pages take.
 export function ErrorState({
   message,
   retry,
@@ -43,17 +51,18 @@ export function ErrorState({
   diagnostics?: React.ReactNode;
   className?: string;
 }) {
+  const locale = useLocale();
   return (
     <div className={cn("rounded-xl border border-red-200 bg-red-50/60 p-4", className)} role="alert">
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />
         <div className="min-w-0">
-          <p className="text-sm font-medium text-red-800">Something went wrong</p>
+          <p className="text-sm font-medium text-red-800">{t(locale, "state.errorHeading")}</p>
           <p className="mt-1 break-words text-sm leading-6 text-red-700">{message}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {retry && (
               <Button variant="secondary" size="sm" onClick={retry}>
-                <RotateCcw className="size-3" aria-hidden /> Retry
+                <RotateCcw className="size-3" aria-hidden /> {t(locale, "common.retry")}
               </Button>
             )}
             {diagnostics}
@@ -66,8 +75,9 @@ export function ErrorState({
 
 // Unified Skeleton blocks for loading.tsx + client loading states.
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
+  const locale = useLocale();
   return (
-    <div className="space-y-2" aria-label="Loading table">
+    <div className="space-y-2" aria-label={t(locale, "state.loadingTable")}>
       <Skeleton className="h-8 w-full" />
       {Array.from({ length: rows }).map((_, i) => (
         <Skeleton key={i} className="h-10 w-full" />
@@ -77,8 +87,9 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 }
 
 export function CardsSkeleton({ count = 3 }: { count?: number }) {
+  const locale = useLocale();
   return (
-    <div className="grid gap-4 md:grid-cols-3" aria-label="Loading">
+    <div className="grid gap-4 md:grid-cols-3" aria-label={t(locale, "state.loadingCards")}>
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i}>
           <CardContent className="space-y-2 p-4 pt-4">
