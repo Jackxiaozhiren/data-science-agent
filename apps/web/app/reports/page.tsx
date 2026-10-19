@@ -61,11 +61,11 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 3 · Reports"
-        title="Reports"
-        description="Every completed run preserves a reproducible Markdown report. Open a run to preview or download it."
+        eyebrow={t(locale, "reportsPage.eyebrow")}
+        title={t(locale, "nav.reports")}
+        description={t(locale, "reportsPage.preserved")}
         actions={
-          <Link href="/analysis"><Button size="sm">New analysis →</Button></Link>
+          <Link href="/analysis"><Button size="sm">{t(locale, "reportsPage.newAnalysis")}</Button></Link>
         }
       />
       {failure && <ErrorState message={messages[failure]} />}
@@ -75,9 +75,9 @@ export default async function ReportsPage() {
             runsFailure === null && (
               <EmptyState
                 icon={<FileText className="size-5 text-zinc-400" aria-hidden />}
-                title="No reports yet"
-                description="Reports appear here once an analysis run completes."
-                action={<Link href="/analysis"><Button size="sm">Start your first analysis →</Button></Link>}
+                title={t(locale, "reportsPage.emptyTitle")}
+                description={t(locale, "reportsPage.appearBody")}
+                action={<Link href="/analysis"><Button size="sm">{t(locale, "reportsPage.startFirst")}</Button></Link>}
               />
             )
           ) : (
@@ -85,7 +85,7 @@ export default async function ReportsPage() {
               {[...groups.entries()].map(([dsId, items], gi) => (
                 <details key={dsId} open={gi === 0} className="rounded-xl border border-zinc-100">
                   <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium hover:bg-zinc-50">
-                    {names.get(dsId) ?? (dsId === "unknown" ? "Unknown dataset" : `Dataset ${dsId.slice(0, 8)}`)}
+                    {names.get(dsId) ?? (dsId === "unknown" ? t(locale, "reportsPage.unknownDataset") : `Dataset ${dsId.slice(0, 8)}`)}
                     <span className="ml-2 font-mono text-xs font-normal text-zinc-400">{items.length} report{items.length === 1 ? "" : "s"}</span>
                   </summary>
                   <div className="border-t border-zinc-100 p-3 sm:p-4">

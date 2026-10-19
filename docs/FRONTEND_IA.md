@@ -171,13 +171,15 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   Retry, the two skeleton labels), the route-level `loading.tsx` and `error.tsx`, `DataTable.tsx`'s empty state,
   the dialog's close labels, the language switch's group name, the hero caption and node labels, the sidebar's
   groups and every one of its links, the header nav, the footer tagline and landmark names, both run/report
-  tables' search and filter controls, the plan timeline's empty line and the whole run inspector (67 strings)
-  read `apps/web/lib/locale.ts`. What is left is route-specific copy: 24 long reader-facing sentences in 10
-  files under the same scan that counted 58 before this batch (it needs ≥3 words in a JSX text node or a
-  sentence of ≥18 characters, so it *understates* -- counted separately, the same tree holds roughly 149
-  strings once single-word column headings, eyebrows and `label=` props are included, led by
-  `datasets/compare/page.tsx`). Two shapes stay English on purpose: technical identifiers (`SHA-256`, `MCP`,
-  a protocol version) and anything the run itself produced.
+  tables' search and filter controls, the plan timeline's empty line, the whole run inspector (67 strings) and
+  the rest of the loop -- the runs list, the reports list, the run-detail header and stats, the dataset comparison
+  screen (51 strings) -- read `apps/web/lib/locale.ts`. What is left is route-specific copy on the secondary
+  surfaces: **15 long reader-facing sentences in 7 files** under the scan that counted 89 before this work
+  started (it needs ≥3 words in a JSX text node or a sentence over 18 characters, so it *understates* -- the same
+  tree counts **105 strings in 16 files** once single-word column headings, eyebrows and `label=` props are
+  included, led by `evaluations`, `settings` and `failures`). Both numbers are stated because quoting only the
+  flattering one is how an inventory becomes a claim. Two shapes stay English on purpose: technical identifiers
+  (`SHA-256`, `MCP`, a protocol version) and anything the run itself produced.
 - **The locale provider wraps the whole shell, and that was a bug.** `LocaleProvider` used to sit around
   `{children}` inside `<main>`, while the sidebar is a sibling of `<main>` and a client component reading that
   context -- so on a 中文 page the sidebar, and anything else outside the provider, rendered the dictionary's

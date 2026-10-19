@@ -45,6 +45,14 @@
   title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
   every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
   fallback now asks the dictionary.
+- **The rest of the analyst loop is bilingual too.** The runs list, the reports list, the run-detail header and
+  stats, and the dataset comparison screen -- 51 strings, including the unit labels under each compared number and
+  the "— select —" placeholders -- now read the dictionary, and existing keys were reused rather than duplicated
+  where the sentence was already owned (`nav.runs`, `dsd.rows`, `insp.statEvidence`, `cmp.back`). Verified with a
+  check designed for the failure mode that matters here: it reads the migrated sentences out of the dictionary at
+  run time and refuses any page that still shows one of them as a whole line in the other language, plus any page
+  showing a `⟨missing-key⟩` marker at all -- a positive "is the Chinese there" test can pass while an English
+  sentence stays behind on the same screen. Six route/language combinations pass with zero console errors.
 - **The navigation, header and footer speak the visitor's language -- and fixing them found a scope bug in the
   language layer itself.** The sidebar's three groups and all thirteen of their links, the header's nav row and
   its mobile menu, the footer tagline and the two landmark names are dictionary keys now; the nav declaration
