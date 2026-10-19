@@ -13239,3 +13239,46 @@ BLOCKERS NEEDING A HUMAN
   loopback `ThreadingHTTPServer` this test starts itself, not a live provider. Neither claim is edited here --
   §218 is another session's dated record, and this is this lane's -- and the actionable form is one command:
   run the whole suite twice, once with and once without `-o addopts=""`, and diff the FAILED set.
+
+## 220. Clearing the dependency queue turned out to be three guards that require a companion edit Dependabot cannot make
+
+Nine open PRs, and after measuring each failing step none of them was blocked by the upgrade itself. §218 named
+the three classes; this is what closing them took, and the one structural finding it exposed.
+
+**The mechanical gap was one command, six times.** `scripts/check_npm_workspace_lock.py` compares every workspace
+manifest against the root `package-lock.json` -- the lock `npm ci` installs from -- and Dependabot edits only the
+workspace. Synced with `npm install --package-lock-only` at the root on `#71`, `#74`, `#75`, `#72`, `#73`, `#82`;
+every diff was confined to `package-lock.json` (9 to 62 changed lines) and each branch's check went from exit 1
+to exit 0. Reproduced before fixing, as ever: `apps/web devDependencies.@types/node: manifest='26.6.5',
+lock='26.4.1'`.
+
+**The artifact gap was the SBOM.** `#80` moved `uv.lock` (jupyterlab 4.6.3 -> 4.6.4, tornado 6.5.8 -> 6.5.9,
+urllib3 2.7.0 -> 2.8.0) while `release/sbom.json` still named the old ones, and
+`scripts/generate_sbom.py --check` said `192 components derived from this revision, 192 on disk` -- counts equal,
+versions not, which is the shape that a count-only gate would have passed. Regenerated inside an environment built
+from *that branch's* lock, which is the condition §213 found missing when a local regeneration produced 193
+components against CI's 192. The check also states what it ignores: license fields and the `generated` stamp.
+
+**The third gap is the finding.** A Node base-image bump (`#77`, 22 -> 26) cannot be completed by editing prose:
+`tests/test_runtime_version_claims.py` exists to keep `ci.yml`'s `node-version`, the image's `FROM node:` tag and
+the page's claims one fact, so aligning them means `ci.yml:27` moves too -- a build-environment change for every
+future run, not just this PR's. And the guard's own control test had four literals pinned to the *string*
+`node:22-alpine` (`.replace("\`node:22-alpine\`", ...)`, `assert any("22-alpine" in i ...)`,
+`.replace("node:22-alpine", "node:20-alpine")`, `"node:20-alpine while CI proves Node 22"`), so the test that
+proves the rule can fail is itself bound to the version the rule guards. Re-pointing them is a mechanical
+four-line edit; the fact that it is *required* on every toolchain bump is the kind of coupling worth knowing
+before someone hits it at 02:00.
+
+Merged: `#76` (playwright 1.55.0 -> 1.55.1) needed nothing from me -- the only PR green exactly as Dependabot
+wrote it; `#71` and `#73` after the lock sync, with `web-regression` green on a framer-motion major; `#74`, `#80`
+and `#77` carry my companion edits and are on auto-merge, GitHub completing them as their required checks pass.
+Left open on measurement, not on taste: `#72` (lucide-react 0.545 -> 1.43) and `#82` (tailwindcss `^3.4` ->
+`^4.3`) each end with `web-regression: failure`, and `#82` is a v3 -> v4 migration -- `apps/web/tailwind.config.js`
+and `apps/web/postcss.config.js` exist, the root lock installs 3.4.19, and the PR's own commit deletes 960 lines of
+`apps/web/package-lock.json`. Both carry a comment with that evidence so the queue reads as decided rather than
+ignored.
+
+One shared-worktree note, because it is how this repo actually behaves: `#76` merged while my own commit sat
+unpushed locally, so pushing directly would have swept another lane's in-flight §219. The commit was cherry-picked
+onto current `origin/main` in an isolated clone and pushed from there, with the ledger verified append-only
+across the move (51 insertions / 0 deletions, then 5 / 0). §219 landed as `da4c6f7`, which is why this one is §220.
