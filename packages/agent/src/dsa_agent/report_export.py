@@ -44,7 +44,8 @@ EXPORT_MODES: tuple[str, ...] = ("findings", "audited")
 CAUSAL_REWRITE_MARKER = "(Causal inference is not established.)"
 
 #: The floor: a property of the method, true of every observational run, so it stays when nothing else does.
-STANDING_LIMITATION = "Correlation does not imply causation unless causal evidence is established."
+#: Its text lives in ``REPORT_LABELS`` below, because a Chinese run's report should say it in Chinese; the
+#: constant stays as the English form so importers and the export tests keep one name to compare against.
 
 #: Identifier shapes that mean "go and look at the trace". Each is named so a violation says which rule it
 #: broke rather than only that one did.
@@ -127,6 +128,17 @@ REPORT_LABELS: dict[str, dict[str, str]] = {
     "result": {"en": "result:", "zh": "结果："},
     "confidence": {"en": "confidence", "zh": "置信度"},
     "limitation": {"en": "limitation:", "zh": "局限："},
+    # Separators belong to the sentence, so these carry their own trailing space in English and their own
+    # full-width colon in Chinese; a template that added " " for both would put a space after 「：」.
+    "causalRewritten": {
+        "en": "One claim was rewritten because causal evidence is absent: ",
+        "zh": "一条结论被改写了，因为缺少因果证据：",
+    },
+    "recordedError": {"en": "The run recorded an error: ", "zh": "本次运行记录了错误："},
+    "standingLimitation": {
+        "en": "Correlation does not imply causation unless causal evidence is established.",
+        "zh": "在建立因果证据之前，相关不等于因果。",
+    },
 }
 
 #: A report is Chinese when the question that produced it is mostly Chinese. Counting *words* rather than
@@ -148,6 +160,9 @@ def report_language(source: Any) -> str:
     if not tokens:
         return "en"
     return "zh" if cjk * 2 > tokens else "en"
+
+
+STANDING_LIMITATION = REPORT_LABELS["standingLimitation"]["en"]
 
 
 def _lbl(lang: str, key: str) -> str:
@@ -202,9 +217,17 @@ def _label(check: Any, lang: str = "en") -> str:
     return _CHECK_LABELS.get(key, key.replace("_", " ").strip() or "Check")
 
 
-def derived_limitations(source: Any, lang: str = "en") -> list[str]:
-    """What this run says is weak about itself, assembled only from records that already exist."""
+def derived_limitations(source: Any, lang: str | None = None) -> list[str]:
+    """What this run says is weak about itself, assembled only from records that already exist.
+
+    The wording of the three sentences this function writes is the product's, so it follows the language
+    the run was asked in -- decided from the run itself when a caller does not pass one, which is what lets
+    an API or CLI caller get the right document without learning about languages at all. The insights'
+    own `limitation` text and the recorded error are copied verbatim: they are the run's bytes.
+    """
     summary = run_summary(source)
+    if lang is None:
+        lang = report_language(source)
     collected: list[str] = []
 
     for result in summary.get("validation_results") or []:
@@ -221,13 +244,13 @@ def derived_limitations(source: Any, lang: str = "en") -> list[str]:
     for record in summary.get("evidence") or []:
         claim = str(record.get("claim") or "")
         if CAUSAL_REWRITE_MARKER in claim:
-            collected.append(f"One claim was rewritten because causal evidence is absent: {claim}")
+            collected.append(f"{_lbl(lang, 'causalRewritten')}{claim}")
 
     error = str(summary.get("error") or "").strip()
     if error:
-        collected.append(f"The run recorded an error: {error}")
+        collected.append(f"{_lbl(lang, 'recordedError')}{error}")
 
-    collected.append(STANDING_LIMITATION)
+    collected.append(_lbl(lang, "standingLimitation"))
 
     seen: set[str] = set()
     unique: list[str] = []

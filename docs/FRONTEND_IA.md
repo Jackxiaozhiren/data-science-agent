@@ -129,6 +129,10 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   file name stays English), and only the product's own words -- headings, field names, the document `lang`
   -- follow it. Findings, claims, messages and numbers are reproduced verbatim, and
   `tests/contract/test_report_language_pair.py` holds the two halves apart.
+  The three limitation sentences the report composes are part of that table too -- the caveat a reader acts
+  on must not arrive in a language nobody chose -- while the critic's own `limitation` text, stored on the
+  insight at analysis time, stays the run's byte: changing it would edit what the run said, which is a
+  decision about data and is left open rather than half-taken.
 - The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
   routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
   outline is not one) and every `<details>` drill-down to open on Enter.

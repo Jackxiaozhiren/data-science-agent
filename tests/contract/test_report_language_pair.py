@@ -23,6 +23,7 @@ import html as html_module
 from typing import Any
 
 import pytest
+from dsa_agent import report_export as _module
 from dsa_agent.report_export import (
     REPORT_LABELS,
     export_html,
@@ -168,6 +169,61 @@ def test_every_label_exists_in_both_languages() -> None:
     )
 
 
+def test_the_limitations_the_product_writes_are_in_the_runs_language() -> None:
+    """Three limitation sentences are the product's own prose, so they move; the run's do not.
+
+    Distinguishing them matters more here than anywhere else in the report: a caveat is the one line a reader
+    acts on, and a Chinese report whose caveat is English is a report whose warning gets skipped.
+    """
+    state = _run(
+        ZH_QUERY,
+        insights=[
+            {
+                "id": "I-9a0b1c2d",
+                "finding": "x",
+                "evidence_ids": [],
+                "limitation": "样本量偏小，估计不稳",
+            }
+        ],
+        evidence=[
+            {
+                "id": "E-1",
+                "source_type": "test",
+                "source_id": "TC-1",
+                "claim": "Uplift (Causal inference is not established.)",
+                "result": {},
+                "confidence": 0.5,
+                "validation_status": "verified",
+            }
+        ],
+        error="tool timed out",
+    )
+    zh = "\n".join(_module.derived_limitations(state))
+    en = "\n".join(
+        _module.derived_limitations(
+            _run(
+                EN_QUERY,
+                **{
+                    "insights": state["insights"],
+                    "evidence": state["evidence"],
+                    "error": state["error"],
+                },
+            )
+        )
+    )
+    assert "一条结论被改写了，因为缺少因果证据：" in zh
+    assert "本次运行记录了错误：" in zh
+    assert "在建立因果证据之前，相关不等于因果。" in zh
+    assert "One claim was rewritten" not in zh and "The run recorded an error" not in zh
+    assert "Correlation does not imply causation" in en and "One claim was rewritten" in en
+    # the caveat the critic wrote and the error the run recorded are quoted, never translated, in either
+    assert "样本量偏小，估计不稳" in zh and "样本量偏小，估计不稳" in en
+    assert "tool timed out" in zh and "tool timed out" in en
+    # and the report the reader opens carries the same prose in both renderings
+    assert "在建立因果证据之前" in export_markdown(state)
+    assert "在建立因果证据之前" in html_module.unescape(export_html(state))
+
+
 def test_every_label_is_reachable_and_both_forms_are_rendered() -> None:
     """No label may exist in the table without a code path that prints it.
 
@@ -180,6 +236,20 @@ def test_every_label_is_reachable_and_both_forms_are_rendered() -> None:
     def conditional(query: str) -> dict[str, Any]:
         base = _run(query)
         base["insights"] = []
+        base["error"] = "tool timed out"
+        # A claim carrying the critic's marker is what makes the "rewritten" caveat render, and an empty
+        # validation message the fallback -- both branches are conditional, so reaching them is the point.
+        base["evidence"] = [
+            {
+                "id": "E-22b3922b",
+                "source_type": "statistical_test",
+                "source_id": "TC-1",
+                "claim": f"Uplift attributable to launch {_module.CAUSAL_REWRITE_MARKER}",
+                "result": {},
+                "confidence": 0.5,
+                "validation_status": "verified",
+            }
+        ]
         base["validation_results"] = [
             {"check": "statistical_power", "passed": False, "message": ""}
         ]

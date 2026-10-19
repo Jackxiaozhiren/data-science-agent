@@ -34,6 +34,23 @@
   whole label table in both languages, so a label nobody renders is named. It was falsified by pinning the
   decision to `en`: four checks went red on the Chinese assertions while the twenty-three existing English
   export checks stayed green, which is the other half of the claim (the shipped English document did not move).
+- The three limitation sentences the report *writes* -- the rewritten-claim caveat, the recorded-error line and
+  the standing "correlation is not causation" floor -- follow the run's language too, because a caveat is the one
+  line a reader acts on and an English warning inside a Chinese report is a warning that gets skipped. The
+  critic's own `limitation` text and the recorded error string stay quoted verbatim in both languages, and
+  `STANDING_LIMITATION` is now the English column of the label table rather than a second copy of the sentence.
+  A heuristic-mode run of `dsa analyze --task 哪些地区的收入最高？…` prints `## 局限` and
+  `- 在建立因果证据之前，相关不等于因果。`
+- **Four producer strings are left English on record, not by oversight.** The limitation text a report quotes
+  comes from the analysis side: `dsa_agent/graph.py:304` and `dsa_agent/langgraph_graph.py:131` write
+  `"Association does not imply causation."` onto an insight, while `dsa_tools/tools/correlation.py:32` and
+  `dsa_tools/tools/hypothesis_test.py:37` carry their own defaults (`"Correlation does not imply causation."`,
+  `"Check assumptions; association does not imply causation."`), and `planner.py` adds an assumption sentence it
+  later deduplicates by **string equality** (`planner.py:459`). Localizing any of them changes the bytes a stored
+  run is made of -- and the planner's equality check would silently stop matching -- so this is a decision about
+  run data with a real hazard attached, not a chrome sweep. It is named as an open item rather than
+  half-applied.
+
 
 ### Added (post-4.6.0) — the interface's own words, all of them (R-13, closure)
 

@@ -13830,3 +13830,33 @@ version"` plus a task for the migration, and the log is
 PR 72 (lucide-react 0.545 -> 1.43) is also red on `web-regression` -- an icon rename or size change, not a
 security bump -- and the same choice applies: dig first with the job log, then merge or ignore.
 `web-regression` is the evidence in both cases, so neither is merged on assumption.
+
+Addendum to §225 (same day): the report's own caveats move with the run, and one producer string is left alone
+on purpose. `derived_limitations()` writes three sentences itself -- the rewritten-claim caveat, the
+recorded-error line and the standing "correlation is not causation" floor -- and all three were English whatever
+the question, which is the worst place in the document for a stray language: a caveat is the line a reader acts
+on. They are now columns of `REPORT_LABELS`, `STANDING_LIMITATION` is the English column rather than a second
+copy of the sentence, and the function resolves the language from the run when a caller does not pass one, so an
+API or CLI caller gets the right document without learning that languages exist. A heuristic-mode run printed
+`## 局限` / `- 在建立因果证据之前，相关不等于因果。`
+
+The run's bytes still do not move: the critic's `limitation` text on an insight and the recorded error string are
+quoted verbatim in both renderings, asserted both ways. The engine constant that *produces* the insight
+limitation (`"Association does not imply causation."` at `dsa_agent/graph.py`, mirrored in
+`dsa_tools/tools/correlation.py`) is deliberately untouched: it is written into stored run state, so localizing
+it changes what a stored report is made of -- a decision about data, not chrome, and named as an open item
+instead of being half-applied here.
+
+Measured the producer side before writing about it, and the first draft of this addendum was wrong about it:
+the insight limitation is `"Association does not imply causation."` at `dsa_agent/graph.py:304` and
+`dsa_agent/langgraph_graph.py:131`, while `dsa_tools/tools/correlation.py:32` says
+`"Correlation does not imply causation."` and `hypothesis_test.py:37` says something else again -- four strings,
+not one mirrored pair. `dsa_agent/planner.py` also adds an assumption sentence and later deduplicates it by
+string equality (`planner.py:459`), so a localized producer constant would silently un-match its own guard.
+That is a change to run bytes plus a behavioural hazard, which is why it is left open with the sites named.
+
+Falsified by making the standing limitation ignore the language: two checks went red (`assert '在建立因果证据之前，
+相关不等于因果。' in …` and the label-reachability sweep naming `standingLimitation[zh]`), and the file came back
+to sha256 `43cd1bf1…`. `tests/contract` 268 passed with the one known credential-dependent failure; report and
+export suites 58 passed; `ruff format --check` green over the gate's path list; the vendored twin re-synced with
+`--package dsa_agent` only.
