@@ -13239,6 +13239,42 @@ BLOCKERS NEEDING A HUMAN
   loopback `ThreadingHTTPServer` this test starts itself, not a live provider. Neither claim is edited here --
   §218 is another session's dated record, and this is this lane's -- and the actionable form is one command:
   run the whole suite twice, once with and once without `-o addopts=""`, and diff the FAILED set.
+**Addendum 2, same session -- the shared chrome, and why the tour's English is now load-bearing twice.**
+§219's NOT DELIVERED named `States.tsx` as needing a boundary decision. Decided and shipped rather than left:
+`States.tsx` is a client module now and reads the locale through `LocaleProvider`, instead of every page passing
+a `locale` prop into three presentational components. Server pages may still render it, so the serialization
+question had to be measured and not assumed -- the one prop in that API a server component *cannot* hand across
+is a function, and `grep -rl "retry={" apps/web/app` returns exactly two files, `datasets/page.tsx` and
+`error.tsx`, both of which already begin with `"use client"`. `loading.tsx` is a server component, so it reads
+the language off the request instead: one sentence, two legitimate routes to it, neither of which repaints.
+
+- **What moved.** The error heading and its retry button, the two skeleton labels, the route-level `loading.tsx`
+  and `error.tsx`, a table's empty state, the dialog's two close labels, the language switch's own group name, and
+  the hero's chain caption. `probe.retry` was renamed to `common.retry` when the error block needed the same word,
+  rather than adding a second key holding "Retry" -- two keys with one value is the two-owner split wearing a
+  different hat. Measured with the same scan: the English inventory went from 89 literals in 25 files to 82 in 19.
+- **The tour now depends on the English values twice over.** Its probe scenario waits for
+  `[aria-label="Loading table"], [aria-label="Loading page"]`, so those two values are load-bearing *as
+  selectors*, not only as sentences. Nine of its English strings in total are dictionary values (was seven before
+  this batch); every `en` value was moved byte-for-byte, which is why the tour stayed 47/47 rather than merely
+  passing afterwards. `docs/FRONTEND_IA.md` states the coupling because no gate enforces it: the parity sweep
+  walks `apps/web/app/**` and never reads `scripts/`.
+- **Verified at three different layers, because they fail differently.** `tsc` clean and `next build` clean;
+  the tour 47/47 locally with zero console errors (the check that would show a context/hydration disagreement);
+  73 `-k web` guards and 258 contract guards; and the browser acceptance extended with the shared heading -- zh
+  renders 出了点问题 with `Something went wrong`, `Browse files` absent, and the en page the reverse
+  (`R13C_PROSE_ACCEPTANCE_PASS (2/2 locales, 0 failed)`, exit 0). Separately, a `curl` of `/reports` carrying only
+  `Cookie: dsa_locale=zh` -- no browser, no JavaScript -- returns 出了点问题 and 正在加载 in the server markup and
+  contains no English chrome, which is the part a browser test cannot distinguish: it would pass equally on a page
+  that rendered English first and re-painted after hydration.
+- **What this batch did not observe in a browser.** The dialog's two close labels and the hero caption: their keys
+  are defined in both locales and asserted to exist, but no scripted interaction opened a dialog to read the
+  rendered name. Recorded as a gap in the evidence rather than folded into the PASS line.
+- **CI witness.** Run **39194536888** at `219da03`: jobs `ci` and `web-regression` both `completed/success`, the
+  latter printing `regression: 47/47 checks passed (26 route/viewport + 3 interaction + 3 backend-probe +
+  15 accessibility)` on the runner. Two earlier revisions of this lane were displaced first: `c43c6e3` carries
+  its own green pair (`39191643629`), and the run for `b31ea17` was cancelled by a later push on the same branch,
+  which is neither a failure nor a pass.
 
 ## 220. Clearing the dependency queue turned out to be three guards that require a companion edit Dependabot cannot make
 
@@ -13282,3 +13318,4 @@ One shared-worktree note, because it is how this repo actually behaves: `#76` me
 unpushed locally, so pushing directly would have swept another lane's in-flight §219. The commit was cherry-picked
 onto current `origin/main` in an isolated clone and pushed from there, with the ledger verified append-only
 across the move (51 insertions / 0 deletions, then 5 / 0). §219 landed as `da4c6f7`, which is why this one is §220.
+
