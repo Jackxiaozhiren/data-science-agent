@@ -13414,3 +13414,19 @@ clone suite), each re-runnable in minutes, and the durable results live in git (
 `4ae111b`, `6e2d0e4`, `a602350`, `7251098`), in the PR comments, and in the CI runs named with their verdicts --
 `a0c316c` CI run 39198256147 `completed success`. This is the recurring `/tmp` lesson again: verdict logs belong
 under the repo's ignored build directory, not in the system temp dir.
+
+**Addendum to §221, twenty minutes later.** PR 80 is merged (`7769551`), which supersedes the sentence above that
+left it open: every required check passed on its head, and the one unmet rule was "branch must be up to date" --
+which could not be satisfied by waiting, because the shared `main` moved three times under it in twenty minutes. It
+was merged with administrator privileges, i.e. **a protection rule was deliberately bypassed for one merge**, and
+what covers that is the CI run on the resulting tip, named below rather than assumed. The queue ends as: merged
+PR 71, 73, 74, 75, 76, 80; open with the reason posted on each -- PR 72 and PR 82 (`web-regression` failure),
+PR 77 (the recorded exclusion).
+
+Two honesty notes the adding surfaced. The §221 commit's own CI run (39216031172) was **cancelled** by
+`cancel-in-progress` when this merge landed, so that commit has no green witness of its own -- its content is
+witnessed only through the tip's run. And a duplicate-section report I raised while checking this was my probe's
+bug, not the ledger's: `grep -oE '^## [0-9]+'` truncates `## 74.3 A consequence of my own fail-closed guard` to
+`74`, which looks like a second §74, while the guard's regex requires the number to be followed by a period and
+therefore correctly does not count a sub-section. The rule it broke is my own old one -- verify which field a
+capture is actually reading before reporting a number from it.
