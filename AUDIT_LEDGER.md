@@ -13581,3 +13581,10 @@ directory fails with `benchmarks/v2/datasets is opened by the running process bu
 file-by-file block with `COPY benchmarks ./benchmarks` fails on the router's own file first. The Dockerfile was
 restored byte-for-byte (`14ee3d247cbb...` before and after) and the two suites are green again (37 passed).
 `test_the_copy_check_can_fail`, the pre-existing negative control, was left as it was.
+
+The widening then reddened CI a second time, and that one was purely mine: run `39238591805` failed on
+`ruff format --check`, not on any test. I had rewritten the guard through a script and validated it with
+`ruff check` -- lint -- while the gate that CI runs is the formatter check too. Formatted, the gate's own command
+reports 299 files already formatted and the two suites are green again (37 passed). Same family as §113.5's
+citing a status that was never the gate's: passing the check I chose to run is not passing the check the pipeline
+runs.

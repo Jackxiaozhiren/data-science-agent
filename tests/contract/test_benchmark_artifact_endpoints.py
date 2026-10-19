@@ -230,7 +230,11 @@ def test_the_api_image_copies_exactly_the_artifacts_the_router_reads():
         )
 
     benchmark_dests = {dest for dest in copies if dest.startswith("./benchmarks")}
-    allowed = {f"./{relative}" for relative in (*router_reads, *seeder_reads) if relative.startswith("benchmarks")}
+    allowed = {
+        f"./{relative}"
+        for relative in (*router_reads, *seeder_reads)
+        if relative.startswith("benchmarks")
+    }
     assert benchmark_dests == allowed, (
         f"the image copies {sorted(benchmark_dests)} under benchmarks/, not the artifacts and demo bytes it "
         f"reads ({sorted(allowed)})"
