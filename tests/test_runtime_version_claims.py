@@ -141,12 +141,12 @@ def test_every_mismatch_is_reported_and_a_matching_page_is_not() -> None:
     assert any("CI runs 3.13" in i for i in untested_claim), untested_claim
 
     silent_image = runtime_version_issues(
-        doc=_read(DOC).replace("`node:22-alpine`", "an older Node image"),
+        doc=_read(DOC).replace("`node:26-alpine`", "an older Node image"),
         pyproject=_read("pyproject.toml"),
         ci=_read(".github/workflows/ci.yml"),
         dockerfile=_read("docker/Dockerfile.web"),
     )
-    assert any("22-alpine" in i for i in silent_image), silent_image
+    assert any("26-alpine" in i for i in silent_image), silent_image
 
     # §137: the divergence itself, planted in the image text. The repository no longer contains it, so
     # this is the only way the rule can be shown to fire -- and a guard whose triggering state exists
@@ -155,9 +155,9 @@ def test_every_mismatch_is_reported_and_a_matching_page_is_not() -> None:
         doc=_read(DOC),
         pyproject=_read("pyproject.toml"),
         ci=_read(".github/workflows/ci.yml"),
-        dockerfile=_read("docker/Dockerfile.web").replace("node:22-alpine", "node:20-alpine"),
+        dockerfile=_read("docker/Dockerfile.web").replace("node:26-alpine", "node:20-alpine"),
     )
-    assert any("node:20-alpine while CI proves Node 22" in i for i in drifted_image), drifted_image
+    assert any("node:20-alpine while CI proves Node 26" in i for i in drifted_image), drifted_image
 
     # ... and the four probes still have to fire on an empty page, not just on edited ones.
     blank = runtime_version_issues(
