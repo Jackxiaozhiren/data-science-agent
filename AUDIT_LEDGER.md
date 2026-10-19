@@ -13017,3 +13017,54 @@ second. Measured, not inferred -- and it is a pre-existing inaccuracy that this 
 corrected: the sentence reads as advice about when to mirror, not as a description of array order. It is named here
 instead of quietly reworded, because the next reader who takes it literally will otherwise trust a claim about the
 tail of a list that this section just reordered.
+
+## 218. A clean clone found what CI and the shared worktree both hid, and the dependency queue turned out to be three different problems
+
+To get a suite number attributable to one commit -- §214 and §217 each had to disclaim one -- `6e2d0e4` was
+cloned to a scratch directory, synced, and run whole: **1117 passed, 3 failed**. All three failures were
+attributed, and only one was a defect:
+
+- `tests/contract/test_provider_settings.py::test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub`
+  and `dsa verify-release`'s `pytest` line are the same condition: the real-mode path calls the live
+  chat-completions endpoint (`HTTP 502` from here, `planner.py:482` in the traceback). CI holds a working
+  credential, so it is green there; this machine cannot run it. Not a code finding, and not something to
+  "fix" by muting it.
+- `tests/vscode/test_vscode_extension.py::test_typescript_compiles` fails for want of `node_modules`: CI runs
+  `npm --prefix apps/vscode ci` as a step, and the contributor guide lists it. A bare clone that skipped the
+  setup step gets this red. Environment again.
+- `apps/api/tests/test_run_bundle.py::test_bundle_carries_every_artifact_recorded_for_the_run` is the real one.
+  It asserts `manifest["storage"]["ephemeral_roots"] == ["artifacts"]`, and in the clone it came back
+  `['artifacts', 'datasets']`. The fixture pins `DSA_ARTIFACT_ROOT` but not `DSA_DATASET_DIR`, whose fallback is
+  `Path(__file__).resolve().parents[5] / "data" / "datasets"` -- so it resolves under wherever the package was
+  installed. A clone under `/private/tmp/...` matches `EPHEMERAL_PREFIXES`, which means the assertion was grading
+  **the checkout's location**, not the bundle. Nothing in CI or in the shared worktree could show it: both live
+  outside `/tmp`, so the same code is green there and red here -- and red was the correct verdict.
+
+Fixed by pinning the datasets root the way the artifact root was already pinned, to the path the accessor's own
+comment names for the Render image (`/app/data/datasets`). Verified in the environment that exposed it: the file
+goes green in the same `/tmp` clone (9 passed) and stays green in the worktree (28 passed with
+`tests/contract/test_storage_disclosure.py`, which already pins all three roots and is why *it* never showed the
+bug). No assertion was weakened -- the check is the same list, now about state the fixture controls.
+
+The dependency queue (nine open Dependabot PRs) was not nine ignored upgrades; measuring each failing step found
+three separate problems:
+
+- **One mechanical gap.** `#71`, `#74`, `#75`, `#76`, `#82`, `#73`, `#72` each died at
+  `scripts/check_npm_workspace_lock.py`: Dependabot edits a workspace manifest, and the lock `npm ci` installs
+  from is the root `package-lock.json`, which it does not touch. Reproduced on the branches (`apps/web
+  devDependencies.@types/node: manifest='26.6.5', lock='26.4.1'`, exit 1) and closed by
+  `npm install --package-lock-only` at the root; every resulting diff is confined to `package-lock.json` (9 to 62
+  changed lines) and the check returns 0 on each branch. Pushed to all six that needed it.
+- **One artifact gap.** `#80` (the uv group: jupyterlab, tornado, urllib3) fails the SBOM comparison --
+  `SBOM CHECK FAIL: 192 components derived from this revision, 192 on disk` -- the counts agree and the versions
+  do not, because `uv.lock` moved and `release/sbom.json` still lists what the previous lock pinned. Merging it
+  requires regenerating the SBOM on the branch, from an environment built from *that* lock.
+- **Two genuine upgrades, both refused by measurement rather than by judgment.** `#72` (lucide-react 0.545 →
+  1.43) and `#82` (tailwindcss `^3.4` → `^4.3`) each end with **`web-regression: failure`** -- the tour, not a
+  reviewer's taste, is what says the UI changed. `#82` is corroborated in the tree: `apps/web/tailwind.config.js`
+  and `apps/web/postcss.config.js` exist and the root lock installs `tailwindcss 3.4.19`, so v4 is a migration
+  (CSS-first config, different PostCSS plugin), not a version bump; its own commit also removes 960 lines from
+  `apps/web/package-lock.json`. Neither is merged, and neither is closed -- they are the two items in this queue
+  that need a decision about upgrading the frontend, which is a larger piece of work than anything here.
+
+`#76` (playwright 1.55.0 → 1.55.1) was already green on every gate after the rebase and is merged.

@@ -55,6 +55,11 @@ async def bundle_env(
     root = tmp_path / "disk" / "artifacts"
     root.mkdir(parents=True)
     monkeypatch.setenv("DSA_ARTIFACT_ROOT", str(root))
+    # Pinned because the accessor's fallback is derived from wherever the package is installed: a clone under
+    # `/tmp` (a scratch tree, a CI cache dir) makes the datasets root match the ephemeral prefixes and this test
+    # asserts a property of the checkout's location instead of the bundle. The Render image layout names this
+    # path, so it is the durable case the assertion means to hold.
+    monkeypatch.setenv("DSA_DATASET_DIR", "/app/data/datasets")
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
