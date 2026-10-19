@@ -205,3 +205,37 @@ def test_the_document_language_follows_the_choice() -> None:
     assert 'role="group"' in toggle and "aria-label" in toggle, (
         "two unlabelled buttons: a screen reader announces the control as nameless"
     )
+
+
+def test_the_two_language_runners_share_one_rule_owner() -> None:
+    """Which words belong to the interface is decided once, by `locale-chrome-rules.mjs`.
+
+    The CI tour and the seeded acceptance both ask the same question -- does this 中文 page show chrome in
+    English -- and if each carries its own identifier list, the two start meaning different things and a green
+    in one stops predicting the other. That is the drift this lane exists to prevent, one level up: the same
+    second-owner problem the dictionary solves for copy, solved here for the rule that measures copy.
+
+    The floor on the owner's list is what keeps this from passing on an emptied file: a rule owner that exports
+    nothing would let both runners go quiet.
+    """
+    scripts = WEB / "scripts"
+    owner = scripts / "locale-chrome-rules.mjs"
+    assert owner.is_file(), f"{owner.relative_to(ROOT)} is missing -- the region rule has no owner"
+    rule_src = owner.read_text(encoding="utf-8")
+    assert "export const CHROME_SELECTOR" in rule_src, "the rule no longer owns the region selector"
+    assert "export function classifyChromeRegions" in rule_src, (
+        "the rule no longer owns the leak decision"
+    )
+    identifiers = re.findall(r'"([^"]+)",', rule_src[rule_src.index("IDENTIFIERS = new Set([") :])
+    assert len(identifiers) >= 25, (
+        f"the identifier list holds {len(identifiers)} entries -- if it were emptied, every English string "
+        "would need exempting by hand and the check would silently stop reporting anything"
+    )
+
+    for name in ("regression.mjs", "locale-chrome-acceptance.mjs"):
+        src = (scripts / name).read_text(encoding="utf-8")
+        assert "./locale-chrome-rules.mjs" in src and "classifyChromeRegions(" in src, (
+            f"{name} no longer asks the shared rule -- it is deciding on its own again"
+        )
+        for private in ("const IDENTIFIERS", "const DATA_IN_CHROME", "const CHROME_SELECTOR"):
+            assert private not in src, f"{name} re-declares {private} beside the import"

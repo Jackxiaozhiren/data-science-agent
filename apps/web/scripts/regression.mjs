@@ -20,6 +20,7 @@ import { mkdirSync, readFileSync, existsSync, statSync, readdirSync } from "node
 import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { CHROME_SELECTOR, classifyChromeRegions } from "./locale-chrome-rules.mjs";
 
 const webDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(webDir, "..", "..");
@@ -801,6 +802,55 @@ try {
       await a11yContext.close();
     }
   }
+
+  // R-13: every word the interface owns follows the visitor's language, on every static route, in both languages.
+  //
+  // The rule -- which DOM regions are the interface's, and which Latin-only strings are identifiers or the run's
+  // own bytes -- lives in `locale-chrome-rules.mjs`, shared with `locale-chrome-acceptance.mjs`, because two
+  // copies of a threshold are how a check starts meaning different things in CI and in a hand-run. This pass
+  // runs with no backend (the tour refuses a live API port), so table column heads are not rendered and the
+  // regions it can see are the shell, the headings, the labels, the tabs and the buttons; the seeded acceptance
+  // covers the row-dependent ones. Each line prints the route's own appetite, because a check that exempted
+  // everything would report this same green.
+  for (const locale of ["zh", "en"]) {
+    const localeContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await localeContext.addCookies([{ name: "dsa_locale", value: locale, domain: "localhost", path: "/" }]);
+    const localePage = await localeContext.newPage();
+    for (const route of ROUTES) {
+      const label = `locale ${locale} ${route}`;
+      try {
+        await localePage.goto(`http://localhost:${PORT}${route}`, { waitUntil: "domcontentloaded", timeout: 45000 });
+        await localePage.waitForTimeout(1200);
+        const text = await localePage.evaluate(() => document.body.innerText);
+        if (text.includes("\u27e8")) throw new Error("a missing-key marker is on the page, so a string has no owner in this locale");
+        const regions = await localePage.evaluate(
+          ({ sel }) =>
+            [...document.querySelectorAll(sel)]
+              .filter((el) => el.offsetParent !== null || el.tagName === "OPTION")
+              .map((el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent || "").replace(/\s+/g, " ").trim() }))
+              .filter((x) => x.text),
+          { sel: CHROME_SELECTOR }
+        );
+        const seen = classifyChromeRegions(regions);
+        if (locale === "zh") {
+          if (seen.total < 6) throw new Error(`only ${seen.total} chrome regions -- the selector matched nothing, so this proves nothing`);
+          if (seen.leaks.length) {
+            throw new Error(
+              `English chrome on a 中文 page: ${seen.leaks.slice(0, 4).map((c) => `${c.tag}:"${c.text.slice(0, 48)}"`).join(" | ")}`
+            );
+          }
+          if (seen.cjk < 3) throw new Error(`a 中文 page with almost no Chinese chrome (${seen.cjk} of ${seen.total} regions)`);
+        }
+        console.log(
+          `locale ${locale} ${route}: ${seen.total} chrome regions, ${seen.cjk} CJK, ${seen.exempt.length} exempt` +
+            (locale === "zh" ? `, ${seen.leaks.length} leak(s)` : "")
+        );
+      } catch (e) {
+        failures.push(`${label}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    await localeContext.close();
+  }
 } catch (e) {
   failures.push(`harness: ${e instanceof Error ? e.message : String(e)}\n${serverLog.slice(-1500)}`);
 } finally {
@@ -810,11 +860,12 @@ try {
 
 const ROUTE_CHECKS = ROUTES.length * VIEWPORTS.length;
 const A11Y_CHECKS = A11Y_PAGES.length * A11Y_CHECKS_PER_PAGE;
-const TOTAL_CHECKS = ROUTE_CHECKS + INTERACTIONS.length + PROBE_SCENARIOS.length + A11Y_CHECKS;
+const LOCALE_CHECKS = ROUTES.length * 2;
+const TOTAL_CHECKS = ROUTE_CHECKS + INTERACTIONS.length + PROBE_SCENARIOS.length + A11Y_CHECKS + LOCALE_CHECKS;
 console.log(
   `\nregression: ${TOTAL_CHECKS - failures.length}/${TOTAL_CHECKS} checks passed ` +
     `(${ROUTE_CHECKS} route/viewport + ${INTERACTIONS.length} interaction + ${PROBE_SCENARIOS.length} backend-probe ` +
-    `+ ${A11Y_CHECKS} accessibility), screenshots in ${OUT}`,
+    `+ ${A11Y_CHECKS} accessibility + ${LOCALE_CHECKS} locale), screenshots in ${OUT}`,
 );
 if (failures.length > 0) {
   console.error("FAILURES:\n- " + failures.join("\n- "));

@@ -12,6 +12,7 @@
 // "closed" a measurement rather than a claim.
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
+import { CHROME_SELECTOR, classifyChromeRegions } from "./locale-chrome-rules.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,30 +27,7 @@ const STATIC = [
   "/runs", "/runs/compare", "/reports", "/datasets", "/datasets/compare", "/analysis",
 ];
 
-// Names the interface shows in their own spelling: protocols, endpoints, tools, version schemes, ranges.
-const IDENTIFIERS = new Set([
-  "mcp", "sha-256", "sse", "api", "url", "id", "dsa", "github", "github ↗", "/health", "/version", "/metrics",
-  "a–f", "10-dim", "ci / mcnemar", "+ wilcoxon", "f01–f15", "l0–l5", "w2–w10", "get", "post",
-  "run_id", "dataset_id", "evidence_id", "sha256 ·", "provider", "mode", "model", "dsa ui", "http", "json-rpc",
-  "tools/list", "tools/call", "session #", "v1", "v2", "ok", "—", "·", "×", "→", "%",
-  // The language switch shows each language by its own name -- "English" written 中文 is a translation of the
-  // word, not the language, so the control deliberately keeps `LOCALE_LABELS` endonyms.
-  "english",
-  // Provider names come from the API's own list (`view.providers`), so they are data the interface displays.
-  "ollama", "openai", "openai-compat",
-]);
-const HAS_CJK = /[\u3400-\u9fff]/;
-// A chrome region can still carry the run's or the user's bytes: an uploaded file name in an <option>, a
-// protocol version or endpoint path in a heading, a dataset id in parentheses. Those are not the interface's
-// words, and the rule for them is spelled out rather than left to a reviewer's judgement.
-const DATA_IN_CHROME = /(^|\s)[\w.-]+\.(csv|xlsx|xls|parquet|json|md|tsv)(\s|$)|\([0-9a-f]{6,}\)|\/(mcp|api|health|version|metrics|evidence|analysis|datasets)\b|^\s*(GET|POST|PUT|DELETE)\s|20\d\d-\d\d-\d\d/;
-const LOOKS_LIKE_CODE = /[{};=]|\$\(|=>|__|\/api\/|\.py|\.json|\.md|localhost|https?:/;
-
 const ONLY = process.env.R13I_ROUTES ? process.env.R13I_ROUTES.split(",") : null;
-const CHROME_SELECTOR = [
-  "th", "option", "summary", "label", "h1", "h2", "h3", "nav a", "header a", "footer a", "button",
-  "[role=tab]", "[data-nav-group] a",
-].join(", ");
 
 async function firstId(path) {
   const res = await fetch(`${API}${path}`, { headers: { "X-DSA-Owner": "web-acceptance" } });
@@ -94,28 +72,19 @@ for (const locale of ["zh", "en"]) {
       continue;
     }
     const problems = [];
-    // Self-report: an exemption list that swallows the corpus would look identical to a clean page, so the run
-    // prints how many chrome regions carried CJK and which Latin-only strings the lists let through.
+    const seen = classifyChromeRegions(chrome);
     if (process.env.R13I_STATS && locale === "zh") {
-      const cjk = chrome.filter((c) => HAS_CJK.test(c.text)).length;
-      const exempt = chrome
-        .filter((c) => !HAS_CJK.test(c.text))
-        .filter((c) => IDENTIFIERS.has(c.text.toLowerCase()) || DATA_IN_CHROME.test(c.text) || LOOKS_LIKE_CODE.test(c.text))
-        .map((c) => c.text.slice(0, 34));
       console.log(
-        `STATS ${route} chrome=${chrome.length} cjk=${cjk} (${Math.round((100 * cjk) / chrome.length)}%) exempt=${exempt.length} ${JSON.stringify(exempt.slice(0, 6))}`
+        `STATS ${route} chrome=${seen.total} cjk=${seen.cjk} (${Math.round((100 * seen.cjk) / seen.total)}%) ` +
+          `exempt=${seen.exempt.length} ${JSON.stringify(seen.exempt.map((c) => c.text.slice(0, 30)).slice(0, 6))}`
       );
-      if (cjk < 4) problems.push(`chineseRouteHasAlmostNoChineseChrome cjk=${cjk} of ${chrome.length}`);
+      if (seen.cjk < 4) problems.push(`chineseRouteHasAlmostNoChineseChrome cjk=${seen.cjk} of ${seen.total}`);
     }
-    if (locale === "zh") {
-      const leaks = chrome
-        .filter((c) => !HAS_CJK.test(c.text))
-        .filter((c) => !IDENTIFIERS.has(c.text.toLowerCase()))
-        .filter((c) => !DATA_IN_CHROME.test(c.text))
-        .filter((c) => !LOOKS_LIKE_CODE.test(c.text))
-        .filter((c) => c.text.split(/[^\w]+/).filter((w) => /^[A-Za-z]{2,}$/.test(w)).length >= 1)
-        .map((c) => `${c.tag}:"${c.text.slice(0, 60)}"`);
-      if (leaks.length) problems.push(`chineseRouteShowsEnglish[${leaks.length}]: ${leaks.slice(0, 6).join(" | ")}`);
+    if (locale === "zh" && seen.leaks.length) {
+      problems.push(
+        `chineseRouteShowsEnglish[${seen.leaks.length}]: ` +
+          seen.leaks.slice(0, 6).map((c) => `${c.tag}:"${c.text.slice(0, 60)}"`).join(" | ")
+      );
     }
     if (text.includes("⟨")) problems.push("missingKeyMarker");
     if ((resp?.status() ?? 0) !== 200) problems.push(`http=${resp.status()}`);

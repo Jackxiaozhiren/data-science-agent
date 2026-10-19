@@ -39,6 +39,15 @@
 - **`CopyButton`'s accessible name said "Copy runner runner command"** -- it composed `${label} runner command`
   onto a label that already read "Copy runner". The suffix is gone, the label is the name, and the unused
   `label = "Copy"` default went with it.
+- **CI now enforces it.** `apps/web/scripts/locale-chrome-rules.mjs` is the single owner of the region rule, and
+  the web job that GitHub Actions already runs (`apps/web/scripts/regression.mjs`) now spends **26 of its 73
+  checks** on it: every static route loaded under a `dsa_locale=zh` and an `=en` cookie, failing on an
+  English chrome region or a `⟨missing-key⟩` marker. The seeded runner keeps the coverage CI cannot have --
+  column heads, which need rows, and the routes that need a real run id -- and
+  `test_the_two_language_runners_share_one_rule_owner` refuses either runner re-declaring the rule beside its
+  import, with a floor on the identifier list so an emptied rule cannot pass by exempting everything. Both
+  were falsified: forcing the tour's cookie to `en` reddened all 13 Chinese routes, and a local stub in place
+  of the shared import tripped the owner guard.
 - **The closure claim is measured on the rendered page.** `build/r13i-chrome-acceptance.mjs` reads only the
   regions the interface owns (`th`, `option`, `summary`, `label`, `h1`–`h3`, `button`, nav, header, footer) on 17
   routes in each language: zero Latin-only chrome strings outside a printed exemption list, 74–94% of chrome

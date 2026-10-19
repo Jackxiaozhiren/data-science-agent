@@ -221,6 +221,17 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   value -- which is why these requirements kept the `en` values byte-for-byte while moving them. The parity sweep
   walks `apps/web/app/**` and does not see `scripts/`, so the coupling is real and unstated by any gate: rewording
   one of those nine is a change to the tour as well as to the dictionary.
+- **The language rule is decided once and CI runs it.** `apps/web/scripts/locale-chrome-rules.mjs` owns the
+  answer to "which regions of a page does the interface speak through" -- the selector, the identifier list, the
+  data-in-chrome pattern and the leak decision. Two runners ask it: `regression.mjs`, the CI web job, now spends
+  **26 of its 73 checks** walking every static route under a `dsa_locale=zh` and `=en` cookie and failing on an
+  English chrome region or a `⟨missing-key⟩` marker; and `locale-chrome-acceptance.mjs`, which needs a seeded
+  backend and therefore runs by hand, covering the regions that only exist once there are rows (table column
+  heads) plus the dynamic routes. `test_the_two_language_runners_share_one_rule_owner` is what keeps them the
+  same test: it refuses a runner that re-declares `IDENTIFIERS` or `CHROME_SELECTOR` beside its import, and it
+  floors the identifier list at 25 entries so an emptied rule cannot pass by exempting everything. The wiring was
+  falsified both ways -- forcing the tour's cookie to `en` reddened all 13 中文 routes, and replacing the
+  acceptance's import with a local stub failed the owner guard.
 - **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
   `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
   would add a devDependency, and dependency changes are the user's call, not the agent's.

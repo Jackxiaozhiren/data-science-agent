@@ -13719,3 +13719,14 @@ breakdown). They were run from the repo after the move and reproduce the scratch
 inventory `duplicates=0, wordy=2 in 2 files, single-token=118, all=132`; acceptance `R13I_CHROME_ACCEPTANCE_PASS
 (34/34)` with 17 STATS lines. No absolute path survives in either file (the scratch copies hardcoded this
 worktree), and the citations above now point at the tracked paths.
+
+Addendum 2 (same day): the closure is now enforced where CI already runs. `apps/web/scripts/locale-chrome-rules.mjs`
+is the single owner of the region rule; `regression.mjs` -- the web job GitHub Actions already runs -- spends 26 of
+its 73 checks on it (every static route under a `zh` and an `en` cookie, failing on English chrome or a
+`⟨missing-key⟩` marker), and `locale-chrome-acceptance.mjs` keeps the seeded coverage the tour cannot have
+(column heads, dynamic routes). Two plants: forcing the tour's cookie to `en` reddened all 13 中文 routes naming
+`a:"Data Science Agent" | a:"Ask" | ...`; replacing the acceptance's import with a local stub tripped the new
+`test_the_two_language_runners_share_one_rule_owner`, which also floors the identifier list at 25 entries so an
+emptied rule cannot pass by exempting everything. Both files restored by sha256. Tour 73/73, `ruff format
+--check` green over the gate's own path list after the first push taught this lane that the formatter is a
+separate CI step from the linter.
