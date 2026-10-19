@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils";
 // Styling is scoped to this component via element overrides — no global CSS.
 export function Markdown({ text, className }: { text: string; className?: string }) {
   return (
-    <div className={cn("min-w-0 text-sm leading-6 text-zinc-700", className)}>
+    // `data-run-document` marks the bytes this run produced -- rendered from its stored report, in the
+    // language the run was asked in. The accessibility and language checks in `apps/web/scripts` examine the
+    // chrome and must not read this subtree as chrome, so the boundary is declared in the DOM rather than
+    // guessed from a class name.
+    <div data-run-document="true" className={cn("min-w-0 text-sm leading-6 text-zinc-700", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

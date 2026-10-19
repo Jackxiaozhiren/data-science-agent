@@ -57,14 +57,38 @@ for (const locale of ["zh", "en"]) {
     const resp = await page.goto(`${WEB}${route}`, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(1300);
     const text = await page.evaluate(() => document.body.innerText);
-    const chrome = await page.evaluate(
-      ({ sel }) =>
-        [...document.querySelectorAll(sel)]
-          .filter((el) => el.offsetParent !== null || el.tagName === "OPTION")
-          .map((el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent || "").replace(/\s+/g, " ").trim() }))
-          .filter((x) => x.text),
-      { sel: CHROME_SELECTOR }
-    );
+    const readChrome = () =>
+      page.evaluate(
+        ({ sel }) =>
+          [...document.querySelectorAll(sel)]
+            .filter((el) => !el.closest("[data-run-document]"))
+            .filter((el) => el.offsetParent !== null || el.tagName === "OPTION")
+            .map((el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent || "").replace(/\s+/g, " ").trim() }))
+            .filter((x) => x.text),
+        { sel: CHROME_SELECTOR }
+      );
+    // An inactive tab is not mounted, so the default tab alone is not the page. Walk every tab the way a
+    // keyboard user reaches one -- focus, then Enter -- and union what each reveals. `inspector-a11y.mjs`
+    // learned this the same way: a check that sees only the first tab passes on a page whose other tabs are
+    // still English, which is the blind spot, not the result.
+    const seenRegions = new Map();
+    const collect = (list) => {
+      for (const r of list) seenRegions.set(`${r.tag}|${r.text}`, r);
+    };
+    collect(await readChrome());
+    const tabCount = await page.locator('[role="tab"]').count();
+    for (let i = 0; i < tabCount; i += 1) {
+      const tab = page.locator('[role="tab"]').nth(i);
+      try {
+        await tab.focus();
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(400);
+        collect(await readChrome());
+      } catch {
+        // A tab that cannot be reached is reported by inspector-a11y.mjs, which owns that claim.
+      }
+    }
+    const chrome = [...seenRegions.values()];
     if (chrome.length < 8) {
       console.log(`${locale} ${route} FAIL chromeRegions=${chrome.length} (the selector matched almost nothing)`);
       failures += 1;

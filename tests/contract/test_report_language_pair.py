@@ -20,6 +20,10 @@ mapping through `state_json`), not guessed from what the renderer reads.
 from __future__ import annotations
 
 import html as html_module
+import re
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[2]
 from typing import Any
 
 import pytest
@@ -296,3 +300,76 @@ def test_every_label_is_reachable_and_both_forms_are_rendered() -> None:
             if needle not in text:
                 unread.append(f"{key}[{lang}]={value!r}")
     assert not unread, f"{unread} are in the table but printed by no rendering"
+
+
+def _ts_map(name: str) -> dict[str, str]:
+    """One `Record<string, string>` literal from a TypeScript module, parsed rather than trusted."""
+    source = _web_file("app/lib/limitations.ts")
+    start = source.index(f"export const {name}: Record<string, string> = {{")
+    body = source[start : source.index("};", start)]
+    return dict(re.findall(r'^\s*"((?:[^"\\]|\\.)*)": "((?:[^"\\]|\\.)*)",', body, re.MULTILINE))
+
+
+def _web_file(relative: str) -> str:
+    return (_REPO / "apps/web" / relative).read_text(encoding="utf-8")
+
+
+def test_the_limitation_prose_maps_agree() -> None:
+    """The producer's constants, the renderer's table and the web's table are one fact, checked in both directions.
+
+    Three places touch these sentences: the engine writes them, `report_export` renders the downloaded document,
+    and the run page renders the stored value from the API. Two of those are different languages, so the map
+    exists twice -- and a mapping maintained twice is how the report and the panel start telling the reader two
+    different things about the same caveat.
+
+    The keys are therefore derived from the producer sources, not retyped here: a fourth constant added to a tool
+    shows up as a missing entry in both maps. And each Chinese form is checked to carry the *same severity* as
+    the English one, because the web decides how loud a caveat is by keyword matching -- a translation that
+    happened to contain a severe word would silently escalate every report that uses it.
+    """
+    producers = {
+        "packages/agent/src/dsa_agent/graph.py",
+        "packages/agent/src/dsa_agent/langgraph_graph.py",
+        "packages/tools/src/dsa_tools/tools/correlation.py",
+        "packages/tools/src/dsa_tools/tools/hypothesis_test.py",
+    }
+    written: set[str] = set()
+    for rel in producers:
+        for line in (_REPO / rel).read_text(encoding="utf-8").splitlines():
+            # `limitation="..."`, `limitations: str = "..."` and any other annotated default all name the same
+            # kind of constant, and a pattern that required the value to follow the name immediately matched one
+            # of the three -- which is how this sweep first reported the producer set as a single string.
+            for match in re.finditer(
+                r'limitation[s]?\s*(?::[^=]*)?=\s*"([^"]*causation[^"]*)"', line
+            ):
+                written.add(match.group(1))
+    assert len(written) >= 3, (
+        f"the producer sweep found only {sorted(written)} -- the pattern has gone blind"
+    )
+
+    missing_from_renderer = sorted(written - set(_module.PRODUCT_PROSE_ZH))
+    assert not missing_from_renderer, f"report_export cannot say {missing_from_renderer} in Chinese"
+    missing_from_page = sorted(written - set(_ts_map("PRODUCT_LIMITATION_TEXT")))
+    assert not missing_from_page, f"the run page cannot say {missing_from_page} in Chinese"
+
+    ts_map = _ts_map("PRODUCT_LIMITATION_TEXT")
+    assert ts_map == _module.PRODUCT_PROSE_ZH, (
+        f"the two tables disagree: renderer-only {set(_module.PRODUCT_PROSE_ZH) - set(ts_map)}, "
+        f"page-only {set(ts_map) - set(_module.PRODUCT_PROSE_ZH)}"
+    )
+
+    severe = re.findall(
+        r'"([^"]+)",',
+        _web_file("app/lib/limitations.ts").split("SEVERE_LIMITATIONS = [")[1].split("];")[0],
+    )
+    for english, chinese in _module.PRODUCT_PROSE_ZH.items():
+        assert any("\u3400" <= ch <= "\u9fff" for ch in chinese), (
+            f"{english!r} was 'translated' into English"
+        )
+        loud_en = any(word in english.lower() for word in severe if word.isascii())
+        loud_zh = any(word in chinese for word in severe if not word.isascii())
+        assert loud_en == loud_zh, (
+            f"{english!r} -> {chinese!r} changes how loud the caveat is "
+            f"(english severe={loud_en}, chinese severe={loud_zh}); severity is keyword-matched, so the "
+            "translation must not pick up or drop a defect word"
+        )

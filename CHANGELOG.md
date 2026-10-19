@@ -16,6 +16,20 @@
   than as two green status codes.
 
 ### Added (post-4.6.0) — the report keeps the language the run was asked in (R-13, the deliverable half)
+- **The tabs were the last blind spot, and they held real copy.** Both language and accessibility checks walked
+  the DOM, and an inactive tab is never mounted, so everything behind a tab went unexamined while the closure was
+  being declared. Walking the tabs found the run report's own filter chips rendering `All` / `Errors` in English on
+  a 中文 page; they are dictionary strings now. It also surfaced the distinction the checks had to make: the
+  headings inside an embedded report are the run's document, not chrome, so `Markdown.tsx` declares that subtree
+  with `data-run-document` and the scanner stands outside it -- the document's language is pinned by tests that
+  control the question instead of by a page scan.
+- The caveat sentences the engine writes into a run (`"Association does not imply causation."` and two tool
+  defaults) are now said in the reader's language in the downloaded report *and* in the run page's insight panel.
+  Whole-value maps in two languages, compared by `test_the_limitation_prose_maps_agree`, which derives its key set
+  from the producer sources and also fails a translation that would change how loud the caveat is -- severity is
+  keyword-matched, so a Chinese rendering picking up a defect word would escalate every report that uses it.
+  Stored run state is never rewritten: a run recorded earlier stays byte-for-byte the document it produced.
+
 
 - The rule has been written in `docs/FRONTEND_IA.md` since the language layer began -- *"the deliverable is not
   translated; a report keeps the language the run was asked in"* -- and the second half of it was not true:

@@ -22,7 +22,7 @@ import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
 import { Markdown } from "@/app/components/data/Markdown";
 import { isInFlightStatus, isReviewStatus, TERMINAL_STATUSES } from "@/app/lib/analysisStatus";
-import { limitationSeverity } from "@/app/lib/limitations";
+import { limitationSeverity, limitationText } from "@/app/lib/limitations";
 
 export type RunDetail = {
   id: string;
@@ -718,7 +718,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                       aria-pressed={traceFilter === f}
                       className={`rounded-md px-3 py-1 capitalize ${traceFilter === f ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900"}`}
                     >
-                      {f === "ok" ? "OK" : f === "error" ? "Errors" : "All"}
+                      {t(locale, f === "ok" ? "insp.filterOk" : f === "error" ? "insp.filterErrors" : "insp.filterAll")}
                     </button>
                   ))}
                 </div>
@@ -860,13 +860,14 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                   <p className="text-xs text-zinc-500">{t(locale, "insp.evidencePrefix")} {ins.evidence_ids.join(", ") || "—"}</p>
                   {ins.limitation && (() => {
                     const sev = limitationSeverity(ins.limitation);
+                    const caveat = limitationText(ins.limitation, locale);
                     return (
                       <p
                         role="note"
                         className={`flex items-start gap-2 rounded-lg border p-2.5 text-xs leading-5 ${sev === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}
                       >
                         <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                        <span><strong>{sev === "error" ? "Critical limitation:" : "Limitation:"}</strong> {ins.limitation}</span>
+                        <span><strong>{t(locale, sev === "error" ? "insp.limitationCritical" : "insp.limitationPlain")}</strong> {caveat}</span>
                       </p>
                     );
                   })()}

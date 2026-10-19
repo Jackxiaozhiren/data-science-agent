@@ -164,6 +164,31 @@ def report_language(source: Any) -> str:
 
 STANDING_LIMITATION = REPORT_LABELS["standingLimitation"]["en"]
 
+#: Sentences the product itself writes *into a run*, listed here so a Chinese run's report can say them in
+#: Chinese. Whole-value matching only: an analyst's or the model's own wording is never touched, however close
+#: it looks, because rewriting a sentence somebody else wrote is how a number leaves a document. The stored run
+#: state is not modified either -- this is a rendering decision, so a run recorded earlier stays byte-for-byte
+#: the document it produced.
+#:
+#: `apps/web/app/lib/limitations.ts` carries the same map for the inspector panel, which reads stored state
+#: rather than this renderer; `test_the_limitation_prose_maps_agree` fails if the two drift.
+PRODUCT_PROSE_ZH: dict[str, str] = {
+    "Association does not imply causation.": "关联不等于因果。",
+    "Correlation does not imply causation.": "相关不等于因果。",
+    "Check assumptions; association does not imply causation.": "请核对假设；关联不等于因果。",
+}
+
+
+def _prose(value: str, lang: str) -> str:
+    """The Chinese form of a sentence the product wrote, or the value unchanged.
+
+    Deliberately an exact-match table rather than a substring rewrite: nothing which is not one of these
+    constants may be altered, so an analyst sentence that merely contains the same words stays as written.
+    """
+    if lang != "zh":
+        return value
+    return PRODUCT_PROSE_ZH.get(value.strip(), value)
+
 
 def _lbl(lang: str, key: str) -> str:
     return REPORT_LABELS[key][lang]
@@ -239,7 +264,7 @@ def derived_limitations(source: Any, lang: str | None = None) -> list[str]:
     for insight in summary.get("insights") or []:
         limitation = str(insight.get("limitation") or "").strip()
         if limitation:
-            collected.append(limitation)
+            collected.append(_prose(limitation, lang))
 
     for record in summary.get("evidence") or []:
         claim = str(record.get("claim") or "")
@@ -298,7 +323,8 @@ def _insight_lines(insights: list[dict[str, Any]], *, plain: bool, lang: str = "
         for key in ("magnitude", "significance", "limitation"):
             value = insight.get(key)
             if value:
-                detail = strip_identifiers(f"{value}") if plain else f"{value}"
+                rendered = _prose(f"{value}", lang)
+                detail = strip_identifiers(rendered) if plain else rendered
                 lines.append(f"  - {key}: {detail}")
         refs = insight.get("evidence_ids") or []
         if refs and not plain:
@@ -644,7 +670,8 @@ def export_html(source: Any) -> str:
         parts.append(f"<summary>{_inline(insight.get('finding'))}</summary>")
         if insight.get("limitation"):
             parts.append(
-                f'<p class="meta">{_lbl(lang, "limitation")} {_inline(insight["limitation"])}</p>'
+                f'<p class="meta">{_lbl(lang, "limitation")} '
+                f"{_inline(_prose(str(insight['limitation']), lang))}</p>"
             )
         links = " ".join(
             f'<a href="#{_esc(eid)}">{_esc(eid)}</a>' for eid in insight.get("evidence_ids") or []

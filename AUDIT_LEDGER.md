@@ -13986,3 +13986,45 @@ outstanding item here, and a handoff that had it in "owed" was wrong.
 **What this changes about the close.** The lane's work is now measured by the same list CI measures, in CI's
 order, on this tree -- not by a narrower selection that happened to be convenient. That is the difference between
 "my tests pass" and "the project's gate is green", and this time the only gap left is another session's drift.
+
+## 230. Two checks were blind to anything behind a tab, and the fix found the last English words on the product's most important page
+
+2026-10-20, continuing §228. §224 closed the web language layer with a region-based page check, and §228 closed
+the keyboard half by discovering that disclosures live inside tabs. The two facts together mean the closure claim
+was measured on **the default tab only** -- an inactive `TabsContent` is never mounted, so a scanner that queries
+the DOM sees nothing behind it. Neither instrument noticed, because neither had a reason to expect content it
+could not see.
+
+Walking the tabs (focus the tab, press `Enter`, re-read the regions) on the seeded instance immediately found the
+run report's own filter chips rendering `All` / `Errors` in English on a 中文 page, inside the Trace tab. They are
+now `insp.filterAll` / `insp.filterErrors` / `insp.filterOk`, and the acceptance covers them.
+
+**The distinction the run page forced, in both directions.** The same tab walk flagged `h1:"Analysis Report — run-…"`,
+`h2:"Plan"`, `h2:"Tool Calls"`, `h2:"Evidence"` on that route -- and those are correct, because the seeded run was
+asked in English and a report keeps the language it was asked in. An instrument that cannot tell the interface's
+words from the run's document will either flag correct behaviour or stop looking. So the boundary is declared in
+the DOM: `Markdown.tsx` carries `data-run-document="true"`, the scanner excludes that subtree, and the document's
+own language is pinned where it belongs -- `test_report_language_pair.py`, which controls the question the run
+was asked. Measured after the change: the inspector route still presents 58 chrome regions, 49 of them CJK.
+
+**Three places say the same caveat, so one test compares them.** The engine writes
+`limitation="Association does not imply causation."` (`graph.py:304`, `langgraph_graph.py:131`) and two tool
+defaults carry their own versions (`correlation.py:32`, `hypothesis_test.py:37`). The panel reads that stored
+value while the report renders it, so the map exists twice, in two languages.
+`test_the_limitation_prose_maps_agree` derives the key set **from the producer sources** rather than retyping it
+-- which caught a blind pattern of my own on the first run: `limitation[s]?[=:]` matched the keyword argument but
+not the annotated pydantic default (`limitations: str = "..."`), so the sweep reported one constant where three
+exist. The test then asserts the two maps are identical, that every Chinese form really contains CJK, and that a
+translation does not change how loud the caveat is -- severity is keyword-matched in `limitations.ts`, so a
+Chinese rendering that happened to contain 混杂 or 偏差 would escalate every report using it.
+
+**Falsifications, including one that was invalid first.** The maps were checked by deleting a renderer entry (red)
+and the scanner by planting an English filter chip inside the Trace tab (exit 1, naming all three buttons); the
+`RunInspector` file returned to sha256 `654fe122…`. The first attempt at that plant appeared to pass -- because
+`R13I_ROUTES` drops the dynamic routes, so the planted page was never scanned. A green on a check that did not
+run is not a result, and the retry ran the full route list.
+
+**Verification.** `npx tsc --noEmit` 0; `next build` 0; `R13I_CHROME_ACCEPTANCE_PASS (34 route/locale checks)`;
+`INSPECTOR_A11Y_PASS` (18 disclosure toggles across both locales); tour `73/73`; `tests/contract` 269 passed with
+the subset-order artifact §229 already records; `ruff format --check` green over the gate list, with `dsa_agent`
+re-synced *after* the formatter ran -- formatting after a sync is exactly how the vendored twin drifts.

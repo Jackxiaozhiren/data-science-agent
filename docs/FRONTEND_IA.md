@@ -245,6 +245,14 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   runners report a clean tree. The wiring was falsified from both sides: forcing the tour's cookie to `en` reddened
   every 中文 route naming `a:"Ask" | a:"Try DSA" | ...`, and replacing the acceptance's import with a local stub
   tripped the owner guard.
+- **A region scan only sees what is mounted.** An inactive tab renders nothing, so the first version of
+  `locale-chrome-acceptance.mjs` examined the default tab and declared the page clean; walking the tabs (focus,
+  `Enter`, re-read) is what made the claim true, and it found English filter chips on the run report's Trace tab
+  the moment it started -- now dictionary strings. The same walk needed a boundary in the other direction: the
+  headings inside an embedded report belong to the run, not the interface, so `Markdown.tsx` marks that subtree
+  with `data-run-document` and the scanner stays out of it. A check that cannot tell the two apart will either
+  flag a correct document or stop looking. §230 records both halves, including a falsification that first
+  *passed* because the runner's route filter had quietly excluded the page under test.
 - **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
   `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
   would add a devDependency, and dependency changes are the user's call, not the agent's. What the in-house
