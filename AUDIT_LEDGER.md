@@ -13788,3 +13788,45 @@ work and was not touched, synced or staged. `ruff format --check` green over the
 files) after the last lesson, `tests/contract` 267 passed with the one known credential-dependent failure
 (`test_provider_settings.py`, §218/§219), `mkdocs build --strict` 0, the docs census gate 3 passed, and the
 ledger numbering guard OK through §225.
+
+## 226. Making the disk attach a one-step action, and the two operator runbooks the code cannot do
+
+**The trap fixed here.** `deploy/render-persistent.example.yaml` mounts a Render disk at `/var/data`, and
+`docker/Dockerfile.api` runs the service as `appuser`. Nothing in the image created `/var/data`, so the mount
+arrives owned by root and the first write -- `sqlite3 /var/data/dsa.db`, or any dataset upload -- fails with
+`attempt to write a readonly database` on the day the disk is attached, not the day the blueprint is written. A
+runtime `chown` is not available to a non-root process, so the fix belongs at build time: `mkdir -p
+/app/data/datasets /var/data/datasets /var/data/artifacts` and `chown -R appuser:appuser /app /var/data`, so the
+volume has an owner to inherit. What this section does **not** claim: the end-to-end behaviour needs a real
+deploy -- there is no Docker daemon on this machine (`docker info` fails) and no Render credential here -- so the
+comment in the Dockerfile says verification is the deploy, and the check is the one below.
+
+**Runbook 1, persistent storage (owner action: costs money, ~USD 7/month + USD 0.25/GB, priced 2026-10-13).**
+Either edit `render.yaml` -- `plan: free` -> `plan: 0.5c-512mb`, add the `disk:` block, and repoint the three
+env values from `/tmp/...` to `/var/data/...` (all three already written out in
+`deploy/render-persistent.example.yaml:31-46`) -- or do it in the dashboard: the service -> Settings ->
+`Instance Type` choose the paid plan -> `Disks` -> Add disk, name `dsa-data`, mount path `/var/data`, size 1 GB
+-> `Environment Variables` -> `DSA_DATABASE_URL = sqlite+aiosqlite:////var/data/dsa.db` (four slashes: the
+scheme's `//` plus the absolute path), `DSA_DATASET_DIR = /var/data/datasets`, `DSA_ARTIFACT_ROOT =
+/var/data/artifacts` -> apply, then **Manual Deploy**. The blueprint guard
+`tests/contract/test_persistence_blueprint_covers_writable_roots.py` reads both `render.yaml` and the example, so
+a half-migrated blueprint -- the database moved but the artifacts left behind, the failure the example's own
+comment calls out -- fails in CI rather than silently. Deliberately not done from here: changing `plan` in a
+committed blueprint starts billing on the next sync.
+Verify after the deploy, from any shell:
+`curl -s https://data-science-agent-api-h43i.onrender.com/version | jq '.storage'` must print
+`{"durable": true, "ephemeral_roots": []}`, and after creating one dataset and clicking Redeploy,
+`curl -s .../api/v1/datasets/ | jq .total` must still be non-zero. Either half failing says what it means:
+`durable:false` after the env change means the paths are not on the mount; a write error means ownership.
+
+**Runbook 2, the three held PRs.** PR 77 (Node 22 -> 26 base image) is prepared and green-capable -- the branch
+already moves `ci.yml:27`, `docs/getting-started.md` and the four planted literals in
+`tests/test_runtime_version_claims.py` -- and what blocks it is the review `CHANGELOG.md:1663` asks for: accept
+with `gh pr merge 77 --merge`, decline with `gh pr close 77`. PR 82 (tailwindcss `^3.4` -> `^4.3`) is not a bump
+but a migration -- v4 is CSS-first, so `tailwind.config.js` and the PostCSS plugin both change -- and its
+`web-regression` is red; the queue-hygiene move is `gh pr comment 82 --body "@dependabot ignore this major
+version"` plus a task for the migration, and the log is
+`gh run view $(gh run list -L1 --json databaseId,headSha --jq '.[]|select(.headSha[0:7]=="967069c")|.databaseId') --log`.
+PR 72 (lucide-react 0.545 -> 1.43) is also red on `web-regression` -- an icon rename or size change, not a
+security bump -- and the same choice applies: dig first with the job log, then merge or ignore.
+`web-regression` is the evidence in both cases, so neither is merged on assumption.

@@ -23,8 +23,15 @@ COPY examples/datasets ./examples/datasets
 COPY benchmarks/v2/datasets ./benchmarks/v2/datasets
 COPY research/results ./research/results
 RUN uv sync --no-dev --locked --all-packages \
-    && mkdir -p /app/data/datasets \
-    && chown -R appuser:appuser /app
+    && mkdir -p /app/data/datasets /var/data/datasets /var/data/artifacts \
+    && chown -R appuser:appuser /app /var/data
+# `/var/data` is created here, with its owner set, because that is the mount point the persistence blueprint
+# uses (deploy/render-persistent.example.yaml). A Docker-named volume mounted at a path that already exists in
+# the image adopts that directory's ownership; mounted at a path that does not exist, it arrives owned by root.
+# The service then runs as `appuser` and cannot chown its own data directory at runtime, so SQLite answers
+# "attempt to write a readonly database" -- a failure that surfaces on the first write after the disk is
+# attached, not before. Creating it here is what makes attaching the disk a one-step action; verified end to
+# end only by the deploy itself (audit §226).
 USER appuser
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s \
