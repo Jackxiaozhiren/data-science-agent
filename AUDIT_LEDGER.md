@@ -13321,6 +13321,59 @@ untouched, because those are what the run produced rather than what the product 
   explanations -- the scripted loopback endpoint this test starts for itself answers 502 in the first two
   invocations and not in the third. Left as a named repro rather than a fix, in a file this lane does not own.
 
+**Addendum 4, same session -- the shell, and a language-layer defect that no guard or single-page test could see.**
+§219's inventory said the remaining English lived in page bodies. Most of it did not: it was the navigation. 101
+strings across 15 files moved into the dictionary -- the sidebar's three groups and thirteen links, the header
+nav and its mobile menu, the footer tagline and both landmark names, the two table controls (search placeholder,
+status filter, "All statuses", the selected-runs affordance), the plan timeline's empty line, the chart's
+accessible name, the hero's four node labels, and the route leftovers from §219's earlier batches.
+`NAV_GROUPS` now carries **key names** rather than sentences (`labelKey`/`hintKey`), which is what stops a label
+from being copied into a component the next time someone renders it; `test_web_navigation_groups.py` follows the
+keys into the dictionary and now requires the "these measure the agent, not your data" disclaimer in *both*
+languages -- strictly more than the English-only source-text check it replaced.
+
+- **The defect.** `LocaleProvider` wrapped `{children}` inside `<main>`. The sidebar is a *sibling* of `<main>` and
+  a client component that reads that context, so it rendered the context's default language whatever the cookie
+  said: the header was correct because it takes `locale` as a prop, and that mismatch is why the page read as
+  half-translated rather than as broken. Nothing in the guard set could see it -- the parity guards read the
+  dictionary and the page files, the navigation guard reads the declaration, and the tour asserts layout and
+  keyboard reach rather than language. Found by reading the rendered shell in a browser (`R13F_NAV_ACCEPTANCE_FAIL`
+  with `leaked=["Ask","Reports","Benchmarks","Model settings"]`), fixed by wrapping the shell in the provider,
+  and pinned by `test_the_provider_wraps_the_shell_not_just_the_route`, which asserts the nesting rather than
+  trusting the next reader to notice.
+- **Two corrections the guards forced, both better than what I wrote first.** `SHA-256` briefly had a dictionary
+  key whose Chinese value was the identical string; the "is the Chinese block actually Chinese" guard refused it,
+  correctly, because an algorithm name is not a sentence the product says -- so it went back to the page rather
+  than the guard being widened. `MCP` kept its key and got a value that says what it is (「MCP 服务」). And the
+  benchmark-artifact guard's 404 branch assertions, which used to run over raw source text, now run over the
+  resolved sentences: the Chinese copy is separately required to name the deployment, carry the 404, refuse the
+  "run the ablation" remedy, and not reuse the genuinely-empty title.
+- **Inventory, measured with the same scan as before.** Long reader-facing sentences in `apps/web/app`: 89 (25
+  files) at §219 -> 82 (19) after the shared chrome -> 58 (19) after the inspector -> **24 in 10 files** now, led
+  by `datasets/compare/page.tsx`. That scan needs three words in a JSX text node or a sentence over eighteen
+  characters, so it understates: a broader pass that also counts single-word column headings, eyebrows and
+  `label=` props finds ~149 strings in 19 files on the same tree. Both numbers are printed here because quoting
+  only the flattering one is how an inventory becomes a claim.
+- **One claim of mine in this section is now falsified by re-measurement, and the honest residue is a
+  measurement rather than an explanation.** Addendum 3 said the discriminator for
+  `test_provider_settings.py::…real_mode_run…` is `--cov`: the gate's `uv run pytest -q --cov` had been green and
+  my `-o addopts=""` runs red. At 07:49 the *identical* gate command -- `uv run pytest -q --cov --cov-report=term`
+  -- went red on that test (`HTTP 502` from the endpoint the test itself starts) while the rest of the suite passed
+  (1124 glyphs, coverage 83.77%). So neither the addopts override nor `--cov` explains it; what is left is that the
+  outcome depends on run state rather than on flags, which is consistent with §218's account of that path needing a
+  credential this machine does not have and with `ci` being green on the runner. Recorded as a repro
+  (`uv run pytest -q --cov tests/contract/test_provider_settings.py`) and left alone: the file is not this lane's,
+  and three of my four explanations have now been measured wrong.
+- **Evidence for this batch.** `tsc` clean; `next build` clean; tour 47/47; the web/parity/navigation/artifact
+  guard sets 100 + 15 passed; full suite 1124 passed with the one failure above; nav read in a live browser
+  `R13F_NAV_ACCEPTANCE_PASS` (zh sidebar 「提问/运行/报告/数据集/关于本系统」, zero leaks, zero console errors,
+  `output/r13c/nav-zh.png`, `nav-en.png`); `audit_facts`, `check_public_claims --require-released-tags` and
+  `mkdocs build --strict` all exit 0. Shipped as `1f1f2b1` (23 files) and pushed with the tree at `0 0`.
+  **CI witness outstanding at the time of writing**: run for `a797f6b` was `in_progress` on `ci`,
+  `web-regression` and the analyzers when this line was committed, and the earlier ledger revision `3e6d223` had
+  its `web-regression` cancelled by a later push. The green witness for this change therefore still has to be
+  read off that run -- it is named here as owed, not as held.
+
 ## 220. Clearing the dependency queue turned out to be three guards that require a companion edit Dependabot cannot make
 
 Nine open PRs, and after measuring each failing step none of them was blocked by the upgrade itself. §218 named
