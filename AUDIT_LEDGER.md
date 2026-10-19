@@ -13588,3 +13588,40 @@ The widening then reddened CI a second time, and that one was purely mine: run `
 reports 299 files already formatted and the two suites are green again (37 passed). Same family as §113.5's
 citing a status that was never the gate's: passing the check I chose to run is not passing the check the pipeline
 runs.
+
+## 223. main was red for two reasons at once, and only one of them was mine
+
+Chasing the CI verdicts after §222 produced three separate failures on the same branch of work, and the chain is
+worth keeping because each one was found by a different means:
+
+- **Mine, and correct to hit:** `a79c770` added two image `COPY` lines and the artifact-router guard refused
+  them. That guard's rule was right and its vocabulary was too narrow; widened to the union of router reads and
+  boot-seeder reads, both directions planted. §222's addendum.
+- **Also mine, and embarrassingly simple:** the widened guard file passed `ruff check` and failed
+  `ruff format --check` -- I ran the lint I thought of instead of the gate the pipeline runs. Fixed in `2e92d84`,
+  and the commit says so in those words.
+- **Not mine:** `tests/contract/test_provider_settings.py::test_the_page_says_no_and_names_the_command_that_says_yes`
+  had been failing since `d76f9dd` (R-13's "the last page-specific copy reads in the visitor's language").
+  It asserted the English refusal headline inside `apps/web/app/settings/page.tsx`, and that commit had moved the
+  sentence into `apps/web/lib/locale.ts` as `settings.noCredentialTitle` ("This instance does not accept a model
+  credential" / "本实例不接受模型凭证"). Reproduced inside a `git archive HEAD` export, which is what separates a
+  committed breakage from a shared-worktree illusion.
+
+Fixed in `111bee6` without weakening the claim: the test now requires the refusal branch to render the key the
+sentence moved to, then reads the headline from that key's English value through the same folded-line parser
+`tests/contract/test_benchmark_artifact_endpoints.py` already uses -- and the parser's fold is not decoration, a
+wrapped entry reads as absent without it. The `dsa ui` half of the assertion still reads the component, because
+that string never moved.
+
+**The trap that nearly produced a false green, stated because it is the shared worktree's characteristic
+failure:** the first local run of the patched test passed, and it proved nothing -- my worktree copy of
+`lib/locale.ts` is another lane's *uncommitted* edit, so the check had read a file that is not in `main`. The
+verification that counted was overlaying only my test file onto the HEAD export and running there. Rule: when a
+test reads a file another lane is editing, the worktree is not a measurement of the commit.
+
+Witnesses: run `39240478038` on `111bee6` -- `run: completed success`, `ci: completed success`,
+`web-regression: completed success`. That ends the red started by `a79c770`. Still outstanding on the deployment
+side, and unchanged by any of this: the instance now running was built from the pre-fix Dockerfile, so the first
+screen stays empty until it is rebuilt and redeployed, and `storage.durable` is still false with all three roots
+on the container filesystem -- which needs the Render dashboard, not a credential I have (measured: no
+`RENDER_API_KEY` in this environment).
