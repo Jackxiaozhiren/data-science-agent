@@ -13374,6 +13374,32 @@ languages -- strictly more than the English-only source-text check it replaced.
   its `web-regression` cancelled by a later push. The green witness for this change therefore still has to be
   read off that run -- it is named here as owed, not as held.
 
+**Addendum 5, same session -- the rest of the loop, and the witness that is owed.** `runs/page.tsx`,
+`reports/page.tsx`, `runs/[id]/page.tsx` and `datasets/compare/page.tsx` moved too (51 strings, from page eyebrows
+to the unit label under each compared number and the `— select —` placeholders); where a sentence was already
+owned the key was reused (`nav.runs`, `dsd.rows`, `insp.statEvidence`, `cmp.back`) instead of adding a second
+entry for it. Inventory with both scans, so neither number stands alone: long-sentence scan **89 → 15 in 7
+files**; broad scan including single-word labels and `label=` props **~149 → 105 in 16 files**, led now by
+`evaluations`, `settings` and `failures`.
+
+- **The acceptance is a leak check, not a presence check.** `build/r13g-routes-acceptance.mjs` loads the migrated
+  sentences out of `lib/locale.ts` at run time, refuses any route rendering one of them as a whole line in the
+  other language, and refuses any page containing a `⟨missing-key⟩` marker. A "is the Chinese there" test would
+  have passed with English still sitting on the same screen; it exits 1 if the watched set falls below 60 keys, so
+  a renamed prefix cannot silently make it vacuous. Six route/language combinations pass, zero console errors.
+- **Two mistakes of mine worth recording, because both are the kind that looks finished.** A `label="Rows"`-style
+  attribute needed `label={t(...)}`, and my first pass emitted `label=t(...)` -- invalid syntax that only `tsc`
+  caught, four sites deep in a file I had already declared migrated. And two `Edit` anchors in `CHANGELOG.md`
+  swallowed the *heading* of the bullet that followed the one I was inserting, producing a sentence that began
+  mid-clause; both were caught by re-reading the rendered section rather than trusting the edit's success. The
+  lesson is the same one already in §219 about the dictionary: a replacement that reports success is not a
+  replacement that landed as intended.
+- **Witness still owed, named rather than assumed.** `1f1f2b1`/`a797f6b`'s CI runs were `cancelled` by later
+  pushes on the same branch (`cancel-in-progress`), so they are neither pass nor fail. The authoritative
+  witness for all of §219's addenda is the run at the current head -- `ci` and `web-regression` were
+  `in_progress` at `8354b80` when this line was written. Whoever reads it next: green there covers the inspector,
+  the shell and the loop batches together, and the local evidence for each is recorded above.
+
 ## 220. Clearing the dependency queue turned out to be three guards that require a companion edit Dependabot cannot make
 
 Nine open PRs, and after measuring each failing step none of them was blocked by the upgrade itself. §218 named
