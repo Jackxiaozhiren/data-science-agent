@@ -172,10 +172,12 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   state, the dialog's two close labels, the language switch's group name and the hero's chain caption all read
   `apps/web/lib/locale.ts`. `States.tsx` became a client module to do it -- server pages may still render it, and
   the locale reaches it through `LocaleProvider` in the root layout, while `loading.tsx` reads it off the request
-  because it is a server component. What remains is page-specific copy: a line scan on 2026-10-19 finds 82
-  reader-facing English literals in 19 files under `apps/web/app` (the scan strips comments, so a rationale in a
-  comment is not counted, and it does not see templates that interpolate; treat it as an inventory, not a proof).
-  The largest owner by far is `analysis/[runId]/RunInspector.tsx` at 25.
+  because it is a server component. The run inspector followed the same route: every label, tab, table header,
+  empty state, download title and the five stage names under its status badge now read `apps/web/lib/locale.ts`,
+  with the run's own question, tool names, paths and status tokens left as data. What remains is page-specific
+  copy on the screens a visitor reaches later: a line scan on 2026-10-19 finds 58 reader-facing English literals
+  in 19 files, led by `datasets/[id]/page.tsx` (9) and `benchmarks/page.tsx` (7). The scan strips comments and does
+  not see templates that interpolate, so it is an inventory rather than a proof.
 - **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on nine English
   strings (measured 2026-10-19: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
   `nothing answered`, `Checking API`, `Loading table`, `Loading page`) and every one of them is a dictionary

@@ -260,11 +260,20 @@ def test_the_product_offers_the_file_its_endpoint_makes() -> None:
         encoding="utf-8"
     )
     assert "format=html" in page, "the page no longer builds the offline-report URL"
-    assert "Download offline HTML" in inspector, (
+    # R-13c moved both sentences to the locale owner, so the reach is pinned here and the wording is pinned
+    # there: the button exists because the row calls its key, and the key still says what the file is.
+    assert 't(locale, "insp.downloadOffline")' in inspector, (
         "the download row no longer offers the offline file"
     )
-    assert 'title="One self-contained file' in inspector, (
+    assert 'title={t(locale, "insp.offlineTitle")}' in inspector, (
         "the button stopped saying what the file is: a visitor cannot tell it apart from the markdown one"
+    )
+    strings = (root / "apps/web/lib/locale.ts").read_text(encoding="utf-8")
+    assert '"insp.downloadOffline": "Download offline HTML",' in strings, (
+        "the offline offer lost its English label, so the button row would render ⟨insp.downloadOffline⟩"
+    )
+    assert '"insp.offlineTitle": "One self-contained file' in strings, (
+        "the offline button's title no longer names the file it produces"
     )
 
 
