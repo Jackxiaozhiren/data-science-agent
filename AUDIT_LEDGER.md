@@ -13562,3 +13562,22 @@ and `DSA_ARTIFACT_ROOT` at an attached Render disk is the remaining action, and 
 no Render credential in this environment (`env | grep -c '^RENDER_API_KEY='` -> `0`), so no claim is made here about
 whether a disk is attached but unused versus not attached at all. The image fix also needs one more deploy before
 the first screen shows anything: what is running now was built from the Dockerfile that could not seed.
+
+**Addendum to §222, same day -- the fix reddened a guard that had been written before the seeder's needs were known.**
+CI run `39222491986` on `a79c770` came back `completed failure` in one step,
+`tests/contract/test_benchmark_artifact_endpoints.py::test_the_api_image_copies_exactly_the_artifacts_the_router_reads`:
+*"the image copies ['./benchmarks/baseline/summary.json', './benchmarks/v2/catalog.json', './benchmarks/v2/datasets']
+under benchmarks/, not just the artifacts it serves."* The rule was right when it was written -- §167 had just
+established that the artifact router reads three small files and that the image must not carry the 2.8 GB
+`benchmarks/` tree -- and it was also the mechanism that kept the demo data out of the image, because the guard's
+vocabulary was "what the router reads", not "what the running process opens".
+
+Widened rather than relaxed, in the only defensible direction: the allowed set is now the union of the router's
+constants and `demo_seed`'s (`CATALOG`, `CATALOG_DATASETS`, `SAMPLES_REL`), each side derived from its own module so
+renaming a path moves the check instead of narrowing it, and the per-file loop now asserts every one of them lands
+at its repository-relative destination. The size argument survives untouched -- a directory-wide `COPY benchmarks`
+is not in the union -- and both directions were proven by planting, not argued: dropping the seeder's twin
+directory fails with `benchmarks/v2/datasets is opened by the running process but copied as None`, and replacing the
+file-by-file block with `COPY benchmarks ./benchmarks` fails on the router's own file first. The Dockerfile was
+restored byte-for-byte (`14ee3d247cbb...` before and after) and the two suites are green again (37 passed).
+`test_the_copy_check_can_fail`, the pre-existing negative control, was left as it was.

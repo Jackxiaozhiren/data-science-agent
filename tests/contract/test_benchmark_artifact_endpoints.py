@@ -202,25 +202,38 @@ def _dockerfile_copies(text: str) -> dict[str, list[str]]:
 
 
 def test_the_api_image_copies_exactly_the_artifacts_the_router_reads():
-    """Each path constant in the router must land at the same repository-relative location in the image.
+    """Every path the running process opens must land at the same repository-relative location in the image.
 
-    Derived from the module rather than retyped, so a fourth endpoint added without its ``COPY`` line is
+    Derived from the modules rather than retyped, so a fourth endpoint added without its ``COPY`` line is
     reported here instead of returning 404 in the deployment. The whole-tree form is refused on purpose:
     ``benchmarks/`` is 2.8 GB on disk (9 tracked files under ``benchmarks/external/``) and the artifacts
     these three endpoints read are ~153 KB.
+
+    Two readers, not one. This check was written for the artifact router alone, and it is exactly the rule
+    that has to grow: the boot seeder opens the catalog's dataset twins (audit §222), found it missing from
+    the image, raised inside ``repo_root()`` and left the deployed first screen empty -- while this file's own
+    assertion was the thing that kept the two directories out. So the allowed set is the union of what the
+    *router* serves and what the *seeder* reads at boot, both derived from their constants. The size argument
+    is untouched: a directory-wide ``COPY benchmarks`` is still not in the union, and
+    ``test_the_copy_check_can_fail`` still proves that.
     """
     import dsa_api.routers.artifacts as artifacts
+    from dsa_api.services import demo_seed
 
     copies = _dockerfile_copies(DOCKERFILE_API.read_text(encoding="utf-8"))
-    for relative in (artifacts.BASELINE, artifacts.CATALOG, artifacts.RESULTS_DIR):
+    router_reads = (artifacts.BASELINE, artifacts.CATALOG, artifacts.RESULTS_DIR)
+    seeder_reads = (demo_seed.CATALOG, demo_seed.CATALOG_DATASETS, demo_seed.SAMPLES_REL)
+    for relative in (*router_reads, *seeder_reads):
         dest = f"./{relative}"
         assert copies.get(dest) == [relative], (
-            f"{relative} is read by the router but copied as {copies.get(dest)}"
+            f"{relative} is opened by the running process but copied as {copies.get(dest)}"
         )
 
     benchmark_dests = {dest for dest in copies if dest.startswith("./benchmarks")}
-    assert benchmark_dests == {f"./{artifacts.BASELINE}", f"./{artifacts.CATALOG}"}, (
-        f"the image copies {sorted(benchmark_dests)} under benchmarks/, not just the artifacts it serves"
+    allowed = {f"./{relative}" for relative in (*router_reads, *seeder_reads) if relative.startswith("benchmarks")}
+    assert benchmark_dests == allowed, (
+        f"the image copies {sorted(benchmark_dests)} under benchmarks/, not the artifacts and demo bytes it "
+        f"reads ({sorted(allowed)})"
     )
 
 
