@@ -364,7 +364,7 @@ def test_status_badge_branches_all_carry_the_state_word() -> None:
     words and that those words come from the status through the locale owner, so both halves are pinned.
     """
     source = BADGE_OWNER.read_text(encoding="utf-8")
-    assert 'const label = statusLabel(locale, status);' in source, (
+    assert "const label = statusLabel(locale, status);" in source, (
         "StatusBadge no longer derives its text from the status argument through the locale owner, so a "
         "declared state could be rendered in the wrong language or not at all"
     )
