@@ -47,7 +47,7 @@ export function ApiStatusDot({ className }: { className?: string }) {
           aria-label={t(locale, "probe.retryCheck")}
         >
           <RotateCcw className="size-3" aria-hidden />
-          {t(locale, "probe.retry")}
+          {t(locale, "common.retry")}
         </Button>
       )}
     </span>

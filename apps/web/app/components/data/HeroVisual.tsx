@@ -2,10 +2,13 @@
 
 import { motion } from "framer-motion";
 import { FileCheck2, Database, Wrench, ScrollText } from "lucide-react";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
 // Home Hero visual: Claim → Evidence → Tool → Dataset hash chain.
 // Single permitted decorative block (gradient + grid + beam live in the parent).
 export function HeroVisual() {
+  const locale = useLocale();
   const nodes = [
     { icon: ScrollText, label: "Claim", sub: "supported finding" },
     { icon: FileCheck2, label: "Evidence", sub: "confidence 0.92" },
@@ -18,9 +21,11 @@ export function HeroVisual() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
       className="rounded-xl border border-zinc-200 bg-zinc-950 p-4 text-zinc-100 shadow-sm"
-      aria-label="Evidence chain: claim to evidence to tool to dataset hash"
+      aria-label={t(locale, "hero.evidenceAria")}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">Evidence chain</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+        {t(locale, "hero.chainTitle")}
+      </p>
       <ol className="mt-3 space-y-0">
         {nodes.map((n, i) => {
           const Icon = n.icon;

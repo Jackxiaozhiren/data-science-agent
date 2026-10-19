@@ -37,6 +37,12 @@
   title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
   every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
   fallback now asks the dictionary.
+- **The chrome that appears on every screen, not just the first-run path.** The error heading and its retry
+  button, the loading skeletons, the route-level `loading.tsx` and `error.tsx`, a table's empty state, the
+  dialog's two close labels, the language switch's group name and the hero's caption were hard-coded English in
+  shared components -- so a visitor who chose 中文 read English furniture wherever they navigated. They now come
+  from the same dictionary, measured as 7 strings across 6 files closed, and `States.tsx` became a client module
+  to do it: it renders inside server pages, and the locale reaches it through the provider in the root layout.
 
 ## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
 
