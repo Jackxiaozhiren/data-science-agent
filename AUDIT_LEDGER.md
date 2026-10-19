@@ -13276,6 +13276,51 @@ the language off the request instead: one sentence, two legitimate routes to it,
   its own green pair (`39191643629`), and the run for `b31ea17` was cancelled by a later push on the same branch,
   which is neither a failure nor a pass.
 
+**Addendum 3, same session -- the run inspector, and what a 67-string migration actually costs.**
+§219's NOT DELIVERED listed `analysis/[runId]/RunInspector.tsx` as the largest English owner (25 literals by the
+scan). It is now dictionary-driven: tabs, table headers, empty-state titles and bodies, the download row's labels
+and titles, the validation ring's accessible name, the parent-run line, and the five stage names under the status
+badge -- 67 distinct strings. The run's own question, the tool names, the artifact paths and the status tokens stay
+untouched, because those are what the run produced rather than what the product says.
+
+- **Why it was scripted, and what the script could not see.** Editing 938 lines by hand is how a batch forgets one
+  string and ships a half-translated screen, so the move was a table with a per-string assertion that the
+  replacement landed. Sixty hit; nine shapes the table's two patterns (JSX text, quoted attribute) cannot reach
+  were then wired individually: `{passed}/{total} checks passed` interleaves an expression, the stats row is an
+  object literal (`l: "Tool calls"`), six `aria-label`/`title` values are templates, and MACHINE is an array of
+  labels consumed by index -- the last one also needed its render site changed from `{m}` to `{t(locale, m)}`, or
+  the dictionary would have displayed key names.
+- **The sweep caught my own migration mid-flight.** After the first pass, `test_no_dictionary_sentence_is_also_
+  written_into_a_page` reddened on "This run has no linked dataset, so a follow-up cannot be started." -- a key had
+  been added to the dictionary by the same run that failed to wire its call site. That is the guard answering the
+  question it exists for, on the change that introduced it.
+- **Two guards pinned the old wording and were re-pointed, not relaxed.**
+  `test_report_html_offline.py` asserted the literal `Download offline HTML` in the component;
+  `test_web_identifier_display.py::test_the_lineage_line_shows_the_parent_id_verbatim` anchored on
+  `Follow-up of <Link…>`, which is the English label rather than the property under test (the parent id rendered
+  verbatim inside the link). Both now assert the key call in the component *and* the sentence in the dictionary,
+  and both still bite: retargeting the offline button's key reddened
+  `test_report_html_offline.py:265` with the file restored byte-identically afterwards (sha256 b94f72aa…), and the
+  lineage guard carries its own glued-spacing plant plus a check that the plant did not delete the line.
+- **A needle that cannot distinguish is not evidence.** The browser walk initially asserted that an English
+  "Objective:" must not appear on the Chinese page. It did -- because the run's own report body legitimately
+  contains that word, and the language layer does not translate a run's text. A page-wide text scan therefore
+  cannot tell that chrome prefix from data, so the needle was dropped and the reason recorded in the script,
+  rather than the check being narrowed until it agreed. Coverage for that key stays with the parity guard.
+- **Measured after.** The scan in `docs/FRONTEND_IA.md` goes 82 literals in 19 files -> **58 in 19**, with the
+  inspector down to its one template (now keyed). `tsc` and `next build` clean; the tour 47/47 locally; 91 web
+  guards green; the inspector walked tab-by-tab in both languages with zero missing labels, zero cross-language
+  leaks and zero console errors (`R13E_INSPECTOR_ACCEPTANCE_PASS`, screenshots
+  `output/r13c/inspector-zh.png`, `inspector-en.png`). CI at `a0c316c`: run **39198256147**, jobs `ci` and
+  `web-regression` both success, the latter printing `regression: 47/47 checks passed (…)` on the runner.
+- **One claim of mine in this section is corrected by a later measurement.** Addendum 1 attributed the
+  `test_provider_settings.py` red to the difference between `-o addopts=""` and the project's own addopts. Three
+  runs then separate the variables: `tests/contract` with addopts cleared -> red; the whole suite with **default
+  addopts and `--no-cov`** -> red; the gate's `uv run pytest -q --cov` -> green (1125 glyphs, no F). So the
+  discriminator is `--cov`, not addopts, and §218's "this machine cannot run it" remains only one of the two
+  explanations -- the scripted loopback endpoint this test starts for itself answers 502 in the first two
+  invocations and not in the third. Left as a named repro rather than a fix, in a file this lane does not own.
+
 ## 220. Clearing the dependency queue turned out to be three guards that require a companion edit Dependabot cannot make
 
 Nine open PRs, and after measuring each failing step none of them was blocked by the upgrade itself. §218 named
