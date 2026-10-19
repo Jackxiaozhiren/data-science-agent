@@ -13509,3 +13509,56 @@ bug, not the ledger's: `grep -oE '^## [0-9]+'` truncates `## 74.3 A consequence 
 `74`, which looks like a second §74, while the guard's regex requires the number to be followed by a period and
 therefore correctly does not count a sub-section. The rule it broke is my own old one -- verify which field a
 capture is actually reading before reporting a number from it.
+
+## 222. The redeploy proved the release shipped and the image never carried the demo, which is the empty first screen
+
+The instance was redeployed and answered from the outside:
+
+```
+/version           {"version":"4.6.0", "storage":{"durable":false,"ephemeral_roots":["artifacts","database","datasets"]}}
+/api/v1/datasets/  {"datasets":[],"total":0}
+/api/v1/analysis/  {"analyses":[],"total":0}
+/health /ready     200
+```
+
+So 4.6.0 is live, every endpoint answers, and the first screen is empty. R-01 -- open since §131 and twice
+bracketed as "undecidable without Render logs" -- does not need those logs. The cause is in this repository:
+`docker/Dockerfile.api` copied `benchmarks/v2/catalog.json` but neither `examples/datasets` (the CSVs the seeder
+seeds) nor `benchmarks/v2/datasets` (the byte twins that decide which questions apply), and
+`demo_seed.repo_root()` locates its tree by searching ancestors for the samples directory -- so on the shipped
+image it raises before seeding a single row, and the boot hook logs exactly that: *"demo seeding was skipped, so
+the first screen may be empty on this instance."*
+
+Proven without a Docker daemon, by building a tree from the Dockerfile's own COPY list and importing the copy of
+`demo_seed` that lives inside it:
+
+```
+[TREE] apps benchmarks examples packages pyproject.toml research src
+[RESULT] repo_root() RAISED RuntimeError: no repository root with examples/datasets above
+         /private/tmp/fakeapp/apps/api/src/dsa_api/services/demo_seed.py        # exit 3, before the fix
+[RESULT] repo_root() -> /private/tmp/fakeapp3                                    # after the fix
+[FILE] sales.csv:   twin=True same_bytes=True questions=3 in_catalog=True
+[FILE] titanic.csv: twin=True same_bytes=True questions=3 in_catalog=True
+```
+
+The two directories are 3 and 30 tracked files, 40 KB and 392 KB, so they are copied by directory -- the file-by-file
+rule in that block exists for the 2.8 GB of untracked `benchmarks/`, not for these. `demo_seed` now names the
+samples path once (`SAMPLES_REL`, replacing four literal sites including the `repo_root` docstring's search), so
+`test_the_api_image_ships_what_the_boot_seeder_opens` derives its requirement from `CATALOG`, `CATALOG_DATASETS`
+and `SAMPLES_REL` rather than restating them: renaming a path moves the check instead of narrowing it (§82). The
+test carries its own removal control, and the whole thing was falsified once more at the outer level -- deleting
+the `COPY examples/datasets` line reddens it with `assert not ['examples/datasets']`, restored byte-for-byte, and
+the probe re-run on the restored file is the block above.
+
+Two instrument failures of mine during this, both caught by assertions rather than by luck: the first draft of the
+probe imported the *editable-installed* `dsa_api` and would have "proved" the worktree rather than the image (the
+identity assert on `mod.__file__` is what exposed it), and the second crashed because a repository path containing
+a space was interpolated into a shell string.
+
+**What this section does not close.** `storage.durable: false` with all three roots ephemeral is a different
+question from the missing demo data, and it is not fixable from here: the instance runs with the container's own
+filesystem, so every run, dataset and artifact dies with the container. Pointing the database, `DSA_DATASET_DIR`
+and `DSA_ARTIFACT_ROOT` at an attached Render disk is the remaining action, and it needs the dashboard -- there is
+no Render credential in this environment (`env | grep -c '^RENDER_API_KEY='` -> `0`), so no claim is made here about
+whether a disk is attached but unused versus not attached at all. The image fix also needs one more deploy before
+the first screen shows anything: what is running now was built from the Dockerfile that could not seed.

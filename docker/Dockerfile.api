@@ -13,6 +13,14 @@ COPY src ./src
 # benchmarks/external/), while the two artifacts these endpoints read total ~141 KB.
 COPY benchmarks/baseline/summary.json ./benchmarks/baseline/summary.json
 COPY benchmarks/v2/catalog.json ./benchmarks/v2/catalog.json
+# The demo seeder runs at boot and locates its own tree by `examples/datasets`, then reads the CSVs named in
+# `benchmarks/v2/catalog.json` from `benchmarks/v2/datasets`. Neither was copied, so the shipped image raised
+# `RuntimeError: no repository root with examples/datasets above /app/...` inside `demo_seed.repo_root()`, the boot
+# hook logged "demo seeding was skipped, so the first screen may be empty", and the deployed instance answered
+# `{"datasets":[],"total":0}` (audit §222). These two directories are 3 and 30 tracked files, 40 KB and 392 KB --
+# small enough to copy by directory, unlike the 2.8 GB `benchmarks/` the block above deliberately avoids.
+COPY examples/datasets ./examples/datasets
+COPY benchmarks/v2/datasets ./benchmarks/v2/datasets
 COPY research/results ./research/results
 RUN uv sync --no-dev --locked --all-packages \
     && mkdir -p /app/data/datasets \

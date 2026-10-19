@@ -72,6 +72,11 @@ SAMPLE_SUFFIXES = (".csv", ".parquet", ".json", ".xlsx", ".xls")
 CATALOG = "benchmarks/v2/catalog.json"
 CATALOG_DATASETS = "benchmarks/v2/datasets"
 
+#: The directory the demo seeds *and* the marker `repo_root()` searches ancestors for. It is named here rather
+#: than spelled at each use because the shipped image has to carry it: `docker/Dockerfile.api` copied neither it
+#: nor `CATALOG_DATASETS`, so the boot hook raised inside `repo_root()` before seeding a single row (audit §222).
+SAMPLES_REL = "examples/datasets"
+
 #: Three is enough to show the range (profile, SQL, model) without turning the first screen into a menu.
 MAX_QUESTIONS = 3
 
@@ -98,9 +103,9 @@ def repo_root() -> Path:
     """The tree this module is installed from, located by the sample directory rather than by a depth count."""
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / "examples" / "datasets").is_dir():
+        if (parent / SAMPLES_REL).is_dir():
             return parent
-    raise RuntimeError(f"no repository root with examples/datasets above {here}")
+    raise RuntimeError(f"no repository root with {SAMPLES_REL} above {here}")
 
 
 def sha256_of(path: Path) -> str:
@@ -288,8 +293,8 @@ async def seed_demo_data(
     without starting a run.
     """
     root = root or repo_root()
-    samples = Path(sample_dir or (root / "examples" / "datasets"))
-    prefix = "examples/datasets" if sample_dir is None else samples.name
+    samples = Path(sample_dir or (root / SAMPLES_REL))
+    prefix = SAMPLES_REL if sample_dir is None else samples.name
     result = SeedResult()
     seen_sources: set[str] = set()
 
