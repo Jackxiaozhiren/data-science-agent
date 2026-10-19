@@ -684,9 +684,9 @@
     },
     {
       "name": "jupyterlab",
-      "version": "4.6.3",
+      "version": "4.6.4",
       "licenses": [],
-      "purl": "pkg:pypi/jupyterlab@4.6.3",
+      "purl": "pkg:pypi/jupyterlab@4.6.4",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1529,7 +1529,7 @@
     },
     {
       "name": "tornado",
-      "version": "6.5.8",
+      "version": "6.5.9",
       "licenses": [
         {
           "license": {
@@ -1537,7 +1537,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/tornado@6.5.8",
+      "purl": "pkg:pypi/tornado@6.5.9",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1583,9 +1583,9 @@
     },
     {
       "name": "urllib3",
-      "version": "2.7.0",
+      "version": "2.8.0",
       "licenses": [],
-      "purl": "pkg:pypi/urllib3@2.7.0",
+      "purl": "pkg:pypi/urllib3@2.8.0",
       "source": "https://pypi.org/simple"
     },
     {
