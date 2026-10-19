@@ -15,6 +15,26 @@
   200 for them and 404 for the client surface, asserted as parity between the two web-facing renderings rather
   than as two green status codes.
 
+### Added (post-4.6.0) — the report keeps the language the run was asked in (R-13, the deliverable half)
+
+- The rule has been written in `docs/FRONTEND_IA.md` since the language layer began -- *"the deliverable is not
+  translated; a report keeps the language the run was asked in"* -- and the second half of it was not true:
+  `dsa_agent/report_export.py` printed `## Limitations`, `**Objective:**`, `<h2>Tool Calls</h2>` and
+  `<html lang="en">` whatever the question was. A Chinese run therefore produced a document that was Chinese in
+  its findings and English in every word the *product* said about them, and declared itself English to the
+  browser -- which is what a screen reader uses to choose a pronunciation, so the wrongness had a consequence.
+- `report_language()` now decides from the run's own question, counting **words** rather than characters: a
+  Chinese sentence naming an English column stays Chinese, an English sentence pasting a Chinese file name
+  stays English, and an empty question is not guessed into a language. Nothing about a visitor's setting enters
+  the decision, because the artifact a reviewer opens offline is not a page and must not change language between
+  readers.
+- Only the product's words move. `tests/contract/test_report_language_pair.py` asserts the two halves separately
+  -- every heading and field name follows the language, while the finding, the claim, the computed `r`, the
+  p-value and the tool error are reproduced byte-for-byte in both renderings of a Chinese run -- and it walks the
+  whole label table in both languages, so a label nobody renders is named. It was falsified by pinning the
+  decision to `en`: four checks went red on the Chinese assertions while the twenty-three existing English
+  export checks stayed green, which is the other half of the claim (the shipped English document did not move).
+
 ### Added (post-4.6.0) — the interface's own words, all of them (R-13, closure)
 
 - **The last tier was the short one.** Column heads, table captions, the eleven run-status labels, tab names,

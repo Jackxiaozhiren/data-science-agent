@@ -123,7 +123,12 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   locale from these keys, and each page's transport override names a key rather than a sentence), the backend
   probe's four phases, and the upload queue's per-file notes. `tests/contract/test_web_locale_parity.py` sweeps
   every sentence the dictionary owns against the page sources, so a moved string that stayed behind in a page
-  cannot ship. The deliverable is not translated -- a report keeps the language the run was asked in.
+  cannot ship. The deliverable is not translated -- a report keeps the language the run was asked in, and
+  `dsa_agent.report_export.report_language()` is what honors that: the run's question decides, by counting
+  words (a Chinese sentence naming an English column stays Chinese; an English sentence pasting a Chinese
+  file name stays English), and only the product's own words -- headings, field names, the document `lang`
+  -- follow it. Findings, claims, messages and numbers are reproduced verbatim, and
+  `tests/contract/test_report_language_pair.py` holds the two halves apart.
 - The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
   routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
   outline is not one) and every `<details>` drill-down to open on Enter.

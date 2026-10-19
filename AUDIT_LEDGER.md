@@ -13741,3 +13741,50 @@ mechanism (the tour adds one check per route per locale and prints its own count
 same class was swept from the neighbouring `26 of its 73 checks` claim in both documents. Re-passing:
 `tests/test_doc_census_claims.py` 3 passed, `mkdocs build --strict` 0, `check_public_claims.py` 0 issues,
 `ruff format --check` green.
+
+## 225. The language layer's other half: a report answers in the language it was asked
+
+Closing the web side (§219, §224) left one sentence in `docs/FRONTEND_IA.md` untrue: *"The deliverable is not
+translated -- a report keeps the language the run was asked in."* The renderer never read a language.
+`packages/agent/src/dsa_agent/report_export.py` printed `# Analysis Report`, `**Objective:**`, `## Limitations`,
+`<h2>Tool Calls</h2>` and `<html lang="en">` for every run, so a Chinese question produced a document that was
+Chinese in its findings and English in everything the product said about them, and announced itself as English
+to the browser -- the attribute a screen reader uses to pick a pronunciation table, so the wrongness was not
+cosmetic. Found by asking what the region-based acceptance could not see: it inspects the web app, and the report
+is rendered by the API into a file.
+
+**The decision.** `report_language()` counts *words*, not characters, because both mixed directions occur:
+`哪些地区的收入最高？请给出可复核的证据` is Chinese, `run the EDA on 商品销量.csv` is an English sentence with a
+Chinese filename pasted into it, and `revenue 与 price 的相关性如何？` is Chinese with two English column
+references. A character ratio got the second one wrong (4 CJK of 19 characters clears a 0.2 bar); a
+CJK-tokens-majority rule gets all three right, and an empty question returns `en` rather than guessing. Nothing
+about a visitor's setting can enter it -- the artifact is opened offline, by a different person, and it must not
+change language between readers.
+
+**What moved, and what is forbidden to move.** One table (`REPORT_LABELS`, 24 entries) plus the seven check
+names carries the product's own words in both languages: title, document title, the four front-matter field
+names, the dataset-hash line, six section headings plus Charts, the limitations lead, the no-insights sentence in
+its italic and plain forms, and the inline words `error:`, `artifact:`, `result:`, `confidence`, `limitation:`.
+The English rendering is unchanged -- the pre-existing 23 export/HTML assertions stayed green -- and the run's
+bytes are asserted to stay untouched: for a Chinese run, `Tier-1 regions contribute 62% of revenue`,
+`Correlation revenue vs price: r=0.586`, `0.5857584322795393`, `column 'price' not found` and
+`Insight I-c9de6a2f ok` must all appear, in both markdown and HTML (compared unescaped, because an escaped
+apostrophe is a document rule, not a translation).
+
+**Evidence.** `tests/contract/test_report_language_pair.py` (6 checks) fails when the decision is pinned to `en`
+-- four of its checks went red naming `a Chinese run's markdown lost ## 洞察`, and the English suite stayed
+green, which is the half that matters most: the shipped document did not move. Its last check walks the whole
+label table in both languages, so a label that no code path prints is named; reaching it needed the conditional
+branches (`artifact`, `chart`, `Dataset sha256`, the empty-message check, no insights), and the first attempt at
+that fixture put a hash at the top level of the run -- the producer keeps it in the profile call's own `output`,
+so the assertion was corrected to the producer's shape rather than the renderer being bent to the guess. A real
+heuristic-mode run of `dsa analyze examples/datasets/sales.csv --task 哪些地区的收入最高？…` produced
+`# 分析报告 — run-e409f97125` with `## 计划 / 工具调用 / 证据 / 洞察 / 校验 / 局限` and the run's own numbers,
+on the free local path.
+
+**Shared state.** `dsa_agent`'s vendored twin re-synced by `scripts/sync_vendor.py --package dsa_agent` and
+verified; the remaining `dsa_evaluation: external_validation.py` drift belongs to another session's uncommitted
+work and was not touched, synced or staged. `ruff format --check` green over the gate's whole path list (300
+files) after the last lesson, `tests/contract` 267 passed with the one known credential-dependent failure
+(`test_provider_settings.py`, §218/§219), `mkdocs build --strict` 0, the docs census gate 3 passed, and the
+ledger numbering guard OK through §225.
