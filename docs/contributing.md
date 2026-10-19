@@ -50,9 +50,10 @@ without running them). `tests/test_command_surface.py` fails if that runner and 
 different gates, and checks that every command the runner names is a real invocation in this tree --
 which is what stops the list from becoming a second, smaller truth.
 
-Run the list, do not sample it. `scripts/run_gates.sh` ends with `scripts/sync_vendor.py --check`, and a
-format pass rewrites the sources the `_vendor` mirrors were copied from: mirror **after** formatting, and
-let the check be the last thing before you commit. Skipping a gate because it is already red for someone
+Run the list, do not sample it. `scripts/run_gates.sh` runs `scripts/sync_vendor.py --check` third -- before its
+own `ruff format --check`, and a format pass rewrites the sources the `_vendor` mirrors were copied from: mirror
+**after** formatting, and re-run that check before you commit, because the one in the list has already passed by
+then. Skipping a gate because it is already red for someone
 else's file removes the only thing that could catch yours -- `--check` names the drifted files now, so
 read that list and compare it against what you do not own (§127.1 cost a red `main`).
 
