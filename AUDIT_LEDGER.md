@@ -13730,3 +13730,14 @@ its 73 checks on it (every static route under a `zh` and an `en` cookie, failing
 emptied rule cannot pass by exempting everything. Both files restored by sha256. Tour 73/73, `ruff format
 --check` green over the gate's own path list after the first push taught this lane that the formatter is a
 separate CI step from the linter.
+
+Addendum 3 (same day): the CI red on `ec2b1f4` was the docs gate, and it was mine. `ruff format --check` cleared
+after `ec2b1f4`, and the pytest step then failed on
+`test_doc_census_claims.py::test_live_documents_cite_no_unowned_census`, naming one line: the new
+`docs/FRONTEND_IA.md` bullet typed "on 17 routes in 中文 and 17 in English". That is the gate's exact purpose -- a
+reader-facing count that no check recomputes goes stale the day someone adds a route -- and the lane had walked
+into it while writing the paragraph that explains why measured counts are trustworthy. Fixed by describing the
+mechanism (the tour adds one check per route per locale and prints its own count) instead of the number, and the
+same class was swept from the neighbouring `26 of its 73 checks` claim in both documents. Re-passing:
+`tests/test_doc_census_claims.py` 3 passed, `mkdocs build --strict` 0, `check_public_claims.py` 0 issues,
+`ruff format --check` green.

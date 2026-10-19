@@ -40,9 +40,9 @@
   onto a label that already read "Copy runner". The suffix is gone, the label is the name, and the unused
   `label = "Copy"` default went with it.
 - **CI now enforces it.** `apps/web/scripts/locale-chrome-rules.mjs` is the single owner of the region rule, and
-  the web job that GitHub Actions already runs (`apps/web/scripts/regression.mjs`) now spends **26 of its 73
-  checks** on it: every static route loaded under a `dsa_locale=zh` and an `=en` cookie, failing on an
-  English chrome region or a `⟨missing-key⟩` marker. The seeded runner keeps the coverage CI cannot have --
+  the web job GitHub Actions already runs (`apps/web/scripts/regression.mjs`) gained one check per static route per
+  locale: each route is loaded under a `dsa_locale=zh` and an `=en` cookie, failing on an English chrome region or
+  a `⟨missing-key⟩` marker, and the tour's summary line prints the pass's own count. The seeded runner keeps the coverage CI cannot have --
   column heads, which need rows, and the routes that need a real run id -- and
   `test_the_two_language_runners_share_one_rule_owner` refuses either runner re-declaring the rule beside its
   import, with a floor on the identifier list so an emptied rule cannot pass by exempting everything. Both
