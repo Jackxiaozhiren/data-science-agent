@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Play, ShieldCheck, Repeat2, Zap } from "lucide-react";
-import { clientFetch, API_BASE_URL, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { clientFetch, API_BASE_URL, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
 import { t, type Locale } from "@/lib/locale";
 import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
@@ -18,12 +18,11 @@ import { useBackendProbe } from "@/app/lib/backendProbe";
 type Ds = { id: string; filename: string };
 
 // Inherits the shared wording, and keeps this page's own line for the transport case: which base URL
-// was unreachable is the diagnostic a reader needs here. That shared owner is still English-only -- the
-// boundary R-13 leaves standing, recorded in the handoff rather than translated halfway.
-const ANALYSIS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
-  ...FAILURE_PRESENTATION,
-  transport: `Could not reach the DSA API at ${API_BASE_URL}.`,
-};
+// was unreachable is the diagnostic a reader needs here. The line itself comes from the locale owner with
+// the URL substituted into it, so the sentence is bilingual and the origin is still the running instance's.
+function askMessages(locale: Locale): Record<ApiFailure, string> {
+  return { ...failurePresentation(locale), transport: t(locale, "ask.transport").replace("{url}", API_BASE_URL) };
+}
 
 function cleanDetail(value: unknown, locale: Locale): string {
   const raw = typeof value === "string" ? value : JSON.stringify(value ?? "");
@@ -46,6 +45,7 @@ function columnChips(columns: string[], locale: Locale): string[] {
 }
 
 function AnalysisWorkspace({ locale }: { locale: Locale }) {
+  const messages = askMessages(locale);
   const sp = useSearchParams();
   const router = useRouter();
   const initialDs = sp.get("dataset") || "";
@@ -70,7 +70,7 @@ function AnalysisWorkspace({ locale }: { locale: Locale }) {
         const failure = classifyResponse(r);
         if (failure) {
           setDatasets({ items: [], failure });
-          setErr(ANALYSIS_FAILURE_MESSAGE[failure]);
+          setErr(messages[failure]);
           return;
         }
         const d = (await r.json()) as { datasets: Ds[] };
@@ -78,7 +78,7 @@ function AnalysisWorkspace({ locale }: { locale: Locale }) {
       })
       .catch(() => {
         setDatasets({ items: [], failure: "transport" });
-        setErr(ANALYSIS_FAILURE_MESSAGE.transport);
+        setErr(messages.transport);
       });
   }, []);
 
@@ -223,7 +223,7 @@ function AnalysisWorkspace({ locale }: { locale: Locale }) {
                 <p className="text-xs text-amber-800" role="status" aria-live="polite">{copy}</p>
               )}
               {phase === "unreachable" && (
-                <Button variant="secondary" size="sm" onClick={retry}>{t(locale, "ask.retryCheck")}</Button>
+                <Button variant="secondary" size="sm" onClick={retry}>{t(locale, "probe.retryCheck")}</Button>
               )}
             </div>
             {err && <ErrorState message={err} />}

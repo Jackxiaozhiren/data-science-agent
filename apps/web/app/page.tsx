@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BarChart3, MessageCircleQuestion, ShieldCheck, ArrowRight, Github } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
 import { serverLocale } from "@/lib/serverApi";
 import { t } from "@/lib/locale";
 import { serverFetch } from "@/lib/serverApi";
@@ -74,6 +74,7 @@ export default async function Home() {
     fetchCounts(),
     fetchSamples(),
   ]);
+  const shared = failurePresentation(locale);
   const starter = firstStarter(seeded.samples, locale);
   const exampleRunId = seeded.samples.find((entry) => entry.sample.exampleRunId)?.sample.exampleRunId ?? null;
 
@@ -182,7 +183,7 @@ export default async function Home() {
         <Card className="mt-3">
           <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
             {failure ? (
-              <ErrorState message={FAILURE_PRESENTATION[failure]} />
+              <ErrorState message={shared[failure]} />
             ) : recent.length === 0 ? (
               <EmptyState
                 title={t(locale, "home.recent.emptyTitle")}

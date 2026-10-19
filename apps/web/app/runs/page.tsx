@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { History } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
-import { serverFetch } from "@/lib/serverApi";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
+import { t, type Locale } from "@/lib/locale";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -13,10 +14,9 @@ type RunItem = { id: string; status: string; user_query: string; created_at: str
 // Inherits the shared wording, and keeps this page's own line for the case it already handled: the
 // transport failure is what readers hit on the hosted demo, and "an empty list instead of a blank
 // page" is the sentence that tells them a fallback is in play.
-const RUNS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
-  ...FAILURE_PRESENTATION,
-  transport: "Could not reach the DSA API — showing an empty run list instead of a blank page.",
-};
+function runsMessages(locale: Locale): Record<ApiFailure, string> {
+  return { ...failurePresentation(locale), transport: t(locale, "runs.transport") };
+}
 
 async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | null }> {
   try {
@@ -31,6 +31,8 @@ async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | nul
 }
 
 export default async function RunsPage() {
+  const locale = await serverLocale();
+  const messages = runsMessages(locale);
   const { runs, failure } = await fetchRuns();
   return (
     <div className="space-y-4">
@@ -42,7 +44,7 @@ export default async function RunsPage() {
           <Link href="/analysis"><Button size="sm">New run →</Button></Link>
         }
       />
-      {failure && <ErrorState message={RUNS_FAILURE_MESSAGE[failure]} />}
+      {failure && <ErrorState message={messages[failure]} />}
       <Card>
         <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
           {runs.length === 0 ? (

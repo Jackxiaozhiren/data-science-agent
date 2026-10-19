@@ -1,4 +1,5 @@
 import { browserOwnerId, withOwner } from "./owner";
+import { t, type Locale } from "./locale";
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
@@ -36,12 +37,17 @@ export function classifyResponse(res: Response): ApiFailure | null {
 
 // One line per kind, rendered straight into ErrorState. Names stay generic -- no status code is dumped
 // at a reader, and no raw response body is carried through.
-export const FAILURE_PRESENTATION: Record<ApiFailure, string> = {
-  unauthorized:
-    "The API is reachable but rejected the request (401/403). This demo does not ask you to sign in, so a " +
-    "rejection here means the instance is configured with an access token this page does not hold.",
-  notFound: "The API answered 404 — the requested record or endpoint does not exist.",
-  serverError: "The API failed while answering (5xx). This data may be temporarily unavailable.",
-  clientError: "The API answered with a client error (4xx). The request was not accepted.",
-  transport: "No response could be read from the API. Check that it is running and reachable from this origin.",
-};
+//
+// R-13: the words live in `lib/locale.ts`, so this is a derivation with no second copy of any sentence. The
+// five keys are listed one per kind on purpose: the return type is checked against `ApiFailure` by the
+// compiler, so a sixth kind added to `API_FAILURE_KINDS` breaks the build rather than rendering a blank line,
+// and tests/contract/test_web_fetch_outcome_vocabulary.py checks the same five keys against both locales.
+export function failurePresentation(locale: Locale): Record<ApiFailure, string> {
+  return {
+    unauthorized: t(locale, "fail.unauthorized"),
+    notFound: t(locale, "fail.notFound"),
+    serverError: t(locale, "fail.serverError"),
+    clientError: t(locale, "fail.clientError"),
+    transport: t(locale, "fail.transport"),
+  };
+}

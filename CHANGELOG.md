@@ -15,6 +15,29 @@
   200 for them and 404 for the client surface, asserted as parity between the two web-facing renderings rather
   than as two green status codes.
 
+### Added (post-4.6.0) — what goes wrong is said in both languages (R-13, last half)
+
+- **The failure vocabulary is now the dictionary's.** A 401, a 404, a 5xx, a 4xx and an API that never answered
+  each have one reader-facing line, and those lines now come from `apps/web/lib/locale.ts` in whichever language
+  the visitor chose. Until now they lived in an English-only constant in `apps/web/lib/api.ts` while the rest of
+  the interface had moved: a visitor reading 中文 got a Chinese page and an English error, which is exactly the
+  half-translation the language layer was built to avoid. `failurePresentation(locale)` replaces the constant,
+  and the constant is gone rather than kept as a shim, so no page can still reach an English copy.
+- **Each page keeps its own transport sentence, but not as an owner.** Five pages name what the reader is
+  actually looking at when nothing answered -- taxonomy reference only, a static endpoint reference, an empty
+  report or run list instead of a blank page, the unreachable base URL. Those disclosures stay, one dictionary
+  key each; a page holding its own string is now refused by a guard, because a second owner is how a reworded
+  line ends up disagreeing with itself.
+- **The upload path, the waiting state, and the browser tab.** The queue's per-file notes (too large, duplicate
+  name, request failed with the API's own detail) and the backend probe's four phases are bilingual, and so are
+  the two strings a running analysis writes outside the page: the tab title's live percentage and the completion
+  notification. The probe's guard moved with the words -- it now reads the waking sentence out of the dictionary
+  in *both* locales, so a Chinese reader is still promised the attempt count and the wait the budget covers.
+- **One duplicate found by the guard that came with this.** The inspector kept its own copy of the product
+  title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
+  every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
+  fallback now asks the dictionary.
+
 ## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
 
 ### Added (post-4.5.0) — the interface speaks two languages, and the keyboard reaches the evidence (R-13)

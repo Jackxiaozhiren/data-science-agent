@@ -16,6 +16,8 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import { apiUrl } from "@/lib/api";
+import { t, type Locale } from "@/lib/locale";
+import { useLocale } from "@/app/lib/LocaleProvider";
 
 export type BackendPhase = "probing" | "warming" | "ready" | "unreachable";
 
@@ -58,26 +60,38 @@ export function nextPhase(current: BackendPhase, outcome: ProbeOutcome, attempt:
   return attempt < PROBE_ATTEMPTS ? "warming" : "unreachable";
 }
 
-/** The full sentence, for the place that has room for it. */
-export function probeCopy(phase: BackendPhase, attempt: number): string {
-  if (phase === "ready") return "API connected";
-  if (phase === "probing") return "Checking API…";
-  if (phase === "warming") return (`Demo waking up — the free instance sleeps when idle, so the first request can take about a minute. Attempt ${attempt} of ${PROBE_ATTEMPTS}.`);
-  return "API unreachable — nothing answered. Check that the API is running, or retry.";
+/**
+ * The full sentence, for the place that has room for it.
+ *
+ * The words belong to the locale owner like every other reader-facing line; this module owns the *phase*, and
+ * passes the attempt count and its bound in as arguments. A sentence kept here would render English under the
+ * 中文 switch, which is the defect R-13 exists to remove.
+ */
+export function probeCopy(phase: BackendPhase, attempt: number, locale: Locale): string {
+  if (phase === "ready") return t(locale, "probe.ready");
+  if (phase === "probing") return t(locale, "probe.probing");
+  if (phase === "warming")
+    return t(locale, "probe.warming")
+      .replace("{attempt}", String(attempt))
+      .replace("{total}", String(PROBE_ATTEMPTS));
+  return t(locale, "probe.unreachable");
 }
 
 /**
  * The same phase in header-width words.
  *
- * The dot lives in a bar that must not overflow at 390 px (the regression tour measures exactly that), so
- * the sentence above goes in `title` and the page-level notice, while the ambient indicator stays short --
- * short, but still text: a colour alone is not a status (web plan R-13).
+ * The dot lives in a bar that must not overflow at 390 px (the regression tour measures exactly that), so the
+ * sentence above goes in `title` and the page-level notice, while the ambient indicator stays short -- short,
+ * but still text: a colour alone is not a status (web plan R-13).
  */
-export function probeShortLabel(phase: BackendPhase, attempt: number): string {
-  if (phase === "ready") return "API up";
-  if (phase === "probing") return "Checking…";
-  if (phase === "warming") return `Waking… ${attempt}/${PROBE_ATTEMPTS}`;
-  return "API unreachable";
+export function probeShortLabel(phase: BackendPhase, attempt: number, locale: Locale): string {
+  if (phase === "ready") return t(locale, "probe.shortReady");
+  if (phase === "probing") return t(locale, "probe.shortProbing");
+  if (phase === "warming")
+    return t(locale, "probe.shortWarming")
+      .replace("{attempt}", String(attempt))
+      .replace("{total}", String(PROBE_ATTEMPTS));
+  return t(locale, "probe.shortUnreachable");
 }
 
 type Listener = () => void;
@@ -161,6 +175,7 @@ export function retryBackendProbe(): boolean {
 
 /** Reactive read of the shared probe: every consumer sees one sequence, not one fetch each. */
 export function useBackendProbe(): { phase: BackendPhase; attempt: number; copy: string; retry: () => void } {
+  const locale = useLocale();
   const value = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   useEffect(() => {
     refreshBackendProbe();
@@ -169,11 +184,11 @@ export function useBackendProbe(): { phase: BackendPhase; attempt: number; copy:
     () => ({
       phase: value.phase,
       attempt: value.attempt,
-      copy: probeCopy(value.phase, value.attempt),
+      copy: probeCopy(value.phase, value.attempt, locale),
       retry: () => {
         retryBackendProbe();
       },
     }),
-    [value]
+    [value, locale]
   );
 }

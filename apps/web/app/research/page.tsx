@@ -7,8 +7,9 @@ import { StatCard } from "@/app/components/data/StatCard";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { ExperimentsTable } from "@/app/research/ExperimentsTable";
 import { TrackedExperimentsTable } from "@/app/research/TrackedExperimentsTable";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
-import { serverFetch } from "@/lib/serverApi";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
+import { t as tt } from "@/lib/locale";
 
 type Tracked = { id: string; name: string; run_id: string; created_at: string | null };
 
@@ -41,6 +42,8 @@ async function fetchExperiments(): Promise<{ files: string[]; failure: ApiFailur
 const RUNNER = "uv run python research/experiments/run_ablation.py --limit 20 --out research/results";
 
 export default async function ResearchPage() {
+  const locale = await serverLocale();
+  const shared = failurePresentation(locale);
   const [experiments, trackedRuns] = await Promise.all([fetchExperiments(), fetchTracked()]);
   const exps = experiments.files;
   const expsFailure = experiments.failure;
@@ -74,7 +77,7 @@ export default async function ResearchPage() {
               description="The API answered 404: research/results was not shipped with this deployment. The ablation output is not the same as an absence of ablations."
             />
           ) : expsFailure ? (
-            <ErrorState message={FAILURE_PRESENTATION[expsFailure]} />
+            <ErrorState message={shared[expsFailure]} />
           ) : (
             <EmptyState
               title="No results yet"
@@ -90,7 +93,7 @@ export default async function ResearchPage() {
         </CardHeader>
         <CardContent>
           {trackedFailure ? (
-            <ErrorState message={FAILURE_PRESENTATION[trackedFailure]} />
+            <ErrorState message={shared[trackedFailure]} />
           ) : tracked.length ? (
             <TrackedExperimentsTable rows={tracked} />
           ) : (

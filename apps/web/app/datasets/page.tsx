@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FileUp, Database, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { clientFetch, API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION } from "@/lib/api";
+import { clientFetch, API_BASE_URL, apiUrl, classifyResponse, failurePresentation } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Progress } from "@/app/components/ui/feedback";
@@ -13,7 +13,7 @@ import { DataTable } from "@/app/components/data/DataTable";
 import { EmptyState, ErrorState, TableSkeleton } from "@/app/components/data/States";
 import { useBackendProbe } from "@/app/lib/backendProbe";
 import { useLocale } from "@/app/lib/LocaleProvider";
-import { t } from "@/lib/locale";
+import { t, type Locale } from "@/lib/locale";
 import { sampleInfo, starterQuestionsFor, type SampleInfo } from "@/app/lib/sampleData";
 
 type Dataset = {
@@ -28,7 +28,7 @@ type Dataset = {
   metadata?: unknown;
 };
 
-async function errorMessage(res: Response): Promise<string> {
+async function errorMessage(res: Response, locale: Locale): Promise<string> {
   // Never dump raw response bodies: a misconfigured API URL returns a full
   // HTML error page, which is unreadable and leaks internals. One human line.
   let hint = "";
@@ -39,7 +39,9 @@ async function errorMessage(res: Response): Promise<string> {
   } catch {
     hint = "";
   }
-  return `Request failed (HTTP ${res.status})${hint}. Check API diagnostics below.`;
+  return t(locale, "ds.requestFailed")
+    .replace("{status}", String(res.status))
+    .replace("{hint}", hint);
 }
 
 const MAX_BYTES = 100 * 1024 * 1024;
@@ -76,17 +78,20 @@ export default function DatasetsPage() {
   async function load() {
     setLoading(true);
     setErr(null);
+    const shared = failurePresentation(locale);
     try {
       const res = await clientFetch("/api/v1/datasets/");
       const failure = classifyResponse(res);
       if (failure) {
-        setErr(`${FAILURE_PRESENTATION[failure]} Check API diagnostics below.`);
+        setErr(`${shared[failure]} ${t(locale, "ds.checkDiagnostics")}`);
         return;
       }
       const data = (await res.json()) as { datasets: Dataset[] };
       setItems(data.datasets);
-    } catch (e) {
-      setErr(`${FAILURE_PRESENTATION.transport} (${API_BASE_URL})`);
+    } catch {
+      // The base URL is the reader's own diagnostic for the one failure this page cannot describe from a
+      // status code: nothing answered at all.
+      setErr(`${shared.transport} (${API_BASE_URL})`);
     } finally {
       setLoading(false);
     }
@@ -103,14 +108,16 @@ export default function DatasetsPage() {
     try {
       const res = await clientFetch("/api/v1/datasets/", { method: "POST", body: fd });
       if (!res.ok) {
-        const msg = await errorMessage(res);
+        const msg = await errorMessage(res, locale);
         setQueue((q) => q.map((it) => (it.key === key ? { ...it, status: "error" as const, note: msg } : it)));
         return;
       }
       setQueue((q) => q.map((it) => (it.key === key ? { ...it, status: "done" as const } : it)));
       await load();
     } catch (e) {
-      const msg = `Upload failed because the DSA API at ${API_BASE_URL} is unavailable. ${String(e)}`;
+      const msg = t(locale, "ds.uploadUnavailable")
+        .replace("{url}", API_BASE_URL)
+        .replace("{detail}", String(e));
       setQueue((q) => q.map((it) => (it.key === key ? { ...it, status: "error" as const, note: msg } : it)));
     }
   }
@@ -126,12 +133,18 @@ export default function DatasetsPage() {
     for (const f of files) {
       const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
       if (f.size > MAX_BYTES) {
-        additions.push({ key, name: f.name, size: f.size, status: "error", note: `Skipped: ${(f.size / 1048576).toFixed(1)}MB exceeds the 100MB limit.` });
+        additions.push({
+          key,
+          name: f.name,
+          size: f.size,
+          status: "error",
+          note: t(locale, "ds.skipTooLarge")
+            .replace("{size}", (f.size / 1048576).toFixed(1))
+            .replace("{limit}", String(MAX_BYTES / 1048576)),
+        });
         continue;
       }
-      const dupNote = existing.has(f.name.toLowerCase())
-        ? "A dataset with this name already exists — uploading as a new copy."
-        : undefined;
+      const dupNote = existing.has(f.name.toLowerCase()) ? t(locale, "ds.dupNote") : undefined;
       existing.add(f.name.toLowerCase());
       additions.push({ key, name: f.name, size: f.size, status: "queued", note: dupNote });
       accepted.push({ file: f, key });

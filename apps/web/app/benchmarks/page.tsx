@@ -5,8 +5,9 @@ import { StatCard } from "@/app/components/data/StatCard";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { CompareBarChart, DonutChart } from "@/app/components/ui/chart";
 import { CopyButton } from "@/app/benchmarks/CopyButton";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
-import { serverFetch } from "@/lib/serverApi";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
+import { t as tt } from "@/lib/locale";
 
 type Baseline = {
   n: number;
@@ -50,6 +51,8 @@ const RUNNER_V1 = "uv run dsa --limit 50 --out benchmarks/baseline";
 const RUNNER_V2 = "uv run dsa --catalog benchmarks/v2/catalog.json --datasets benchmarks/v2/datasets --limit 100 --out /tmp/v2-bench";
 
 export default async function BenchmarksPage() {
+  const locale = await serverLocale();
+  const shared = failurePresentation(locale);
   const [baseline, catalog] = await Promise.all([
     getJson<Baseline>("/api/v1/benchmarks/baseline"),
     getJson<Catalog>("/api/v1/benchmarks/catalog"),
@@ -100,7 +103,7 @@ export default async function BenchmarksPage() {
               />
             ) : (
               <ErrorState
-                message={baselineFailure ? FAILURE_PRESENTATION[baselineFailure] : "The API returned no baseline."}
+                message={baselineFailure ? shared[baselineFailure] : tt(locale, "bench.noBaseline")}
               />
             )}
           </CardContent>
@@ -122,7 +125,7 @@ export default async function BenchmarksPage() {
             ) : catalogFailure === "notFound" ? (
               <EmptyState title="V2 catalog missing" description="The API answered 404: benchmarks/v2/catalog.json is not present in this deployment." />
             ) : (
-              <ErrorState message={catalogFailure ? FAILURE_PRESENTATION[catalogFailure] : "The API returned no catalog."} />
+              <ErrorState message={catalogFailure ? shared[catalogFailure] : tt(locale, "bench.noCatalog")} />
             )}
           </CardContent>
         </Card>

@@ -114,7 +114,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "ask.starting": "Starting…",
     "ask.runNow": "Run analysis →",
     "ask.watchNextPage": "The run starts immediately and you watch it on the next page.",
-    "ask.retryCheck": "Retry the API check",
+    "probe.retryCheck": "Retry the API check",
     "ask.needBoth": "Select a dataset and enter a question.",
     "ask.requestFailed": "Analysis request failed.",
     "ask.couldNotStart":
@@ -168,6 +168,61 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "ds.emptyTitle": "No datasets yet",
     "ds.emptyBody": "Upload one above to begin the demo flow: Bring → Ask → Inspect.",
     "ds.emptyUpload": "Upload your first dataset",
+    // The upload path's own failures. These are the sentences a visitor reads when their file did not
+    // arrive, so they belong to the locale owner like everything else; the run's HTTP status, byte size and
+    // error detail are substituted by the page.
+    "ds.requestFailed": "Request failed (HTTP {status}){hint}. Check API diagnostics below.",
+    "ds.checkDiagnostics": "Check API diagnostics below.",
+    "ds.uploadUnavailable": "Upload failed because the DSA API at {url} is unavailable. {detail}",
+    "ds.skipTooLarge": "Skipped: {size}MB exceeds the {limit}MB limit.",
+    "ds.dupNote": "A dataset with this name already exists — uploading as a new copy.",
+    // The shared backend probe's four phases (apps/web/app/lib/backendProbe.ts owns the machine, this owns the
+    // words). The long form goes in the page notice and the dot's `title`; the short form is what fits the
+    // header at 390px. Both name the phase in words, because a colour alone is not a status.
+    "probe.ready": "API connected",
+    "probe.probing": "Checking API…",
+    "probe.warming":
+      "Demo waking up — the free instance sleeps when idle, so the first request can take about a minute. Attempt {attempt} of {total}.",
+    "probe.unreachable": "API unreachable — nothing answered. Check that the API is running, or retry.",
+    "probe.shortReady": "API up",
+    "probe.shortProbing": "Checking…",
+    "probe.shortWarming": "Waking… {attempt}/{total}",
+    "probe.shortUnreachable": "API unreachable",
+    "probe.retry": "Retry",
+    // The fetch-outcome vocabulary (audit §160 item 6). The English values are the ones `lib/api.ts` has
+    // always rendered, kept byte-for-byte because the browser guards match rendered text against them.
+    "fail.unauthorized":
+      "The API is reachable but rejected the request (401/403). This demo does not ask you to sign in, so a rejection here means the instance is configured with an access token this page does not hold.",
+    "fail.notFound": "The API answered 404 — the requested record or endpoint does not exist.",
+    "fail.serverError":
+      "The API failed while answering (5xx). This data may be temporarily unavailable.",
+    "fail.clientError": "The API answered with a client error (4xx). The request was not accepted.",
+    "fail.transport":
+      "No response could be read from the API. Check that it is running and reachable from this origin.",
+    // Per-page transport lines: each names the fallback the reader is actually looking at, so the shared
+    // `fail.transport` sentence is not the whole disclosure. The English values are the pages' own wording
+    // kept byte-for-byte for the same reason as above -- browser guards match rendered text.
+    "failures.transport":
+      "Could not reach the DSA API — showing taxonomy reference only.",
+    "mcp.transport":
+      "Could not reach the MCP endpoint — showing the static reference below instead of a blank page.",
+    "reports.transport":
+      "Could not reach the DSA API — showing an empty report list instead of a blank page.",
+    "runs.transport": "Could not reach the DSA API — showing an empty run list instead of a blank page.",
+    "ask.transport": "Could not reach the DSA API at {url}.",
+    "bench.noBaseline": "The API returned no baseline.",
+    "bench.noCatalog": "The API returned no catalog.",
+    "run.noSuchRun": "No run {id} exists behind this API.",
+    "run.bundleSaved":
+      "Bundle saved. The archive carries a manifest listing any file this instance could not read, so a missing chart is named rather than absent.",
+    "run.bundleUnavailable":
+      "{line} — this run recorded files, but none is readable here. The report text is stored with the run and still opens above.",
+    // While a run is in flight the poll owns the browser tab title and, if the visitor asked for it, one
+    // notification. Both are reader-facing sentences about this product, so they are owned here and the
+    // percentages, run id, status token and evidence count are substituted by the inspector.
+    "run.liveTitle": "({pct}%) Analysis {id} — DSA",
+    "run.notifyTitle": "Analysis {status}",
+    "run.notifyBody": "Run {id} finished with {evidence} evidence.",
   },
   zh: {
     "meta.title": "数据科学智能体 — 可验证的 AI 数据科学",
@@ -240,7 +295,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "ask.starting": "正在启动…",
     "ask.runNow": "运行分析 →",
     "ask.watchNextPage": "运行会立即开始，你可以在下一页查看它。",
-    "ask.retryCheck": "重试 API 检查",
+    "probe.retryCheck": "重试 API 检查",
     "ask.needBoth": "请选择数据集并输入问题。",
     "ask.requestFailed": "分析请求失败。",
     "ask.couldNotStart": "无法开始分析，因为位于 {url} 的 DSA API 不可用。",
@@ -287,6 +342,39 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "ds.emptyTitle": "还没有任何数据集",
     "ds.emptyBody": "先在上方上传一个，即可开始演示流程：带上数据 → 提问 → 查看证据。",
     "ds.emptyUpload": "上传你的第一个数据集",
+    "ds.requestFailed": "请求失败（HTTP {status}）{hint}。请在下方查看 API 诊断信息。",
+    "ds.checkDiagnostics": "请在下方查看 API 诊断信息。",
+    "ds.uploadUnavailable": "上传失败，因为位于 {url} 的 DSA API 不可用。{detail}",
+    "ds.skipTooLarge": "已跳过：{size}MB 超过 {limit}MB 的上限。",
+    "ds.dupNote": "已经存在同名数据集 —— 将作为一份新的副本上传。",
+    "probe.ready": "API 已连接",
+    "probe.probing": "正在检查 API…",
+    "probe.warming": "演示正在唤醒 —— 免费实例在空闲时会休眠，因此第一个请求可能需要一分钟左右。第 {attempt} 次尝试，共 {total} 次。",
+    "probe.unreachable": "API 不可达 —— 没有任何应答。请确认 API 正在运行，或重试。",
+    "probe.shortReady": "API 正常",
+    "probe.shortProbing": "检查中…",
+    "probe.shortWarming": "唤醒中… {attempt}/{total}",
+    "probe.shortUnreachable": "API 不可达",
+    "probe.retry": "重试",
+    "fail.unauthorized":
+      "API 可以访问，但它拒绝了本次请求（401/403）。本演示不会要求你登录，因此这里的拒绝意味着实例配置了一个本页面并不持有的访问令牌。",
+    "fail.notFound": "API 返回 404 —— 所请求的记录或端点不存在。",
+    "fail.serverError": "API 在应答过程中失败（5xx）。这些数据可能暂时不可用。",
+    "fail.clientError": "API 返回了客户端错误（4xx）。该请求未被接受。",
+    "fail.transport": "无法从 API 读到任何响应。请确认它正在运行，并且从本站点可以访问到。",
+    "failures.transport": "无法连到 DSA API —— 下方只展示失败分类参考。",
+    "mcp.transport": "无法连到 MCP 端点 —— 因此下方给出静态参考，而不是一个空白页面。",
+    "reports.transport": "无法连到 DSA API —— 下方展示的是空的报告列表，而不是一个空白页面。",
+    "runs.transport": "无法连到 DSA API —— 下方展示的是空的运行列表，而不是一个空白页面。",
+    "ask.transport": "无法连到位于 {url} 的 DSA API。",
+    "bench.noBaseline": "API 没有返回任何基线。",
+    "bench.noCatalog": "API 没有返回任何目录。",
+    "run.noSuchRun": "这个 API 背后不存在 {id} 这次运行。",
+    "run.bundleSaved": "打包已保存。压缩包里带有一份清单，列出本实例无法读取的任何文件，因此缺失的图表会被点名说明，而不是无声消失。",
+    "run.bundleUnavailable": "{line} —— 这次运行登记了文件，但这里没有一个可读。报告正文随运行一起存储，上方仍然可以打开。",
+    "run.liveTitle": "（{pct}%）分析 {id} — DSA",
+    "run.notifyTitle": "分析 {status}",
+    "run.notifyBody": "运行 {id} 已结束，留下 {evidence} 条证据。",
   },
 };
 

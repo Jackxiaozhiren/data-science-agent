@@ -39,6 +39,19 @@ def _planted(source: str, old: str, new: str, label: str) -> str:
     return changed
 
 
+def _dictionary_value(locale: str, key: str) -> str:
+    """One key's value out of `lib/locale.ts`, folded so a wrapped line still parses."""
+    folded = re.sub(r":\s+", ": ", (ROOT / "apps/web/lib/locale.ts").read_text(encoding="utf-8"))
+    parts = folded.split(f"{locale}: {{", 1)
+    assert len(parts) == 2, f"UI_STRINGS has no {locale} block written the way this guard parses it"
+    # Cut at the block's own closing brace: searching the remainder of the file would let a key defined only
+    # in the *other* locale satisfy this one.
+    body = parts[1].split("\n  },", 1)[0]
+    found = re.search(rf'"{re.escape(key)}": "((?:[^"\\]|\\.)*)"', body)
+    assert found, f"{locale} defines no {key!r} -- the probe would render ⟨{key}⟩"
+    return found.group(1)
+
+
 def test_the_probe_is_one_owner_with_a_named_phase_for_the_wait() -> None:
     """Four phases, and the waking one is not folded into either neighbour."""
     assert PROBE.is_file(), (
@@ -76,9 +89,14 @@ def test_the_retry_is_bounded_and_says_so() -> None:
     )
 
     assert re.search(r"export const PROBE_TIMEOUT_MS\s*=\s*(\d+)", source), "no per-attempt timeout"
-    assert "Attempt ${attempt}" in source, (
-        "the sentence does not carry the attempt count -- a bounded retry that hides its bound is still a hang"
-    )
+    # The waking sentence must carry the attempt count and its bound -- a bounded retry that hides its bound
+    # is still a hang. R-13c moved the wording to the locale owner, so what this checks is the placeholder
+    # pair in both languages: a zh value that dropped `{total}` would read "第 2 次尝试，共 次".
+    for locale in ("en", "zh"):
+        warming = _dictionary_value(locale, "probe.warming")
+        assert "{attempt}" in warming and "{total}" in warming, (
+            f"the {locale} waking sentence names no bound: {warming!r}"
+        )
     # The published attempt is already 1-based; adding to it makes the paragraph disagree with the short
     # label in the same frame (measured: header "1/4" against "Attempt 2 of 4").
     assert not re.search(r"attempt\s*\+\s*1", source), (
@@ -136,12 +154,19 @@ def test_the_probe_waits_longer_than_the_cold_start_it_is_meant_to_cover() -> No
         "no derived PROBE_BUDGET_MS -- coverage would then live only in prose"
     )
 
-    warming = re.search(r'if \(phase === "warming"\) return \(`([^`]+)`', source)
-    assert warming, "no warming copy"
-    if "minute" in warming.group(1).lower():
-        assert coverage >= 45_000, (
-            f"warming copy promises 'about a minute' but the probe stops at {coverage / 1000:.1f}s"
+    # The promise inside the waking sentence is what the budget has to keep. R-13c moved the words to the
+    # locale owner, so the promise is read from there -- in both languages, because a reader of either is owed
+    # the same coverage, and a zh sentence that quietly dropped the wait would otherwise be invisible here.
+    for locale in ("en", "zh"):
+        warming = _dictionary_value(locale, "probe.warming")
+        assert re.search(r"minute|分钟|second|秒", warming, re.I), (
+            f"the {locale} waking sentence names no wait, so the reader cannot tell how long to stay"
         )
+        if re.search(r"minute|分钟", warming, re.I):
+            assert coverage >= 45_000, (
+                f"the {locale} warming copy promises about a minute but the probe stops at "
+                f"{coverage / 1000:.1f}s"
+            )
 
     thin = _planted(
         source,
@@ -212,14 +237,23 @@ def test_a_warming_backend_is_never_described_as_ready_or_as_gone() -> None:
     replied, so it is not warming -- that distinction is asserted, not assumed.
     """
     source = PROBE.read_text(encoding="utf-8")
-    warming = re.search(r'if \(phase === "warming"\) return \(`([^`]+)`', source)
-    assert warming, "no warming copy"
-    text = warming.group(1).lower()
-    assert "free" in text and ("sleep" in text or "idle" in text), (
-        f"warming copy does not name the cause: {warming.group(1)!r}"
-    )
-    assert "error" not in text and "fail" not in text, (
-        f"warming copy blames the reader: {warming.group(1)!r}"
+    # The sentence names the cause, in whichever language it is read, and does not blame the reader for a
+    # sleeping machine. Wording moved to the locale owner in R-13c, so the keywords are checked per locale --
+    # an English-only assertion here would pass while the zh reader was told nothing about why they are waiting.
+    for locale, cause, sleep in (
+        ("en", "free", ("sleep", "idle")),
+        ("zh", "免费", ("休眠", "空闲")),
+    ):
+        warming = _dictionary_value(locale, "probe.warming")
+        text = warming.lower()
+        assert cause in text and any(word in text for word in sleep), (
+            f"the {locale} warming copy does not name the cause: {warming!r}"
+        )
+        assert not any(word in text for word in ("error", "fail", "错误", "失败")), (
+            f"the {locale} warming copy blames the reader: {warming!r}"
+        )
+    assert 't(locale, "probe.warming")' in source, (
+        "the probe no longer renders the waking sentence through its owner"
     )
 
     body = source[source.index("export function nextPhase(") :]
@@ -255,15 +289,11 @@ def test_the_datasets_entrance_states_the_wait_before_it_happens() -> None:
     assert 't(locale, "ds.coldStart")' in " ".join(source.split()), (
         "the entrance no longer renders the cold-start expectation through its owner"
     )
-    strings = " ".join((ROOT / "apps/web/lib/locale.ts").read_text(encoding="utf-8").split())
     for locale in ("en", "zh"):
-        block = strings.split(f"{locale}: {{", 1)
-        assert len(block) == 2, (
-            f"UI_STRINGS has no {locale} block written the way this guard parses it"
-        )
-        sentence = block[1].split('"ds.coldStart":', 1)
-        assert len(sentence) == 2, f"no ds.coldStart defined for {locale}"
-        assert re.search(r"sleeps|idle|wake|休眠|空闲", sentence[1][:400], re.I), (
+        # Read the value out of *that* locale's block. Splitting on `en: {` and searching the remainder used to
+        # walk into the zh block, so an en sentence deleted in English only still passed the en arm.
+        sentence = _dictionary_value(locale, "ds.coldStart")
+        assert re.search(r"sleeps|idle|wake|休眠|空闲", sentence, re.I), (
             f"the {locale} entrance says nothing about the cold start, so the first 45 seconds are unexplained"
         )
     assert re.search(r"phase === \"ready\"|isReady", source), (

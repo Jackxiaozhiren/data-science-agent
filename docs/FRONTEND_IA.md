@@ -114,12 +114,16 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
 
 ## UI principles
 
-- Two languages, one owner for the words. `app/lib/locale.ts` declares `en` and `zh`, and the choice is a
+- Two languages, one owner for the words. `apps/web/lib/locale.ts` declares `en` and `zh`, and the choice is a
   first-party `dsa_locale` cookie read by the server before render -- `<html lang>`, the tab title and the page
   copy all come from that one answer, because a language the server cannot see produces English markup that
   re-paints in Chinese. A key no locale defines renders visibly as `⟨key⟩`: the failure is meant to be seen,
-  not quietly downgraded to the other language. The deliverable is not translated -- a report keeps the language
-  the run was asked in.
+  not quietly downgraded to the other language. What the owner holds is everything the interface says -- the
+  first-run copy, the fetch-outcome vocabulary (`failurePresentation` in `apps/web/lib/api.ts` builds it per
+  locale from these keys, and each page's transport override names a key rather than a sentence), the backend
+  probe's four phases, and the upload queue's per-file notes. `tests/contract/test_web_locale_parity.py` sweeps
+  every sentence the dictionary owns against the page sources, so a moved string that stayed behind in a page
+  cannot ship. The deliverable is not translated -- a report keeps the language the run was asked in.
 - The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
   routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
   outline is not one) and every `<details>` drill-down to open on Enter.
@@ -156,13 +160,22 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   Reports therefore render from the database row, and the artifact links on a page are the instance's own.
 - **Per-run evidence coverage on the landing page.** The stat card shows `—` until a query exists that
   computes it across runs; the number is per-run today, on the run page.
-- **Translated failure prose.** The first-run path is bilingual (R-13: the landing, the Ask screen, the upload
-  screen, the starter questions); what is still English-only is the vocabulary of things going wrong --
-  `FAILURE_PRESENTATION` in `lib/api.ts`, each page's own transport line, the upload queue's per-file notes.
-  Those owners are shared by every page and are asserted by the browser guards in their exact English words, so
-  translating them means moving several owners and their guards in one change. Half-translating them -- the
-  screen in Chinese, the error in English, with no decision recorded -- is the worse option, so it is listed
-  here instead of done quietly.
+- **Translated failure prose -- closed, and what it revealed.** The vocabulary of things going wrong is now
+  bilingual: `failurePresentation()` in `apps/web/lib/api.ts` builds the five fetch-outcome lines from
+  `lib/locale.ts`, each page's transport override names a key instead of holding a sentence, the backend probe's
+  four phases and the upload queue's per-file notes do the same, and so does the browser-tab title and the
+  completion notification a live run writes. The English-only constant that used to own them is gone; a page may
+  no longer keep its own copy, which `tests/contract/test_web_locale_parity.py` sweeps and
+  `tests/contract/test_web_fetch_outcome_vocabulary.py` pins per locale.
+- **Page chrome past the first-run path.** The same sweep now finds ~89 reader-facing English literals in 25
+  files under `apps/web/app` (measured 2026-10-18 by a line scan that strips comments, so a rationale in a comment
+  is not counted and an interpolated template is; it is an inventory, not a proof). The largest is the run
+  inspector. The shared presentational components in `app/components/data/States.tsx` are a special case rather
+  than more of the same work: they have no locale of their own because they are not client components, so
+  translating "Something went wrong" first needs a decision about putting those three components behind the
+  locale context or threading a `locale` prop through every call site. That is a rendering-boundary change, and
+  doing it halfway would leave the Chinese visitor reading English chrome -- the outcome this whole layer exists
+  to prevent.
 - **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
   `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
   would add a devDependency, and dependency changes are the user's call, not the agent's.

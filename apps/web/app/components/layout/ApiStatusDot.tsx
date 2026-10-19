@@ -3,6 +3,8 @@
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { probeShortLabel, useBackendProbe } from "@/app/lib/backendProbe";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 // The ambient backend indicator. It used to run its own one-shot fetch and had two colours, which left the
@@ -10,6 +12,7 @@ import { cn } from "@/lib/utils";
 // a broken one. It now reads the shared probe (apps/web/app/lib/backendProbe.ts) and says the phase in
 // words, because a dot alone is not a status.
 export function ApiStatusDot({ className }: { className?: string }) {
+  const locale = useLocale();
   const { phase, attempt, copy, retry } = useBackendProbe();
 
   return (
@@ -33,7 +36,7 @@ export function ApiStatusDot({ className }: { className?: string }) {
         )}
       />
       <span role="status" aria-live="polite" className="whitespace-nowrap">
-        {probeShortLabel(phase, attempt)}
+        {probeShortLabel(phase, attempt, locale)}
       </span>
       {phase === "unreachable" && (
         <Button
@@ -41,10 +44,10 @@ export function ApiStatusDot({ className }: { className?: string }) {
           size="sm"
           className="h-5 gap-1 px-1 text-[11px]"
           onClick={retry}
-          aria-label="Retry the API check"
+          aria-label={t(locale, "probe.retryCheck")}
         >
           <RotateCcw className="size-3" aria-hidden />
-          Retry
+          {t(locale, "probe.retry")}
         </Button>
       )}
     </span>

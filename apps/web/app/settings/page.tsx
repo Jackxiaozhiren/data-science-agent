@@ -8,7 +8,8 @@
 // all, the page says why and names the command that does accept one, instead of showing a form that would fail.
 import { useEffect, useState } from "react";
 import { Loader2, KeyRound, Trash2 } from "lucide-react";
-import { clientFetch, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { clientFetch, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Input, Select } from "@/app/components/ui/input";
@@ -34,6 +35,9 @@ const MODES = [
 ];
 
 export default function SettingsPage() {
+  const locale = useLocale();
+  // The failure lines come from the same owner the classifier names, in the language this page rendered in.
+  const shared = failurePresentation(locale);
   const [view, setView] = useState<View | null>(null);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
   const [mode, setMode] = useState("heuristic");
@@ -87,7 +91,7 @@ export default function SettingsPage() {
       });
       const kind = classifyResponse(res);
       if (kind) {
-        setNotice(res.status === 403 ? (await res.json()).detail : FAILURE_PRESENTATION[kind]);
+        setNotice(res.status === 403 ? (await res.json()).detail : shared[kind]);
         setSaving("idle");
         return;
       }
@@ -97,7 +101,7 @@ export default function SettingsPage() {
       setSaving("saved");
       await refresh();
     } catch {
-      setNotice(FAILURE_PRESENTATION.transport);
+      setNotice(shared.transport);
       setSaving("idle");
     }
   }
@@ -113,7 +117,7 @@ export default function SettingsPage() {
       setNotice("Stored settings deleted. The key stays only if your shell exported one.");
       await refresh();
     } catch {
-      setNotice(FAILURE_PRESENTATION.transport);
+      setNotice(shared.transport);
     }
   }
 
@@ -121,7 +125,7 @@ export default function SettingsPage() {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
         <PageHeader eyebrow="This instance" title="Model settings" description="Choose what produces the plan." />
-        <ErrorState message={FAILURE_PRESENTATION[failure]} />
+        <ErrorState message={shared[failure]} />
       </div>
     );
   }

@@ -11,7 +11,8 @@ A language layer fails in four quiet ways, and each gets a guard here rather tha
    against the dictionary instead of trusting a run to notice.
 4. **A page that keeps its own copy.** The strings this requirement covers must live in one place; a hard-coded
    second copy would keep showing English after the switch, so the guard asserts those sentences appear in the
-   dictionary and in no other file.
+   dictionary and in no other file -- both by the curated list and, more broadly, by sweeping every sentence the
+   dictionary owns.
 
 The deliverables themselves are out of scope by the plan's rule: a run's report renders in the language the run
 produced, and nothing here translates analysis text.
@@ -118,6 +119,32 @@ def test_a_owned_sentence_has_exactly_one_owner() -> None:
             f"{sentence!r} is hard-coded in {elsewhere} as well as in the dictionary"
         )
         assert sentence in _source(), f"{sentence!r} is owned by no locale at all"
+
+
+def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
+    """The list above is hand-curated; this one sweeps every sentence the dictionary owns.
+
+    R-13c moved the last failure and upload prose here, and a moved sentence that still sits inline in the page
+    that moved it is exactly the drift the language layer exists to prevent: the page keeps rendering English.
+    Only sentences are swept -- a short value like `sample` or `Ask: ` is also an identifier or a fragment, and
+    matching those would flag code that is not a copy of anything. A page that interpolates *inside* a sentence
+    is not caught by an exact-value sweep either; that is why this file also refuses a page to own a transport
+    line at all (test_web_fetch_outcome_vocabulary.py), so the interpolated ones are the reviewed set.
+    """
+    sentences = [value for value in _keys("en").values() if len(value) >= 40]
+    assert len(sentences) >= 20, (
+        f"the sweep found only {len(sentences)} sentences -- the dictionary is not the size this guard assumes, "
+        "so it is checking less than it claims"
+    )
+    corpus = {
+        str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
+        for path in list(WEB.glob("app/**/*.tsx")) + list(WEB.glob("app/**/*.ts"))
+    }
+    assert len(corpus) >= 30, f"the sweep walked only {len(corpus)} files -- the glob broke"
+    duplicated = sorted(
+        {(rel, value[:60]) for rel, text in corpus.items() for value in sentences if value in text}
+    )
+    assert not duplicated, f"{duplicated} are in a page as well as in the dictionary"
 
 
 def test_the_document_language_follows_the_choice() -> None:

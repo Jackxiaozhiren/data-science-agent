@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
-import { serverFetch } from "@/lib/serverApi";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
+import { t, type Locale } from "@/lib/locale";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -26,10 +27,9 @@ type FailureStats = {
 
 // Inherits the shared wording, and keeps this page's own line for the transport case: the taxonomy
 // cards below are static, so "reference only" is what a reader is actually left with.
-const FAILURES_FAILURE_MESSAGE: Record<ApiFailure, string> = {
-  ...FAILURE_PRESENTATION,
-  transport: "Could not reach the DSA API — showing taxonomy reference only.",
-};
+function failuresMessages(locale: Locale): Record<ApiFailure, string> {
+  return { ...failurePresentation(locale), transport: t(locale, "failures.transport") };
+}
 
 async function fetchFailureStats(): Promise<FailureStats> {
   const empty: FailureStats = { failure: null, runsScanned: 0, failedCalls: 0, byTool: [] };
@@ -73,6 +73,8 @@ async function fetchFailureStats(): Promise<FailureStats> {
 }
 
 export default async function FailuresPage() {
+  const locale = await serverLocale();
+  const messages = failuresMessages(locale);
   const stats = await fetchFailureStats();
   return (
     <div className="space-y-4">
@@ -84,7 +86,7 @@ export default async function FailuresPage() {
           <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
         }
       />
-      {stats.failure && <ErrorState message={FAILURES_FAILURE_MESSAGE[stats.failure]} />}
+      {stats.failure && <ErrorState message={messages[stats.failure]} />}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Runs scanned" value={String(stats.runsScanned)} />
         <StatCard label="Failed tool calls" value={String(stats.failedCalls)} accent={stats.failedCalls > 0 ? "red" : "emerald"} />

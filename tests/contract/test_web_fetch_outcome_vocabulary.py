@@ -8,13 +8,13 @@ product was empty. `docs/hosted-demo.md:175` already promised transport failures
 told apart from absence.
 
 Two properties are pinned, in both directions, for the reason
-`tests/contract/test_web_analysis_status_vocabulary.py` pins the run-status vocabulary: the words are
-owned in `apps/web/lib/api.ts`, their consumers are scattered across pages, and nothing else connects
-them.
+`tests/contract/test_web_analysis_status_vocabulary.py` pins the run-status vocabulary: the kinds are owned in
+`apps/web/lib/api.ts`, the words in `apps/web/lib/locale.ts`, their consumers are scattered across pages, and
+nothing else connects them.
 
-1. `API_FAILURE_KINDS`, the literals `classifyResponse` can return, and the keys of
-   `FAILURE_PRESENTATION` are one set. A kind the classifier emits but the map does not name would render
-   `undefined` at a reader; a map entry no branch produces is dead copy.
+1. `API_FAILURE_KINDS`, the literals `classifyResponse` can return, the keys `failurePresentation` builds, and
+   the `fail.*` dictionary entries in *both* locales are one set. A kind the classifier emits but the renderer
+   does not name would show a reader the missing-key marker; an entry no branch produces is dead copy.
 2. `!response.ok` sites are accounted for by owner, not by line number, because a line number moves the
    moment anyone edits a file and a rename of the response variable must not redden this:
    - pages converted in §166 may hold only the declared best-effort or POST-error sites;
@@ -25,6 +25,11 @@ them.
 
 The last clause is what a later session must clear: converting a pending page means deleting it from
 PENDING_SITES in the same commit, and the test then proves the page holds no collapse of its own.
+
+A third property came with R-13. Five pages override the `transport` line with a sentence of their own --
+naming the fallback the reader is actually looking at -- and each of those sentences is a reader-facing line
+like any other. So an override must name a dictionary key; an inline English string here would put the
+vocabulary back in two owners and render English under the 中文 switch.
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 API_MODULE = ROOT / "apps/web/lib/api.ts"
+LOCALE_MODULE = ROOT / "apps/web/lib/locale.ts"
 WEB_APP = ROOT / "apps/web/app"
 
 VOCABULARY = {"unauthorized", "notFound", "serverError", "clientError", "transport"}
@@ -104,13 +110,33 @@ def _kind_literals(source: str, name: str) -> set[str]:
 
 
 def _presentation_keys(source: str) -> set[str]:
+    """The kinds `failurePresentation` names a line for -- read from its object literal, not its type."""
     match = re.search(
-        r"export const FAILURE_PRESENTATION\s*:\s*Record<ApiFailure,\s*string>\s*=\s*\{(.*?)\n\};",
+        r"export function failurePresentation\(locale: Locale\): Record<ApiFailure, string> "
+        r"\{\s*return \{(.*?)\n  \};",
         source,
         re.DOTALL,
     )
-    assert match is not None, "FAILURE_PRESENTATION is missing or no longer keyed on ApiFailure"
-    return set(re.findall(r"^\s{2}([A-Za-z][A-Za-z0-9]*):", match.group(1), re.MULTILINE))
+    assert match is not None, (
+        "failurePresentation is gone, or it no longer returns a Record<ApiFailure, string> literal built per "
+        "kind -- a computed record would drop the compile-time check that every kind has a line"
+    )
+    return set(re.findall(r"^\s{4}([A-Za-z][A-Za-z0-9]*):", match.group(1), re.MULTILINE))
+
+
+def _dictionary_keys(locale: str, prefix: str) -> set[str]:
+    """One locale's `prefix.*` keys, after folding the line break a long value is wrapped onto.
+
+    Same reason as in `test_web_locale_parity.py`: without the fold, an entry whose string sits on its own
+    line is silently invisible, and an empty result would make every assertion below vacuously true.
+    """
+    folded = re.sub(r":\s+", ": ", LOCALE_MODULE.read_text(encoding="utf-8"))
+    parts = folded.split(f"{locale}: {{", 1)
+    assert len(parts) == 2, f"UI_STRINGS has no {locale} block written the way this guard parses it"
+    body = parts[1].split("\n  },", 1)[0]
+    found = set(re.findall(rf'"{re.escape(prefix)}([^"]+)":', body))
+    assert found, f"no {prefix}* key parsed from the {locale} block -- the pattern went blind"
+    return found
 
 
 def _collapse_lines(text: str) -> list[str]:
@@ -150,6 +176,12 @@ def test_classifier_and_presentation_agree_with_the_vocabulary() -> None:
         "a kind has no reader-facing line, or the copy is dead"
     )
     assert VOCABULARY - emitted == {"transport"}, "only transport may live outside the classifier"
+    for locale in ("en", "zh"):
+        keys = _dictionary_keys(locale, "fail.")
+        assert keys == VOCABULARY, (
+            f"the {locale} fail.* entries {sorted(keys)} are not the vocabulary {sorted(VOCABULARY)} -- "
+            "a kind with no line renders ⟨fail.kind⟩, an extra entry is a sentence no page can reach"
+        )
 
 
 def test_transport_is_reachable_where_a_response_never_arrives() -> None:
@@ -216,14 +248,72 @@ def test_no_other_page_collapses_or_waits_unlisted() -> None:
 
 
 def test_pages_that_classify_import_the_vocabulary() -> None:
-    """Consumers must take their kinds from the owner rather than hand-copying names."""
+    """Consumers must take their kinds from the owner rather than hand-copying names.
+
+    R-13 moved the words into the string owner, so the only shared name a page may reference is
+    `failurePresentation()`, which builds one view per language. What is still refused is a page writing its
+    own sentence for a kind.
+    """
     for rel, text in _sources(WEB_APP).items():
         if "classifyResponse(" not in text:
             continue
         assert 'from "@/lib/api"' in text, f"{rel} calls classifyResponse without importing it"
-        assert "FAILURE_PRESENTATION" in text, (
+        assert "failurePresentation(" in text, (
             f"{rel} classifies a failure but renders no shared line for it"
         )
+
+
+def test_a_page_override_names_a_dictionary_key() -> None:
+    """A page may replace the transport line, but not own its wording.
+
+    The override exists because "no response arrived" is not the whole disclosure: a reader looking at an
+    empty report list needs to know the list is a fallback. That sentence is still a reader-facing line, so it
+    lives in the dictionary and the page only names it. An inline string here is the two-owner split back
+    again, and it would keep reading English after the visitor switched to 中文.
+    """
+    overrides: list[tuple[str, str]] = []
+    inline: list[tuple[str, str]] = []
+    for rel, text in _sources(WEB_APP).items():
+        inline += [(rel, found) for found in re.findall(r'transport:\s*"[^"]*"', text)]
+        overrides += [
+            (rel, key) for key in re.findall(r'transport:\s*t\(locale,\s*"([^"]+)"\)', text)
+        ]
+    assert not inline, (
+        f"{inline} own a transport sentence in the page: two owners, and English only"
+    )
+    assert len(overrides) >= 5, (
+        f"only {len(overrides)} pages override the transport line (5 as of 2026-10-18) -- the pattern went "
+        "blind, or the fallback disclosures were dropped from the pages that had them"
+    )
+    defined = {locale: _dictionary_keys(locale, "") for locale in ("en", "zh")}
+    for rel, key in overrides:
+        assert key.endswith(".transport"), (
+            f"{rel} overrides transport with {key!r}, which is not a *transport key"
+        )
+        for locale, keys in defined.items():
+            assert key in keys, (
+                f"{rel} asks for {key!r}, which {locale} does not define -- the reader sees ⟨{key}⟩"
+            )
+
+
+def test_the_presentation_is_derived_from_the_string_owner_in_both_languages() -> None:
+    """One owner per line, including the language layer's own.
+
+    The record used to carry the English sentences and `lib/locale.ts` carried nothing for failures; that split
+    is how a reworded line ends up in two places and disagrees with itself. So the renderer must build every
+    kind by key name through `t(locale, ...)`, and the English constant it used to hold must stay gone -- an
+    `en`-only record beside a bilingual function is the same split wearing a different hat.
+    """
+    source = _api_source()
+    for kind in sorted(VOCABULARY):
+        assert re.search(rf'{kind}:\s*t\(locale, "fail\.{kind}"\)', source), (
+            f"{kind} is no longer derived from the string owner -- an inline English sentence here would be a "
+            "second copy of the line, and the zh view would drift from it silently"
+        )
+    assert "FAILURE_PRESENTATION" not in source, (
+        "the English-only record is back: with a page per language nothing imports it, and the sentences it "
+        "held would stop being the ones readers see"
+    )
 
 
 def test_the_inventory_check_can_fail(tmp_path: Path) -> None:

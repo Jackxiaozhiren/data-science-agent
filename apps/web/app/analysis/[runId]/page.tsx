@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
-import { serverFetch, ownerFromRequest } from "@/lib/serverApi";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, ownerFromRequest, serverLocale } from "@/lib/serverApi";
 import { withOwnerParam } from "@/lib/owner";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { ErrorState } from "@/app/components/data/States";
 import { Button } from "@/app/components/ui/button";
 import { RunInspector, type RunDetail } from "@/app/analysis/[runId]/RunInspector";
+import { t as tt } from "@/lib/locale";
 
 async function fetchRun(id: string): Promise<{ record: RunDetail | null; failure: ApiFailure | null }> {
   try {
@@ -19,6 +20,8 @@ async function fetchRun(id: string): Promise<{ record: RunDetail | null; failure
 }
 
 export default async function TracePage({ params, searchParams }: { params: Promise<{ runId: string }>; searchParams: Promise<{ from?: string }> }) {
+  const locale = await serverLocale();
+  const shared = failurePresentation(locale);
   const { runId } = await params;
   const { from } = await searchParams;
   const { record: run, failure } = await fetchRun(runId);
@@ -38,7 +41,7 @@ export default async function TracePage({ params, searchParams }: { params: Prom
           }
         />
         <ErrorState
-          message={failure ? FAILURE_PRESENTATION[failure] : `No run ${runId} exists behind this API.`}
+          message={failure ? shared[failure] : tt(locale, "run.noSuchRun").replace("{id}", runId)}
           diagnostics={
             <Link href="/analysis"><Button variant="secondary" size="sm">Back to Analysis</Button></Link>
           }

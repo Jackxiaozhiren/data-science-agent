@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
-import { clientFetch, apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { clientFetch, apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { t as tt } from "@/lib/locale";
+import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -50,7 +52,6 @@ type Progress = {
 };
 
 const TERMINAL = new Set<string>(TERMINAL_STATUSES);
-const DEFAULT_TITLE = "Data Science Agent — Verifiable AI Data Science";
 
 function stripHtml(raw: string): string {
   return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -63,12 +64,18 @@ function stripHtml(raw: string): string {
 // clients that want the event sequence itself. Full state refreshes via
 // router.refresh() on phase transitions and terminal states.
 function useLiveProgress(runId: string, initialStatus: string) {
+  const locale = useLocale();
   const router = useRouter();
   const [prog, setProg] = React.useState<Progress | null>(null);
   const [live, setLive] = React.useState(!TERMINAL.has(initialStatus.trim().toUpperCase()));
   const [notify, setNotify] = React.useState(false);
   const lastStatus = React.useRef(initialStatus);
-  const origTitle = React.useRef(typeof document !== "undefined" ? document.title : DEFAULT_TITLE);
+  // The title this page had before the poll started rewriting it. The fallback is the dictionary's own
+  // product title, not a second copy of it -- the sweep in tests/contract/test_web_locale_parity.py refuses a
+  // page that keeps its own version of a sentence the locale owner has.
+  const origTitle = React.useRef(
+    typeof document !== "undefined" ? document.title : tt(locale, "meta.title")
+  );
 
   React.useEffect(() => {
     if (!live) return;
@@ -79,13 +86,19 @@ function useLiveProgress(runId: string, initialStatus: string) {
         if (!r.ok || stop) return;
         const p = (await r.json()) as Progress;
         setProg(p);
-        document.title = `(${p.progress_pct}%) Analysis ${runId.slice(0, 8)} — DSA`;
+        document.title = tt(locale, "run.liveTitle")
+          .replace("{pct}", String(p.progress_pct))
+          .replace("{id}", runId.slice(0, 8));
         const terminal = TERMINAL.has(p.status.trim().toUpperCase());
         if (terminal) {
           setLive(false);
-          document.title = origTitle.current || DEFAULT_TITLE;
+          document.title = origTitle.current || tt(locale, "meta.title");
           if (notify && "Notification" in window && Notification.permission === "granted") {
-            new Notification(`Analysis ${p.status}`, { body: `Run ${runId.slice(0, 12)} finished with ${p.evidence} evidence.` });
+            new Notification(tt(locale, "run.notifyTitle").replace("{status}", p.status), {
+              body: tt(locale, "run.notifyBody")
+                .replace("{id}", runId.slice(0, 12))
+                .replace("{evidence}", String(p.evidence)),
+            });
           }
           router.refresh();
         } else if (p.status !== lastStatus.current) {
@@ -101,9 +114,9 @@ function useLiveProgress(runId: string, initialStatus: string) {
     return () => {
       stop = true;
       clearInterval(id);
-      document.title = origTitle.current || DEFAULT_TITLE;
+      document.title = origTitle.current || tt(locale, "meta.title");
     };
-  }, [runId, live, notify, router]);
+  }, [runId, live, notify, router, locale]);
 
   const toggleNotify = React.useCallback(async () => {
     if (!notify && "Notification" in window && Notification.permission === "default") {
@@ -330,6 +343,8 @@ function FollowUpBox({ run }: { run: RunDetail }) {
 }
 
 export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }: { run: RunDetail; reportUrl: string; findingsUrl?: string; htmlUrl?: string; fromRunId?: string }) {
+  const locale = useLocale();
+  const shared = failurePresentation(locale);
   const st = run.state;
   const [copied, setCopied] = React.useState(false);
   const [traceFilter, setTraceFilter] = React.useState<"all" | "ok" | "error">("all");
@@ -532,10 +547,10 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
           }`}
         >
           {bundle === "saved"
-            ? "Bundle saved. The archive carries a manifest listing any file this instance could not read, so a missing chart is named rather than absent."
+            ? tt(locale, "run.bundleSaved")
             : bundle === "notFound"
-              ? `${FAILURE_PRESENTATION.notFound} — this run recorded files, but none is readable here. The report text is stored with the run and still opens above.`
-              : FAILURE_PRESENTATION[bundle]}
+              ? tt(locale, "run.bundleUnavailable").replace("{line}", shared.notFound)
+              : shared[bundle]}
         </p>
       )}
 
