@@ -167,17 +167,25 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   completion notification a live run writes. The English-only constant that used to own them is gone; a page may
   no longer keep its own copy, which `tests/contract/test_web_locale_parity.py` sweeps and
   `tests/contract/test_web_fetch_outcome_vocabulary.py` pins per locale.
-- **Page chrome past the first-run path.** The shared chrome is now bilingual: `States.tsx` (the error heading,
-  its Retry, the two skeleton labels), the route-level `loading.tsx` and `error.tsx`, `DataTable.tsx`'s empty
-  state, the dialog's two close labels, the language switch's group name and the hero's chain caption all read
-  `apps/web/lib/locale.ts`. `States.tsx` became a client module to do it -- server pages may still render it, and
-  the locale reaches it through `LocaleProvider` in the root layout, while `loading.tsx` reads it off the request
-  because it is a server component. The run inspector followed the same route: every label, tab, table header,
-  empty state, download title and the five stage names under its status badge now read `apps/web/lib/locale.ts`,
-  with the run's own question, tool names, paths and status tokens left as data. What remains is page-specific
-  copy on the screens a visitor reaches later: a line scan on 2026-10-19 finds 58 reader-facing English literals
-  in 19 files, led by `datasets/[id]/page.tsx` (9) and `benchmarks/page.tsx` (7). The scan strips comments and does
-  not see templates that interpolate, so it is an inventory rather than a proof.
+- **Page chrome past the first-run path.** The shell is bilingual now. `States.tsx` (the error heading, its
+  Retry, the two skeleton labels), the route-level `loading.tsx` and `error.tsx`, `DataTable.tsx`'s empty state,
+  the dialog's close labels, the language switch's group name, the hero caption and node labels, the sidebar's
+  groups and every one of its links, the header nav, the footer tagline and landmark names, both run/report
+  tables' search and filter controls, the plan timeline's empty line and the whole run inspector (67 strings)
+  read `apps/web/lib/locale.ts`. What is left is route-specific copy: 24 long reader-facing sentences in 10
+  files under the same scan that counted 58 before this batch (it needs ≥3 words in a JSX text node or a
+  sentence of ≥18 characters, so it *understates* -- counted separately, the same tree holds roughly 149
+  strings once single-word column headings, eyebrows and `label=` props are included, led by
+  `datasets/compare/page.tsx`). Two shapes stay English on purpose: technical identifiers (`SHA-256`, `MCP`,
+  a protocol version) and anything the run itself produced.
+- **The locale provider wraps the whole shell, and that was a bug.** `LocaleProvider` used to sit around
+  `{children}` inside `<main>`, while the sidebar is a sibling of `<main>` and a client component reading that
+  context -- so on a 中文 page the sidebar, and anything else outside the provider, rendered the dictionary's
+  default language. The header looked translated because it takes `locale` as a prop, which is what made the
+  screen read as half-done rather than broken. No source guard and no single-page browser check could see it:
+  the parity guards read the dictionary and the page files, and the tour asserts layout rather than language.
+  `test_the_provider_wraps_the_shell_not_just_the_route` now pins the nesting, and the live navigation check
+  (`build/r13f-nav-acceptance.mjs`) reads header, sidebar and footer text in both languages.
 - **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on nine English
   strings (measured 2026-10-19: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
   `nothing answered`, `Checking API`, `Loading table`, `Loading page`) and every one of them is a dictionary

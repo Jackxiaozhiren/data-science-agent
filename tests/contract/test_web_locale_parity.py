@@ -154,6 +154,23 @@ def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
     assert not duplicated, f"{duplicated} are in a page as well as in the dictionary"
 
 
+def test_the_provider_wraps_the_shell_not_just_the_route() -> None:
+    """A client component outside the provider silently renders the default language.
+
+    Measured: with `LocaleProvider` around `{children}` inside `<main>`, every sidebar label rendered English on
+    a 中文 page -- the header was correct because it takes the locale as a prop, which is exactly what made the
+    screen look half-translated rather than broken. No source-text guard could see it and no single-page browser
+    check walked the sidebar, so the shape itself is pinned here.
+    """
+    layout = (WEB / "app/layout.tsx").read_text(encoding="utf-8")
+    opened = layout.index("<LocaleProvider")
+    closed = layout.index("</LocaleProvider>")
+    for client_part in ("<Sidebar", "<ArrivalBeacon", "<SiteHeader"):
+        assert opened < layout.index(client_part) < closed, (
+            f"{client_part} sits outside the locale provider, so it reads the default language instead of the cookie"
+        )
+
+
 def test_the_document_language_follows_the_choice() -> None:
     """`lang` is what tells a screen reader which pronunciation table to use; a static "en" lies to it."""
     layout = (WEB / "app/layout.tsx").read_text(encoding="utf-8")

@@ -7,7 +7,7 @@ import { CompareBarChart, DonutChart } from "@/app/components/ui/chart";
 import { CopyButton } from "@/app/benchmarks/CopyButton";
 import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
 import { serverFetch, serverLocale } from "@/lib/serverApi";
-import { t as tt } from "@/lib/locale";
+import { t } from "@/lib/locale";
 
 type Baseline = {
   n: number;
@@ -78,7 +78,7 @@ export default async function BenchmarksPage() {
       <PageHeader
         eyebrow="Evaluation · Frozen vs research"
         title="Benchmarks"
-        description="Frozen baseline (v1) vs V2 (100 tasks). Source: benchmarks/baseline/summary.json (seed 42, 20 datasets) and benchmarks/v2/catalog.json (30 datasets, 11 categories)."
+        description={t(locale, "bench.provenance")}
         actions={<CopyButton text={RUNNER_V2} label="Copy runner" />}
       />
 
@@ -97,13 +97,13 @@ export default async function BenchmarksPage() {
               </div>
             ) : baselineFailure === "notFound" ? (
               <EmptyState
-                title="Baseline not frozen yet"
-                description="The API answered 404: benchmarks/baseline/summary.json is not present in this deployment."
+                title={t(locale, "bench.notFrozen")}
+                description={t(locale, "bench.notFrozenBody")}
                 action={<CopyButton text={RUNNER_V1} label="Copy freeze command" />}
               />
             ) : (
               <ErrorState
-                message={baselineFailure ? shared[baselineFailure] : tt(locale, "bench.noBaseline")}
+                message={baselineFailure ? shared[baselineFailure] : t(locale, "bench.noBaseline")}
               />
             )}
           </CardContent>
@@ -123,9 +123,9 @@ export default async function BenchmarksPage() {
                 </p>
               </div>
             ) : catalogFailure === "notFound" ? (
-              <EmptyState title="V2 catalog missing" description="The API answered 404: benchmarks/v2/catalog.json is not present in this deployment." />
+              <EmptyState title={t(locale, "bench.catalogMissing")} description={t(locale, "bench.catalogBody")} />
             ) : (
-              <ErrorState message={catalogFailure ? shared[catalogFailure] : tt(locale, "bench.noCatalog")} />
+              <ErrorState message={catalogFailure ? shared[catalogFailure] : t(locale, "bench.noCatalog")} />
             )}
           </CardContent>
         </Card>
@@ -133,8 +133,8 @@ export default async function BenchmarksPage() {
 
       {hasBars ? (
         <CompareBarChart
-          title="Accuracy comparison"
-          description="Task success · evidence coverage · SQL accuracy (v1 frozen)"
+          title={t(locale, "bench.accuracyTitle")}
+          description={t(locale, "bench.metrics")}
           data={[
             { name: "Task success", v1: taskSuccess ?? 0 },
             { name: "Evidence", v1: evidence ?? 0 },
@@ -144,19 +144,19 @@ export default async function BenchmarksPage() {
         />
       ) : baselineFailure === null ? (
         <EmptyState
-          title="No benchmark numbers to chart"
-          description="Freeze the baseline to unlock the comparison chart."
+          title={t(locale, "bench.noNumbers")}
+          description={t(locale, "bench.freezeHint")}
           action={<CopyButton text={RUNNER_V1} label="Copy freeze command" />}
         />
       ) : null}
 
       {donut.length > 0 && (
-        <DonutChart title="V2 category distribution" description={`${v2?.tasks} tasks across ${donut.length} categories`} data={donut} />
+        <DonutChart title={t(locale, "bench.v2Distribution")} description={`${v2?.tasks} tasks across ${donut.length} categories`} data={donut} />
       )}
 
       {byCatBars.length > 0 && (
         <CompareBarChart
-          title="v1 success by category"
+          title={t(locale, "bench.v1ByCategory")}
           description={`${byCatBars.length} categories · task success rate (frozen baseline)`}
           data={byCatBars.map((d) => ({ name: d.name, success: Math.round(d.success * 10) / 10 }))}
           bars={[{ key: "success", label: "Task success (%)", color: "#3f3f46" }]}

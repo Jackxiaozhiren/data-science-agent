@@ -588,7 +588,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                   type="button"
                   onClick={toggleNotify}
                   aria-pressed={notify}
-                  title={notify ? "Notification on completion: on" : "Notify me when done"}
+                  title={notify ? t(locale, "insp.notifyAriaOn") : t(locale, "insp.notifyAriaOff")}
                   className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
                 >
                   {notify ? <Bell className="size-3.5" aria-hidden /> : <BellOff className="size-3.5" aria-hidden />}
@@ -644,7 +644,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                 <CardDescription className="text-xs">{t(locale, "insp.planSub")}</CardDescription>
               </CardHeader>
               <CardContent>
-                <TraceTimeline
+                <TraceTimeline locale={locale}
                   steps={(st?.plan ?? []).map((s, i) => ({
                     id: s.id, name: s.name, tool: s.tool, description: s.description,
                     status: run.status === "COMPLETED" || i < stepsDone
@@ -867,7 +867,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Artifacts ({st?.artifacts.length ?? 0})</CardTitle>
-                <CardDescription className="text-xs">Files generated during the run. Each path is on the server, so copy one to fetch it from the host; &ldquo;Download bundle&rdquo; above returns everything the run recorded as one archive, naming any file it could not read.</CardDescription>
+                <CardDescription className="text-xs">{t(locale, "insp.artifactsBody")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(st?.artifacts.length ?? 0) === 0 && (

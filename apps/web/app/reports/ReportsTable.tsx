@@ -6,6 +6,8 @@ import { DataTable } from "@/app/components/data/DataTable";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { Input, Select } from "@/app/components/ui/input";
 import { IN_FLIGHT_STATUSES } from "@/app/lib/analysisStatus";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
 export type ReportRow = { id: string; status: string; user_query: string; created_at: string | null };
 
@@ -13,6 +15,7 @@ export type ReportRow = { id: string; status: string; user_query: string; create
 // boundary, so they are defined here next to the client DataTable.
 // Includes search + status filter + newest-first default.
 export function ReportsTable({ runs }: { runs: ReportRow[] }) {
+  const locale = useLocale();
   const [q, setQ] = React.useState("");
   const [status, setStatus] = React.useState("all");
 
@@ -30,17 +33,17 @@ export function ReportsTable({ runs }: { runs: ReportRow[] }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor="reports-search" className="sr-only">Search reports</label>
+        <label htmlFor="reports-search" className="sr-only">{t(locale, "reports.searchLabel")}</label>
         <Input
           id="reports-search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search query or run id…"
+          placeholder={t(locale, "table.searchRunsPh")}
           className="h-8 w-52"
         />
-        <label htmlFor="reports-status" className="sr-only">Filter by status</label>
-        <Select id="reports-status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-8 w-40" aria-label="Filter by status">
-          <option value="all">All statuses</option>
+        <label htmlFor="reports-status" className="sr-only">{t(locale, "table.filterAria")}</label>
+        <Select id="reports-status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-8 w-40" aria-label={t(locale, "table.filterAria")}>
+          <option value="all">{t(locale, "table.allStatuses")}</option>
           <option value="COMPLETED">Completed</option>
           <option value="FAILED">Failed</option>
           {IN_FLIGHT_STATUSES.map((s) => (

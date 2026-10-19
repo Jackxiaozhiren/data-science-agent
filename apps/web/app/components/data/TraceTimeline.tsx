@@ -1,5 +1,6 @@
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { t, type Locale } from "@/lib/locale";
 
 export type TraceStep = {
   id: string;
@@ -10,8 +11,8 @@ export type TraceStep = {
 };
 
 // Unified TraceTimeline: vertical Plan timeline used by run/trace pages.
-export function TraceTimeline({ steps }: { steps: TraceStep[] }) {
-  if (steps.length === 0) return <p className="text-sm text-zinc-500">No plan steps.</p>;
+export function TraceTimeline({ steps, locale }: { steps: TraceStep[]; locale: Locale }) {
+  if (steps.length === 0) return <p className="text-sm text-zinc-500">{t(locale, "timeline.empty")}</p>;
   return (
     <ol className="relative space-y-4 border-l border-zinc-200 pl-5">
       {steps.map((s) => (

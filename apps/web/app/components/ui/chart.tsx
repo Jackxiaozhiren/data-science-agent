@@ -15,6 +15,8 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
 // Chart layer: shadcn Chart encapsulation over Recharts v3.
 // Ref: https://ui.shadcn.com/docs/components/base/chart (ChartContainer / Tooltip / Legend pattern)
@@ -106,6 +108,7 @@ export function DonutChart({
 }
 
 export function ConfidenceBars({ values, title }: { values: number[]; title?: string }) {
+  const locale = useLocale();
   const buckets = React.useMemo(() => {
     const bins = [0, 0, 0, 0, 0];
     for (const v of values) {
@@ -116,7 +119,7 @@ export function ConfidenceBars({ values, title }: { values: number[]; title?: st
     return labels.map((name, i) => ({ name, count: bins[i] }));
   }, [values]);
   return (
-    <ChartContainer title={title ?? "Confidence distribution"} description="Evidence confidence histogram">
+    <ChartContainer title={title ?? t(locale, "chart.confidenceTitle")} description={t(locale, "chart.confidenceAria")}>
       <ResponsiveContainer width="100%" height="100%">
         <ReBarChart data={buckets} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />

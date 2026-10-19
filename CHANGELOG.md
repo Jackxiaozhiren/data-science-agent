@@ -45,6 +45,21 @@
   title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
   every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
   fallback now asks the dictionary.
+- **The navigation, header and footer speak the visitor's language -- and fixing them found a scope bug in the
+  language layer itself.** The sidebar's three groups and all thirteen of their links, the header's nav row and
+  its mobile menu, the footer tagline and the two landmark names are dictionary keys now; the nav declaration
+  carries key names rather than sentences, so a label cannot have a second owner. Widening the check to a real
+  page then showed the sidebar still rendering English: `LocaleProvider` wrapped `{children}` inside `<main>`,
+  and the sidebar is a sibling of `<main>`, so it read the context's default rather than the cookie. The provider
+  now wraps the shell, a guard pins that nesting, and the live check reads header, sidebar and footer in both
+  languages with zero cross-language leaks.
+- **One label that was not a sentence.** `SHA-256` briefly had a dictionary key whose Chinese value was the same
+  string, which the "is the Chinese block actually Chinese" guard correctly refused: an algorithm name is a
+  technical identifier, not something the product says, so it went back to the page. `MCP` kept its key and got a
+  Chinese value that says what it is (`MCP 服务`).
+- **Two guards followed the words instead of being loosened.** The navigation guard used to read the group's label
+  out of the sidebar source; it now resolves the key against the dictionary and requires the disclaimer in *both*
+  languages, because a Chinese hint that dropped "not your data" would have passed the old check.
 - **The chrome that appears on every screen, not just the first-run path.** The error heading and its retry
   button, the loading skeletons, the route-level `loading.tsx` and `error.tsx`, a table's empty state, the
   dialog's two close labels, the language switch's group name and the hero's caption were hard-coded English in

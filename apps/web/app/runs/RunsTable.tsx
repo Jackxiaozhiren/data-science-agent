@@ -8,6 +8,8 @@ import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { Input, Select } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { IN_FLIGHT_STATUSES } from "@/app/lib/analysisStatus";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
 export type RunRow = { id: string; status: string; user_query: string; created_at: string | null };
 
@@ -15,6 +17,7 @@ export type RunRow = { id: string; status: string; user_query: string; created_a
 // boundary, so they are defined here next to the client DataTable.
 // Includes search + status filter + newest-first default + compare-select.
 export function RunsTable({ runs }: { runs: RunRow[] }) {
+  const locale = useLocale();
   const router = useRouter();
   const [q, setQ] = React.useState("");
   const [status, setStatus] = React.useState("all");
@@ -44,17 +47,17 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor="runs-search" className="sr-only">Search runs</label>
+        <label htmlFor="runs-search" className="sr-only">{t(locale, "runs.searchLabel")}</label>
         <Input
           id="runs-search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search query or run id…"
+          placeholder={t(locale, "table.searchRunsPh")}
           className="h-8 w-52"
         />
-        <label htmlFor="runs-status" className="sr-only">Filter by status</label>
-        <Select id="runs-status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-8 w-40" aria-label="Filter by status">
-          <option value="all">All statuses</option>
+        <label htmlFor="runs-status" className="sr-only">{t(locale, "table.filterAria")}</label>
+        <Select id="runs-status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-8 w-40" aria-label={t(locale, "table.filterAria")}>
+          <option value="all">{t(locale, "table.allStatuses")}</option>
           <option value="COMPLETED">Completed</option>
           <option value="FAILED">Failed</option>
           {IN_FLIGHT_STATUSES.map((s) => (
@@ -63,16 +66,16 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
             </option>
           ))}
         </Select>
-        <span className="text-xs text-zinc-400" aria-live="polite">{filtered.length} of {runs.length} runs</span>
+        <span className="text-xs text-zinc-400" aria-live="polite">{t(locale, "runs.filteredOf").replace("{shown}", String(filtered.length)).replace("{total}", String(runs.length))}</span>
         <span className="flex-1" />
         <Button
           variant="secondary"
           size="sm"
           disabled={selected.length !== 2}
           onClick={() => router.push(`/runs/compare?a=${selected[0]}&b=${selected[1]}`)}
-          title={selected.length !== 2 ? "Select exactly two runs to compare" : "Compare selected runs"}
+          title={selected.length !== 2 ? t(locale, "runs.selectTwo") : t(locale, "runs.compareSelected")}
         >
-          Compare ({selected.length}/2)
+          {t(locale, "runs.compareCount").replace("{count}", String(selected.length))}
         </Button>
       </div>
       {filtered.length === 0 ? (

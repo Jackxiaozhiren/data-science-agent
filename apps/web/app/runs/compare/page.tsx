@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GitCompareArrows } from "lucide-react";
 import { clientFetch, API_BASE_URL, apiUrl } from "@/lib/api";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -41,6 +43,7 @@ function metric(a: Full | null, b: Full | null, label: string, pick: (r: Full) =
 }
 
 function CompareWorkspace() {
+  const locale = useLocale();
   const sp = useSearchParams();
   const aId = sp.get("a") || "";
   const bId = sp.get("b") || "";
@@ -63,7 +66,7 @@ function CompareWorkspace() {
     )
       .then(([ra, rb]) => {
         if (cancelled) return;
-        if (!ra || !rb) setErr("One of the runs could not be loaded — it may have been removed.");
+        if (!ra || !rb) setErr(t(locale, "cmp.loadFailed"));
         setA(ra);
         setB(rb);
       })
@@ -105,10 +108,10 @@ function CompareWorkspace() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="Step 3 · Compare runs"
-        title="Compare runs"
-        description="Side-by-side evidence output for two runs. Emerald marks the larger value."
+        title={t(locale, "cmp.title")}
+        description={t(locale, "cmp.subtitle")}
         actions={
-          <Link href="/runs"><Button variant="secondary" size="sm">Back to Runs</Button></Link>
+          <Link href="/runs"><Button variant="secondary" size="sm">{t(locale, "cmp.back")}</Button></Link>
         }
       />
       {err && <ErrorState message={err} />}
@@ -117,8 +120,8 @@ function CompareWorkspace() {
       ) : !aId || !bId ? (
         <EmptyState
           icon={<GitCompareArrows className="size-5 text-zinc-400" aria-hidden />}
-          title="Pick two runs to compare"
-          description="Select exactly two runs on the Runs page, then come back here."
+          title={t(locale, "cmp.pickTwo")}
+          description={t(locale, "cmp.pickTwoBody")}
           action={<Link href="/runs"><Button size="sm">Go to Runs →</Button></Link>}
         />
       ) : a && b ? (
@@ -154,7 +157,7 @@ function CompareWorkspace() {
           </Card>
         </>
       ) : (
-        !err && <EmptyState title="Runs unavailable" description="Both runs must exist to compare." />
+        !err && <EmptyState title={t(locale, "cmp.unavailable")} description={t(locale, "cmp.mustExist")} />
       )}
     </div>
   );

@@ -24,17 +24,17 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const [open, setOpen] = React.useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur">
-      <nav aria-label="Primary" className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <nav aria-label={t(locale, "nav.primaryAria")} className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white" aria-hidden>
             <FlaskConical className="size-4" />
           </span>
-          <span className="truncate">Data Science Agent</span>
+          <span className="truncate">{t(locale, "nav.brand")}</span>
         </Link>
         <div className="hidden items-center gap-1 text-sm md:flex">
           {analystGroup.items.slice(0, 2).map((l) => (
             <Link key={l.href} href={l.href} className="rounded-lg px-3 py-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900">
-              {l.label}
+              {t(locale, l.labelKey)}
             </Link>
           ))}
           <a
@@ -72,15 +72,15 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             </Link>
             {analystGroup.items.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100">
-                {l.label}
+                {t(locale, l.labelKey)}
               </Link>
             ))}
             <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-              {systemGroup.label}
+              {t(locale, systemGroup.labelKey)}
             </p>
             {systemGroup.items.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100">
-                {l.label}
+                {t(locale, l.labelKey)}
               </Link>
             ))}
             <a href="https://github.com/Jackxiaozhiren/data-science-agent" target="_blank" rel="noreferrer" className="rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100">

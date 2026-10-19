@@ -49,7 +49,7 @@ export default async function MCPPage() {
         title="MCP 2026-07-28"
         description={`Stateless core · ${tools.length ? `${tools.length} tools` : "tool list unavailable"} · No Mcp-Session-Id · cacheHints via cache_hint · Explicit handles: run_id / dataset_id.`}
         actions={
-          <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
+          <Link href="/analysis"><Button size="sm">{t(locale, "mcp.back")}</Button></Link>
         }
       />
       {failure && <ErrorState message={messages[failure]} />}
@@ -69,7 +69,7 @@ export default async function MCPPage() {
       ) : (
         failure === null && (
           <Card>
-            <CardContent className="p-4 pt-4 text-sm text-zinc-500">The MCP endpoint returned no tools.</CardContent>
+            <CardContent className="p-4 pt-4 text-sm text-zinc-500">{t(locale, "mcp.noTools")}</CardContent>
           </Card>
         )
       )}

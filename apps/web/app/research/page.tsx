@@ -9,7 +9,7 @@ import { ExperimentsTable } from "@/app/research/ExperimentsTable";
 import { TrackedExperimentsTable } from "@/app/research/TrackedExperimentsTable";
 import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
 import { serverFetch, serverLocale } from "@/lib/serverApi";
-import { t as tt } from "@/lib/locale";
+import { t } from "@/lib/locale";
 
 type Tracked = { id: string; name: string; run_id: string; created_at: string | null };
 
@@ -53,9 +53,9 @@ export default async function ResearchPage() {
       <PageHeader
         eyebrow="Research · Step 3"
         title="Research"
-        description="W2–W10 closure: EvaluationResultV2 (10-dim + 6-level), Benchmark v2 (100 tasks), Ablation A–F, Significance (bootstrap CI / McNemar / Wilcoxon), Reproducibility L0–L5, Failure F01–F15. See docs/benchmark.md and research/paper/V2_paper_draft.md."
+        description={t(locale, "rs.closure")}
         actions={
-          <Link href="/analysis"><Button size="sm">Back to Analysis</Button></Link>
+          <Link href="/analysis"><Button size="sm">{t(locale, "rs.back")}</Button></Link>
         }
       />
       <div className="grid gap-4 sm:grid-cols-3">
@@ -66,21 +66,21 @@ export default async function ResearchPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Recent experiments ({exps.length})</CardTitle>
-          <CardDescription className="text-xs">Ablation result files served from research/results by GET /api/v1/research/experiments.</CardDescription>
+          <CardDescription className="text-xs">{t(locale, "rs.ablationNote")}</CardDescription>
         </CardHeader>
         <CardContent>
           {exps.length ? (
             <ExperimentsTable files={exps} />
           ) : expsFailure === "notFound" ? (
             <EmptyState
-              title="No results in this deployment"
-              description="The API answered 404: research/results was not shipped with this deployment. The ablation output is not the same as an absence of ablations."
+              title={t(locale, "rs.notShipped")}
+              description={t(locale, "rs.notShippedBody")}
             />
           ) : expsFailure ? (
             <ErrorState message={shared[expsFailure]} />
           ) : (
             <EmptyState
-              title="No results yet"
+              title={t(locale, "rs.noResults")}
               description={`Run the ablation runner to produce the first result files: ${RUNNER}`}
             />
           )}
@@ -89,7 +89,7 @@ export default async function ResearchPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">API-tracked experiments ({tracked.length})</CardTitle>
-          <CardDescription className="text-xs">Named runs recorded via POST /api/v1/experiments/ (SDK/scripts). A failed request is reported as an error, not as no runs.</CardDescription>
+          <CardDescription className="text-xs">{t(locale, "rs.recordedNote")}</CardDescription>
         </CardHeader>
         <CardContent>
           {trackedFailure ? (
@@ -98,8 +98,8 @@ export default async function ResearchPage() {
             <TrackedExperimentsTable rows={tracked} />
           ) : (
             <EmptyState
-              title="No tracked runs"
-              description="Record one programmatically (POST /api/v1/experiments/) to compare named runs here."
+              title={t(locale, "rs.noRuns")}
+              description={t(locale, "rs.noRunsBody")}
             />
           )}
         </CardContent>

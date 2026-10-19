@@ -354,7 +354,7 @@ export default function DatasetsPage() {
 
       {/* API diagnostics */}
       <details className="rounded-xl border bg-white px-4 py-3 text-sm shadow-sm">
-        <summary className="cursor-pointer text-xs font-medium text-zinc-500">API diagnostics</summary>
+        <summary className="cursor-pointer text-xs font-medium text-zinc-500">{t(locale, "ds.apiDiagnostics")}</summary>
         <p className="mt-2 text-xs leading-5 text-zinc-500">
           Base URL: <code className="font-mono">{API_BASE_URL}</code>
           {" · "}

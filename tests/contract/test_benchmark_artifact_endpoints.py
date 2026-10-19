@@ -39,6 +39,25 @@ PAGE_TO_ENDPOINT = {
     "apps/web/app/research/page.tsx": "/api/v1/research/experiments",
 }
 
+
+def _locale_sentence(locale: str, key: str) -> str:
+    """One sentence out of the web's string owner.
+
+    The reader-facing copy these guards police lives in `apps/web/lib/locale.ts` since R-13, so a guard that
+    wants to know what a branch *says* has to resolve the key the branch renders -- and the same assertion then
+    covers the 中文 page, which the source-text form could not see at all.
+    """
+    folded = re.sub(r":\s+", ": ", (ROOT / "apps/web/lib/locale.ts").read_text(encoding="utf-8"))
+    parts = folded.split(f"{locale}: {{", 1)
+    assert len(parts) == 2, (
+        f"the dictionary has no {locale} block written the way this guard parses it"
+    )
+    body = parts[1].split("\n  },", 1)[0]
+    found = re.search(rf'"{re.escape(key)}": "((?:[^"\\]|\\.)*)"', body)
+    assert found, f"{locale} defines no {key!r}: a reader of that language would see ⟨{key}⟩"
+    return found.group(1)
+
+
 #: The shapes `dsa_api.core.security.AuthMiddleware` treats as unauthenticated.
 PUBLIC_PROBE_PATHS = frozenset({"/health", "/ready", "/version"})
 
@@ -250,12 +269,23 @@ def test_the_research_page_keeps_an_absent_results_dir_apart_from_an_empty_one()
     assert anchor in text, "the page has no dedicated notFound branch"
     start = text.index(anchor)
     branch = text[start : text.index(") :", start)]
-    assert "deployment" in branch, (
+    # R-13 moved these sentences into the locale owner, so the branch names keys and the guard follows them.
+    # Checking the resolved sentences rather than the source text is the stronger form: it still refuses the
+    # wrong remedy and the reused empty-state copy, and it now has to refuse them in 中文 as well.
+    keys = re.findall(r't\(locale, "([^"]+)"\)', branch)
+    assert keys, "the 404 branch no longer renders any sentence through the locale owner"
+    words = " ".join(_locale_sentence("en", key) for key in keys)
+    zh_words = " ".join(_locale_sentence("zh", key) for key in keys)
+    assert "deployment" in words, (
         "the 404 branch does not say the artifact is missing from the deployment"
     )
-    assert "404" in branch
-    assert "ablation runner" not in branch, "the 404 branch tells the reader to do the wrong thing"
-    assert "No results yet" not in branch, "the 404 branch reuses the genuinely-empty copy"
+    assert "404" in words and "404" in zh_words
+    assert "ablation runner" not in words and "运行消融" not in zh_words, (
+        "the 404 branch tells the reader to do the wrong thing"
+    )
+    assert (
+        "No results yet" not in words and _locale_sentence("zh", "rs.noResults") not in zh_words
+    ), "the 404 branch reuses the genuinely-empty copy"
 
 
 def test_the_filesystem_read_check_can_fail():
