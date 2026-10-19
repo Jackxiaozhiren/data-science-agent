@@ -13860,3 +13860,34 @@ Falsified by making the standing limitation ignore the language: two checks went
 to sha256 `43cd1bf1…`. `tests/contract` 268 passed with the one known credential-dependent failure; report and
 export suites 58 passed; `ruff format --check` green over the gate's path list; the vendored twin re-synced with
 `--package dsa_agent` only.
+
+## 227. The free tier is the decision, and it is already policed by CI rather than by intent
+
+Asked whether to attach a persistent Render disk (about USD 7/month + USD 0.25/GB), the answer was **no -- the
+demo stays entirely free**. That closes §226's offer to prepare the blueprint change, and it needed no code
+movement, because the free posture is not merely the current setting: it is asserted.
+
+`tests/contract/test_persistence_blueprint_covers_writable_roots.py` (9 tests, green re-run at this commit) pins
+the live blueprint from three directions at once -- `plan` must be `free`, no `disk` may appear, and
+`DSA_DATABASE_URL` must start with `sqlite+aiosqlite:////tmp/` -- and it cross-checks `docs/hosted-demo.md`,
+which says the storage is ephemeral. So drift is reported, not absorbed: a disk added without a documentation
+change fails, a `/var/data` URL without a disk fails, and so does prose claiming durability the service does not
+have. The failure message even names the rule as a question to the author -- "the live demo was moved to a paid
+plan; re-read this file's intent". A decision that lives only in a conversation would have been reversed by the
+next session that saw `durable: false` and tried to help.
+
+What the choice means, stated plainly rather than discovered later: visitor-uploaded datasets, runs and artifacts
+disappear when the free instance spins down or redeploys. The mitigations that make that tolerable are all
+already shipped and were the work of this session and its neighbours -- the boot seeder now actually runs in the
+image, so the first screen refills itself (`/api/v1/datasets/` answered `titanic.csv` and
+`/api/v1/analysis/` answered `run-032c5e4412` on the live host after the redeploy, having answered
+`{"total":0}` an hour earlier), rows whose run died with a previous process are swept at startup with a message
+that says so, `/version` publishes `{"durable":false,"ephemeral_roots":["artifacts","database","datasets"]}`
+and the interface shows it, and the reproducibility bundle is the copy a visitor can keep before the instance
+goes. The `/var/data` ownership preparation in `953e9fd` stays harmless in this regime -- with no disk mounted,
+the directory simply exists inside the image and nobody writes to it.
+
+Left open on purpose: PR 77 (Node 26) is blocked by the project's own written rule that the base-image move
+needs independent review, which is the owner's call and not mine; PRs 72 and 82 cannot be merged under any
+decision because their `web-regression` is red, so they wait for either a migration task or
+`@dependabot ignore this major version` to quiet the queue.
