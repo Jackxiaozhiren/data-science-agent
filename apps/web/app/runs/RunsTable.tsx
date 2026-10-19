@@ -9,7 +9,7 @@ import { Input, Select } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { IN_FLIGHT_STATUSES } from "@/app/lib/analysisStatus";
 import { useLocale } from "@/app/lib/LocaleProvider";
-import { t } from "@/lib/locale";
+import { statusLabel, t } from "@/lib/locale";
 
 export type RunRow = { id: string; status: string; user_query: string; created_at: string | null };
 
@@ -58,11 +58,11 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
         <label htmlFor="runs-status" className="sr-only">{t(locale, "table.filterAria")}</label>
         <Select id="runs-status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-8 w-40" aria-label={t(locale, "table.filterAria")}>
           <option value="all">{t(locale, "table.allStatuses")}</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="FAILED">Failed</option>
+          <option value="COMPLETED">{statusLabel(locale, "COMPLETED")}</option>
+          <option value="FAILED">{statusLabel(locale, "FAILED")}</option>
           {IN_FLIGHT_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s.toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+              {statusLabel(locale, s)}
             </option>
           ))}
         </Select>
@@ -80,11 +80,11 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
       </div>
       {filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 px-4 py-6 text-center text-sm text-zinc-500">
-          No runs match — adjust the search or status filter.
+          {t(locale, "runs.noMatch")}
         </p>
       ) : (
         <DataTable<RunRow & Record<string, unknown>>
-          caption="Analysis runs"
+          caption={t(locale, "table.runsCaption")}
           keyOf={(r) => r.id}
           rows={filtered as (RunRow & Record<string, unknown>)[]}
           columns={[
@@ -95,16 +95,16 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
                   checked={selected.includes(r.id)}
                   disabled={!selected.includes(r.id) && selected.length >= 2}
                   onChange={() => toggle(r.id)}
-                  aria-label={`Select run ${r.id.slice(0, 12)} for comparison`}
+                  aria-label={t(locale, "runs.selectAria").replace("{id}", r.id.slice(0, 12))}
                   className="size-4 accent-zinc-900"
                 />
               ),
             },
-            { key: "id", header: "Run", render: (r) => <Link href={`/analysis/${r.id}`} className="font-mono text-xs underline">{r.id.slice(0, 14)}</Link> },
-            { key: "status", header: "Status", sortable: true, render: (r) => <StatusBadge status={r.status} /> },
-            { key: "user_query", header: "Query", render: (r) => <span className="block max-w-[280px] truncate" title={r.user_query}>{r.user_query}</span> },
-            { key: "created_at", header: "Created", sortable: true, render: (r) => <span className="whitespace-nowrap text-xs text-zinc-500">{r.created_at?.slice(0, 19).replace("T", " ") || "—"}</span> },
-            { key: "__open", header: "", render: (r) => <Link href={`/analysis/${r.id}`} className="whitespace-nowrap text-xs font-semibold underline">Inspect →</Link> },
+            { key: "id", header: t(locale, "col.run"), render: (r) => <Link href={`/analysis/${r.id}`} className="font-mono text-xs underline">{r.id.slice(0, 14)}</Link> },
+            { key: "status", header: t(locale, "col.status"), sortable: true, render: (r) => <StatusBadge status={r.status} /> },
+            { key: "user_query", header: t(locale, "col.query"), render: (r) => <span className="block max-w-[280px] truncate" title={r.user_query}>{r.user_query}</span> },
+            { key: "created_at", header: t(locale, "col.created"), sortable: true, render: (r) => <span className="whitespace-nowrap text-xs text-zinc-500">{r.created_at?.slice(0, 19).replace("T", " ") || "—"}</span> },
+            { key: "__open", header: "", render: (r) => <Link href={`/analysis/${r.id}`} className="whitespace-nowrap text-xs font-semibold underline">{t(locale, "runs.inspect")}</Link> },
           ]}
         />
       )}

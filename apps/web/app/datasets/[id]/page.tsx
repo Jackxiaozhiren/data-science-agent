@@ -132,10 +132,10 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
 
       <Tabs defaultValue="preview">
         <TabsList>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="schema">Schema</TabsTrigger>
-          <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
-          <TabsTrigger value="lineage">Lineage</TabsTrigger>
+          <TabsTrigger value="preview">{t(locale, "dsd.tabPreview")}</TabsTrigger>
+          <TabsTrigger value="schema">{t(locale, "dsd.tabSchema")}</TabsTrigger>
+          <TabsTrigger value="analyses">{t(locale, "dsd.tabAnalyses").replace("{n}", String(analyses.length))}</TabsTrigger>
+          <TabsTrigger value="lineage">{t(locale, "dsd.lineage")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="preview">
@@ -151,13 +151,15 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-zinc-500">{t(locale, "dsd.dupRows")}</span><span className="font-medium tabular-nums">{prof.duplicate_rows}</span></div>
                   <div className="flex justify-between"><span className="text-zinc-500">{t(locale, "dsd.missingRatio")}</span><span className="font-medium tabular-nums">{(prof.missing_ratio * 100).toFixed(1)}%</span></div>
-                  <div className="flex justify-between"><span className="text-zinc-500">Shape</span><span className="font-medium tabular-nums">{prof.rows} × {prof.columns}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">{t(locale, "dsd.shapeLabel")}</span><span className="font-medium tabular-nums">{prof.rows} × {prof.columns}</span></div>
                 </CardContent>
               </Card>
               <Card className="min-w-0">
                 <CardHeader>
                   <CardTitle className="text-sm">{t(locale, "dsd.colHealth")}</CardTitle>
-                  <CardDescription className="text-xs">Null share per column — over 20% gets flagged. Showing up to 8 of {prof.column_profiles.length}.</CardDescription>
+                            <CardDescription className="text-xs">
+            {t(locale, "dsd.nullShareBody").replace("{n}", String(prof.column_profiles.length))}
+          </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2.5 text-sm">
@@ -169,10 +171,13 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
                           <div className="flex items-center justify-between gap-2">
                             <code className="min-w-0 flex-1 truncate font-mono text-xs" title={c.name}>{c.name}</code>
                             <span className={`shrink-0 text-xs tabular-nums ${flagged ? "font-semibold text-amber-700" : "text-zinc-500"}`}>
-                              {flagged ? `⚠ ${nullPct.toFixed(1)}% null` : t(locale, "dsd.nullRatio").replace("{pct}", nullPct.toFixed(1))} · {c.unique_count ?? "—"} uniq
+                              {flagged
+                              ? t(locale, "dsd.nullFlag").replace("{pct}", nullPct.toFixed(1))
+                              : t(locale, "dsd.nullRatio").replace("{pct}", nullPct.toFixed(1))}
+                            {t(locale, "dsd.uniqSuffix").replace("{n}", String(c.unique_count ?? "—"))}
                             </span>
                           </div>
-                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={`${c.name}: ${nullPct.toFixed(1)}% null values`}>
+                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={t(locale, "dsd.barAria").replace("{name}", c.name).replace("{pct}", nullPct.toFixed(1))}>
                             <div
                               className={`h-full rounded-full ${flagged ? "bg-amber-400" : "bg-emerald-500"}`}
                               style={{ width: `${Math.max(2, Math.min(100, nullPct))}%` }}
@@ -236,7 +241,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
         <TabsContent value="lineage">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm"><Fingerprint className="size-4 text-zinc-500" aria-hidden /> Lineage</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-sm"><Fingerprint className="size-4 text-zinc-500" aria-hidden /> {t(locale, "dsd.lineage")}</CardTitle>
               <CardDescription className="text-xs">{t(locale, "dsd.provenanceSub")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 font-mono text-xs">

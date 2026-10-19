@@ -15,6 +15,38 @@
   200 for them and 404 for the client surface, asserted as parity between the two web-facing renderings rather
   than as two green status codes.
 
+### Added (post-4.6.0) — the interface's own words, all of them (R-13, closure)
+
+- **The last tier was the short one.** Column heads, table captions, the eleven run-status labels, tab names,
+  form labels, the filter's option text, the empty-result lines and the accessible names that wrap a value
+  (`Sort by {column}`, `Select run {id} for comparison`, `Copy call template for {name}`) now come from
+  `apps/web/lib/locale.ts`, which holds 603 keys per locale with both blocks key-identical. A 中文 visitor's runs
+  table used to read Status / Query / Created above rows of Chinese; the status filter used to offer
+  `Data_profiling` while the page said everything else in Chinese.
+- **What changed in the English too.** A run's status chip rendered the raw enum token, so the badge said
+  `COMPLETED` and the filter said `Data_profiling`; both now read "Completed" and "Data profiling" through
+  `statusLabel()`, which is also what the Chinese page uses. A status the vocabulary does not declare still
+  renders as its own token -- `test_every_declared_status_has_a_label_in_both_locales` pins that every declared
+  one has a label in both languages, and it was falsified by adding a twelfth state and watching it go red.
+  The settings readout lines moved from `word <strong>value</strong> …` into one dictionary sentence with
+  placeholders, which gives up the inline bold: a Chinese sentence needs Chinese punctuation, and fragments
+  around markup cannot carry it.
+- **Two second owners, removed.** "Back to Analysis →" was dictionary key `mcp.back` that three pages had
+  borrowed, so it is `common.backToAnalysis`; and `/failures` had kept its own copy of "Evaluation · Step 3"
+  while the dictionary owned the same sentence, which is why that route still showed an English eyebrow. The
+  sweep that looks for that defect now runs at **12 characters plus a required space** instead of 40, with
+  whole-line comments stripped, and it found seven such pages in total.
+- **`CopyButton`'s accessible name said "Copy runner runner command"** -- it composed `${label} runner command`
+  onto a label that already read "Copy runner". The suffix is gone, the label is the name, and the unused
+  `label = "Copy"` default went with it.
+- **The closure claim is measured on the rendered page.** `build/r13i-chrome-acceptance.mjs` reads only the
+  regions the interface owns (`th`, `option`, `summary`, `label`, `h1`–`h3`, `button`, nav, header, footer) on 17
+  routes in each language: zero Latin-only chrome strings outside a printed exemption list, 74–94% of chrome
+  regions carrying CJK, and it fails when a column head is put back (`th:"Status"`), which is how the instrument
+  was shown to be able to fail. The source-level AST count went from 57 multi-word reader-facing literals to 2,
+  both declared identifiers. `docs/FRONTEND_IA.md` names the two detectors' blind spots, including the one that
+  hid the caveat banner until the page-level check found it.
+
 ### Added (post-4.6.0) — what goes wrong is said in both languages (R-13, last half)
 
 - **The failure vocabulary is now the dictionary's.** A 401, a 404, a 5xx, a 4xx and an API that never answered

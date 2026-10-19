@@ -128,6 +128,23 @@ def test_a_owned_sentence_has_exactly_one_owner() -> None:
         assert sentence in _source(), f"{sentence!r} is owned by no locale at all"
 
 
+def _code_only(text: str) -> str:
+    """Drop whole-line comments and JSX comment blocks; keep every line that carries code.
+
+    The sweep below compares dictionary text against the corpus, and the five hits it produced at the lowered
+    floor were all comments -- `{/* Recent analyses */}`, `// would leave the visitor staring at "Checking API…"`.
+    Deleting only lines that *start* with a comment marker keeps every code line intact, so the gate cannot be
+    silenced by putting its own needle behind a comment strip wide enough to eat source.
+    """
+    kept = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
+            continue
+        kept.append(re.sub(r"\{/\*.*?\*/\}", " ", line))
+    return "\n".join(kept)
+
+
 def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
     """The list above is hand-curated; this one sweeps every sentence the dictionary owns.
 
@@ -137,14 +154,19 @@ def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
     matching those would flag code that is not a copy of anything. A page that interpolates *inside* a sentence
     is not caught by an exact-value sweep either; that is why this file also refuses a page to own a transport
     line at all (test_web_fetch_outcome_vocabulary.py), so the interpolated ones are the reviewed set.
+
+    R-13f lowered the floor from 40 characters to 12 plus a required space. The old floor had a real blind spot:
+    `/failures` carried its own copy of "Evaluation · Step 3" (19 characters) while the dictionary owned the same
+    sentence under `failures.eyebrow`, and the 中文 route kept rendering the English eyebrow. A sweep that stops
+    at 40 cannot see a short second owner, and short labels are exactly what the table and status tier moved.
     """
-    sentences = [value for value in _keys("en").values() if len(value) >= 40]
-    assert len(sentences) >= 20, (
+    sentences = [value for value in _keys("en").values() if len(value) >= 12 and " " in value]
+    assert len(sentences) >= 120, (
         f"the sweep found only {len(sentences)} sentences -- the dictionary is not the size this guard assumes, "
         "so it is checking less than it claims"
     )
     corpus = {
-        str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
+        str(path.relative_to(ROOT)): _code_only(path.read_text(encoding="utf-8"))
         for path in list(WEB.glob("app/**/*.tsx")) + list(WEB.glob("app/**/*.ts"))
     }
     assert len(corpus) >= 30, f"the sweep walked only {len(corpus)} files -- the glob broke"

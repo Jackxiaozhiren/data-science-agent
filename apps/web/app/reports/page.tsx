@@ -85,8 +85,8 @@ export default async function ReportsPage() {
               {[...groups.entries()].map(([dsId, items], gi) => (
                 <details key={dsId} open={gi === 0} className="rounded-xl border border-zinc-100">
                   <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium hover:bg-zinc-50">
-                    {names.get(dsId) ?? (dsId === "unknown" ? t(locale, "reportsPage.unknownDataset") : `Dataset ${dsId.slice(0, 8)}`)}
-                    <span className="ml-2 font-mono text-xs font-normal text-zinc-400">{items.length} report{items.length === 1 ? "" : "s"}</span>
+                    {names.get(dsId) ?? (dsId === "unknown" ? t(locale, "reportsPage.unknownDataset") : t(locale, "reportsPage.datasetPrefix").replace("{id}", dsId.slice(0, 8)))}
+                    <span className="ml-2 font-mono text-xs font-normal text-zinc-400">{t(locale, items.length === 1 ? "reportsPage.countOne" : "reportsPage.countMany").replace("{n}", String(items.length))}</span>
                   </summary>
                   <div className="border-t border-zinc-100 p-3 sm:p-4">
                     <ReportsTable runs={items} />

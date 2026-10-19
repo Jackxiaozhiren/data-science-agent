@@ -257,7 +257,10 @@ function FailureCard({ run }: { run: RunDetail }) {
   return (
     <Card className="border-red-200 bg-red-50/50">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm text-red-800"><XCircle className="size-4" aria-hidden /> This run failed{failed.length > 0 ? ` — ${failed.length} tool call${failed.length === 1 ? "" : "s"} errored` : ""}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm text-red-800"><XCircle className="size-4" aria-hidden /> {t(locale, "insp.runFailed")}
+          {failed.length > 0
+            ? ` ${t(locale, failed.length === 1 ? "insp.failedCallsOne" : "insp.failedCallsMany").replace("{n}", String(failed.length))}`
+            : ""}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {run.error && (
@@ -540,7 +543,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               ) : (
                 <Download className="size-4" aria-hidden />
               )}{" "}
-              Download bundle
+              {t(locale, "insp.downloadBundle")}
             </Button>
           </>
         }
@@ -578,7 +581,15 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
           <CardContent className="space-y-2.5 p-4 pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium">
-                {isReview ? "Paused for human review" : <>Running… step {Math.min(stepsDone + 1, Math.max(stepsTotal, 1))} of {Math.max(stepsTotal, 1)}</>}
+                {isReview ? (
+                  t(locale, "insp.pausedReview")
+                ) : (
+                  <>
+                    {t(locale, "insp.runningStep")
+                      .replace("{done}", String(Math.min(stepsDone + 1, Math.max(stepsTotal, 1))))
+                      .replace("{total}", String(Math.max(stepsTotal, 1)))}
+                  </>
+                )}
               </p>
               <div className="flex items-center gap-3">
                 <span className="text-xs tabular-nums text-zinc-500">
@@ -632,8 +643,11 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
             >
               <AlertTriangle className="size-4 shrink-0" aria-hidden />
               <span>
-                <strong>{limitations.length} caveat{limitations.length === 1 ? "" : "s"}{severeCount > 0 ? ` (${severeCount} critical)` : ""}</strong>
-                {" — review limitations before trusting these findings. View Insights →"}
+                <strong>
+                  {t(locale, limitations.length === 1 ? "insp.caveatOne" : "insp.caveatMany").replace("{n}", String(limitations.length))}
+                  {severeCount > 0 ? t(locale, "insp.criticalSuffix").replace("{n}", String(severeCount)) : ""}
+                </strong>
+                {t(locale, "insp.caveatTail")}
               </span>
             </button>
           )}
@@ -767,7 +781,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                               )}
                               <details>
                                 <summary className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900">
-                                  <ChevronDown className="size-3" aria-hidden /> input/output
+                                  <ChevronDown className="size-3" aria-hidden /> {t(locale, "insp.ioSummary")}
                                 </summary>
                                 <div className="mt-2 space-y-2">
                                   <div>
@@ -775,7 +789,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                                     <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-zinc-950 p-2 font-mono text-[11px] leading-5 text-zinc-200">{JSON.stringify(tc.input, null, 2)}</pre>
                                   </div>
                                   <div>
-                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Output{tc.error ? " · error" : ""}</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">{t(locale, "insp.outputLabel")}{tc.error ? t(locale, "insp.outputErrorSuffix") : ""}</p>
                                     <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-zinc-950 p-2 font-mono text-[11px] leading-5 text-zinc-200">{tc.error ?? JSON.stringify(tc.output ?? null, null, 2)}</pre>
                                   </div>
                                 </div>
@@ -843,7 +857,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               <Card key={ins.id}>
                 <CardContent className="space-y-2 p-4 pt-4">
                   <p className="text-sm leading-6">{ins.finding}</p>
-                  <p className="text-xs text-zinc-500">Evidence: {ins.evidence_ids.join(", ") || "—"}</p>
+                  <p className="text-xs text-zinc-500">{t(locale, "insp.evidencePrefix")} {ins.evidence_ids.join(", ") || "—"}</p>
                   {ins.limitation && (() => {
                     const sev = limitationSeverity(ins.limitation);
                     return (
@@ -866,7 +880,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
           <div className="grid items-start gap-4 lg:grid-cols-[0.9fr_1.1fr]">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Artifacts ({st?.artifacts.length ?? 0})</CardTitle>
+                <CardTitle className="text-sm">{t(locale, "insp.artifactsTitle").replace("{n}", String(st?.artifacts.length ?? 0))}</CardTitle>
                 <CardDescription className="text-xs">{t(locale, "insp.artifactsBody")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -942,7 +956,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
       <FollowUpBox run={run} />
 
       <p className="text-xs text-zinc-400">
-        {t(locale, "insp.fullTraceVia")} <code className="font-mono">GET /api/v1/analysis/{run.id}</code> · Evidence graph at{" "}
+        {t(locale, "insp.fullTraceVia")} <code className="font-mono">GET /api/v1/analysis/{run.id}</code> · {t(locale, "runsPage.evidenceGraphAt")}{" "}
         <code className="font-mono">/evidence/{"{evidence_id}"}</code> · <Link href="/runs" className="underline">{t(locale, "insp.allRuns")}</Link>
       </p>
     </div>

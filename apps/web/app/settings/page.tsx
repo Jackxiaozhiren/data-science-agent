@@ -31,8 +31,8 @@ type View = {
 };
 
 const MODES = [
-  { value: "heuristic", label: "Local planner — no model, no cost, no data leaves this machine" },
-  { value: "real", label: "Real model — sends your question and your data to the endpoint below" },
+  { value: "heuristic", labelKey: "settings.modeHeuristic" },
+  { value: "real", labelKey: "settings.modeReal" },
 ];
 
 export default function SettingsPage() {
@@ -149,22 +149,19 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">{t(locale, "settings.noCredentialTitle")}</CardTitle>
-            <CardDescription className="text-xs">
-              A hosted demo has nowhere to keep a secret between visits, and a key that is accepted and then
-              lost on restart is worse than one that is refused. So the setting is not partially supported
-              here: it is off, and the reason is on the page.
-            </CardDescription>
+            <CardDescription className="text-xs">{t(locale, "settings.noKeyBody")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p>
               {t(locale, "settings.runLocal")} <code className="rounded bg-zinc-100 px-1">dsa ui</code>{" "}
-              keeps its settings in the data directory you chose, reads them from disk on every run, and sends
-              nothing anywhere you did not point it at.
+              {t(locale, "settings.runLocalTail")}
             </p>
             <p className="text-xs text-zinc-500">
-              {t(locale, "settings.resolvesWith")} <strong>{view.effective.mode}</strong>,
-              provider <strong>{view.effective.provider}</strong>, decided by{" "}
-              <strong>{view.effective.source}</strong>.
+              {t(locale, "settings.resolvesWith")}{" "}
+              {t(locale, "settings.resolvesLine")
+                .replace("{mode}", view.effective.mode)
+                .replace("{provider}", view.effective.provider)
+                .replace("{source}", view.effective.source)}
             </p>
           </CardContent>
         </Card>
@@ -185,16 +182,15 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">{t(locale, "settings.inEffect")}</CardTitle>
-            <CardDescription className="text-xs">
-              Read from the process that will run your next analysis, not from a label.
-            </CardDescription>
+            <CardDescription className="text-xs">{t(locale, "settings.inEffectBody")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>
-              mode <strong>{view.effective.mode}</strong> · provider{" "}
-              <strong>{view.effective.provider}</strong> · model{" "}
-              <strong>{view.effective.model ?? "—"}</strong> · decided by{" "}
-              <strong>{view.effective.source}</strong>
+              {t(locale, "settings.effectiveLine")
+                .replace("{mode}", view.effective.mode)
+                .replace("{provider}", view.effective.provider)
+                .replace("{model}", view.effective.model ?? "—")
+                .replace("{source}", view.effective.source)}
             </p>
             {view.effective.error && (
               <p className="text-xs text-amber-800" role="status">
@@ -208,8 +204,7 @@ export default function SettingsPage() {
             )}
             {view.settings_file_readable_by_others && (
               <p className="text-xs text-red-700" role="alert">
-                The settings file is readable by other users on this machine. Re-save the settings to restore
-                0600, or check the directory&apos;s permissions.
+                {t(locale, "settings.permsWarning")}
               </p>
             )}
             <p className="text-xs text-zinc-500">{view.suggestion}</p>
@@ -219,28 +214,24 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
-              <KeyRound className="size-4" aria-hidden /> Configure a provider
+              <KeyRound className="size-4" aria-hidden /> {t(locale, "settings.configureProvider")}
             </CardTitle>
-            <CardDescription className="text-xs">
-              Saved to a file in this instance&apos;s data directory, readable only by your user. The value is
-              never sent back to this page, so the field above stays empty after a save — that is deliberate,
-              not a bug.
-            </CardDescription>
+            <CardDescription className="text-xs">{t(locale, "settings.saveNote")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <label className="block text-sm">
-              <span className="mb-1 block text-xs font-medium text-zinc-600">Mode</span>
+              <span className="mb-1 block text-xs font-medium text-zinc-600">{t(locale, "settings.modeLabel")}</span>
               <Select value={mode} onChange={(e) => setMode(e.target.value)}>
                 {MODES.map((m) => (
                   <option key={m.value} value={m.value}>
-                    {m.label}
+                    {t(locale, m.labelKey)}
                   </option>
                 ))}
               </Select>
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block text-xs font-medium text-zinc-600">Provider</span>
+              <span className="mb-1 block text-xs font-medium text-zinc-600">{t(locale, "settings.providerLabel")}</span>
               <Select value={provider} onChange={(e) => setProvider(e.target.value)}>
                 {view.providers.map((name) => (
                   <option key={name} value={name}>
@@ -260,19 +251,20 @@ export default function SettingsPage() {
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block text-xs font-medium text-zinc-600">Endpoint</span>
+              <span className="mb-1 block text-xs font-medium text-zinc-600">{t(locale, "settings.endpointLabel")}</span>
               <Input
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
                 placeholder={
-                  provider === "ollama" ? "http://localhost:11434/v1" : "https://… /v1 (OpenAI-compatible)"
+                  provider === "ollama" ? "http://localhost:11434/v1" : t(locale, "settings.phOpenai")
                 }
               />
             </label>
 
             <label className="block text-sm">
               <span className="mb-1 block text-xs font-medium text-zinc-600">
-                Credential {hasCredential ? "(one is already stored)" : ""}
+                {t(locale, "settings.credentialLabel")}
+                {hasCredential ? ` ${t(locale, "settings.credentialStored")}` : ""}
               </span>
               <Input
                 type="password"

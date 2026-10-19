@@ -79,9 +79,9 @@ export default async function FailuresPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Evaluation · Step 3"
+        eyebrow={t(locale, "failures.eyebrow")}
         title={t(locale, "failures.title")}
-        description={`Taxonomy F01–F15 · Aggregated from ${stats.runsScanned} runs in this environment · Recovery rate · Agent/tool with most errors · Unsupported claim rate.`}
+        description={t(locale, "failures.descBody").replace("{n}", String(stats.runsScanned))}
         actions={
           <Link href="/analysis"><Button size="sm">{t(locale, "common.backToAnalysis")}</Button></Link>
         }

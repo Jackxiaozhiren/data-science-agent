@@ -57,7 +57,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            aria-label={open ? "Close menu" : "Open menu"}
+            aria-label={open ? t(locale, "header.closeMenu") : t(locale, "header.openMenu")}
             className="rounded-lg border border-zinc-200 p-2 md:hidden"
           >
             {open ? <X className="size-4" /> : <Menu className="size-4" />}
@@ -68,7 +68,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         <div className="border-t border-zinc-200 bg-white px-4 py-3 md:hidden">
           <div className="flex flex-col gap-1 text-sm">
             <Link href="/datasets" onClick={() => setOpen(false)} className="rounded-lg bg-zinc-900 px-3 py-2 font-medium text-white">
-              Try DSA
+              {t(locale, "header.try")}
             </Link>
             {analystGroup.items.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100">

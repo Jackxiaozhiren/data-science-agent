@@ -122,7 +122,7 @@ function CompareWorkspace() {
           icon={<GitCompareArrows className="size-5 text-zinc-400" aria-hidden />}
           title={t(locale, "cmp.pickTwo")}
           description={t(locale, "cmp.pickTwoBody")}
-          action={<Link href="/runs"><Button size="sm">Go to Runs →</Button></Link>}
+          action={<Link href="/runs"><Button size="sm">{t(locale, "cmp.goToRuns")}</Button></Link>}
         />
       ) : a && b ? (
         <>
@@ -135,7 +135,7 @@ function CompareWorkspace() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={r.status} />
-                  <Link href={`/analysis/${r.id}`} className="text-xs font-medium underline">Inspect →</Link>
+                  <Link href={`/analysis/${r.id}`} className="text-xs font-medium underline">{t(locale, "runs.inspect")}</Link>
                 </CardContent>
               </Card>
             ))}

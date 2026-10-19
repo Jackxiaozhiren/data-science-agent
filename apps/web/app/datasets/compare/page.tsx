@@ -195,7 +195,12 @@ export default function ComparePage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">{t(locale, "cmpds.overlapTitle")}</CardTitle>
-                  <CardDescription className="text-xs">{common.length} shared · {onlyLeft.length} only in A · {onlyRight.length} only in B (matched by name).</CardDescription>
+                            <CardDescription className="text-xs">
+            {t(locale, "cmpds.sharedLine")
+              .replace("{shared}", String(common.length))
+              .replace("{left}", String(onlyLeft.length))
+              .replace("{right}", String(onlyRight.length))}
+          </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-1.5">
                   {common.map((c) => <Badge key={c.name} variant="success">{c.name}</Badge>)}

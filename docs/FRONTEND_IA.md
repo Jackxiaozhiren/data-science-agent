@@ -167,19 +167,46 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   completion notification a live run writes. The English-only constant that used to own them is gone; a page may
   no longer keep its own copy, which `tests/contract/test_web_locale_parity.py` sweeps and
   `tests/contract/test_web_fetch_outcome_vocabulary.py` pins per locale.
-- **Page chrome past the first-run path.** The shell is bilingual now. `States.tsx` (the error heading, its
-  Retry, the two skeleton labels), the route-level `loading.tsx` and `error.tsx`, `DataTable.tsx`'s empty state,
-  the dialog's close labels, the language switch's group name, the hero caption and node labels, the sidebar's
-  groups and every one of its links, the header nav, the footer tagline and landmark names, both run/report
-  tables' search and filter controls, the plan timeline's empty line, the whole run inspector (67 strings) and
-  the rest of the loop -- the runs list, the reports list, the run-detail header and stats, the dataset comparison
-  screen (51 strings) -- read `apps/web/lib/locale.ts`. What is left is route-specific copy on the secondary
-  surfaces: **15 long reader-facing sentences in 7 files** under the scan that counted 89 before this work
-  started (it needs ≥3 words in a JSX text node or a sentence over 18 characters, so it *understates* -- the same
-  tree counts **105 strings in 16 files** once single-word column headings, eyebrows and `label=` props are
-  included, led by `evaluations`, `settings` and `failures`). Both numbers are stated because quoting only the
-  flattering one is how an inventory becomes a claim. Two shapes stay English on purpose: technical identifiers
-  (`SHA-256`, `MCP`, a protocol version) and anything the run itself produced.
+- **Page chrome past the first-run path: closed, and measured twice.** The shell is bilingual. `States.tsx` (the
+  error heading, its Retry, the two skeleton labels), the route-level `loading.tsx` and `error.tsx`,
+  `DataTable.tsx`'s empty state and every sortable column's accessible name, the dialog's close labels, the
+  language switch's group name, the hero caption and node labels, the sidebar's groups and every one of its links,
+  the header nav and mobile menu button, the footer tagline and landmark names, both run/report tables' search,
+  filter and empty-line text, the plan timeline's empty line, the whole run inspector (67 strings) and the rest of
+  the loop -- the runs list, the reports list, the run-detail header and stats, the dataset comparison screen,
+  the settings and failures screens, the MCP reference, the six evaluation levels, the replay page, the benchmarks
+  page and its copy button -- read `apps/web/lib/locale.ts` (603 keys per locale, the two blocks key-identical).
+  The last tier was the one the first counters could not see: **every table column head and caption, the eleven
+  run-status labels, and the short labels of the secondary pages.** Two measures are quoted because they answer
+  different questions. In the source, `build/r13j-ast-inventory.mjs` walks the TypeScript AST and reports
+  reader-position string literals; it went from **57 multi-word candidates in 19 files to 2**, and both survivors
+  are declared identifiers (`dataset_id ·`, the Ollama endpoint placeholder). On the rendered page,
+  `build/r13i-chrome-acceptance.mjs` reads only the regions the interface owns -- `th`, `option`, `summary`,
+  `label`, `h1`–`h3`, `button`, nav/header/footer -- on 17 routes in 中文 and 17 in English: **zero chrome regions
+  show a Latin-only string outside the declared identifier set, and 74–94% of the chrome regions carry CJK.** Its
+  exemption list is printed with every run (4–10 regions per route, and they are GitHub, the language switch's
+  endonym "English", endpoint paths, provider ids from the API, and uploaded file names), because an instrument
+  that exempts everything would also report a clean page.
+- **Three detectors, each blind in a way the next one had to fix.** The first R-13 counter was a line-matching
+  scan: it could not see a JSX text node wrapped over three lines ("No runs match — adjust the search or status
+  filter." in `RunsTable`) and it could not see a string attribute at all. The AST pass fixed that, and its own
+  exemption -- "this value already exists in the dictionary, so it is not an orphan" -- hid the actual defect
+  class: `/failures` kept its own copy of "Evaluation · Step 3" while the dictionary owned the sentence, and seven
+  pages were doing that. Reporting duplicates instead of skipping them found all seven. Then the page-wide text
+  comparison had to go, because it cannot tell chrome from data: a seeded run's own English report is not a leak.
+  The region selector is what made the claim decidable, and it caught one more leak none of the others could
+  (`RunInspector`'s caveat banner, `{n} caveat{s} (m critical) — review limitations…`), which is now four keys.
+  `test_no_dictionary_sentence_is_also_written_into_a_page` was widened from a 40-character floor to **12 plus a
+  required space**, with whole-line comments stripped so a comment quoting a dictionary line is not a second
+  owner; both that sweep and the new `test_every_declared_status_has_a_label_in_both_locales` were falsified by
+  planting the failure and restoring by hash.
+- **Two English strings changed visible text, on purpose.** The status chip used to render the raw enum token, so
+  `COMPLETED` appeared in capitals and the in-flight filter option said `Data_profiling`; both now come from
+  `statusLabel()`, so the chip says "Completed" and the option says "Data profiling". The settings readout lines
+  moved from `word <strong>value</strong> word <strong>value</strong>` into one dictionary sentence with
+  placeholders, which drops the inline bold -- punctuation belongs to the sentence, and a Chinese sentence needs
+  Chinese punctuation, so fragments around markup could not carry both. A status the enum does not declare is
+  still rendered as the token it arrived with: labelling a state nobody declared would invent one.
 - **The locale provider wraps the whole shell, and that was a bug.** `LocaleProvider` used to sit around
   `{children}` inside `<main>`, while the sidebar is a sibling of `<main>` and a client component reading that
   context -- so on a 中文 page the sidebar, and anything else outside the provider, rendered the dictionary's

@@ -4,6 +4,8 @@ import * as React from "react";
 import { Check, Copy } from "lucide-react";
 import { Badge } from "@/app/components/ui/badge";
 import { DataTable } from "@/app/components/data/DataTable";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
 export type McpTool = {
   name: string;
@@ -16,6 +18,7 @@ export type McpTool = {
 // Client wrapper: column render functions cannot cross the server→client
 // boundary, so they are defined here next to the client DataTable.
 export function McpTable({ tools }: { tools: McpTool[] }) {
+  const locale = useLocale();
   const [copied, setCopied] = React.useState<string | null>(null);
 
   async function copyTemplate(name: string) {
@@ -33,35 +36,37 @@ export function McpTable({ tools }: { tools: McpTool[] }) {
     }
   }
 
+  const tpl = (key: string, name: string) => t(locale, key).replace("{name}", name);
+
   return (
     <DataTable<McpTool & Record<string, unknown>>
-      caption="MCP tools"
-      keyOf={(t) => t.name}
+      caption={t(locale, "mcp.toolsCaption")}
+      keyOf={(tool) => tool.name}
       rows={tools as (McpTool & Record<string, unknown>)[]}
       columns={[
-        { key: "name", header: "Tool", sortable: true, render: (t) => <code className="font-mono text-xs font-medium">{t.name}</code> },
-        { key: "description", header: "Description", render: (t) => <span className="block max-w-[420px] text-xs leading-5 text-zinc-600" title={t.description}>{t.description}</span> },
-        { key: "tool_class", header: "Class", sortable: true, render: (t) => <Badge variant="secondary">{t.tool_class}</Badge> },
+        { key: "name", header: t(locale, "col.tool"), sortable: true, render: (tool) => <code className="font-mono text-xs font-medium">{tool.name}</code> },
+        { key: "description", header: t(locale, "col.description"), render: (tool) => <span className="block max-w-[420px] text-xs leading-5 text-zinc-600" title={tool.description}>{tool.description}</span> },
+        { key: "tool_class", header: t(locale, "col.class"), sortable: true, render: (tool) => <Badge variant="secondary">{tool.tool_class}</Badge> },
         {
-          key: "timeout_ms", header: "Timeout", sortable: true,
-          render: (t) => <span className="whitespace-nowrap tabular-nums text-xs">{t.timeout_ms != null ? `${Math.round(t.timeout_ms / 1000)}s` : "—"}</span>,
+          key: "timeout_ms", header: t(locale, "col.timeout"), sortable: true,
+          render: (tool) => <span className="whitespace-nowrap tabular-nums text-xs">{tool.timeout_ms != null ? `${Math.round(tool.timeout_ms / 1000)}s` : "—"}</span>,
         },
         {
-          key: "idempotency", header: "Idempotent", render: (t) => (
-            <span className="text-xs">{t.idempotency ? "yes" : "—"}</span>
+          key: "idempotency", header: t(locale, "col.idempotent"), render: (tool) => (
+            <span className="text-xs">{tool.idempotency ? t(locale, "mcp.yes") : "—"}</span>
           ),
         },
         {
-          key: "__tpl", header: "", render: (t) => (
+          key: "__tpl", header: "", render: (tool) => (
             <button
               type="button"
-              onClick={() => copyTemplate(t.name)}
-              title={`Copy tools/call template for ${t.name}`}
-              aria-label={`Copy call template for ${t.name}`}
+              onClick={() => copyTemplate(tool.name)}
+              title={tpl("mcp.copyTitle", tool.name)}
+              aria-label={tpl("mcp.copyAria", tool.name)}
               className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
             >
-              {copied === t.name ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-              {copied === t.name ? "Copied" : "Template"}
+              {copied === tool.name ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+              {copied === tool.name ? t(locale, "copy.copied") : t(locale, "mcp.template")}
             </button>
           ),
         },

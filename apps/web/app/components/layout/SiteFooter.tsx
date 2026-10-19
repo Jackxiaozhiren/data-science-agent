@@ -18,10 +18,10 @@ export async function SiteFooter() {
             GitHub
           </a>
           <a href="https://github.com/Jackxiaozhiren/data-science-agent/tree/main/docs" target="_blank" rel="noreferrer" className="hover:underline">
-            Docs
+            {t(locale, "footer.docs")}
           </a>
           <a href={apiUrl("/health")} target="_blank" rel="noreferrer" className="hover:underline">
-            API /health
+            {t(locale, "footer.health")}
           </a>
           <a href={apiUrl("/version")} target="_blank" rel="noreferrer" className="hover:underline">
             /version

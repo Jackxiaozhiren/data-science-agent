@@ -13625,3 +13625,89 @@ side, and unchanged by any of this: the instance now running was built from the 
 screen stays empty until it is rebuilt and redeployed, and `storage.durable` is still false with all three roots
 on the container filesystem -- which needs the Render dashboard, not a credential I have (measured: no
 `RENDER_API_KEY` in this environment).
+
+## 224. Session close (Lane F): the short labels were the last tier, and closing them needed a parser and a DOM region
+
+2026-10-19, continuing §219. Five batches of R-13 had shipped and the language layer still left the secondary
+pages in English. This section records what it took to find out how much, because the answer was not in the
+numbers §219 quoted.
+
+**What the §219 inventory could not see, and how each blind spot was closed.**
+
+- The 89 → 15 → 10 "long reader-facing sentences" counter was a line-matching scan. It cannot see a JSX text node
+  wrapped across lines (`RunsTable`'s "No runs match — adjust the search or status filter." was in the tree the
+  whole time and never named), and it does not look at string attributes at all. Replaced with a TypeScript AST
+  walk (`typescript` 5.9.3 already in `apps/web/node_modules`): every `JsxText`, every string-literal attribute,
+  every template chunk, classified by the element it sits in and by whether the nearest decisive ancestor is a
+  reader attribute, a `PropertyAssignment`, a JSX child, a `cn(...)` call or a `t(...)` key. Structural counts,
+  measured on this tree: **57 multi-word reader-facing literals in 19 files** before batches F/G, **2 after**,
+  and both survivors are declared identifiers (`dataset_id ·` on the provenance card, the Ollama endpoint
+  placeholder).
+- The AST walk then had to lose its own best idea. It skipped any literal that equalled a dictionary value, on
+  the reasoning that such a string is already owned. That is the opposite: a page holding a copy of a sentence the
+  dictionary owns is the second-owner drift R-13 exists to prevent. Reporting them instead of skipping them found
+  **seven**, including one nobody had flagged -- `/failures` rendered its own "Evaluation · Step 3" eyebrow on a
+  中文 page (`failures.eyebrow` had been created for it, so the sweep at 40 characters could not see a 19-character
+  sentence either). All seven are gone; `duplicates=0`.
+- Chrome versus data is not decidable from page text. The first acceptance read `document.body.innerText` and
+  compared whole lines to dictionary values, so it called the seeded run's own English report a leak and missed a
+  real one inside a `<code>`-adjacent node. The instrument now selects the regions the interface owns -- `th`,
+  `option`, `summary`, `label`, `h1`–`h3`, `button`, nav, header, footer -- and examines those, leaving table
+  cells, code and the report body alone. 17 routes × 中文 and 17 × English: **`R13I_CHROME_ACCEPTANCE_PASS`
+  (34/34)**, with **74–94% of chrome regions carrying CJK** and 4–10 exempted regions per route printed on every
+  run. The exemptions are enumerable and they are: the language switch's endonym "English", GitHub, endpoint
+  paths (`/health`, `/version`), the protocol version heading, provider ids the API returns (`ollama`, `openai`,
+  `openai-compat`), and uploaded file names in `<option>` and a heading. One real leak was found only by this
+  instrument: the caveats banner in `RunInspector` (`{n} caveat{s} (m critical) — review limitations before
+  trusting these findings. View Insights →`), now four keys.
+
+**The tier that moved.** Column heads (20 distinct), four table captions, the eleven declared run statuses, the
+filter's option text, tab names, form labels, two empty-result lines, a report counter, an overlap sentence, a
+null-share sentence, twelve settings strings, the research header and its three stat cards, the MCP table's five
+heads plus its copy button, the replay page, the evaluations levels, the benchmark cards and charts, the shell's
+menu button and footer links. `apps/web/lib/locale.ts` is 603 keys per locale, the two blocks key-identical.
+`statusLabel()` is the one new owner function: a declared status gets its label in the visitor's language, an
+undeclared token renders as itself, because inventing a translation for a state nobody declared is worse.
+
+**Visible English changes, named because a reader will meet them.** The status chip used to print the raw enum
+(`COMPLETED`), and the filter used to derive `Data_profiling` by title-casing it; both now read "Completed" and
+"Data profiling". The settings readout lines went from `word <strong>value</strong> word <strong>value</strong>`
+into single dictionary sentences, which drops the inline bold -- the alternative was an English comma and an
+English "decided by" inside a Chinese sentence. `CopyButton`'s accessible name was
+`aria-label={`${label} runner command`}`, so with `label="Copy runner"` a screen reader announced "Copy runner
+runner command"; the label is now the name, and the unused `label = "Copy"` default is gone with the required prop.
+
+**Guards added or widened, each falsified by planting the failure.**
+
+- `test_no_dictionary_sentence_is_also_written_into_a_page`: floor 40 → **12 characters plus a required space**,
+  with whole-line comments stripped (the five hits at the new floor were all comments quoting a dictionary line).
+  Planted `title="Plan timeline"` in `runs/compare` → red naming that file and value; restored, sha256 identical.
+- `test_every_declared_status_has_a_label_in_both_locales` (new): reads `ANALYSIS_STATUSES` through the file's
+  existing `_ts_array` and requires `status.X` in both locale blocks. Planted a twelfth state `SPECULATIVE` →
+  red with `en carries no label for ['status.SPECULATIVE']`; restored, sha256 identical.
+- `test_status_badge_branches_all_carry_the_state_word` had to be re-aimed, not relaxed: it asserted the substring
+  `status` appears in each badge branch, which was a proxy for "the badge says the state in words". After
+  `statusLabel()` the branch renders `{label}`, so the guard now pins both halves -- the branch renders `{label}`,
+  *and* `const label = statusLabel(locale, status);` is present, so the text still comes from the status.
+
+**Verification.** `npx tsc --noEmit` exit 0 (the completion signal after every JSX batch -- a script that edits
+attribute values produces code that type-errors but never looks wrong); `next build` exit 0;
+`tests/contract -k "web or locale or navigation"` 83 passed; full `tests/contract` 260 passed with the one known
+environment-dependent failure (`test_provider_settings.py::…real_mode_run…`, `providers.py:351` RuntimeError,
+needs a live credential -- CI green on it, §218/§219 both recorded it); the regression tour **47/47** (26
+route/viewport + 3 interaction + 3 backend-probe + 15 accessibility) against the rebuilt bundle on a quiet API
+port; `R13I_CHROME_ACCEPTANCE_PASS` 34/34 on the shipped build.
+
+**Shared state.** `d76f9dd` (batches D+E, 14 files, explicit paths) pushed to `main` and recorded; its parent is
+`3e00804`, another session's fix to the artifact-copy gate that `a79c770` had reddened -- that red was measured
+here first (`git status` showed `docker/Dockerfile.api` and the gate file clean, so the failure was HEAD's own,
+and CI's only failing step on `a79c770` was `Run uv run pytest -q --cov…`). Their fix landed in the shared
+worktree as an uncommitted change while this batch was being verified; it was not staged, committed or edited
+here. §223 is theirs. This lane's F+G commit and the CI witness for it are recorded in the handoff.
+
+**Still owed.** The two demos still serve a build from before this language work, so none of the above is
+visible hosted until a redeploy, and the redeploy needs the platform tokens exported in the user's own shell (not
+pasted into chat). `test_provider_settings.py`'s order-dependent failure is a named repro, not a fix. The
+single-token bucket (118 literals) is now known to be dominated by non-rendered values (`aria-live="polite"`,
+`<option value=>`, `{placeholder}` chunks, identifiers) rather than by copy, but the claim rests on the region
+instrument, not on that bucket being empty.

@@ -70,7 +70,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         setSortDir("asc");
                       }
                     }}
-                    aria-label={`Sort by ${c.header}`}
+                    aria-label={t(locale, "table.sortBy").replace("{column}", c.header)}
                     className="inline-flex items-center gap-1 hover:text-zinc-900"
                   >
                     {c.header}

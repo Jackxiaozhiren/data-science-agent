@@ -51,21 +51,21 @@ export default async function ResearchPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Research · Step 3"
-        title="Research"
+        eyebrow={t(locale, "rs.eyebrow")}
+        title={t(locale, "rs.title")}
         description={t(locale, "rs.closure")}
         actions={
           <Link href="/analysis"><Button size="sm">{t(locale, "rs.back")}</Button></Link>
         }
       />
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Ablations" value="A–F" hint="LLM-only → Full" icon={FlaskConical} />
-        <StatCard label="Eval dims" value="10-dim" hint="+ 6-level breakdown" icon={Layers} />
-        <StatCard label="Significance" value="CI / McNemar" hint="+ Wilcoxon" icon={Sigma} />
+        <StatCard label={t(locale, "rs.ablationsLabel")} value="A–F" hint={t(locale, "rs.ablationsHint")} icon={FlaskConical} />
+        <StatCard label={t(locale, "rs.dimsLabel")} value="10-dim" hint={t(locale, "rs.dimsHint")} icon={Layers} />
+        <StatCard label={t(locale, "rs.sigLabel")} value="CI / McNemar" hint="+ Wilcoxon" icon={Sigma} />
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Recent experiments ({exps.length})</CardTitle>
+          <CardTitle className="text-sm">{t(locale, "rs.recentTitle").replace("{n}", String(exps.length))}</CardTitle>
           <CardDescription className="text-xs">{t(locale, "rs.ablationNote")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -81,14 +81,14 @@ export default async function ResearchPage() {
           ) : (
             <EmptyState
               title={t(locale, "rs.noResults")}
-              description={`Run the ablation runner to produce the first result files: ${RUNNER}`}
+              description={t(locale, "rs.runRunner").replace("{runner}", RUNNER)}
             />
           )}
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">API-tracked experiments ({tracked.length})</CardTitle>
+          <CardTitle className="text-sm">{t(locale, "rs.trackedTitle").replace("{n}", String(tracked.length))}</CardTitle>
           <CardDescription className="text-xs">{t(locale, "rs.recordedNote")}</CardDescription>
         </CardHeader>
         <CardContent>

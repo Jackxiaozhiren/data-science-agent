@@ -42,7 +42,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
   if (failure && failure !== "notFound") {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow={t(locale, "runDetail.eyebrow")} title={`Run ${id.slice(0, 12)}`} description={t(locale, "runDetail.couldNotLoad")} />
+        <PageHeader eyebrow={t(locale, "runDetail.eyebrow")} title={t(locale, "runDetail.title").replace("{id}", id.slice(0, 12))} description={t(locale, "runDetail.couldNotLoad")} />
         <ErrorState
           message={shared[failure]}
           diagnostics={<Link href="/runs"><Button variant="secondary" size="sm">{t(locale, "cmp.back")}</Button></Link>}
@@ -53,7 +53,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
   if (!run) {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow={t(locale, "runDetail.eyebrow")} title={`Run ${id.slice(0, 12)}`} description={t(locale, "runDetail.couldNotLoad")} />
+        <PageHeader eyebrow={t(locale, "runDetail.eyebrow")} title={t(locale, "runDetail.title").replace("{id}", id.slice(0, 12))} description={t(locale, "runDetail.couldNotLoad")} />
         <ErrorState
           message={t(locale, "runDetail.notFoundBody")}
           diagnostics={<Link href="/runs"><Button variant="secondary" size="sm">{t(locale, "cmp.back")}</Button></Link>}
@@ -72,7 +72,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
     <div className="space-y-4">
       <PageHeader
         eyebrow={t(locale, "runDetail.eyebrow")}
-        title={`Run ${id.slice(0, 12)}`}
+        title={t(locale, "runDetail.title").replace("{id}", id.slice(0, 12))}
         description={st?.objective || run.user_query}
         actions={
           <>
