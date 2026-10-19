@@ -13017,3 +13017,268 @@ second. Measured, not inferred -- and it is a pre-existing inaccuracy that this 
 corrected: the sentence reads as advice about when to mirror, not as a description of array order. It is named here
 instead of quietly reworded, because the next reader who takes it literally will otherwise trust a claim about the
 tail of a list that this section just reordered.
+
+## 218. A clean clone found what CI and the shared worktree both hid, and the dependency queue turned out to be three different problems
+
+To get a suite number attributable to one commit -- §214 and §217 each had to disclaim one -- `6e2d0e4` was
+cloned to a scratch directory, synced, and run whole: **1117 passed, 3 failed**. All three failures were
+attributed, and only one was a defect:
+
+- `tests/contract/test_provider_settings.py::test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub`
+  and `dsa verify-release`'s `pytest` line are the same condition: the real-mode path calls the live
+  chat-completions endpoint (`HTTP 502` from here, `planner.py:482` in the traceback). CI holds a working
+  credential, so it is green there; this machine cannot run it. Not a code finding, and not something to
+  "fix" by muting it.
+- `tests/vscode/test_vscode_extension.py::test_typescript_compiles` fails for want of `node_modules`: CI runs
+  `npm --prefix apps/vscode ci` as a step, and the contributor guide lists it. A bare clone that skipped the
+  setup step gets this red. Environment again.
+- `apps/api/tests/test_run_bundle.py::test_bundle_carries_every_artifact_recorded_for_the_run` is the real one.
+  It asserts `manifest["storage"]["ephemeral_roots"] == ["artifacts"]`, and in the clone it came back
+  `['artifacts', 'datasets']`. The fixture pins `DSA_ARTIFACT_ROOT` but not `DSA_DATASET_DIR`, whose fallback is
+  `Path(__file__).resolve().parents[5] / "data" / "datasets"` -- so it resolves under wherever the package was
+  installed. A clone under `/private/tmp/...` matches `EPHEMERAL_PREFIXES`, which means the assertion was grading
+  **the checkout's location**, not the bundle. Nothing in CI or in the shared worktree could show it: both live
+  outside `/tmp`, so the same code is green there and red here -- and red was the correct verdict.
+
+Fixed by pinning the datasets root the way the artifact root was already pinned, to the path the accessor's own
+comment names for the Render image (`/app/data/datasets`). Verified in the environment that exposed it: the file
+goes green in the same `/tmp` clone (9 passed) and stays green in the worktree (28 passed with
+`tests/contract/test_storage_disclosure.py`, which already pins all three roots and is why *it* never showed the
+bug). No assertion was weakened -- the check is the same list, now about state the fixture controls.
+
+The dependency queue (nine open Dependabot PRs) was not nine ignored upgrades; measuring each failing step found
+three separate problems:
+
+- **One mechanical gap.** `#71`, `#74`, `#75`, `#76`, `#82`, `#73`, `#72` each died at
+  `scripts/check_npm_workspace_lock.py`: Dependabot edits a workspace manifest, and the lock `npm ci` installs
+  from is the root `package-lock.json`, which it does not touch. Reproduced on the branches (`apps/web
+  devDependencies.@types/node: manifest='26.6.5', lock='26.4.1'`, exit 1) and closed by
+  `npm install --package-lock-only` at the root; every resulting diff is confined to `package-lock.json` (9 to 62
+  changed lines) and the check returns 0 on each branch. Pushed to all six that needed it.
+- **One artifact gap.** `#80` (the uv group: jupyterlab, tornado, urllib3) fails the SBOM comparison --
+  `SBOM CHECK FAIL: 192 components derived from this revision, 192 on disk` -- the counts agree and the versions
+  do not, because `uv.lock` moved and `release/sbom.json` still lists what the previous lock pinned. Merging it
+  requires regenerating the SBOM on the branch, from an environment built from *that* lock.
+- **Two genuine upgrades, both refused by measurement rather than by judgment.** `#72` (lucide-react 0.545 →
+  1.43) and `#82` (tailwindcss `^3.4` → `^4.3`) each end with **`web-regression: failure`** -- the tour, not a
+  reviewer's taste, is what says the UI changed. `#82` is corroborated in the tree: `apps/web/tailwind.config.js`
+  and `apps/web/postcss.config.js` exist and the root lock installs `tailwindcss 3.4.19`, so v4 is a migration
+  (CSS-first config, different PostCSS plugin), not a version bump; its own commit also removes 960 lines from
+  `apps/web/package-lock.json`. Neither is merged, and neither is closed -- they are the two items in this queue
+  that need a decision about upgrading the frontend, which is a larger piece of work than anything here.
+
+`#76` (playwright 1.55.0 → 1.55.1) was already green on every gate after the rebase and is merged.
+
+## 219. Session close (Lane F): the failure prose speaks both languages, and the new sweep found a copy on its first run
+
+§211 closed R-13 with one line under NOT DELIVERED: the vocabulary of things going wrong was still English while
+the interface around it had moved. That is the half this section records, and the finding worth keeping is not the
+translation -- it is that the guard written to keep the translation honest immediately found a duplicate nobody had
+been looking for.
+
+`FAILURE_PRESENTATION` in `apps/web/lib/api.ts` derived its five lines from `UI_STRINGS.en`, so it already had no
+English copy of its own. What it *was* is a second owner: an `en`-only record living beside a bilingual function,
+read by nothing once the last page converted. Measured before deleting: `grep -rn FAILURE_PRESENTATION apps/web`
+returns only the definition, so it went rather than stayed as a shim, and `failurePresentation(locale)` now builds
+the five kinds as an explicit per-kind literal. That shape is deliberate -- a computed record over
+`API_FAILURE_KINDS` would compile even when a sixth kind has no line, whereas a literal annotated
+`Record<ApiFailure, string>` makes the compiler refuse it. Completeness is policed twice: by `tsc` on that literal,
+and by a guard that now compares the kinds against the `fail.*` keys in **both** locale blocks rather than one
+English map.
+
+- **The sweep found a production duplicate, not a hypothetical one.**
+  `test_no_dictionary_sentence_is_also_written_into_a_page` compares every dictionary sentence ≥40 chars against
+  the page corpus. Its first run reddened on one row: `DEFAULT_TITLE = "Data Science Agent — Verifiable AI Data
+  Science"` in the run inspector, the same sentence `meta.title` owns, kept as a fallback for `document.title`. The
+  hand-curated `OWNED_ENGLISH` list had stood beside it for two sessions and never named it, which is the argument
+  for sweeping rather than curating. The fallback now asks the dictionary, and the inspector's live tab title and
+  completion notification -- two reader-facing sentences that had no owner at all -- became `run.liveTitle`,
+  `run.notifyTitle`, `run.notifyBody`.
+- **Writing the guard found a bug in a guard that already existed.** `test_web_backend_probe.py` read a locale
+  value by splitting the dictionary on `en: {` and searching *the rest of the file* -- so the `en` arm walked into
+  the `zh` block. Deleting the English `ds.coldStart` sentence while leaving the Chinese one in place kept the test
+  green. Fixed by cutting at the block's own closing brace; proven with a plant whose payload is invisible to the
+  other locale (below).
+- **A plant can pass for the wrong reason.** The first version of that plant copied the *Chinese* sentence into the
+  `en` block. The guard's keyword list is bilingual (`sleeps|idle|wake|休眠|空闲`), so the en arm matched it and
+  stayed green -- correctly, as it turns out: the sentence does name the wait, just in the wrong column. The plant
+  that proves the leak is closed is a keyword-free English sentence, and that one reddened on the right line.
+  Recording the failed plant is the point: a plant that does not fire is a premise bug report.
+- **Two prose moments, and no single read that sees both.** The acceptance script found the page-level 401 notice
+  rendered, then gone after the upload ran, and the first two runs of the script disagreed about which line was
+  "missing". `enqueue()` calls `setErr(null)` before adding queue items, so the notice and the per-file note are
+  mutually exclusive on screen -- assert them in order, not from one final snapshot. (The same effect hid a real
+  harness bug once already: setting the file before React attached its `change` handler produces a DOM change
+  nobody listens to, which looks exactly like an upload that rendered no note.)
+
+```
+ACCEPT EVIDENCE
+  a Chinese reader sees Chinese when the API refuses, hangs, or never answers
+      -> `node build/r13c-prose-acceptance.mjs` against `next start` with `/health` answered 503 and
+         `/api/v1/*` answered 401: R13C_PROSE_ACCEPTANCE_PASS (2/2 locales, 0 failed), exit 0
+      zh  tab「数据科学智能体 — 可验证的 AI 数据科学」, dot「API 不可达」, notice
+          「API 不可达 —— 没有任何应答。请确认 API 正在运行，或重试。」, refusal line
+          「API 可以访问，但它拒绝了本次请求（401/403）。…」, upload note
+          「请求失败（HTTP 401）: {"detail":"token required"}。请在下方查看 API 诊断信息。」
+      en  "API unreachable" / "API unreachable — nothing answered…" / "The API is reachable but rejected
+          the request (401/403)…" / "Request failed (HTTP 401): {"detail":"token required"}…"
+      leak check: neither page contains a sentence from the other language (forbid list, both directions)
+      screenshots: output/r13c/datasets-zh.png, output/r13c/datasets-en.png
+  the waiting state keeps its bound in both languages
+      -> `probe.warming` carries `{attempt}` and `{total}` in en and zh, and the waking sentence still
+         promises a minute, so the budget assertion (coverage >= 45 s) is reached through the dictionary
+
+DELIVERED
+  R-13c: the five fetch-outcome lines built per locale; FAILURE_PRESENTATION deleted, not shimmed
+      -- green `test_web_fetch_outcome_vocabulary.py` 10 passed, including the four-way agreement
+         (kind list / classifier / renderer literal / fail.* keys in both locales)
+  R-13c: five pages' transport overrides keyed, and a page may no longer own one
+      -- red captured as plant A (`transport: "Could not reach the DSA API at all."` in runs/page.tsx ->
+         FAILED test_a_page_override_names_a_dictionary_key) / green after restore + `test_…` pass
+  R-13c: upload queue notes, probe phases, dot label, retry button and aria, live tab title, notification
+      -- green `test_web_locale_parity.py` 7 passed (key existence, en/zh parity, CJK-ness, sweep)
+  R-13c: the probe guard reads its wording from the locale owner, in both locales
+      -- red captured as plant E (waking sentence moved back inline in `backendProbe.ts` -> FAILED
+         test_a_warming_backend_is_never_described_as_ready_or_as_gone) and plant D (zh `probe.warming`
+         stripped of `{total}` and of 分钟 -> 2 failed) and plant C2 (en `ds.coldStart` keyword-free ->
+         FAILED test_the_datasets_entrance_states_the_wait_before_it_happens)
+  correction of §211's neighbour claim: `docs/FRONTEND_IA.md` no longer says the browser guards assert "the
+      exact English words" as a reason not to move them -- measured, the tour asserts or locates on seven
+      English strings, every one of them now dictionary-owned, and that coupling is stated instead of implied.
+
+NOT DELIVERED
+  ~89 reader-facing English literals across 25 files under `apps/web/app` (line scan 2026-10-18 that strips
+      comments; interpolating templates are not counted, so it is an inventory rather than a proof). Largest
+      single owner: `analysis/[runId]/RunInspector.tsx` at 25.
+      Next command: the same scan is reproducible from this section's method; start with the inspector.
+  `app/components/data/States.tsx` ("Something went wrong", "Loading table", "Loading") is not a client
+      component, so it has no locale to read. Translating it needs a boundary decision -- put the three
+      presentational components behind `LocaleProvider`, or thread a `locale` prop through every call site --
+      and doing neither halfway is the point of recording it.
+  hosted redeploy -- unchanged from §207: both demos still serve a pre-R-08 build; the platform tokens are the
+      user's to export, and `vercel` is not installed on this machine.
+
+FULL LANE RESULT
+  ./scripts/run_gates.sh  ->  17 gate(s) run, 2 failed at that moment.
+      `sync_vendor.py --check` reports `dsa_evaluation: 1 file(s) differ [external_validation.py]`, which is a
+      concurrent session's uncommitted edit in this shared worktree, not this lane's file.
+      `ruff format --check` named three files, all of them mine (the three guard files rewritten by hand at
+      ~120 columns). Fixed by `ruff format` on exactly those three paths, and CI's own format gate passing at
+      the pushed revision is the witness that it closed -- not a local re-run.
+  uv run pytest -q --cov (inside the gate run) -> 1125 progress glyphs, no F, exit 0; coverage 83.77% against
+      the 79.0% floor.
+  uv run pytest --no-cov -o addopts="" -> 1124 passed, 1 failed:
+      tests/contract/test_provider_settings.py::test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub,
+      `RuntimeError: Chat completions API returned HTTP 502:` from a scripted loopback endpoint the test itself
+      started. Same tree, same suite, different invocation flags, and the file collects at position 73 -- before
+      the only `tests/contract` file this lane touched -- and passes in isolation. So it is an invocation- and
+      order-dependent leak around the stored provider settings, not a change this lane made; it is recorded as a
+      finding with its reproduction rather than fixed by loosening an assertion or edited in another lane's file.
+  node apps/web/scripts/regression.mjs  ->  47/47 checks (26 route/viewport + 3 interaction + 3 backend-probe +
+      15 accessibility), locally and on the runner. The three backend-probe checks are the tour's English
+      couplings, and they stayed green because the `en` values were moved byte-for-byte.
+  CI at c43c6e3: run 39191643629 `CI` -> jobs `ci` success and `web-regression` success, printing
+      `regression: 47/47 checks passed (…)` on `web-regression`; run 39191643600 `CodeQL` -> success.
+
+FALSIFICATION PROOF
+  five plants, each applied, run, then restored and hash-verified:
+    A inline transport sentence in `app/runs/page.tsx`  -> 1 failed on the new override guard
+    B undefined key `runs.nope`                        -> 2 failed (override guard + key-existence guard),
+                                                         which is the two-owner redundancy this lane wanted
+    C  zh sentence placed in the `en` block            -> stayed green, and that is a *guard* result: the
+                                                         bilingual keyword list matched it. Kept as evidence
+                                                         that a plant must be invisible to the arm it tests.
+    C2 keyword-free `en` `ds.coldStart`                -> 1 failed on the entrance guard, i.e. the
+                                                         cross-locale leak is closed
+    D  zh `probe.warming` without `{total}`/分钟        -> 2 failed
+    E  waking sentence moved back inline               -> 1 failed on the owner-reference check
+  locale.ts and backendProbe.ts restored byte-identically (sha256 e8bad256… and 1bed08a5… both re-verified
+  after restore, `RESTORE` line printed by the same command), and the guard files then measured 24 passed.
+
+FILES OTHER SESSIONS OWN (untouched)
+  README.md, packages/evaluation/src/dsa_evaluation/external_validation.py,
+      tests/evals/test_external_validation.py remain dirty and are not in c43c6e3; the commit used an explicit
+      path list (23 files) and `git status` was re-read after it. `WEB_PRODUCT_MASTER_PROMPT.md` and the four
+      项目经历-DSA-*.md files remain untracked. Two other sessions pushed while this lane worked
+      (`6e2d0e4` landed under it, `be97308`/`db64cb3` ran afterwards), so the push was checked as a
+      fast-forward and `ahead/behind = 0 0` re-read after it.
+
+SHARED-STATE ACTIONS UNDER §19.1
+  commit -> c43c6e3 (explicit 23 paths)
+  push   -> main, 6e2d0e4..c43c6e3, fast-forward, `0 0` after a fresh fetch
+  PR     -> none: §19.1 permits a self-authored green change on main
+  deploy -> none. Nothing on this machine holds the platform tokens, so the two demo services named in
+             `docs/hosted-demo.md` still run the pre-R-08 build.
+  ledger -> this section, written after the CI witness was read, not predicted
+
+BLOCKERS NEEDING A HUMAN
+  redeploy the Vercel web app and the Render API -> the user's tokens exported to their own shell (never pasted
+      into chat), then `docs/hosted-demo.md`'s census re-run against the live URLs. Until then a visitor to the
+      public demo sees 4.5.0, which has none of R-13 in it.
+  axe-core as a devDependency -> still the same ask as §211: approval to add it, or approval to accept the
+      Playwright-implemented rules as R-13's "accessibility scan".
+  the States.tsx locale boundary and the 25-file chrome inventory -> a scoping decision about how far the
+      Chinese view has to reach before the demo is presentable to the reviewers in §12's Studies.
+```
+
+**Addendum, same session.** Two things measured after §219 was written, both worth keeping.
+
+- **The fence above was left open, and that is a shared-file hazard rather than a formatting nit.** §219's
+  handoff block opened at its own ``` and never closed, so anything the next session appended would have landed
+  *inside this section's code block* -- a heading rendered as prose, invisible to `check_ledger_identifiers.py`,
+  which counts heading lines and reported `OK` for the whole time it was open. Closed here; the checker still
+  exits 0 (`run §62-§219, 159 heading lines read`).
+- **§218 and this section attribute the same red differently, and the measurement sits between them.** §218
+  records `test_provider_settings.py::…real_mode_run…` as the live chat-completions endpoint being unreachable
+  from this machine ("CI holds a working credential, so it is green there; this machine cannot run it"). This
+  lane measured `1124 passed, 1 failed` with that test failing (`HTTP 502`) under
+  `uv run pytest --no-cov -o addopts=""` -- twice, reproducibly -- and the same file's test passing inside
+  `scripts/run_gates.sh`, which runs `uv run pytest -q --cov` with the project's own addopts on this same
+  machine, in the same hour. So "this machine cannot run it" is not the whole story: something the default
+  addopts carry (or `--cov`'s import order) makes the difference, and the scripted endpoint in that test is a
+  loopback `ThreadingHTTPServer` this test starts itself, not a live provider. Neither claim is edited here --
+  §218 is another session's dated record, and this is this lane's -- and the actionable form is one command:
+  run the whole suite twice, once with and once without `-o addopts=""`, and diff the FAILED set.
+
+## 220. Clearing the dependency queue turned out to be three guards that require a companion edit Dependabot cannot make
+
+Nine open PRs, and after measuring each failing step none of them was blocked by the upgrade itself. §218 named
+the three classes; this is what closing them took, and the one structural finding it exposed.
+
+**The mechanical gap was one command, six times.** `scripts/check_npm_workspace_lock.py` compares every workspace
+manifest against the root `package-lock.json` -- the lock `npm ci` installs from -- and Dependabot edits only the
+workspace. Synced with `npm install --package-lock-only` at the root on `#71`, `#74`, `#75`, `#72`, `#73`, `#82`;
+every diff was confined to `package-lock.json` (9 to 62 changed lines) and each branch's check went from exit 1
+to exit 0. Reproduced before fixing, as ever: `apps/web devDependencies.@types/node: manifest='26.6.5',
+lock='26.4.1'`.
+
+**The artifact gap was the SBOM.** `#80` moved `uv.lock` (jupyterlab 4.6.3 -> 4.6.4, tornado 6.5.8 -> 6.5.9,
+urllib3 2.7.0 -> 2.8.0) while `release/sbom.json` still named the old ones, and
+`scripts/generate_sbom.py --check` said `192 components derived from this revision, 192 on disk` -- counts equal,
+versions not, which is the shape that a count-only gate would have passed. Regenerated inside an environment built
+from *that branch's* lock, which is the condition §213 found missing when a local regeneration produced 193
+components against CI's 192. The check also states what it ignores: license fields and the `generated` stamp.
+
+**The third gap is the finding.** A Node base-image bump (`#77`, 22 -> 26) cannot be completed by editing prose:
+`tests/test_runtime_version_claims.py` exists to keep `ci.yml`'s `node-version`, the image's `FROM node:` tag and
+the page's claims one fact, so aligning them means `ci.yml:27` moves too -- a build-environment change for every
+future run, not just this PR's. And the guard's own control test had four literals pinned to the *string*
+`node:22-alpine` (`.replace("\`node:22-alpine\`", ...)`, `assert any("22-alpine" in i ...)`,
+`.replace("node:22-alpine", "node:20-alpine")`, `"node:20-alpine while CI proves Node 22"`), so the test that
+proves the rule can fail is itself bound to the version the rule guards. Re-pointing them is a mechanical
+four-line edit; the fact that it is *required* on every toolchain bump is the kind of coupling worth knowing
+before someone hits it at 02:00.
+
+Merged: `#76` (playwright 1.55.0 -> 1.55.1) needed nothing from me -- the only PR green exactly as Dependabot
+wrote it; `#71` and `#73` after the lock sync, with `web-regression` green on a framer-motion major; `#74`, `#80`
+and `#77` carry my companion edits and are on auto-merge, GitHub completing them as their required checks pass.
+Left open on measurement, not on taste: `#72` (lucide-react 0.545 -> 1.43) and `#82` (tailwindcss `^3.4` ->
+`^4.3`) each end with `web-regression: failure`, and `#82` is a v3 -> v4 migration -- `apps/web/tailwind.config.js`
+and `apps/web/postcss.config.js` exist, the root lock installs 3.4.19, and the PR's own commit deletes 960 lines of
+`apps/web/package-lock.json`. Both carry a comment with that evidence so the queue reads as decided rather than
+ignored.
+
+One shared-worktree note, because it is how this repo actually behaves: `#76` merged while my own commit sat
+unpushed locally, so pushing directly would have swept another lane's in-flight §219. The commit was cherry-picked
+onto current `origin/main` in an isolated clone and pushed from there, with the ledger verified append-only
+across the move (51 insertions / 0 deletions, then 5 / 0). §219 landed as `da4c6f7`, which is why this one is §220.
