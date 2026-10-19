@@ -13219,3 +13219,23 @@ BLOCKERS NEEDING A HUMAN
       Playwright-implemented rules as R-13's "accessibility scan".
   the States.tsx locale boundary and the 25-file chrome inventory -> a scoping decision about how far the
       Chinese view has to reach before the demo is presentable to the reviewers in §12's Studies.
+```
+
+**Addendum, same session.** Two things measured after §219 was written, both worth keeping.
+
+- **The fence above was left open, and that is a shared-file hazard rather than a formatting nit.** §219's
+  handoff block opened at its own ``` and never closed, so anything the next session appended would have landed
+  *inside this section's code block* -- a heading rendered as prose, invisible to `check_ledger_identifiers.py`,
+  which counts heading lines and reported `OK` for the whole time it was open. Closed here; the checker still
+  exits 0 (`run §62-§219, 159 heading lines read`).
+- **§218 and this section attribute the same red differently, and the measurement sits between them.** §218
+  records `test_provider_settings.py::…real_mode_run…` as the live chat-completions endpoint being unreachable
+  from this machine ("CI holds a working credential, so it is green there; this machine cannot run it"). This
+  lane measured `1124 passed, 1 failed` with that test failing (`HTTP 502`) under
+  `uv run pytest --no-cov -o addopts=""` -- twice, reproducibly -- and the same file's test passing inside
+  `scripts/run_gates.sh`, which runs `uv run pytest -q --cov` with the project's own addopts on this same
+  machine, in the same hour. So "this machine cannot run it" is not the whole story: something the default
+  addopts carry (or `--cov`'s import order) makes the difference, and the scripted endpoint in that test is a
+  loopback `ThreadingHTTPServer` this test starts itself, not a live provider. Neither claim is edited here --
+  §218 is another session's dated record, and this is this lane's -- and the actionable form is one command:
+  run the whole suite twice, once with and once without `-o addopts=""`, and diff the FAILED set.
