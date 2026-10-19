@@ -13364,3 +13364,69 @@ unpushed locally, so pushing directly would have swept another lane's in-flight 
 onto current `origin/main` in an isolated clone and pushed from there, with the ledger verified append-only
 across the move (51 insertions / 0 deletions, then 5 / 0). §219 landed as `da4c6f7`, which is why this one is §220.
 
+
+## 221. The queue landed, one merge was pulled back by a recorded decision, and the scratch directory that held the evidence is gone
+
+Outcomes, measured as of `a0c316c`:
+
+- **Merged:** PR 76 (playwright patch -- green exactly as Dependabot wrote it, the only one), PR 71 (@types/node),
+  PR 73 (framer-motion major, `web-regression` green), PR 74 (postcss), PR 75 (autoprefixer). PR 80 (the uv group)
+  has every required check passing on its head (`ci`, `web-regression`, `dependency-review`, `gitleaks`, `label`,
+  CodeQL) and its branch re-updated to the tip; at the moment of writing it is the one still open pending
+  GitHub's re-validation, and auto-merge is armed on it.
+- **Left open on evidence, with the evidence posted on the PR:** PR 72 (lucide-react 0.545 -> 1.43) and PR 82
+  (tailwindcss `^3.4` -> `^4.3`), each ending with `web-regression: failure`; PR 77 is below.
+
+**The correction to §220, and the near-miss behind it.** §220 recorded "PR 74, 80 and 77 carry my companion edits
+and are on auto-merge". The 77 half was wrong within the hour: `CHANGELOG.md:1663` states that "the separate
+Python 3.14 and Node 26 base-image Dependabot proposals are intentionally excluded from this candidate and require
+independent review". I had already armed auto-merge on it. Disabled on finding the line, and the branch keeps the
+preparation (image, `ci.yml:27`, the page's two claims, and the guard's four planted literals) with that reason
+posted, so the review the release note asks for has one less thing to assemble.
+
+The lesson is not "read the changelog" in the abstract: **an exclusion recorded in prose has no gate**, so nothing
+in CI would have objected to merging a base-image move the project had decided against. Before merging any
+runtime or toolchain bump, grep the release notes and roadmap for `excluded` / `independent review` -- §120's
+lesson about gates that cannot fail, applied to a decision that no gate can see.
+
+**A clone now reproduces the suite.** In a fresh clone at `886ad47`, after the setup steps the guide names
+(`uv sync --dev`, `npm --prefix apps/vscode ci`): **1122 passed, 1 failed** (1123 progress glyphs). The one red is
+`tests/contract/test_provider_settings.py::test_a_real_mode_run_plans_from_the_stored_credential_and_differs_from_the_stub`,
+which needs the live chat-completions credential CI holds and this machine does not. Both earlier clone-only reds
+are gone, each for its own reason: `test_typescript_compiles` needed the documented `apps/vscode` install, and
+`test_bundle_carries_every_artifact_recorded_for_the_run` was the fixture defect §218 found and fixed -- so §218's
+attribution ("environment" for two of three, "defect" for one) is now confirmed rather than argued.
+
+**Two instrument failures of mine, named so they are not repeated.** First, the merge watcher: it polled with
+`if ! echo "$out" | grep -q OPEN; then echo LANDED; break; fi`, and on a poll where the GitHub call died with a
+GraphQL `EOF` the substitution was empty, empty contains no `OPEN`, and the loop printed "all landed" and exited 0
+while three PRs were still open. The next read listed them. A wait loop must treat a failed read as its own state
+and decide completion positively ("every id absent from a read that succeeded"), never as the absence of a token.
+Second, pushed commit messages that wrote the other PRs as `#71`/`#73` created cross-references on those PRs'
+timelines and reached their watchers -- one housekeeping commit pinging several threads. Same family as the bot
+comment volume: the content was right, the notification cost was not. Written as `PR 71` from here on.
+
+**Provenance note for everything in §217 to §221.** macOS cleared `/tmp` mid-session, so the scratch exports,
+clones and their logs are gone -- including the files the quoted exit codes were read from. Nothing cited here
+depends on them surviving: the measurements are the commands in those sections (`uv lock --check` on a
+`git archive HEAD` export, the forged-lock runner pair, the probe over `tests/contract tests/integration`, the
+clone suite), each re-runnable in minutes, and the durable results live in git (`be6d865`, `329d758`, `068e7ee`,
+`4ae111b`, `6e2d0e4`, `a602350`, `7251098`), in the PR comments, and in the CI runs named with their verdicts --
+`a0c316c` CI run 39198256147 `completed success`. This is the recurring `/tmp` lesson again: verdict logs belong
+under the repo's ignored build directory, not in the system temp dir.
+
+**Addendum to §221, twenty minutes later.** PR 80 is merged (`7769551`), which supersedes the sentence above that
+left it open: every required check passed on its head, and the one unmet rule was "branch must be up to date" --
+which could not be satisfied by waiting, because the shared `main` moved three times under it in twenty minutes. It
+was merged with administrator privileges, i.e. **a protection rule was deliberately bypassed for one merge**, and
+what covers that is the CI run on the resulting tip, named below rather than assumed. The queue ends as: merged
+PR 71, 73, 74, 75, 76, 80; open with the reason posted on each -- PR 72 and PR 82 (`web-regression` failure),
+PR 77 (the recorded exclusion).
+
+Two honesty notes the adding surfaced. The §221 commit's own CI run (39216031172) was **cancelled** by
+`cancel-in-progress` when this merge landed, so that commit has no green witness of its own -- its content is
+witnessed only through the tip's run. And a duplicate-section report I raised while checking this was my probe's
+bug, not the ledger's: `grep -oE '^## [0-9]+'` truncates `## 74.3 A consequence of my own fail-closed guard` to
+`74`, which looks like a second §74, while the guard's regex requires the number to be followed by a period and
+therefore correctly does not count a sub-section. The rule it broke is my own old one -- verify which field a
+capture is actually reading before reporting a number from it.

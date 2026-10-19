@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-10-09T05:34:51.282547+00:00",
+  "generated": "2026-10-19T03:12:31.303389+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -550,10 +550,10 @@
     },
     {
       "package": "jupyterlab",
-      "version": "4.6.3",
+      "version": "4.6.4",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/jupyterlab@4.6.3"
+      "purl": "pkg:pypi/jupyterlab@4.6.4"
     },
     {
       "package": "jupyterlab-pygments",
@@ -1215,10 +1215,10 @@
     },
     {
       "package": "tornado",
-      "version": "6.5.8",
+      "version": "6.5.9",
       "license": "Apache-2.0",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/tornado@6.5.8"
+      "purl": "pkg:pypi/tornado@6.5.9"
     },
     {
       "package": "traitlets",
@@ -1257,10 +1257,10 @@
     },
     {
       "package": "urllib3",
-      "version": "2.7.0",
+      "version": "2.8.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/urllib3@2.7.0"
+      "purl": "pkg:pypi/urllib3@2.8.0"
     },
     {
       "package": "uuid-utils",
