@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Plug2 } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
+import { t, type Locale } from "@/lib/locale";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -17,14 +19,13 @@ const endpoints = [
 
 // Inherits the shared wording, and keeps this page's own line for the transport case: the static
 // endpoint reference below is what a reader gets when no response could be read at all.
-const MCP_FAILURE_MESSAGE: Record<ApiFailure, string> = {
-  ...FAILURE_PRESENTATION,
-  transport: "Could not reach the MCP endpoint — showing the static reference below instead of a blank page.",
-};
+function mcpMessages(locale: Locale): Record<ApiFailure, string> {
+  return { ...failurePresentation(locale), transport: t(locale, "mcp.transport") };
+}
 
 async function fetchTools(): Promise<{ tools: McpTool[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/mcp/tools"), { cache: "no-store" });
+    const res = await serverFetch("/mcp/tools", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { tools: [], failure };
     const d = (await res.json()) as { tools: McpTool[] };
@@ -35,6 +36,8 @@ async function fetchTools(): Promise<{ tools: McpTool[]; failure: ApiFailure | n
 }
 
 export default async function MCPPage() {
+  const locale = await serverLocale();
+  const messages = mcpMessages(locale);
   const { tools, failure } = await fetchTools();
   const byClass = new Map<string, number>();
   for (const t of tools) byClass.set(t.tool_class, (byClass.get(t.tool_class) ?? 0) + 1);
@@ -49,7 +52,7 @@ export default async function MCPPage() {
           <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
         }
       />
-      {failure && <ErrorState message={MCP_FAILURE_MESSAGE[failure]} />}
+      {failure && <ErrorState message={messages[failure]} />}
       {tools.length > 0 ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import String, Text
+from sqlalchemy import String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dsa_api.core.database import Base
+from dsa_api.core.ownership import OWNER_DEFAULT
 
 
 class AnalysisRunORM(Base):
@@ -21,6 +22,11 @@ class AnalysisRunORM(Base):
     updated_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
+    #: R-08: whose row this is. Non-null with a server default so the startup ALTER can backfill it, and
+    #: deliberately not in `to_dict` -- scoping is a server-side predicate, not a field a client reads.
+    owner: Mapped[str] = mapped_column(
+        String(64), nullable=False, default=OWNER_DEFAULT, server_default=text(f"'{OWNER_DEFAULT}'")
+    )
 
     def to_dict(self) -> dict[str, Any]:
         import json
@@ -29,6 +35,7 @@ class AnalysisRunORM(Base):
         return {
             "id": self.id,
             "dataset_id": self.dataset_id,
+            "owner": self.owner,
             "dataset_path": self.dataset_path,
             "user_query": self.user_query,
             "status": self.status,

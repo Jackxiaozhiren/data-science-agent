@@ -466,7 +466,12 @@ def _validate_real_plan(
 async def plan_analysis(
     user_query: str, dataset_path: str | None = None, columns: list[str] | None = None
 ) -> AnalysisPlan:
-    mode = os.getenv("DSA_LLM_MODE", "stub").strip().lower()
+    from dsa_llm.providers import configured_llm_mode
+
+    # The mode comes from the owner function, not from a second reading of `DSA_LLM_MODE`: R-05 added a stored
+    # configuration that outranks the environment, so a planner that re-read the variable would plan heuristically
+    # while `/version` reported `real` -- the two-readings defect R-02 was raised to remove.
+    mode = configured_llm_mode()
     if mode in _STUB_MODES:
         return heuristics_plan(user_query, dataset_path, columns)
     if mode not in _REAL_MODES:

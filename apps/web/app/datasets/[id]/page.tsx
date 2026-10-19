@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Database, Hash, Table2, FileDigit, ArrowRight, Fingerprint } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/app/components/ui/tabs";
@@ -9,6 +10,7 @@ import { StatCard } from "@/app/components/data/StatCard";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { SchemaTable } from "@/app/datasets/[id]/SchemaTable";
+import { t as tt } from "@/lib/locale";
 
 type ColumnProfile = {
   name: string;
@@ -41,7 +43,7 @@ type AnalysisItem = { id: string; status: string; user_query: string; created_at
 
 async function fetchOne(id: string): Promise<{ record: DatasetDetail | null; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/datasets/${id}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/datasets/${id}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { record: null, failure };
     return { record: (await res.json()) as DatasetDetail, failure: null };
@@ -52,7 +54,7 @@ async function fetchOne(id: string): Promise<{ record: DatasetDetail | null; fai
 
 async function fetchAnalyses(datasetId: string): Promise<{ analyses: AnalysisItem[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/analysis/?dataset_id=${datasetId}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/analysis/?dataset_id=${datasetId}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { analyses: [], failure };
     const data = (await res.json()) as { analyses: AnalysisItem[] };
@@ -63,6 +65,8 @@ async function fetchAnalyses(datasetId: string): Promise<{ analyses: AnalysisIte
 }
 
 export default async function DatasetDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const locale = await serverLocale();
+  const shared = failurePresentation(locale);
   const { id } = await params;
   const { record: ds, failure } = await fetchOne(id);
   // A 404 is this page's own not-found answer; every other outcome is a request that failed and must
@@ -72,7 +76,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
       <div className="space-y-4">
         <PageHeader eyebrow="Step 1 · Dataset profile" title="Dataset unavailable" description="The request for this dataset failed." />
         <ErrorState
-          message={FAILURE_PRESENTATION[failure]}
+          message={shared[failure]}
           diagnostics={
             <Link href="/datasets"><Button variant="secondary" size="sm">Back to Datasets</Button></Link>
           }
@@ -192,7 +196,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
           <Card>
             <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
               {analysesFailure ? (
-                <ErrorState message={FAILURE_PRESENTATION[analysesFailure]} />
+                <ErrorState message={shared[analysesFailure]} />
               ) : analyses.length === 0 ? (
                 <EmptyState
                   title="No analyses for this dataset yet"

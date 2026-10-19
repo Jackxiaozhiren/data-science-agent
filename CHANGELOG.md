@@ -2,6 +2,665 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — a client can open a report the product already has (R-14)
+
+- `/mcp-app/report/{run_id}` has always gone through the product's one report renderer, and that was the half
+  the requirement named. The other half was broken: it read its state from the runs *this process* had produced
+  through the MCP tools, so a stored, COMPLETED run answered `No stored analysis for this run_id` while the same
+  instance handed the web 32,756 bytes for the same id. The host now hands the App a way to read a stored run --
+  an injected loader, because `dsa_api` imports `dsa_mcp` and never the reverse, and a second implementation of
+  "load this run" is the defect class R-02 removed.
+- That read is scoped to what the instance publishes. The App surface carries no visitor identity, so without
+  the scope it would be a way around the owner separation R-08 established: a visitor's own completed run is
+  200 for them and 404 for the client surface, asserted as parity between the two web-facing renderings rather
+  than as two green status codes.
+
+### Added (post-4.6.0) — what goes wrong is said in both languages (R-13, last half)
+
+- **The failure vocabulary is now the dictionary's.** A 401, a 404, a 5xx, a 4xx and an API that never answered
+  each have one reader-facing line, and those lines now come from `apps/web/lib/locale.ts` in whichever language
+  the visitor chose. Until now they lived in an English-only constant in `apps/web/lib/api.ts` while the rest of
+  the interface had moved: a visitor reading 中文 got a Chinese page and an English error, which is exactly the
+  half-translation the language layer was built to avoid. `failurePresentation(locale)` replaces the constant,
+  and the constant is gone rather than kept as a shim, so no page can still reach an English copy.
+- **Each page keeps its own transport sentence, but not as an owner.** Five pages name what the reader is
+  actually looking at when nothing answered -- taxonomy reference only, a static endpoint reference, an empty
+  report or run list instead of a blank page, the unreachable base URL. Those disclosures stay, one dictionary
+  key each; a page holding its own string is now refused by a guard, because a second owner is how a reworded
+  line ends up disagreeing with itself.
+- **The upload path, the waiting state, and the browser tab.** The queue's per-file notes (too large, duplicate
+  name, request failed with the API's own detail) and the backend probe's four phases are bilingual, and so are
+  the two strings a running analysis writes outside the page: the tab title's live percentage and the completion
+  notification. The probe's guard moved with the words -- it now reads the waking sentence out of the dictionary
+  in *both* locales, so a Chinese reader is still promised the attempt count and the wait the budget covers.
+- **One duplicate found by the guard that came with this.** The inspector kept its own copy of the product
+  title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
+  every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
+  fallback now asks the dictionary.
+
+## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
+
+### Added (post-4.5.0) — the interface speaks two languages, and the keyboard reaches the evidence (R-13)
+
+- **A language switch in the header**, choosing between English and 中文 from a first-party `dsa_locale` cookie.
+  The cookie rather than a URL segment or `Accept-Language`: the pages are server-rendered, and a language the
+  server cannot see before render would produce English markup that immediately re-paints -- a hydration
+  mismatch and a flash on every navigation. `<html lang>` and the tab title follow the choice too, because a
+  reader who switches the page but not the voice is being told the translation is a decoration.
+- **Every string lives in one dictionary** (`apps/web/lib/locale.ts`), and a missing key renders as a visible
+  `⟨key⟩` rather than falling back quietly. That is what turned up the first omission during this very change:
+  a key a page asked for that no locale defined, caught on the screen instead of in a review.
+- **The starter questions are published in both languages, and the funnel knows both.** A Chinese interface that
+  sent the English question behind a Chinese button would be a label over different content, so the Chinese
+  wording is what gets sent. `starter_questions_zh.json` sits beside the seeder keyed by **catalog task id**,
+  not by the English sentence, so rewording a question cannot silently unmatch it. `is_starter_question` accepts
+  every published spelling -- the guard that matters is `test_the_chinese_wording_of_a_starter_records_the_same_link`:
+  a matcher that only knew English would keep counting the half that stayed English, so the funnel would read as
+  a smaller product rather than as a broken measurement.
+- **The Ask and upload screens are bilingual on the server**, not only after hydration: `apps/web/lib/locale.ts`
+  carries the copy and the root layout hands the choice down through a provider, so a client component reads its
+  language from the render rather than guessing it in the browser.
+- **An accessibility floor wired into the web lane.** `apps/web/scripts/regression.mjs` now walks five routes and
+  asserts, in a real browser: a declared and legal document language, a title and exactly one main region, an
+  accessible name on every interactive control and `alt` on every image, a *visible* focus indicator on every
+  keyboard stop, and that each `<details>` drill-down opens on Enter. No axe-core -- a new devDependency needs the
+  user's approval, so each rule is implemented against real DOM and names the axe rule it reproduces.
+- Two defects this found in its own tooling, recorded because they are the reason to run the falsification:
+  `checkVisibility()` rather than client rects is required, since Chromium still lays out the links inside a
+  *closed* `<details>` and those are not tab stops (a clean sweep read as 33 of 36 unreachable); and a focus
+  indicator must be measured by colour as well as style, because this Tailwind builds `outline-none` as
+  `outline: rgba(0,0,0,0) solid 2px` -- a check that reads only `outline-style` and `outline-width` calls a
+  transparent ring visible.
+- **A caveat's severity is no longer English-only.** `SEVERE_LIMITATIONS` carries the Chinese defect words
+  alongside the English ones, so a leak stated in Chinese does not render as a routine note. The Chinese words
+  are deliberately narrower than the English (`偏见`/`偏差`, never bare `偏`; never `混淆`, which also names a
+  confusion matrix) -- an over-matching keyword list reproduces the bug that section exists to prevent.
+
+### Added (post-4.5.0) -- the ledger's section numbers are now a gate, not a habit
+
+- `scripts/check_ledger_identifiers.py` holds three things over the canonical `## N. ` run (in use since §62):
+  a number is issued once, the run has no undeclared gap, and a body citation above the floor resolves. The
+  two existing collisions (§178, §179) and the one historic dangling citation (§83) are exempted by number,
+  each with the section that decided it -- the exemption covers the recorded past, so a third §178 still fails.
+- Wired into `.github/workflows/ci.yml`, `scripts/run_gates.sh` and both contributor guides in one commit, as
+  `tests/test_ci_gate_integrity.py` and `tests/test_command_surface.py` require; the checker's own executable
+  bit was the first thing caught, and `debt.unwiredCheckers` returns to 0 only because the workflow names it.
+- Prose below the §62 floor is out of scope by declaration. Two scans of the same file disagreed about what
+  was dangling (62 under a strict heading pattern, 8 under a permissive one) because dates and version strings
+  leak into either, so the gate states the form it can read instead of guessing at the rest.
+
+### Added (post-4.5.0) — a model credential you set inside the product, on your own machine (R-05)
+
+- Until now the only way to see the real product was to export variables before the server started: a developer
+  act. **`/settings`** replaces it for a private instance -- choose a provider, name a model and endpoint, paste
+  the key, save. No shell, no restart, and the suggested first option is **Ollama**, because that is the free
+  and local answer and the requirement says to make cost and privacy explicit rather than assuming you arrive
+  with a hosted key.
+- **The credential is write-only.** `GET /api/v1/provider` reports the provider, the model, the endpoint and
+  *whether* a key is present -- never the value, and not a fragment of it. That forces the save to be a merge
+  rather than a replace: a form that cannot read the key back must not delete it when you change the model. An
+  explicit empty value removes it, which is the only way to express that from a page that never sees it.
+- It lives in `provider.json` **inside the `--data-dir` you already chose**, written `0600`, never in the
+  database -- a row in `dsa.db` would ride along in every copy and support bundle of that file, and the rule is
+  that the secret appears in no serialized artifact. The page reports the file if it stops being private.
+- Saving does not contact the provider. A "verify" button would spend your credit or send your data out without
+  being asked, so the response says it was checked for shape only, and the first run is the test.
+- **The hosted demo refuses, in the interface as well as the API.** `PUT /api/v1/provider` answers 403 whenever
+  `DSA_PROVIDER_CONFIG` is unset, which is how the process knows it is a shared box, and `/settings` renders
+  that reason instead of a form that would fail. Partial support -- accept the key, keep it in memory, lose it
+  on the next idle restart -- is what the requirement refuses to build.
+- **`source` joins the effective mode** (`stored` / `environment` / `default`), and the run row now records the
+  mode that produced it (`state.reasoning`) rather than whatever `/version` reports later. Two knobs can set the
+  mode now, and a reader is not left inferring which one answered.
+- **A defect this found on the way:** `plan_analysis` re-read `DSA_LLM_MODE` itself instead of going through
+  `configured_llm_mode()`, so the planner could answer heuristically while `/version` reported `real`. That is
+  the two-readings defect R-02 was raised to remove, and it is now measured: `test_a_real_mode_run_plans_from_
+  the_stored_credential_and_differs_from_the_stub` saves a configuration through the route, runs against a
+  scripted local endpoint, asserts the endpoint received the stored credential, and asserts the resulting plan
+  differs from the heuristic plan on the same question. (The endpoint is scripted, not a paid model -- the
+  project stays on free tiers, and the mechanism proved is the routing of the plan, not the model's quality.)
+- **Two defects that only a browser could catch, both found by driving the real page.** `allow_methods` shipped
+  as `GET, POST, OPTIONS`, so a `PUT` from the UI was refused at the preflight while curl answered 200 -- every
+  pytest in this repo uses an ASGI transport and performs no preflight. It is now derived-and-checked
+  (`test_every_method_the_routes_declare_is_a_method_the_browser_may_use`), against the methods the routes
+  declare rather than a transcription. And the settings page's Ollama placeholder (`http://localhost:11434/v1`)
+  was read by the bundle-origin probe as the *configured* API origin, which made both `dsa ui`'s preflight and
+  the browser tour refuse a correct build; the probe now matches an origin, not any loopback URL.
+- Pinned by `tests/contract/test_provider_settings.py`: 16 guards, each falsified by removing the fix it
+  describes -- echoing the key back, replacing instead of merging, accepting a write in hosted mode, env-first
+  precedence, an unrecorded mode, a credential-bearing field in the page, and a method the browser may not use.
+  Verified live as well: on a running `dsa ui`, saving flipped the page from
+  `heuristic · stub · decided by environment` to `real · openai-compat · decided by stored`, the typed
+  credential disappeared from the DOM (`outerHTML` checked, not just the rendered text), the field emptied
+  itself, a reload reported "one is already stored" without showing it, and the file landed `0600` in the
+  chosen data directory.
+
+### Fixed (post-4.5.0) — `dsa ui` printed a URL whose origin its own API refused
+
+- `dsa ui` hands the user `http://127.0.0.1:3000`, while `DSA_CORS_ORIGINS` ships as `http://localhost:3000`,
+  and `localhost` and `127.0.0.1` are two different origins to CORS. Measured live: following the printed link
+  loaded the page and then refused every request -- 12 console errors and an empty dataset list, which reads as
+  "the product has nothing in it". `environment_for` now allows both spellings on the UI port, plus any host
+  named with `--host`, and leaves an explicit `DSA_CORS_ORIGINS` untouched.
+- Verified on the running instance: `GET /api/v1/datasets/` with `Origin: http://127.0.0.1:3000` answers
+  `access-control-allow-origin: http://127.0.0.1:3000`, and the same page then lists the sample datasets.
+  `test_the_origin_this_command_prints_is_an_origin_the_api_answers` pins all three cases, including the one
+  where an operator set the variable themselves.
+
+### Added (post-4.5.0) — one visitor's upload is no longer the next visitor's data (R-08)
+
+- The hosted demo answers without credentials, so until now `GET /api/v1/datasets/` from any browser listed
+  every other visitor's file, and a run id was the only thing between a stranger and your report, bundle and
+  approval button. Every row now carries an `owner`: `datasets`, `analysis_runs` and `experiments` each gained
+  the column, and every route that reads or writes one resolves the caller first.
+- **The migration is the part that usually gets faked.** The lifespan creates tables with `create_all`, which is
+  *checkfirst* and never `ALTER`s, so an `owner` column added only to the models would be a silent no-op on every
+  database that already exists -- including the deployed one. A startup step now adds the column in one
+  transaction before `create_all`, backfills existing rows to the single local owner, and refuses to boot if the
+  file cannot be written rather than serving a half-migrated schema. It is idempotent, because the free tier
+  restarts constantly.
+- **Who the caller is.** The web app mints a random id in a first-party cookie before the first render and sends
+  it as `X-DSA-Owner` on every request; the three report links that open in a new tab use `?owner=`, because a
+  navigation cannot carry a header. No id means the `local` owner, which is also what the backfill assigns, so
+  `curl` and the CLI keep working unchanged.
+- **`shared`, and why the demo did not go blank.** Scoping everything would have emptied the first screen R-01
+  shipped: a visitor holding their own id would see no datasets and no examples. The sample datasets and the
+  example runs are therefore published under a reserved owner that every request can read and no client can be
+  given -- `X-DSA-Owner: shared` normalises to `local`, so a visitor can read the sample but cannot publish their
+  own file to everyone. Rows the migration backfilled to `local` are relabelled on the next boot, marker by
+  marker, which is what keeps an upgraded instance from presenting a correct-looking database and an empty page.
+- **What it is not.** Not an account, and not confidentiality against someone who takes the cookie: it is a
+  bearer id with nothing behind it. `docs/hosted-demo.md` says so, and the same sentence now sits at the upload
+  control, because a promise the interface does not make is the half-measure this requirement is about.
+- Pinned by `tests/contract/test_owner_scoped_storage.py` (the old-file upgrade, the route census, and two
+  simulated browsers against one deployed demo -- including the check that every run route answers a stranger
+  with the *same* 404 an unknown id gets, so a 409 cannot confirm a run exists) and
+  `tests/contract/test_web_owner_identity.py` (the client half: no page may fetch the API without the id, the
+  header name is compared against the Python constant, and the URL transport is limited to those three links).
+- **Not yet live.** The deployed demo is still the pre-R-08 build: this workspace has no `RENDER_API_KEY` or
+  `VERCEL_TOKEN`, so the redeploy that would put this on the public URL has not happened. See the handoff in
+  `docs/hosted-demo.md`'s launch checklist.
+
+### Fixed (post-4.5.0) -- a client's poll could erase the run's own final write
+
+- `sqlite+aiosqlite:///:memory:` resolves to StaticPool, which hands every session in a test the *same* DBAPI
+  connection. A request that opened and closed a session therefore rolled back whatever the run's task had
+  flushed but not yet committed, and that task's own `commit()` then committed nothing -- no error, no log, and
+  a row that stayed `VALIDATION` while its report content was already written. The two integration fixtures that
+  run a background task and poll it in the same test now use a per-test temporary **file** database, where each
+  session holds its own connection: `tests/integration/test_phase6_api.py` (one `_database_url` owner, shared by
+  the fixture and the guard) and `tests/integration/test_agent_analysis.py`.
+- The invariant is pinned rather than described: `test_a_terminal_write_survives_a_client_poll_on_the_same_tick`
+  races `run_lifecycle._write(status="COMPLETED")` against a concurrent `read_run` started on the same tick and
+  requires the row to read `COMPLETED`. Held at the in-memory URL it fails with exactly the CI reading --
+  `the concurrent reader rolled the terminal write back: the row still reads VALIDATION` -- and passes against
+  the file URL, so the guard can fail and names the shape it protects.
+- Nothing in `apps/` or `packages/` chose that URL, so the product was never exposed: its default is a file
+  database, which resolves to `AsyncAdaptedQueuePool` (measured), one connection per session, so a reader
+  cannot reach another session's transaction. Counted across the suite, the in-memory URL appears at 19 sites in
+  15 test files; two of them paired it with concurrent polling, and those are the two that had been failing.
+
+### Added (post-4.5.0) — `dsa ui`: the whole product locally, one command, loopback by default (R-04)
+
+- `dsa ui` starts the API and the dashboard together, prints the one URL to open, and stops both on a single
+  interrupt. Data lives in one directory the user chooses (`--data-dir`, default `~/.dsa/ui`), so a laptop run
+  needs no Docker and no hosted box, and nothing is uploaded anywhere: the only outbound request is the model
+  endpoint that person configures, and `DSA_LLM_MODE` unset means the deterministic planner answers.
+- Measured on a real run: ready in 6 s, `/health` answering, `/` serving 60,623 bytes, an uploaded CSV
+  reaching `COMPLETED` in 4 s, its markdown export 200, 23 artifact files plus a 643 KB database under the
+  chosen directory, and **both ports free with zero surviving processes** after a single `SIGTERM`.
+- Two failure modes that would have made it worse than the demo it replaces are refused *before* spawning:
+  a missing **or stale** bundle (the freshness rule the browser tour already enforces, so a user is never
+  served the previous product), and an `--api-port` the built client cannot reach — `NEXT_PUBLIC_API_URL` is
+  compiled into the bundle, so the wrong port yields a page that loads and then fails every request.
+- Teardown takes the whole child process group, and the supervisor is *not* in it: the first spike proved why,
+  because signalling a group you belong to kills the terminal with it. `SIGINT` and `SIGTERM` are both
+  handled; the original version caught only `KeyboardInterrupt`, so a `SIGTERM` ended the supervisor, its
+  cleanup never ran, and the ports stayed held.
+- `build_parser()` is now a real seam (the gap `tests/unit/test_cli_help_surface.py` had recorded): the
+  surface is inspectable without dispatching, which is how the loopback default and the port-8000 default are
+  pinned as defaults rather than as prose.
+- Fifteen guards, and two of them were broken instruments before they were finished. The `SIGTERM` guard sent
+  the signal to the pytest process itself, so removing the handler produced a crashed run at rc 143 with no
+  verdict — it now runs in a child process and fails with a named assertion. The escalation guard's child was
+  killed before it could install `SIG_IGN`, so the guard passed with the escalation deleted; the child now
+  announces it is ignoring `SIGTERM`, and the assertion demands `SIGKILL` specifically.
+- Cost check: the first draft spent 6 exception handlers and 4 suppressions against ceilings of 185/42 that
+  had 1 and 0 slots of headroom. Rather than raise a ceiling, the module was restructured to need none —
+  `connect_ex` returns a code where `bind` would raise, `os.access` asks permission where a write-and-catch
+  would report it, `contextlib.suppress` covers the two process-race successes, and two `# noqa: S603`
+  comments were deleted once `packages/evaluation/**` was found to ignore that rule already. Measured after:
+  `exceptHandlers` 184, `suppressionDirectives` 42 — both back to the pre-change reading.
+
+### Added (post-4.5.0) — the funnel's last link, with two switches that both start off (R-15)
+
+- `arrival` is now instrumented end to end: `POST /api/v1/events` relays the one event only a browser can
+  observe, and `apps/web/app/lib/productEvents.ts` reports it from the root layout's beacon. The funnel has
+  all five links.
+- **Nothing leaves the browser by default.** `NEXT_PUBLIC_*` is inlined at build time, so a bundle not built
+  with `NEXT_PUBLIC_TELEMETRY=on` compiles the check to `false` and cannot reach the network at all; the API
+  gates a second time on `DSA_TELEMETRY`. Two deliberate acts are required to count a visitor, and the
+  vocabulary says so in the event's own `counts` text rather than in a comment nobody deploys.
+- The relay is a transport, not a second authority: the same `_payload_refusal` the in-process emitter uses
+  checks declared keys, the prohibited classes, the value shape and — new — **the choice list each field
+  declares**, so a payload naming `page: "settings"` is refused because the vocabulary never offered it.
+  Every declared payload key is now required, which caught three of this lane's own call sites the moment
+  `initiated_by` joined `run_started`.
+- An event the vocabulary says the **api** emits is refused from the client, so `run_completed` cannot be
+  written by whoever is reading the page. The refusal is checked before status, and the boundary asks for a
+  *message* instead of catching an exception — the emitter and the endpoint now share one predicate, and the
+  debt ratchet stayed at 184 of 185 because no handler was added to get there.
+- A counting-off instance answers the same **202** and writes nothing: the route is not a way to ask whether
+  an operator chose to count. The events route is IP rate-limited like the upload route (120/min, with a test
+  that drives it to 429 rather than reading the table).
+- Guarded in both directions across corpora, in the style of `test_web_fetch_outcome_vocabulary.py`: labels
+  the client may send equal the vocabulary's declared choices exactly, each label keys a route whose page file
+  exists, the beacon is mounted and renders `null`, the module posts only web-owned events, and the URL the
+  client calls is the path the API ships. Five plants reddened exactly the guards meant to catch them.
+
+### Added (post-4.5.0) — the funnel's fourth link, and the starts that were going uncounted (R-15, continued)
+
+- `starter_question_used` is now recorded: a run whose question equals — after stripping — one of the 100
+  questions the tracked catalog publishes records the link **before** `run_started`, because that is the
+  funnel's own order. The matcher reads the catalog and compares; the question text is consumed and dropped,
+  so the log still carries only `dataset_id`.
+- Its denominator is written into the vocabulary: *runs, not clicks*. A visitor who opens a starter question
+  and never submits leaves no record, and a question that merely resembles a published one is not counted.
+  The alternative — implying clicks from a submit — is the kind of number §18 refuses to let prose carry.
+- `run_started` gains `initiated_by` (`user` | `seeding`) and the boot seeder now emits it for its own example
+  runs. Until this, only the endpoint recorded a start while `run_completed` fired from the terminal choke
+  point the seeder also passes through — so a counting instance reported **more completions than starts**, a
+  funnel that could exceed 100% and did not say so.
+- Two derived guards: every event declared `active` with an API emitter must be named by shipped API source
+  (a vocabulary entry nobody calls is §182's silent no-op with a schema attached), and the planned set is
+  pinned to `["arrival"]` with the refusal asserted from the other side — the API cannot emit the web's event.
+- Four plants, each reverted from a byte snapshot: removing the endpoint's starter emission reddened the
+  positive test only; making the matcher always-true reddened the negative one only; removing the seeder's
+  emission reddened the pairing test; and declaring an `active` event nobody emits reddened the call-site
+  guard. `arrival` remains **not built**: it needs a page-view signal from the client, and that is a decision
+  about a stranger's session rather than a line of code.
+
+### Added (post-4.5.0) — the product can count, but only if it was asked to (R-15)
+
+- `apps/api/src/dsa_api/services/product_events.json` publishes the **event vocabulary as data**: five
+  funnel events (`run_started`, `run_completed`, `export_taken`, `starter_question_used` emitted by the API;
+  `arrival` declared web-side and still *planned*), each with its payload fields, plus the
+  list of keys that may never be logged and the value rule that keeps free text out of the log.
+- `apps/api/src/dsa_api/services/telemetry.py` is the one emitter. `record_event` validates **before** the
+  consent gate and appends only when `DSA_TELEMETRY=on`: any other value, including the default, writes
+  nothing and creates no file, so local mode ships silent. Shape errors raise in the caller's path — a
+  payload that would carry query text is a code defect whether or not this instance is counting.
+- Emission points: run creation records the effective reasoning mode, both report-export branches record
+  format and mode, and `run_lifecycle._write` records every terminal status from the one choke point that all
+  four exits (success, task failure, write failure, non-terminal graph return) already pass through. A funnel
+  that counted only the happy path would be a lie with a file behind it.
+- Measured, not asserted: one full loop on an in-memory database (`upload → analyze → poll → export`) produced
+  exactly `["run_started", "run_completed", "export_taken"]` with payloads
+  `{dataset_id, reasoning_mode}`, `{run_status: "COMPLETED"}`, `{export_format: "markdown", mode: "audited"}`,
+  and the same records were re-checked from the bytes on disk against the pattern extracted from the
+  vocabulary itself. With consent off the log file does not exist. Four refusals are asserted: unknown event,
+  prohibited key, undeclared key, non-identifier value.
+- The vocabulary is asserted **tracked in git** — the demo's first evidence source read a gitignored directory
+  and worked only on the machine that wrote it (§182), and a clone that emitted nothing would have looked like
+  "nobody used it".
+- The funnel is guarded twice, because the CI runner cannot finish a run (§188: three samples, the task never
+  reaches the loop). A deterministic driver stubs the router's `schedule_run` and terminalises through
+  `persist_state` — the same function the real task calls, hence the same `is_terminal` branch — so the
+  emission wiring is asserted on every machine; the spec's real-loop accept keeps its exact assertions but
+  declines with §188 named where a run cannot complete. Deleting any one of the three emissions reddens the
+  deterministic test (verified by three plants), and neutering the emit-time check while logging a free-text
+  value reddens both the refusal test and the disk re-check.
+- Enabling counting on the hosted demo is deliberately **not** done here: `DSA_TELEMETRY` is a new variable
+  for that service, and turning it on changes what a real visitor's session does with their activity. It is
+  recorded as the maintainer's decision, with both switches, the four combinations they produce, and the
+  rebuild caveat set out in `docs/hosted-demo.md`.
+
+### Changed (post-4.5.0) — the MCP App's report is the product's one rendering (R-14)
+
+- `GET /mcp-app/report/{run_id}` serves the run's report through `dsa_agent.report_export.export_html` —
+  byte-for-byte the same rendering the web's *Download offline HTML* hands over. The old MCP page truncated
+  `report_markdown` to 3,000 characters into a `<pre>`; that second, amputated renderer is gone, and with it
+  the risk of the two views disagreeing about a number.
+- The `analyze` tool's stored handle now also carries the run's original `AnalysisState` (the SDK's
+  `raw_state`), which is what the renderer reads; the MCP resource surface (`report://`, `evidence://`,
+  `dataset://`) and the tool surface are unchanged — the `dsa mcp` listing is identical before and after, and
+  the only adapter delta is the store call.
+- An unknown handle answers **404** with the next action ("Run the analyze tool first"), not an empty page.
+- Guarded behaviorally: the endpoint's response is asserted **byte-equal** to `export_html(state)`; the page
+  is pinned to embed rather than re-implement (the old `slice(0, 3000)` fails the guard); the new store is
+  registered in the process-global isolation registry, whose derived-from-source scan caught it the moment it
+  existed. The MCP contract, acceptance and seam suites stay green.
+- Honest half of the accept: no MCP chat client was available here to produce the spec's rendered capture
+  from a real client. Verification is the byte-equality test plus the existing suites; the client capture is
+  recorded as owed, not implied.
+
+### Added (post-4.5.0) — the report a stranger opens is one file, offline (R-07)
+
+- `GET /api/v1/analysis/{run_id}/report?format=html` now returns a file that carries everything it shows:
+  charts inlined from the run state's own `base64_png` (12–126 KB per chart on the seeded runs), the
+  limitations block leading, and the drill-down from claim to evidence to tool call to dataset sha256
+  implemented as in-page `<details>` disclosure with anchor links that resolve inside the document.
+- The chart is read from the state, not the filesystem, because the state is what survives the free tier's
+  wiped disk; a payload that is not a PNG, or one over the per-chart cap, is *named* in the trace rather than
+  shipped as a broken `<img>` — the same honesty rule the previous renderer stated in its docstring.
+- A print stylesheet is included; collapsed chains print their summary line, so paper carries findings,
+  limitations and charts without scripts (there are none in the file).
+- Measured on the seeded sales run (two charts): 161,570 bytes, zero external origin references, and opened
+  from `file://` with every `http`/`https` request aborted: **0 requests attempted**, the chart decodes, and
+  the evidence chain expands and navigates (`output/lane-d/r07-offline-acceptance.mjs`).
+- Guarded by 9 tests in `tests/contract/test_report_html_offline.py`, parser-based rather than regex-based:
+  no `src`/`href` of any external scheme, no `<script>`/`<iframe>`/`@import`, every in-page link resolved
+  against the document's own ids, a 2 MB traveller ceiling, limitations before the plan, and both
+  falsifications — a planted CDN script tag reddens the reference check, a moved evidence anchor reddens the
+  link check.
+
+### Added (post-4.5.0) -- a run leaves the instance as one archive, and the page has the button for it
+
+- `GET /api/v1/analysis/{run_id}/bundle` zips the artifacts a run recorded, resolving each stored path and
+  requiring it to sit under `artifact_root()`: the path column is data, so an entry outside the root is listed
+  with its reason and never opened (pinned with a symlink pointing out of the root). Nothing is dropped
+  silently -- `manifest.excluded` names what could not be carried and why -- and a run whose files are all gone
+  answers **404** rather than an empty zip. `manifest.storage` repeats the `/version` disclosure inside the
+  archive, because the zip is what survives the instance.
+- `Download bundle` sits with the other export controls, and the outcome is reported through the shared
+  vocabulary: a real click against a live API saved the archive, and with the artifact directory removed the
+  same click produced no download and named the 404 as "files recorded, none readable here, report text still in
+  the database". `analysis/[runId]/page.tsx` was the last page calling a failed request "not found"; with it
+  converted, the gate's `PENDING_SITES` inventory is now empty -- kept as `set()`, because the guard compares
+  against exactly that list. audit §179, §183.
+
+### Fixed (post-4.5.0) -- a discarded run write and a cancelled lifecycle both speak now
+
+- A run could stop updating its row while everything looked merely slow. `await execute()` on the same row and
+  dataset writes seven states ending `COMPLETED`, so the graph is not the loss: `_write` began
+  `if row is None: return`, discarding the write with no exception and no log, and `session_factory()` resolves
+  the module session at call time by design -- so a database rebound mid-run sends every later write for that
+  row into a database holding no such row, `execute` returns normally, the done callback finds no exception,
+  and a client polls a status nothing will ever change again. That is the shape CI had been reporting as a
+  30-second timeout.
+- Both silent exits now name themselves: the write line carries the run id and the engine it was writing to, and
+  a lifecycle that ends by cancellation logs instead of returning. No exception handler was added, so
+  `debt.exceptHandlers` is unchanged, and a boot that cannot see its own schema still raises.
+- Not fixed, and asserted as not fixed: a cancelled lifecycle still leaves the row in flight and still empties
+  the registry, because closing that gap means either raising from `_write` or pinning the session factory at
+  schedule time, and both reverse a documented decision in another lane's file. audit §183 records them as votes.
+- The stall report's own instrument was wrong in a way that mattered: `asyncio.all_tasks()` is loop-local (an
+  empty census did not prove the writer had finished), so the report now labels that line as this-loop-only and
+  adds a thread-wide stack scan, which is what actually shows the writer gone.
+
+### Added (post-4.5.0) -- the first screen is never empty, and the door that opens is the analyst's
+
+- **R-01.** `dsa_api.services.demo_seed` runs in the lifespan: the committed files in `examples/datasets/` go
+  through the real `save_dataset` path (validated, profiled, hashed), each seeded row carries a
+  `dsa_sample_dataset` marker in its existing metadata column, and every seeded dataset gets a finished report
+  to open before the visitor does anything. `GET /api/v1/datasets/` on a fresh database answered
+  `{"datasets": []}` (audit B4); it now answers two marked rows with three questions each.
+- The questions are this project's own benchmark tasks: `benchmarks/v2/catalog.json` names a dataset per task,
+  and a task is offered for a sample only when `benchmarks/v2/datasets/<name>` has the same sha256 as that
+  sample. Nothing is written for a page, and a sample with no byte-matched task publishes no question.
+- The example report is **produced by the code that is shipping**, in a reasoning mode that calls no model and
+  spends nothing, and is linked only if its own row shows no errored tool call and no failing validation check
+  (`run_is_clean`). When the instance is configured to reason with a model, no run is started unasked -- the
+  questions stay offered.
+- **R-10.** `NAV_GROUPS` in `Sidebar.tsx` is the one declaration, read by the sidebar and the top bar:
+  *Your work* (`/analysis`, `/runs`, `/reports`, `/datasets`) then *About this system* (seven entries, labelled
+  as measurements of the agent rather than of the visitor's data). The sidebar now renders on every route -- it
+  previously appeared on three, so a report page had no workspace navigation -- and `/evaluations`, `/failures`
+  and `/mcp` gained their first links after being URL-only surfaces. Nothing was removed or hidden.
+- `docs/FRONTEND_IA.md` was rewritten as the spec of record: sixteen routes with where each is reached from,
+  the endpoint-per-screen data flow, the two deployment shapes (local and the free hosted pair, including the
+  disk that is wiped on every deploy), and an explicit deferred list with a reason per item. The previous
+  version described a five-route app and still said `Settings hidden until auth` (audit B12).
+- Twenty-nine guards: 18 in `tests/integration/test_demo_seeding.py`, 7 in
+  `tests/contract/test_web_navigation_groups.py`, 4 in `tests/contract/test_web_limitation_severity.py`. The
+  acceptance run (`output/lane-d/capture-r01-r10.sh`, fresh database, API :8124, web :3213) is 7/7 browser
+  checks plus the cold-boot assertion, with four screenshots; the web tour is 30/30.
+
+### Fixed (post-4.5.0) -- two premises that were true only on the machine that wrote them, and a warning that fired on every run
+
+- **The demo's evidence lived in a gitignored directory.** The first version of the seeder took its questions
+  and its example run from `benchmarks/ds-agent-benchmark/results/**/raw_runs.json`. Those are real completed
+  runs, so it looked like the stronger source; `.gitignore:36` excludes the whole directory, so a fresh clone
+  -- what a deploy builds and what a reviewer reads -- would have seeded two datasets and no questions, and
+  every test in the suite would have passed anyway because the developer's tree has the files. The seeding
+  tests read the same ignored path, so they would have errored in CI. `demo_seed` now names its sources as
+  constants, and `test_the_demo_reads_only_tracked_files` asserts each one is in `git ls-files` -- with the
+  ignored path kept in the file as the negative control, verified red by pointing `CATALOG` at it.
+- **`COMPLETED` is not a quality claim, and the promoted example proved it.** Every committed `titanic.csv` run
+  reaches `COMPLETED` with 4-8 errored tool calls inside it (a planner that emitted `x` missing and
+  `test: "t-test"` for a schema wanting `"t_test"`), so the landing page's "open a finished example" led to a
+  red "This run failed -- 4 tool calls errored" panel. The acceptance check passed on it, because it asserted
+  `COMPLETED` and a non-empty page. The example is now generated at boot by the current code, and the check
+  reads the rendered page for the failure panel and the check count; the cold-boot assertion opens every linked
+  example and refuses an errored call or a failed check.
+- **A caveat that fires on every report fires on none of them.** `SEVERE_LIMITATIONS` in the run inspector
+  listed `causal` and `causation`, and the agent attaches `limitation="Association does not imply causation."`
+  to every insight derived from a correlation or a hypothesis test -- so the loudest tier was the product's own
+  standing disclaimer, on effectively every page. Severity moved to `app/lib/limitations.ts` as one owner; the
+  causal words are out, `bias / leak / overfit / confound / spurious` stay. Claiming a causal conclusion is a
+  different gate and still is the `unsupported_claim` validation check, which the guard pins by name so the
+  banner is not quietly the last line of defence. Both directions are falsified: adding `causation` back
+  reddens it, emptying the list reddens it.
+- **A boot that ran the agent inside eight unrelated test files.** `TestClient(app)`'s context manager runs the
+  lifespan, and nine files open one -- eight of them with no connection to this work; with the hook live, each
+  of them seeded the configured database and
+  executed two analyses. The full gate sweep showed it as `test_api_analysis_flow` timing out at
+  `status: VALIDATION` -- a run whose four steps had all finished, waiting on a write while two other runs
+  shared the file. `DSA_DEMO_SEEDING` now gates the hook, the root conftest sets it off for the suite, and
+  `test_the_switch_the_suite_relies_on_actually_switches_it_off` holds both halves: off means the boot writes
+  nothing, and an unset variable still means on, so a deploy cannot silently lose the demo. Verified red by
+  making the hook ignore its own flag.
+- **The tour could be walked against a bundle that was not this tree.** `next start` never builds, so a stale
+  `.next` -- or one compiled with a different `NEXT_PUBLIC_API_URL` -- is served and judged. Hit for real while
+  capturing this lane's evidence: the acceptance build baked `:8124`, and the tour then reported the shared
+  probe's page copy as missing because the pages were calling a dead origin. `assertBundleMatchesThisTree`
+  refuses a bundle older than any source file, or one naming an API origin other than the port being guarded;
+  both branches were verified red (a `touch`, and the real `:8124` bundle).
+- **Two instrument reads taken at first paint.** Next streams these routes, so `main` arrives after the shell.
+  The probe scenarios and the example-report check each read the page the moment a locator appeared and
+  reported "rendered nothing" against a Suspense fallback. Both now wait for streamed content, and the probe
+  failure path dumps what the page did say -- a check that fails on an empty page would also pass its
+  forbidden-claim assertions vacuously, which is the part worth pinning.
+- The tour's route list is now checked against `NAV_GROUPS` rather than maintained beside it, so a nav entry
+  added tomorrow cannot ship without ever having been rendered once.
+- `debt.exceptHandlers` stays at 184 of 185: the boot hook reads failures through
+  `asyncio.gather(..., return_exceptions=True)`, and the two halves of the hook are gathered apart so a
+  missing example run is logged as "the datasets are there, the report is not" rather than as an empty screen.
+- Vendored copies repaired for the two files that changed (`dsa_api/main.py`, `dsa_api/services/demo_seed.py`);
+  `sync_vendor.py --check` reports only another session's `dsa_evaluation` drift.
+
+### Fixed (post-4.5.0) -- a run whose last write failed is now failed, not frozen
+
+- Reading a CI payload instead of its assertion sentence changed the diagnosis: the run that timed out at
+  `status: VALIDATION` had a four-step plan, all four tool calls recorded ok, and a rendered report already in
+  its state. Nothing stalled. The row's final write simply never landed, and `schedule_run`'s done callback
+  only removed the registry entry, so the exception stayed inside a task no one awaited -- no log line, no
+  terminal status, and a client polling a finished run forever. R-03 exists to keep "failed" and "frozen"
+  distinguishable, and this path had made them identical again.
+- The terminal write is now awaited through `asyncio.gather(..., return_exceptions=True)`, so a failure is read
+  as a value, logged as `the terminal write failed`, and written back as `FAILED` naming the kind of error --
+  all inside the awaited coroutine, which keeps the detached-coroutine failure §174 recorded from coming back.
+  The done callback became a named `_finish` that retrieves the task's exception and logs
+  `run lifecycle ended without a terminal row`. No counted handler was added: `debt.exceptHandlers` stays at
+  184 of 185, a ceiling shared with the other session in this tree.
+- Guarded by `test_a_terminal_write_that_fails_lands_as_failed_not_as_a_frozen_run`, which refuses exactly one
+  write (the `COMPLETED` one) and requires a `FAILED` row plus the log line. Red against the pre-fix module --
+  the raw `OSError` reaching the poller and the deadline expiring -- green in 1.35 s after.
+- Attribution, because two earlier sections guessed: the failing set went 7, 7, 3, 3 across `bccb4e0` (this
+  lane's schema fixture), `bfc160a` (this lane's guard), `c575bd2` (another session) and `f1eec91` (this lane's
+  binding pin). Four of seven closed in work this lane did not do; the pin's warning has never fired. §178's
+  rebinding leak is therefore a real hazard the pin now neutralises, not the cause of these three.
+
+
+### Added (post-4.5.0) — a run leaves the instance as one archive (register item 2, the free-tier half)
+
+- `GET /api/v1/analysis/{run_id}/bundle` answers a zip of the artifact files a run recorded, plus a
+  `manifest.json`. The free demo's filesystem is cleared when its container is recreated, and the report text
+  survives in the database while the files do not, so the only reproducibility a visitor can keep is the one
+  they download before the instance goes away.
+- The stored `path` column is not trusted: each entry is resolved and required to sit under
+  `artifact_root()`, and an entry outside it is listed with its reason and never opened -- pinned with a
+  symlink planted inside the root that points at a file outside it.
+- Nothing is dropped in silence. `manifest.excluded` names every entry that could not be carried and why, and
+  a run whose files are all gone answers **404** rather than an empty zip, pointing at `/report` for the half
+  that did survive. `manifest.storage` repeats what `/version` says about the roots, so the archive carries its
+  own provenance after the server is gone.
+- OpenAPI paths 22 -> 23. Nine tests in `apps/api/tests/test_run_bundle.py`; the vendored copy was repaired
+  with `sync_vendor.py --package dsa_api`. The web download button is **not** in this change and is recorded as
+  a proposal in audit §179, because it would edit a contract test's protected gate list.
+
+### Fixed (post-4.5.0) — one test's failure no longer decides what the next test reads (audit §178)
+
+- The seven reds named in §177 are not seven causes. `test_api_analysis_flow` rebinds
+  `dsa_api.core.database.AsyncSessionLocal` and the `get_session` override so its background task and its route
+  share one in-memory engine, and restores both only on the success path. When it fails for any reason, the
+  rebind survives it: the next test's own `previous = ...` reads the leaked value and restores *that*, so every
+  later database read in the process goes to a `:memory:` engine that hands each new connection an empty file.
+  That is where CI's `no such table: analysis_runs` and `no such table: datasets` came from -- four suites whose
+  own code was fine.
+- Reproduced in a disposable worktree at `362bfe5` (rebind, dispose, raise -> the same two messages in the
+  same four tests) and falsified in the same place by moving the restore into a `finally`: one failed,
+  downstream green. The `_ISOLATED_GLOBALS` harness cannot cover this, because it snapshots dict/list/set
+  containers and `_snapshot` raises on an attribute rebinding.
+- No exception handler was added and nothing is swallowed, so a boot that cannot see its own schema still
+  raises. What is **not** fixed here is the origin of the first 30 s timeout: it does not exist locally at any
+  budget, and lengthening it or forcing `DSA_LLM_MODE` on the pytest step would edit the condition instead of
+  the cause. Prediction for the next CI run, stated to be checkable: the four `no such table` failures go away,
+  the timeout does not necessarily.
+
+### Fixed (post-4.5.0) — the test suite no longer depends on which test created the schema first
+
+- `apps/api/tests/test_security.py` asserts that `/api/v1/datasets/` answers 200 with auth off and 401 with a
+  token set. It drives the app through `httpx.AsyncClient(transport=ASGITransport(app=app))`, which **never
+  runs the app's lifespan**, and `init_db()` lives in that lifespan -- so nothing in the test created the ORM
+  tables. It passed for months only because some earlier test had opened a `TestClient` (whose context manager
+  does run the lifespan), or because the machine already carried a populated `data/dsa.db`. On a clean
+  checkout the answer depended on collection order, and CI answered `sqlite3.OperationalError: no such table:
+  datasets`.
+- R-03 turned the same latent condition into a second, louder symptom. A run's background task writes through
+  `dsa_api.core.database.AsyncSessionLocal`, while a test's own request path can be overridden through the
+  `get_session` dependency. When the first points at a database with no schema and the second at one with it,
+  the row is created, the task's writes fail, and the run never becomes terminal -- so four suites reported
+  `no such table: analysis_runs` from `sweep_abandoned_runs` at startup and three more reported
+  `never reached a terminal status within 30.0s`. Seven CI failures, one root cause, and green on every
+  developer machine that had ever run the app.
+- A session-scoped autouse fixture in the root `conftest.py` now creates the schema once against the database
+  the module engine names, the same `create_all(checkfirst=True)` the application performs at boot -- so the
+  test process guarantees the fact instead of borrowing it from a neighbour. The DDL runs through a sync
+  engine because the async one binds to whichever event loop touches it first, and a session-scoped fixture
+  has no claim on the per-test loops.
+- Verified by A/B in a disposable `git worktree` export of HEAD (own virtualenv, own empty `data/`, module
+  identity printed to confirm which copy was imported): with the default database removed, the auth suite is
+  **2 failed without the fixture and 9 passed with it**.
+- **This did not turn CI green.** The run at `bccb4e0` reported the identical seven failures with the fixture
+  present, so guaranteeing the DDL is necessary but not sufficient, and the remaining disagreement is about
+  which database the *application's* engine opens rather than whether a file was written. A guard in
+  `tests/contract/test_test_database_is_reachable.py` now asks that engine directly and fails with the URL,
+  the working directory and the file's size, and its own predicate is falsified against a freshly created
+  empty database so it cannot pass for the wrong reason. The root fixture warns rather than raises on the same
+  condition, because a session-scoped autouse fixture that aborts reddens every test in the run.- **What CI then showed.** The guard added for that gap *passed* on CI while `apps/api/tests/test_security.py`
+  failed later in the same session. Reading the tables through `database.engine` therefore certifies the wrong
+  object: requests are answered by `database.AsyncSessionLocal`, a module-level name any test can rebind, and a
+  contents-based isolation guard cannot see a rebinding. A function-scoped autouse `isolate_database_binding`
+  now restores `(AsyncSessionLocal, engine)` after any test that moved them and warns with that test's node id,
+  and a companion guard queries the factory the way a route does. The mechanism was proven by planting it in a
+  disposable export -- 1 failed without the pin, 2 passed plus a named warning with it -- because a developer
+  machine, holding a populated `data/dsa.db`, cannot see this defect at all.
+
+
+### Changed (post-4.5.0) — the wait explains itself, and a refused follow-up stays refused (web plan Lane B, R-11 + R-12)
+
+- Measured before writing anything: the first request to the hosted demo after it had idled took **44.5 s** to
+  answer `/health`. During that window the app had exactly two states -- `checking`, then `down` -- and the
+  entire visible signal was the letters "API" beside a coloured dot, so a first-time visitor could not
+  distinguish a sleeping free instance from a broken product, and had no retry to press. That is B3, and it is
+  the moment a trial is lost.
+- One new owner, `apps/web/app/lib/backendProbe.ts`, holds the phase machine (`probing | warming | ready |
+  unreachable`), the budget, the retry, and the wording, and publishes it through `useSyncExternalStore` so
+  every consumer reads the same probe instead of fetching alone. Two clocks, deliberately different: coverage is
+  4 attempts x 12 s plus 2 s/4 s/8 s backoff = **62 s**, which has to clear the measured 44.5 s or the probe
+  would report a sleeping machine as a dead one; and an unanswered request repaints as `warming` after 1.5 s
+  (`PROBE_SILENCE_HINT_MS`), while still in flight, so the explanation is there when the visitor looks instead
+  of after a whole attempt ends. `PROBE_BUDGET_MS` is derived from the constants, and the guard compares that
+  derived coverage against the measurement -- the first version advertised "about a minute" while its own
+  numbers added up to 37 s. A non-2xx answer is `unreachable`, never `warming`: something replied. The header
+  dot now carries `data-api-state` and says `Waking… 2/4`, with a Retry when the budget is spent.
+- The expectation moved into copy at the entrance instead of appearing as a toast after the failure: the
+  datasets page states the idle-sleep up front, and -- the second half of B4 -- "No datasets yet" and "No
+  datasets loaded" are now gated on `phase === "ready"`. A list that is empty because nothing answered used to
+  be reported as a fact about the user's account.
+- Re-verifying the follow-up button after R-03 (the plan's Lane B obligation, §R-12) found a real defect in the
+  lineage line, not in the request: `analysis_service.py` mints ids that already carry their prefix
+  (`run-2a4d6eeeb2`), and `RunInspector.tsx` rendered the parent as `run-{fromRunId.slice(0, 12)}`, so a reader
+  was shown `run-run-2a4d6eee` -- a string that identifies nothing, truncated so it could not be searched for.
+  It now renders the stored id verbatim, and `tests/contract/test_web_identifier_display.py` polices the class
+  across `apps/web` (a prefix glued onto an interpolated id), verified red on a planted mutation.
+- Acceptance in a real browser, in two acts (`output/lane-b/capture-r12.sh`): with the live API, the follow-up
+  create answered **202 declaring UNDERSTANDING 83 ms after the click** and the route committed with it, the
+  child linked back with the parent's stored id as its text, and the child ran on the parent's dataset. Then
+  with the create refused (an in-process stub that answers the reads and 404s only the POST -- stopping the API
+  would not work, because `/analysis/[runId]` is server-rendered and would never reach the card), the page
+  states `Analysis not found`, does not navigate, sends exactly one POST, and re-enables its button. The stub
+  answers `OPTIONS` because a JSON cross-origin POST is preflighted, and a stub that ignores that never sees
+  the request it claims to be refusing.
+- The web tour grew three backend-probe scenarios that intercept `/health` -- a hanging request on
+  `/datasets` and on `/analysis`, and a 503 -- and assert the phase, the dot's text, that the page states the
+  wait in its own words, and that the header and the paragraph agree about the *same* attempt number. That last
+  control earned its keep: it caught an off-by-one (dot `1/4` against "Attempt 2 of 4") which the contract test
+  had itself codified, because each string looked plausible alone.
+- The tour also refuses rather than misattributing. A live server on the API port makes Chrome report
+  `net::ERR_FAILED` with no URL in the message, so the console filter cannot see it and the tour had blamed the
+  app for 51 phantom errors (§165). `regression.mjs` now checks the port before booting anything, names the
+  `LISTEN` holder (`lsof -sTCP:LISTEN`, not a bare port match -- the probe's own connection otherwise names
+  this script), and exits. Hermetic result at this revision: **30/30** (24 route/viewport + 3 interaction + 3
+  backend-probe).
+
+### Changed (post-4.5.0) — an analysis run is a job, not an HTTP request (web plan Lane B, R-03)
+
+- `POST /api/v1/analysis/` used to execute the whole agent graph before answering, and inserted the row only
+  afterwards (`analysis_service.py` said so in a comment: "run the agent graph synchronously (for MVP)").
+  So during a run there was nothing to read: the id did not exist, `/progress` 404'd, and `/events` could
+  only ever replay a finished state. With a stub planner that costs seconds; with a real model it is minutes
+  of a frozen tab, and a proxy timeout makes a working product look crashed. The create call now returns
+  **202** with the row already persisted and the run executing, **200** with the same id when that exact
+  question is already in flight (the double-click case the non-blocking button creates), and `Location` as
+  before.
+- One new owner, `apps/api/src/dsa_api/services/run_lifecycle.py`, holds the task, the session the task
+  writes through, the terminal/in-flight vocabulary, and the crash-to-row path. `dsa_agent.graph.run_analysis`
+  gained an optional `on_update` awaited at stage boundaries -- the plan is set, each tool call recorded,
+  validation entered -- which is what lets the row advance without a second orchestrator being written in
+  the API layer. Execution stays in-process: a broker would be a new dependency, and §19 reserves that.
+- `/events` now follows the stored row and closes when it turns terminal; `analysis_completed` is emitted
+  only for a run that has actually stopped, which the old snapshot builder could not express. The JSON
+  fallback is unchanged.
+- A crash inside the task lands on the row as `FAILED` with the *kind* of error and never its message
+  (`failure_message`), and a row left non-terminal by a restart is swept to `FAILED` at the next startup --
+  the failure mode this design creates, so it is closed by the same module that creates it.
+- The web needed less than expected and one real fix: `useLiveProgress` already polled `/progress`,
+  classified statuses through `analysisStatus.ts`, and null-guarded every state read, so an in-flight row
+  rendered as zeros instead of crashing. What was missing was the sentence -- `RunDetail` carried no
+  `error`, and the failure card derived everything from `state.tool_calls`, so a run that died before its
+  first write showed a red badge over an empty page. It now reads the row's own error, and
+  `Copy diagnostics` includes it.
+- Guarded by `tests/integration/test_analysis_run_lifecycle.py` (5 tests) and
+  `tests/contract/test_web_run_failure_surface.py` (3), each red before green: create answers while the run
+  is gated and the row is observable mid-flight; an exception in the task becomes a row and not a 500 on a
+  read; the event generator yields before the run finishes and never re-emits; a second identical submit
+  returns the first run and starts nothing; the restart sweep closes the abandoned row and leaves a
+  completed one alone. Every absence-assertion is run against a planted mutation that proves it can bite.
+- Acceptance in a real browser (`output/lane-b/`): after the confirm click the page is a run page showing
+  `UNDERSTANDING`, the stage rail and a progress bar -- no COMPLETED badge -- and reaches the finished
+  report with both download links; a separately seeded `FAILED` row with `state_json` NULL renders "This run
+  failed / Reason The analysis stopped unexpectedly (RuntimeError)…". Two instrument faults were fixed on
+  the way and are recorded rather than hidden: `httpx`'s `ASGITransport` buffers a response body to the end,
+  so a *live* stream cannot be read over it and liveness is asserted at the generator seam instead; and a
+  Playwright multipart payload was shaped wrongly.
+- Migration cost, stated because it will recur: any test that overrides only `get_session` now lets the
+  background task write through `database.AsyncSessionLocal` to the app's real database (it announced
+  itself as `analysis task started for an unknown run`). Five existing suites were updated to patch both
+  seams and to wait for the terminal state through one new root-conftest fixture, `await_terminal_run`,
+  rather than by assuming a POST returns a finished run. No assertion was weakened to make them pass.
+
 ### Added (post-4.5.0) — one run, two exports (web plan Lane C, R-06)
 
 - A finished run had exactly one rendering. The plan's argument is a pair -- the conclusion and the evidence

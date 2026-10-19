@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable
+from typing import Any
 from pathlib import Path
 
 import pytest
@@ -79,8 +81,13 @@ async def test_critic_evidence_coverage() -> None:
 
 
 @pytest.mark.asyncio
-async def test_api_analysis_flow() -> None:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+async def test_api_analysis_flow(await_terminal_run: Callable[..., Any], tmp_path: Any) -> None:
+    from dsa_api.core import database
+
+    # A file, not ``:memory:``: the in-memory URL resolves to StaticPool, which gives every session in this
+    # test one shared DBAPI connection -- so a poll's closing rollback discards the run task's flushed write
+    # and its commit then commits nothing, silently. Audit §203; §202's CI sample was reading exactly this.
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'flow.db'}", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -89,57 +96,67 @@ async def test_api_analysis_flow() -> None:
         async with SessionLocal() as s:
             yield s
 
+    # The run executes in a background task with its own session, so the engine has to be reachable
+    # through the module the task resolves, not only through the request override.
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = SessionLocal
     app.dependency_overrides[get_session] = _get_session
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # upload dataset
-        csv_bytes = b"a,b,group,target\n1,2.0,A,0\n2,3.5,B,1\n3,4.1,A,0\n4,6.0,B,1\n5,7.2,A,0\n6,8.1,B,1\n7,9.0,A,0\n8,10.2,B,1\n9,11.1,A,0\n10,12.3,B,1\n11,13.0,A,0\n12,14.5,B,1\n"
-        files = {"file": ("t.csv", csv_bytes, "text/csv")}
-        r = await ac.post("/api/v1/datasets/", files=files)
-        assert r.status_code == 201, r.text
-        ds_id = r.json()["id"]
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            # upload dataset
+            csv_bytes = b"a,b,group,target\n1,2.0,A,0\n2,3.5,B,1\n3,4.1,A,0\n4,6.0,B,1\n5,7.2,A,0\n6,8.1,B,1\n7,9.0,A,0\n8,10.2,B,1\n9,11.1,A,0\n10,12.3,B,1\n11,13.0,A,0\n12,14.5,B,1\n"
+            files = {"file": ("t.csv", csv_bytes, "text/csv")}
+            r = await ac.post("/api/v1/datasets/", files=files)
+            assert r.status_code == 201, r.text
+            ds_id = r.json()["id"]
 
-        # create analysis
-        r2 = await ac.post(
-            "/api/v1/analysis/",
-            json={
-                "dataset_id": ds_id,
-                "user_query": "Analyze correlation between a and b and test group differences",
-            },
-        )
-        assert r2.status_code == 201, r2.text
-        data = r2.json()
-        assert "id" in data
-        assert data["status"] in ("COMPLETED", "FAILED")
-        run_id = data["id"]
+            # create analysis
+            r2 = await ac.post(
+                "/api/v1/analysis/",
+                json={
+                    "dataset_id": ds_id,
+                    "user_query": "Analyze correlation between a and b and test group differences",
+                },
+            )
+            assert r2.status_code == 202, r2.text
+            data = r2.json()
+            assert "id" in data
+            assert data["status"] not in ("COMPLETED", "FAILED"), (
+                f"the create call answered with a finished run ({data['status']}): R-03's early return regressed"
+            )
+            run_id = data["id"]
+            finished = await await_terminal_run(ac, run_id)
+            assert finished["status"] in ("COMPLETED", "FAILED"), finished
 
-        # get analysis
-        r3 = await ac.get(f"/api/v1/analysis/{run_id}")
-        assert r3.status_code == 200
-        assert r3.json()["id"] == run_id
+            # get analysis
+            r3 = await ac.get(f"/api/v1/analysis/{run_id}")
+            assert r3.status_code == 200
+            assert r3.json()["id"] == run_id
 
-        # report
-        r4 = await ac.get(f"/api/v1/analysis/{run_id}/report")
-        assert r4.status_code == 200
-        assert "markdown" in r4.json()
-        assert r4.json()["markdown"] is not None
+            # report
+            r4 = await ac.get(f"/api/v1/analysis/{run_id}/report")
+            assert r4.status_code == 200
+            assert "markdown" in r4.json()
+            assert r4.json()["markdown"] is not None
 
-        # artifacts
-        r5 = await ac.get(f"/api/v1/analysis/{run_id}/artifacts")
-        assert r5.status_code == 200
-        assert "artifacts" in r5.json()
+            # artifacts
+            r5 = await ac.get(f"/api/v1/analysis/{run_id}/artifacts")
+            assert r5.status_code == 200
+            assert "artifacts" in r5.json()
 
-        # events (SSE JSON stream)
-        r6 = await ac.get(f"/api/v1/analysis/{run_id}/events")
-        assert r6.status_code == 200
-        assert "text/event-stream" in r6.headers.get("content-type", "")
+            # events (SSE JSON stream)
+            r6 = await ac.get(f"/api/v1/analysis/{run_id}/events")
+            assert r6.status_code == 200
+            assert "text/event-stream" in r6.headers.get("content-type", "")
 
-        # list
-        r7 = await ac.get("/api/v1/analysis/")
-        assert r7.status_code == 200
-        assert len(r7.json()["analyses"]) >= 1
-
-    app.dependency_overrides.clear()
-    await engine.dispose()
+            # list
+            r7 = await ac.get("/api/v1/analysis/")
+            assert r7.status_code == 200
+            assert len(r7.json()["analyses"]) >= 1
+    finally:
+        app.dependency_overrides.clear()
+        database.AsyncSessionLocal = previous
+        await engine.dispose()
 
 
 @pytest.mark.asyncio

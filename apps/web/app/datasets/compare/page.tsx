@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { GitCompareArrows } from "lucide-react";
-import { API_BASE_URL, apiUrl } from "@/lib/api";
+import { clientFetch, API_BASE_URL, apiUrl } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Select } from "@/app/components/ui/input";
@@ -60,7 +60,7 @@ export default function ComparePage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
-    fetch(apiUrl("/api/v1/datasets/"))
+    clientFetch("/api/v1/datasets/")
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<{ datasets: DsItem[] }>;
@@ -84,7 +84,7 @@ export default function ComparePage() {
     setLoadingDetail(true);
     Promise.all(
       [leftId, rightId].map((id) =>
-        id ? fetch(apiUrl(`/api/v1/datasets/${id}`)).then((r) => (r.ok ? (r.json() as Promise<Detail>) : null)) : Promise.resolve(null)
+        id ? clientFetch(`/api/v1/datasets/${id}`).then((r) => (r.ok ? (r.json() as Promise<Detail>) : null)) : Promise.resolve(null)
       )
     )
       .then(([l, r]) => {

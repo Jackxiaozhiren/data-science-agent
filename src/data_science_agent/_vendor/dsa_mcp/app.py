@@ -1,9 +1,43 @@
-"""MCP App — Real Integration (W6 §36) — Dataset→Question→Analysis→Evidence→Viz→Report."""
+"""MCP App — Real Integration (W6 §36) — Dataset→Question→Analysis→Evidence→Viz→Report.
 
-from fastapi import FastAPI
+R-14: the report a client sees here is rendered by the product's one report renderer
+(``dsa_agent.report_export.export_html``) over the run's stored state -- the same bytes
+the web's download button hands over. This page assembles no report HTML of its own;
+its job is the flow (dataset → question → evidence) and staying inside a client's UI
+budget by embedding, not re-implementing.
+
+One renderer is only half of "the same run result". The state behind it used to come from
+``dsa_mcp.resources._STATE_STORE`` alone -- the runs this process produced by being *asked* --
+so a run the product had already stored and the web could show answered 404 here. Measured on
+``dsa ui``: ``run-65becae7af`` returned 32,755 bytes at ``/api/v1/analysis/{id}/report`` and
+``No stored analysis for this run_id`` at ``/mcp-app/report/{id}``, from the same process. The
+loader below is how the host that owns the database hands that reading to the App.
+"""
+
+from collections.abc import Awaitable, Callable
+from typing import Any
+
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from dsa_agent.report_export import export_html
+from dsa_mcp.resources import get_state
+
 app = FastAPI(title="DSA MCP App", version="0.1.0")
+
+_stored_run: Callable[[str], Awaitable[dict[str, Any] | None]] | None = None
+
+
+def set_stored_run_loader(loader: Callable[[str], Awaitable[dict[str, Any] | None]]) -> None:
+    """Let the embedding application hand this App a way to read a stored run (R-14).
+
+    The direction is deliberate: ``dsa_api`` imports this module and never the reverse, so the App asks its
+    host how to read a run instead of reaching into someone else's session factory. A second implementation of
+    "load this run" is the defect R-02 was about -- two owners reading one fact and disagreeing.
+    """
+    global _stored_run
+    _stored_run = loader
+
 
 HTML = """<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -43,7 +77,9 @@ th,td{border:1px solid #ddd; padding:6px; text-align:left; font-size:13px;}
 <div id="viz"></div></div>
 
 <div class="card"><h2>5. Report <span class="small">report://{run_id}</span></h2>
-<pre id="report"></pre>
+<p class="small">Rendered by the same report renderer the web app uses — charts inlined, drill-down in page.</p>
+<iframe id="reportFrame" title="Rendered analysis report" style="width:100%;height:420px;border:1px solid #ddd;border-radius:6px;" hidden></iframe>
+<p id="reportEmpty" class="small">Run an analysis to see its report here.</p>
 <button id="openReportBtn" disabled>Open report:// resource</button>
 </div>
 
@@ -111,8 +147,11 @@ async function runAnalysis(){
     evDiv.innerHTML = ev.length ? '<table><tr><th>id</th><th>claim</th><th>source</th></tr>'+ev.slice(0,5).map(e=>`<tr><td>${e.id}</td><td>${(e.claim||'').slice(0,80)}</td><td>${e.source_type||''}</td></tr>`).join('')+'</table>' : 'No evidence';
     document.getElementById('openEvidenceBtn').disabled=false;
     document.getElementById('openEvidenceBtn').onclick=()=> openResource('evidence://'+lastRunId);
-    // Report
-    document.getElementById('report').textContent = (out.report_markdown||'').slice(0,3000);
+    // Report — rendered by the single owner (R-14), embedded rather than re-implemented
+    const frame = document.getElementById('reportFrame');
+    frame.src = '/mcp-app/report/' + encodeURIComponent(lastRunId);
+    frame.hidden = false;
+    document.getElementById('reportEmpty').hidden = true;
     document.getElementById('openReportBtn').disabled=false;
     document.getElementById('openReportBtn').onclick=()=> openResource('report://'+lastRunId);
     // Viz — if artifact exists, try to show
@@ -134,7 +173,14 @@ document.getElementById('openEvidenceBtn').onclick=()=> openResource('evidence:/
 document.getElementById('openReportBtn').onclick=()=> openResource('report://'+lastRunId);
 loadDatasets();
 // If URL has run_id, load its resources
-if(lastRunId){ setTimeout(()=> openResource('evidence://'+lastRunId), 800); }
+if(lastRunId){
+  setTimeout(()=> openResource('evidence://'+lastRunId), 800);
+  const frame = document.getElementById('reportFrame');
+  frame.src = '/mcp-app/report/' + encodeURIComponent(lastRunId);
+  frame.hidden = false;
+  document.getElementById('reportEmpty').hidden = true;
+  document.getElementById('openReportBtn').disabled=false;
+}
 </script>
 </body></html>
 """
@@ -143,6 +189,29 @@ if(lastRunId){ setTimeout(()=> openResource('evidence://'+lastRunId), 800); }
 @app.get("/", response_class=HTMLResponse)
 async def root() -> str:
     return HTML
+
+
+@app.get("/report/{run_id}", response_class=HTMLResponse)
+async def report_view(run_id: str) -> HTMLResponse:
+    """One run's report through the product's single renderer (R-14).
+
+    Asked for in this order on purpose: a run the client drove through the tools is already in memory, and a
+    run the product stored is read through the host's loader -- which is scoped to what the instance publishes,
+    so an unidentified client surface cannot reach a visitor's private rows (R-08).
+    """
+    state: Any = get_state(run_id)
+    if state is None and _stored_run is not None:
+        row = await _stored_run(run_id)
+        state = (row or {}).get("state") if row else None
+    if state is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No stored analysis for this run_id. Run the analyze tool first, then reopen -- or ask for a "
+                "report the instance itself publishes."
+            ),
+        )
+    return HTMLResponse(content=export_html(state))
 
 
 @app.get("/app", response_class=JSONResponse)

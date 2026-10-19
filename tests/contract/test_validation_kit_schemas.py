@@ -15,12 +15,15 @@ schemas in the directory stay the pair they are meant to be.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 KIT = ROOT / "external-validation"
-SCHEMAS = ("RESULTS_SCHEMA.json", "STUDY1_RESULTS_SCHEMA.json")
+#: Derived, never listed: the directory is the registry, so a schema added tomorrow is checked the day it
+#: lands instead of being protected only while someone remembers to type its name here.
+SCHEMAS = tuple(sorted(p.name for p in KIT.glob("*_SCHEMA.json")))
 
 
 def _refs(node: Any, out: list[str]) -> None:
@@ -150,3 +153,77 @@ def test_the_study1_schema_keeps_the_fields_the_protocol_promises() -> None:
     assert "correctness" not in props["scores"]["properties"], (
         "Correctness needs the participant's own ground truth and belongs to the reviewer studies, not here"
     )
+
+
+def test_the_study2_schema_holds_what_its_protocol_promises() -> None:
+    """`STUDY2_PAIRED_BLIND.md` §4 collects specific things; the schema has to be able to store them.
+
+    The pairing design's whole point is the per-participant difference, so the schema must carry both
+    documents' readings plus the difference, and the verdict vocabulary the plan pre-commits to acting on.
+    """
+    schema = json.loads((KIT / "STUDY2_RESULTS_SCHEMA.json").read_text(encoding="utf-8"))
+    props = schema["properties"]
+    assert schema["required"] == [
+        "study",
+        "participant",
+        "session",
+        "documents",
+        "paired_difference",
+        "provenance_verdict",
+        "consent",
+    ], (
+        "the protocol's record is those seven things; a fifth document field would need a protocol change first"
+    )
+    docs = props["documents"]["items"]["properties"]
+    assert {"trust_1_to_7", "claims_would_verify", "minutes", "verbatim_sentence"} <= set(docs), (
+        "protocol §4.3's four per-document measures are missing"
+    )
+    assert props["documents"]["minItems"] == 2 and props["documents"]["maxItems"] == 2, (
+        "a paired design has exactly two documents"
+    )
+    assert props["provenance_verdict"]["enum"] == ["helped", "hindered", "neutral", "mixed"], (
+        "the vocabulary moved without the plan's pre-committed response moving with it"
+    )
+    assert props["study"]["properties"]["id"]["const"] == "study2_paired_blind", (
+        "a Study 2 record must not be mergeable with another study's"
+    )
+
+
+def test_the_study3_schema_holds_what_its_protocol_promises() -> None:
+    """`STUDY3_REVIEWER_USABILITY.md` §4's per-claim attempts and its mandatory closing answer."""
+    schema = json.loads((KIT / "STUDY3_RESULTS_SCHEMA.json").read_text(encoding="utf-8"))
+    props = schema["properties"]
+    claims = props["claims"]["items"]["properties"]
+    assert {"claim_verbatim", "outcome", "minutes", "drill_down_used"} <= set(claims), (
+        "protocol §4.3's per-claim record is missing a field"
+    )
+    assert set(claims["outcome"]["enum"]) == {
+        "verified",
+        "not_verified_within_5m",
+        "unable_to_attempt",
+    }, "the time-boxed outcomes moved"
+    assert props["study"]["properties"]["id"]["const"] == "study3_reviewer_usability"
+    assert props["study"]["properties"].get("preflight_offline_check_passed"), (
+        "protocol §3 requires the coordinator to verify the file's own zero-network claim before a session; "
+        "the record must be able to say whether that happened"
+    )
+
+
+def test_the_kit_index_and_the_directory_agree_in_both_directions() -> None:
+    """The README table is the kit's index; an index that lags the directory is a silent lie.
+
+    Both directions, because a file added without a row and a row left pointing at a deleted file are the
+    same defect read from opposite ends.
+    """
+    readme = (KIT / "README.md").read_text(encoding="utf-8")
+    linked = set(re.findall(r"\]\(([^)]+\.md|[^)]+\.json)\)", readme))
+    on_disk = {
+        p.name for p in KIT.iterdir() if p.suffix in {".md", ".json"} and p.name != "README.md"
+    }
+    rows = {name for name in on_disk if f"]({name})" in readme}
+    assert rows == on_disk, (
+        f"index and directory disagree: on disk but unindexed={sorted(on_disk - rows)}, "
+        f"indexed but missing={sorted(rows - on_disk)}"
+    )
+    dangling = [name for name in linked if not (KIT / name).is_file()]
+    assert not dangling, f"README links files that do not exist: {dangling}"

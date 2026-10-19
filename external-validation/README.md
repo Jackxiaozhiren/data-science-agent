@@ -21,6 +21,10 @@ instruments live here and they answer different questions:
 | [RESULTS_SCHEMA.json](RESULTS_SCHEMA.json) | Machine-readable schema for the scores |
 | [STUDY1_FIRST_RUN.md](STUDY1_FIRST_RUN.md) | Web plan §12 Study 1: can a stranger finish a real task from a URL, alone? Frozen 2026-10-12, `NOT CONDUCTED` |
 | [STUDY1_RESULTS_SCHEMA.json](STUDY1_RESULTS_SCHEMA.json) | One participant record for that study, in the same style as `RESULTS_SCHEMA.json` |
+| [STUDY2_PAIRED_BLIND.md](STUDY2_PAIRED_BLIND.md) | Web plan §12 Study 2: does per-claim provenance help or bother a reviewer? Two renderings of one analysis, blind, order alternated. Frozen 2026-10-15, `NOT CONDUCTED` |
+| [STUDY2_RESULTS_SCHEMA.json](STUDY2_RESULTS_SCHEMA.json) | One participant record for that study: both documents' ratings and the paired difference |
+| [STUDY3_REVIEWER_USABILITY.md](STUDY3_REVIEWER_USABILITY.md) | Web plan §12 Study 3: using only the offline report file, can a reviewer verify each claim in five minutes — and name the one they could not? Frozen 2026-10-15, `NOT CONDUCTED` |
+| [STUDY3_RESULTS_SCHEMA.json](STUDY3_RESULTS_SCHEMA.json) | One reviewer record for that study: per-claim outcomes, times and the mandatory closing answer |
 
 The reviewer kit scores the **quality of an analysis** and needs the reviewer's own ground truth. Study 1
 scores the **path** — completion, time, what was noticed, what was said first — and needs no expertise at

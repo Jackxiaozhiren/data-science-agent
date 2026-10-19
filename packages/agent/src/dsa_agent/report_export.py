@@ -332,8 +332,16 @@ _CSS = (
     "padding:0 1rem}h1{font-size:1.5rem;margin-bottom:.25rem}h2{font-size:1.05rem;"
     "margin-top:1.75rem;border-bottom:1px solid #e4e4e7;padding-bottom:.25rem}"
     "p.meta{color:#52525b;font-size:.85rem}ul{padding-left:1.1rem}li{margin:.2rem 0}"
-    "code{background:#f4f4f5;padding:.1rem .25rem;border-radius:.25rem;font-size:.85em}"
-    ".fail{color:#b91c1c}.pass{color:#047857}"
+    "code{background:#f4f4f5;padding:.1rem .25rem;border-radius:.25rem;font-size:.85em;"
+    "overflow-wrap:anywhere}.fail{color:#b91c1c}.pass{color:#047857}"
+    ".chart{max-width:100%;height:auto;border:1px solid #e4e4e7;border-radius:.5rem;margin:.4rem 0}"
+    ".limitations{border:1px solid #fde68a;background:#fffbeb;color:#92400e;padding:.6rem .8rem;"
+    "border-radius:.5rem;margin:.8rem 0;font-size:.9rem}"
+    ".limitations ul{margin:.3rem 0 0;padding-left:1.1rem}"
+    "details{border:1px solid #e4e4e7;border-radius:.5rem;padding:.4rem .6rem;margin:.35rem 0}"
+    "summary{cursor:pointer;font-weight:600}"
+    "@media print{body{margin:0;max-width:none}.chart{max-width:100%}details{border:none;"
+    "padding-left:0}a{color:inherit;text-decoration:none}}"
 )
 
 
@@ -356,14 +364,99 @@ def _inline(value: Any) -> str:
     return text
 
 
-def export_html(source: Any) -> str:
-    """The audited rendering as a single file that opens with no server.
+#: Per-chart headroom. The seeded runs' charts are 12-126 KB of base64; a cap keeps a pathological run from
+#: pushing the stranger-facing file past the traveller budget the offline guard asserts.
+_MAX_CHART_B64 = 300_000
+_PNG_MAGIC = "iVBORw0KGgo"
 
-    Inline styles only, no subresource references. A chart is named rather than embedded: R-07 is the
-    requirement that inlines the image, and until then a broken ``<img>`` would be the dishonest choice --
-    it looks like the artifact travelled with the file when it did not.
+
+def _travelling_charts(source: Any) -> list[tuple[str, str]]:
+    """``(alt, data-uri)`` for every chart the run state itself carries, in trace order.
+
+    The state survives the free tier's wiped disk; the filesystem does not, so the picture is read from the
+    ``create_chart`` call's own output and never from a path. A payload that is not a PNG, or one over the
+    cap, is left out here and named in the trace instead -- a broken ``<img>`` would claim the picture
+    travelled when it did not.
     """
-    blocks = build_sections(source, plain=False)
+    charts: list[tuple[str, str]] = []
+    for call in _field(source, "tool_calls", []) or []:
+        get = (
+            call.get
+            if isinstance(call, Mapping)
+            else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        )
+        if get("tool") != "create_chart":
+            continue
+        output = get("output")
+        if not isinstance(output, Mapping):
+            continue
+        b64 = str(output.get("base64_png") or "")
+        if not b64.startswith(_PNG_MAGIC) or len(b64) > _MAX_CHART_B64:
+            continue
+        kind = str(output.get("chart_type") or "chart")
+        charts.append((f"{kind} chart", f"data:image/png;base64,{b64}"))
+    return charts
+
+
+def _named_chart_lines(source: Any) -> list[str]:
+    """The charts that did *not* travel, named the way the markdown view names them."""
+    lines: list[str] = []
+    for call in _field(source, "tool_calls", []) or []:
+        get = (
+            call.get
+            if isinstance(call, Mapping)
+            else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        )
+        if get("tool") != "create_chart":
+            continue
+        output = get("output")
+        if not isinstance(output, Mapping):
+            continue
+        b64 = str(output.get("base64_png") or "")
+        if b64.startswith(_PNG_MAGIC) and len(b64) <= _MAX_CHART_B64:
+            continue
+        artifact = str(output.get("artifact_path") or "").rsplit("/", 1)[-1]
+        if artifact:
+            lines.append(f"chart: {artifact} (not embedded)")
+    return lines
+
+
+def _dataset_sha256(source: Any) -> str | None:
+    """The hash the profile call computed, read from the run's own trace -- the drill-down's last link."""
+    for call in _field(source, "tool_calls", []) or []:
+        get = (
+            call.get
+            if isinstance(call, Mapping)
+            else (lambda k, _c=call, d=None: getattr(_c, k, d))
+        )
+        output = get("output")
+        if isinstance(output, Mapping):
+            value = output.get("sha256")
+            if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+                return value
+    return None
+
+
+def export_html(source: Any) -> str:
+    """The audited rendering as a single file a stranger opens with no server and no network.
+
+    R-07. The chart travels inside the file -- read from the run state's own ``base64_png``, never from the
+    filesystem, because the state is what survives a free tier's wiped disk. Every claim collapses into an
+    in-page drill-down: insight to evidence to the tool call that produced it, closed by the dataset hash the
+    profile call computed. Limitations lead, because the reader this file exists for brings ten minutes of
+    judgement, not an audit session. No ``<script>``, no external origin of any kind; the offline guard
+    (``tests/contract/test_report_html_offline.py``) asserts both and plants a script tag to prove it would
+    see one.
+
+    Values come from the same ``run_summary`` and state primitives the markdown pair reads; the order and the
+    wrapping differ on purpose, because a page a stranger scrolls and a document pasted into a submission are
+    read differently.
+    """
+    summary = run_summary(source)
+    objective = str(_field(source, "objective") or _field(source, "user_query") or "").strip()
+    status = final_report_status(summary.get("status"))
+    sha256 = _dataset_sha256(source)
+
     parts: list[str] = [
         "<!DOCTYPE html>",
         '<html lang="en">',
@@ -374,26 +467,98 @@ def export_html(source: Any) -> str:
         f"<style>{_CSS}</style>",
         "</head>",
         "<body>",
+        f"<h1>Analysis Report — {_esc(summary.get('run_id'))}</h1>",
+        f'<p class="meta"><strong>Objective:</strong> {_inline(objective)}</p>',
+        f'<p class="meta"><strong>Dataset:</strong> <code>{_esc(_field(source, "dataset_id", ""))}</code>'
+        f"  |  <strong>Status:</strong> {_esc(status)}"
+        f"  |  <strong>Generated:</strong> {_esc(_generated(source))}</p>",
     ]
-    for heading, body in blocks:
-        if not heading:
-            for index, line in enumerate(body):
-                if index == 0:
-                    parts.append(f"<h1>{_inline(line.lstrip('# '))}</h1>")
-                else:
-                    parts.append(f'<p class="meta">{_inline(line)}</p>')
-            continue
-        parts.append(f"<h2>{_esc(heading)}</h2>")
+    if sha256:
+        parts.append(
+            f'<p class="meta"><strong>Dataset sha256:</strong> <code>{_esc(sha256)}</code></p>'
+        )
+
+    limitations = derived_limitations(source)
+    if limitations:
+        parts.append('<div class="limitations" role="note"><strong>Limitations.</strong> <ul>')
+        parts.extend(f"<li>{_inline(line)}</li>" for line in limitations)
+        parts.append("</ul></div>")
+
+    charts = _travelling_charts(source)
+    named = _named_chart_lines(source)
+    if charts or named:
+        parts.append("<h2>Charts</h2>")
+        parts.extend(f'<img class="chart" alt="{_esc(alt)}" src="{src}">' for alt, src in charts)
+        parts.extend(f'<p class="meta">{_esc(line)}</p>' for line in named)
+
+    plan = list(_field(source, "plan", []) or [])
+    if plan:
+        parts.append("<h2>Plan</h2>")
         parts.append("<ul>")
-        for line in body:
-            text = line.lstrip("- ").strip()
-            klass = ""
-            if text.startswith("✗"):
-                klass, text = ' class="fail"', text[1:].strip()
-            elif text.startswith("✓"):
-                klass, text = ' class="pass"', text[1:].strip()
-            parts.append(f"<li{klass}>{_inline(text)}</li>")
+        parts.extend(f"<li>{_inline(line.lstrip('- '))}</li>" for line in map(_step_text, plan))
         parts.append("</ul>")
+
+    parts.append("<h2>Tool Calls</h2>")
+    parts.append("<ul>")
+    for call in summary.get("tool_calls") or []:
+        mark = "✓" if call.get("status") == "ok" else "✗"
+        klass = ' class="pass"' if mark == "✓" else ' class="fail"'
+        parts.append(
+            f'<li{klass} id="{_esc(call.get("call_id"))}">{mark} <strong>{_esc(call.get("tool"))}</strong>'
+            f" — {_esc(call.get('duration_ms'))}ms</li>"
+        )
+        if call.get("error"):
+            parts.append(f'<li class="fail">error: {_esc(call["error"])}</li>')
+    parts.append("</ul>")
+
+    parts.append("<h2>Evidence</h2>")
+    parts.append("<ul>")
+    for record in summary.get("evidence") or []:
+        confidence = record.get("confidence")
+        confidence_text = (
+            f"{float(confidence):.2f}" if isinstance(confidence, (int, float)) else "?"
+        )
+        result = (
+            f"<br><code>{_esc(json.dumps(record['result'], sort_keys=True))}</code>"
+            if record.get("result")
+            else ""
+        )
+        parts.append(
+            f'<li id="{_esc(record.get("id"))}"><strong>{_esc(record.get("id"))}</strong>'
+            f' ({_esc(record.get("source_type"))} → <a href="#{_esc(record.get("source_id"))}">'
+            f"{_esc(record.get('source_id'))}</a>) — {_inline(record.get('claim'))}"
+            f" — confidence {confidence_text} — {_esc(record.get('validation_status'))}{result}</li>"
+        )
+    parts.append("</ul>")
+
+    parts.append("<h2>Insights</h2>")
+    insights = summary.get("insights") or []
+    if not insights:
+        parts.append(
+            '<p class="meta">No insights yet — analysis may be incomplete or blocked by validation.</p>'
+        )
+    for insight in insights:
+        parts.append("<details>")
+        parts.append(f"<summary>{_inline(insight.get('finding'))}</summary>")
+        if insight.get("limitation"):
+            parts.append(f'<p class="meta">limitation: {_inline(insight["limitation"])}</p>')
+        links = " ".join(
+            f'<a href="#{_esc(eid)}">{_esc(eid)}</a>' for eid in insight.get("evidence_ids") or []
+        )
+        if links:
+            parts.append(f'<p class="meta">Evidence: {links}</p>')
+        parts.append("</details>")
+
+    parts.append("<h2>Validation</h2>")
+    parts.append("<ul>")
+    for check in summary.get("validation_results") or []:
+        mark = "✓" if check.get("passed") else "✗"
+        klass = ' class="pass"' if check.get("passed") else ' class="fail"'
+        parts.append(
+            f"<li{klass}>{mark} <strong>{_esc(check.get('check'))}</strong> — {_esc(check.get('message'))}</li>"
+        )
+    parts.append("</ul>")
+
     parts.append("</body>")
     parts.append("</html>")
     return "\n".join(parts) + "\n"

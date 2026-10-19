@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import pathlib
+from typing import Any
+
+import anyio
+from httpx import ASGITransport, AsyncClient
 
 
 def test_mcp_has_13_tools() -> None:
@@ -118,3 +122,113 @@ def test_mcp_http_list_and_call() -> None:
     )
     assert r3.status_code == 200
     assert "result" in r3.json()
+
+
+def _r14_state() -> Any:
+    """One completed run in the shape the graph persists -- the thing the app's report view must render."""
+    from datetime import UTC, datetime
+
+    from dsa_agent.state import AnalysisState, AnalysisStatus, Evidence, Insight, ToolCallRecord
+
+    return AnalysisState(
+        run_id="run-r14mcp000",
+        dataset_id="9bdfe7ad-mcp00",
+        dataset_path="/var/lib/dsa/output/datasets/9bdfe7ad_sales.csv",
+        user_query="Which regions drove revenue?",
+        objective="Attribute revenue to region.",
+        status=AnalysisStatus.COMPLETED,
+        created_at=datetime(2026, 10, 15, 12, 0, 0, tzinfo=UTC),
+        plan=[],
+        tool_calls=[
+            ToolCallRecord(
+                call_id="TC-r14mcp00",
+                tool="profile_dataset",
+                input={"path": "x.csv"},
+                output={
+                    "rows": 10,
+                    "sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+                },
+                status="ok",
+                duration_ms=5,
+            )
+        ],
+        evidence=[
+            Evidence(
+                id="E-r14mcp00",
+                source_type="statistical_test",
+                source_id="TC-r14mcp00",
+                claim="Revenue concentrates in region A.",
+                result={"r": 0.5},
+                confidence=0.7,
+                validation_status="verified",
+            )
+        ],
+        insights=[
+            Insight(
+                id="I-r14mcp00",
+                finding="Revenue concentrates in region A.",
+                evidence_ids=["E-r14mcp00"],
+                limitation="Association does not imply causation.",
+            )
+        ],
+        validation_results=[],
+    )
+
+
+def test_the_mcp_report_view_is_the_single_renderer_byte_for_byte() -> None:
+    """R-14: the app's report view must BE the product's one renderer, not a sibling of it.
+
+    Byte equality is the strongest form of that claim -- any assembly of this app's own would diverge the
+    first time the renderer grew a section.
+    """
+    import json as _json
+
+    from dsa_agent.report_export import export_html
+    from dsa_mcp.app import app as mcp_app
+    from dsa_mcp.resources import store_state
+
+    state = _r14_state()
+    store_state(state.run_id, state)
+    try:
+        transport = ASGITransport(app=mcp_app)
+        import anyio
+
+        async def _fetch() -> tuple[int, str]:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                r = await client.get(f"/report/{state.run_id}")
+                return r.status_code, r.text
+
+        status, body = anyio.run(_fetch)
+        assert status == 200
+        assert body == export_html(state), (
+            "the MCP app's report view diverged from the one renderer"
+        )
+    finally:
+        from dsa_mcp import resources as _res
+
+        _res._STATE_STORE.pop(state.run_id, None)
+
+
+def test_the_mcp_report_view_names_the_unknown_handle() -> None:
+    from dsa_mcp.app import app as mcp_app
+
+    async def _fetch() -> int:
+        async with AsyncClient(
+            transport=ASGITransport(app=mcp_app), base_url="http://test"
+        ) as client:
+            r = await client.get("/report/run-unknown000")
+            return r.status_code
+
+    assert anyio.run(_fetch) == 404
+
+
+def test_the_app_page_embeds_the_renderer_instead_of_truncating_the_markdown() -> None:
+    """The old page put `report_markdown.slice(0, 3000)` in a <pre> -- a second, amputated rendering."""
+    from dsa_mcp import app as mcp_module
+
+    source = pathlib.Path(mcp_module.__file__).read_text(encoding="utf-8")
+    assert "format=html" not in source, "the page reached around the renderer via the API route"
+    assert "/mcp-app/report/" in source, "the report card no longer points at the render endpoint"
+    assert "slice(0,3000)" not in source and "report_markdown||''" not in source, (
+        "the page still renders the markdown itself, truncated"
+    )

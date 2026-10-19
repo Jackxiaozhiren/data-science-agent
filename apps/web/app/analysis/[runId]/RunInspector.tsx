@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { clientFetch, apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { t as tt } from "@/lib/locale";
+import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -20,12 +22,14 @@ import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
 import { Markdown } from "@/app/components/data/Markdown";
 import { isInFlightStatus, isReviewStatus, TERMINAL_STATUSES } from "@/app/lib/analysisStatus";
+import { limitationSeverity } from "@/app/lib/limitations";
 
 export type RunDetail = {
   id: string;
   status: string;
   user_query: string;
   dataset_id: string;
+  error?: string | null;
   state: {
     objective: string;
     plan: { id: string; name: string; tool: string; description: string }[];
@@ -48,47 +52,53 @@ type Progress = {
 };
 
 const TERMINAL = new Set<string>(TERMINAL_STATUSES);
-const DEFAULT_TITLE = "Data Science Agent — Verifiable AI Data Science";
 
 function stripHtml(raw: string): string {
   return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-const SEVERE_LIMITATIONS = ["bias", "leakage", "leak", "overfit", "causal", "causation", "confound", "spurious"];
-
-function limitationSeverity(text: string): "error" | "warning" {
-  const lower = text.toLowerCase();
-  return SEVERE_LIMITATIONS.some((k) => lower.includes(k)) ? "error" : "warning";
-}
-
 // Live progress: polls the lightweight /progress endpoint every 3s while the
-// run is non-terminal. The backend /events SSE is snapshot-style (dumps and
-// closes), so polling is the correct transport. Full state refreshes via
+// run is non-terminal. /events became a live stream when the run stopped
+// blocking its own create call (R-03), but a poll is the transport that
+// survives a buffering proxy and costs one small row read; the stream is for
+// clients that want the event sequence itself. Full state refreshes via
 // router.refresh() on phase transitions and terminal states.
 function useLiveProgress(runId: string, initialStatus: string) {
+  const locale = useLocale();
   const router = useRouter();
   const [prog, setProg] = React.useState<Progress | null>(null);
   const [live, setLive] = React.useState(!TERMINAL.has(initialStatus.trim().toUpperCase()));
   const [notify, setNotify] = React.useState(false);
   const lastStatus = React.useRef(initialStatus);
-  const origTitle = React.useRef(typeof document !== "undefined" ? document.title : DEFAULT_TITLE);
+  // The title this page had before the poll started rewriting it. The fallback is the dictionary's own
+  // product title, not a second copy of it -- the sweep in tests/contract/test_web_locale_parity.py refuses a
+  // page that keeps its own version of a sentence the locale owner has.
+  const origTitle = React.useRef(
+    typeof document !== "undefined" ? document.title : tt(locale, "meta.title")
+  );
 
   React.useEffect(() => {
     if (!live) return;
     let stop = false;
     const tick = async () => {
       try {
-        const r = await fetch(apiUrl(`/api/v1/analysis/${runId}/progress`), { cache: "no-store" });
+        const r = await clientFetch(`/api/v1/analysis/${runId}/progress`, { cache: "no-store" });
         if (!r.ok || stop) return;
         const p = (await r.json()) as Progress;
         setProg(p);
-        document.title = `(${p.progress_pct}%) Analysis ${runId.slice(0, 8)} — DSA`;
+        document.title = tt(locale, "run.liveTitle")
+          .replace("{pct}", String(p.progress_pct))
+          .replace("{id}", runId.slice(0, 8));
         const terminal = TERMINAL.has(p.status.trim().toUpperCase());
         if (terminal) {
           setLive(false);
-          document.title = origTitle.current || DEFAULT_TITLE;
+          document.title = origTitle.current || tt(locale, "meta.title");
           if (notify && "Notification" in window && Notification.permission === "granted") {
-            new Notification(`Analysis ${p.status}`, { body: `Run ${runId.slice(0, 12)} finished with ${p.evidence} evidence.` });
+            new Notification(tt(locale, "run.notifyTitle").replace("{status}", p.status), {
+              body: tt(locale, "run.notifyBody")
+                .replace("{id}", runId.slice(0, 12))
+                .replace("{evidence}", String(p.evidence)),
+            });
           }
           router.refresh();
         } else if (p.status !== lastStatus.current) {
@@ -104,9 +114,9 @@ function useLiveProgress(runId: string, initialStatus: string) {
     return () => {
       stop = true;
       clearInterval(id);
-      document.title = origTitle.current || DEFAULT_TITLE;
+      document.title = origTitle.current || tt(locale, "meta.title");
     };
-  }, [runId, live, notify, router]);
+  }, [runId, live, notify, router, locale]);
 
   const toggleNotify = React.useCallback(async () => {
     if (!notify && "Notification" in window && Notification.permission === "default") {
@@ -165,7 +175,7 @@ function ApprovalCard({ runId }: { runId: string }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(apiUrl(`/api/v1/analysis/${runId}/approve`), {
+      const res = await clientFetch(`/api/v1/analysis/${runId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note }),
@@ -218,6 +228,7 @@ function FailureCard({ run }: { run: RunDetail }) {
         run_id: run.id,
         status: run.status,
         query: run.user_query,
+        error: run.error ?? null,
         failures: failed.map((tc) => ({ tool: tc.tool, call_id: tc.call_id, error: tc.error ?? null })),
       },
       null,
@@ -238,6 +249,12 @@ function FailureCard({ run }: { run: RunDetail }) {
         <CardTitle className="flex items-center gap-2 text-sm text-red-800"><XCircle className="size-4" aria-hidden /> This run failed{failed.length > 0 ? ` — ${failed.length} tool call${failed.length === 1 ? "" : "s"} errored` : ""}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
+        {run.error && (
+          <p className="rounded-lg border border-red-200 bg-white p-2.5 text-xs leading-5">
+            <strong>Reason</strong>
+            <span className="ml-1 break-words text-red-700">{stripHtml(String(run.error)).slice(0, 500)}</span>
+          </p>
+        )}
         {failed.map((tc) => (
           <div key={tc.call_id} className="rounded-lg border border-red-200 bg-white p-2.5 text-xs leading-5">
             <code className="font-mono font-semibold">{tc.tool}</code>
@@ -278,7 +295,7 @@ function FollowUpBox({ run }: { run: RunDetail }) {
     }
     setBusy(true);
     try {
-      const res = await fetch(apiUrl("/api/v1/analysis/"), {
+      const res = await clientFetch("/api/v1/analysis/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset_id: run.dataset_id, user_query: q }),
@@ -325,7 +342,9 @@ function FollowUpBox({ run }: { run: RunDetail }) {
   );
 }
 
-export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: RunDetail; reportUrl: string; findingsUrl?: string; fromRunId?: string }) {
+export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }: { run: RunDetail; reportUrl: string; findingsUrl?: string; htmlUrl?: string; fromRunId?: string }) {
+  const locale = useLocale();
+  const shared = failurePresentation(locale);
   const st = run.state;
   const [copied, setCopied] = React.useState(false);
   const [traceFilter, setTraceFilter] = React.useState<"all" | "ok" | "error">("all");
@@ -411,8 +430,34 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // Artifacts grouped by kind. Paths are server-local (no file-serving
-  // endpoint exists), so the honest action is copy-path, not a fake link.
+  const [bundle, setBundle] = React.useState<"idle" | "sending" | "saved" | ApiFailure>("idle");
+
+  async function downloadBundle() {
+    setBundle("sending");
+    try {
+      const res = await clientFetch(`/api/v1/analysis/${run.id}/bundle`, { cache: "no-store" });
+      const failure = classifyResponse(res);
+      if (failure) {
+        setBundle(failure);
+        return;
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${run.id}-bundle.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setBundle("saved");
+    } catch {
+      setBundle("transport");
+    }
+  }
+
+  // Artifacts grouped by kind. The stored paths are server-local and there is no per-file serving route,
+  // so the honest action on a row is copy-path, not a fake link; the whole set leaves through
+  // /bundle below, which is the only thing a visitor can keep when the host's filesystem is not durable.
   const artifactGroups = React.useMemo(() => {
     const groups = new Map<string, NonNullable<RunDetail["state"]>["artifacts"]>();
     for (const a of st?.artifacts ?? []) {
@@ -460,15 +505,58 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
                 </Button>
               </a>
             )}
+            {st?.report_markdown && htmlUrl && (
+              <a href={htmlUrl} target="_blank" rel="noreferrer">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  title="One self-contained file: charts inlined, evidence chains expand in page, opens with no server and no network"
+                >
+                  <Download className="size-4" aria-hidden /> Download offline HTML
+                </Button>
+              </a>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={downloadBundle}
+              disabled={bundle === "sending"}
+              title="Every artifact this run recorded, in one archive, with a manifest naming the files it could not carry and why"
+            >
+              {bundle === "sending" ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Download className="size-4" aria-hidden />
+              )}{" "}
+              Download bundle
+            </Button>
           </>
         }
       />
 
       <ReasoningModeNotice />
 
+      {bundle !== "idle" && bundle !== "sending" && (
+        <p
+          role="status"
+          aria-live="polite"
+          className={`rounded-xl border px-4 py-2.5 text-xs shadow-sm ${
+            bundle === "saved"
+              ? "border-zinc-200 bg-white text-zinc-600"
+              : "border-amber-200 bg-amber-50/60 text-amber-900"
+          }`}
+        >
+          {bundle === "saved"
+            ? tt(locale, "run.bundleSaved")
+            : bundle === "notFound"
+              ? tt(locale, "run.bundleUnavailable").replace("{line}", shared.notFound)
+              : shared[bundle]}
+        </p>
+      )}
+
       {fromRunId && (
         <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs text-zinc-600 shadow-sm">
-          Follow-up of <Link href={`/analysis/${fromRunId}`} className="font-mono font-medium text-zinc-900 underline">run-{fromRunId.slice(0, 12)}</Link>
+          Follow-up of <Link href={`/analysis/${fromRunId}`} className="font-mono font-medium text-zinc-900 underline">{fromRunId}</Link>
           {" · "}<Link href={`/analysis/${fromRunId}`} className="underline">View parent trace →</Link>
         </p>
       )}
@@ -767,7 +855,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, fromRunId }: { run: 
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Artifacts ({st?.artifacts.length ?? 0})</CardTitle>
-                <CardDescription className="text-xs">Files generated during the run. Paths are server-local — copy a path to retrieve it from the host.</CardDescription>
+                <CardDescription className="text-xs">Files generated during the run. Each path is on the server, so copy one to fetch it from the host; &ldquo;Download bundle&rdquo; above returns everything the run recorded as one archive, naming any file it could not read.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(st?.artifacts.length ?? 0) === 0 && (

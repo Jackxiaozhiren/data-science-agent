@@ -1,27 +1,42 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SiteHeader } from "@/app/components/layout/SiteHeader";
+import { ArrivalBeacon } from "@/app/components/layout/ArrivalBeacon";
 import { SiteFooter } from "@/app/components/layout/SiteFooter";
 import { Sidebar } from "@/app/components/layout/Sidebar";
+import { serverLocale } from "@/lib/serverApi";
+import { t } from "@/lib/locale";
+import { LocaleProvider } from "@/app/lib/LocaleProvider";
 
-export const metadata: Metadata = {
-  title: "Data Science Agent — Verifiable AI Data Science",
-  description: "The AI data scientist that shows its work. Ask questions about your data and inspect the evidence behind the answer.",
-  icons: { icon: "/icon.svg" },
-};
+// R-13: the tab title and the document language follow the browser's choice, which means both are read per
+// request. This layout therefore renders on every navigation -- a price worth paying, because a Chinese
+// reader whose browser chrome and skip link stay English is being told the translation is a decoration.
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await serverLocale();
+  return {
+    title: t(locale, "meta.title"),
+    description: t(locale, "meta.description"),
+    icons: { icon: "/icon.svg" },
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await serverLocale();
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="min-h-screen bg-zinc-50 text-zinc-900">
+        <ArrivalBeacon />
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded-lg focus:bg-zinc-900 focus:px-3 focus:py-2 focus:text-sm focus:text-white">
-          Skip to content
+          {t(locale, "a11y.skip")}
         </a>
-        <SiteHeader />
+        <SiteHeader locale={locale} />
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row">
           <Sidebar />
           <main id="main" className="min-w-0 flex-1">
-            {children}
+            {/* The route below may be a client component, and a client component cannot look the language up for
+                itself without disagreeing with its own server render. So the answer the layout already paid for
+                is handed down here, once. */}
+            <LocaleProvider locale={locale}>{children}</LocaleProvider>
           </main>
         </div>
         <SiteFooter />

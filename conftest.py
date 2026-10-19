@@ -1,6 +1,11 @@
+import asyncio
 import importlib
+import logging
 import sys
 import tomllib
+import warnings
+import weakref
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -56,8 +61,22 @@ _ISOLATED_GLOBALS = (
     ("dsa_agent.graph", "_TOOL_CACHE"),
     ("dsa_llm.cost", "_CALL_LOG"),
     ("dsa_mcp.resources", "_ANALYSIS_STORE"),
+    # R-14: the original AnalysisState behind each handle, held for the app's report view. A state leaking
+    # across tests would let one test render another test's run.
+    ("dsa_mcp.resources", "_STATE_STORE"),
     ("dsa_tools.registry", "_REGISTRY"),
+    # The in-flight analysis tasks (R-03). A registry of live asyncio tasks leaking across tests would
+    # hand one test another's run id, and the stale task would keep writing through a disposed engine.
+    ("dsa_api.services.run_lifecycle", "_TASKS"),
 )
+
+# Containers the snapshot/restore above cannot isolate, because their state lives *inside* the objects the
+# container holds: `dsa_api.core.security._limiters` is a list of RateLimiter instances, and each one keeps
+# its own sliding-window deque in `limiter._hits`. Snapshotting that list hands back the same objects with
+# their windows intact, so an entry here would read as isolated while resetting nothing -- the green-but-
+# never-ran shape §76 caught. These are reset by the fixture below instead, and
+# `tests/test_process_global_isolation.py` asserts the set is complete against the same scan.
+_ISOLATED_RESETS: tuple[tuple[str, str], ...] = (("dsa_api.core.security", "_limiters"),)
 
 
 def _snapshot(obj: object) -> object:
@@ -100,6 +119,494 @@ def declared_version() -> str:
     ]
 
 
+@pytest.fixture
+def await_terminal_run():
+    """Wait for a run the API is executing in the background to stop (web plan R-03).
+
+    A create call now answers while the work is still going, so every test that reads a finished report has
+    to wait for it the way a client does -- through ``GET /api/v1/analysis/{id}``. A fixed sleep would pass
+    on a quiet machine and fail on a loaded runner, and neither outcome would be about the code.
+    """
+
+    async def _wait(client: object, run_id: str, *, timeout_s: float = 30.0) -> dict:
+        import asyncio
+        import time
+
+        from dsa_api.services.run_lifecycle import REVIEW_STATUS, TERMINAL_STATUSES
+
+        stopped = {*TERMINAL_STATUSES, REVIEW_STATUS}
+        deadline = time.monotonic() + timeout_s
+        last: dict = {}
+        while time.monotonic() < deadline:
+            row = await client.get(f"/api/v1/analysis/{run_id}")  # type: ignore[attr-defined]
+            assert row.status_code == 200, row.text  # type: ignore[attr-defined]
+            last = row.json()  # type: ignore[attr-defined]
+            if str(last.get("status")) in stopped:
+                return last
+            await asyncio.sleep(0.05)
+        raise AssertionError(
+            f"run {run_id} never reached a terminal status within {timeout_s}s; last seen: {last}"
+            + await _writer_side_row(run_id)
+            + _stall_evidence(run_id)
+        )
+
+    return _wait
+
+
+_LIFECYCLE_RECORDS: list[tuple[str, str]] = []
+
+
+class _CountLifecycleLines(logging.Handler):
+    """Count the run lifecycle's own lines process-wide; never absorb one.
+
+    pytest captures logs per test, so a record emitted while an *earlier* test was running is invisible to the
+    report of the test that finally times out. That difference is the whole remaining question -- either a third
+    silent exit exists, or the write did say so and the reader was looking in another test's capture window.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        _LIFECYCLE_RECORDS.append((str(getattr(record, "run_id", "-")), record.getMessage()[:80]))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def count_lifecycle_log_lines():
+    logger = logging.getLogger("dsa_api.services.run_lifecycle")
+    handler = _CountLifecycleLines(level=logging.WARNING)
+    logger.addHandler(handler)
+    yield
+    logger.removeHandler(handler)
+
+
+_SCHEDULED_ON: dict[str, asyncio.AbstractEventLoop] = {}
+_SCHEDULED_OUTCOME: dict[str, tuple[str, str]] = {}
+#: A weak reference on purpose: whether the task object is still alive is a separate fact from how it ended,
+#: and holding it strongly would change the very lifetime this report is trying to observe.
+_SCHEDULED_TASK: dict[str, weakref.ref] = {}
+
+
+def _record_outcome(run_id: str, finished: asyncio.Task) -> None:
+    """How the lifecycle task itself ended, read off the task instead of off the log.
+
+    Every exit of the shipped `execute` either writes a terminal status or emits a line naming the run, and the
+    CI samples showed neither -- a row frozen in flight with an empty registry, which the enumeration says is
+    unreachable. An inference drawn from the absence of a log inherits every assumption about how that log is
+    captured, so this asks the task directly. `cancelled()` is consulted first because `exception()` on a
+    cancelled task raises rather than returns; no handler is needed, and none is added.
+    """
+    if finished.cancelled():
+        _SCHEDULED_OUTCOME[run_id] = ("cancelled", "-")
+        return
+    error = finished.exception()
+    _SCHEDULED_OUTCOME[run_id] = ("raised", type(error).__name__) if error else ("returned", "-")
+
+
+async def _writer_side_row(run_id: str) -> str:
+    """Read the frozen row back through the factory the lifecycle writes through, and name both sides.
+
+    The enumeration of `execute` is closed: it returns normally only after a terminal write, and every other
+    exit emits a line naming the run. CI reads `returned (-)` with no line at all, and the polled row stays in
+    flight -- so the two readings can only be reconciled if the writer and the client are not looking at the
+    same database or the same snapshot of it. This asks the writer's own session. Bounded by `asyncio.wait`
+    rather than a handler, because a probe that can hang would replace the report with a second hang, and a
+    counted `except` for it would be a new silent exit in the harness.
+    """
+    from dsa_api.core import database
+    from dsa_api.services.run_lifecycle import read_run
+
+    collector = asyncio.gather(read_run(run_id), return_exceptions=True)
+    done, _pending = await asyncio.wait({collector}, timeout=3)
+    if not done:
+        collector.cancel()
+        await asyncio.wait({collector}, timeout=1)
+        verdict = "no answer within 3s"
+    else:
+        value = collector.result()[0]
+        if isinstance(value, BaseException):
+            verdict = f"read raised {type(value).__name__}"
+        elif value is None:
+            verdict = "row absent -- the writer's database does not have this run"
+        else:
+            verdict = f"status={value.get('status')} updated_at={value.get('updated_at')}"
+    bind = getattr(database.AsyncSessionLocal, "kw", {}).get("bind")
+    return (
+        f"\n  writer-side row for {run_id} (same session factory the lifecycle writes through): {verdict}"
+        f"\n  factory identity: id(AsyncSessionLocal)={id(database.AsyncSessionLocal)} "
+        f"id(engine)={id(database.engine)} factory bind is that engine={bind is database.engine} "
+        f"url={database.engine.url!r}"
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def record_scheduled_loop():
+    """Note which loop each run was scheduled on -- the datum the registry cannot give back once it is empty.
+
+    Every CI timeout read `no task for <run>` plus an empty `all_tasks()` census plus no lifecycle line, and the
+    leading reading was an orphan: the coroutine was suspended on a loop that had already closed, so no census
+    on the polling loop could see it and no thread scan could show a frame. That reading is unfalsifiable with
+    the registry alone -- a closed loop leaves no trace there. The loop object itself is the thing to keep, and
+    `schedule_run` is the last moment it is still knowable.
+
+    Installed on every module that holds the name, not only the definition: the router imported `schedule_run`
+    directly, so patching `run_lifecycle` alone would record nothing for the runs the route actually creates.
+    """
+    from dsa_api.routers import analysis as analysis_router
+    from dsa_api.services import demo_seed, run_lifecycle
+
+    targets = [run_lifecycle, analysis_router, demo_seed]
+    originals = [(module, module.schedule_run) for module in targets]
+
+    def _wrap(original):
+        def schedule_run(run_id: str):
+            task = original(run_id)
+            _SCHEDULED_ON[run_id] = task.get_loop()
+            _SCHEDULED_TASK[run_id] = weakref.ref(task)
+            task.add_done_callback(partial(_record_outcome, run_id))
+            return task
+
+        return schedule_run
+
+    for module, original in originals:
+        module.schedule_run = _wrap(original)
+    yield
+    for module, original in originals:
+        module.schedule_run = original
+
+
+_GRAPH_RETURN: dict[str, tuple[str, str, str]] = {}
+_ON_UPDATE_SEQUENCE: dict[str, list[str]] = {}
+
+
+async def _observe_graph_call(original: object, run_id: str, named: dict[str, object]) -> object:
+    """Await the graph and record how it ended, then hand the outcome back unchanged.
+
+    This is the last unknown the CI samples cannot answer: `execute` returns normally, the lifecycle's own
+    database still says the run is in flight, and no line names the run. The only readings left differ in what
+    `run_analysis` handed back -- a terminal state written under another id, a non-terminal state that should
+    have tripped the enforcement in `execute`, or a call that never returned. The recorder must not change the
+    shape it observes, so it awaits the real coroutine directly: no extra task, and the `raise` after recording
+    leaves cancellation and exceptions propagating exactly as shipped.
+    """
+    inner_update = named.get("on_update")
+
+    async def _observe(state: object) -> None:
+        _ON_UPDATE_SEQUENCE.setdefault(run_id, []).append(f"{state.status.value}@{state.run_id}")
+        if inner_update is not None:
+            await inner_update(state)
+
+    named["on_update"] = _observe
+    try:
+        state = await original(**named)  # type: ignore[operator]
+    except BaseException as ended:
+        _GRAPH_RETURN[run_id] = (f"raised {type(ended).__name__}", "-", "-")
+        raise
+    _GRAPH_RETURN[run_id] = ("returned", str(state.status.value), str(state.run_id))
+    return state
+
+
+@pytest.fixture(scope="session", autouse=True)
+def record_graph_return():
+    """Install `_observe_graph_call` on the name `execute` imports at call time."""
+    import dsa_agent.graph as graph
+
+    original = graph.run_analysis
+    names = ("dataset_path", "dataset_id", "user_query", "run_id", "on_update")
+
+    async def _wrapped(*args: object, **kwargs: object) -> object:
+        named = dict(zip(names, args, strict=False))
+        named.update(kwargs)
+        return await _observe_graph_call(original, str(named.get("run_id") or "-"), named)
+
+    graph.run_analysis = _wrapped
+    yield
+    graph.run_analysis = original
+
+
+def _stall_evidence(run_id: str) -> str:
+    """Name the condition the timeout is actually in, instead of leaving it to be inferred from a traceback.
+
+    A wait that expires says only "not terminal yet", which reads the same whether the run is slow, deadlocked
+    on a database connection belonging to an event loop that has since closed, or parked in an await that never
+    returns. Each line below is read without touching the database (a probe that awaited the hung resource would
+    replace the report with a second hang) and each one discriminates a different cause: the task's loop versus
+    the running loop, the task's own stack at the suspended await, the pool's checked-out count, and whether the
+    registry still holds a task for this run at all.
+
+    Nothing here is wrapped in a handler: this text is appended to a failure that is already real, so a probe
+    that can fail quietly would hide the one thing the report exists to show.
+    """
+    import asyncio
+    import threading
+    from io import StringIO
+    from pathlib import Path
+
+    from dsa_api.core import database as app_database
+    from dsa_api.services import run_lifecycle
+
+    lines = ["", "  --- stall evidence ---"]
+    running = asyncio.get_running_loop()
+    tasks: dict = run_lifecycle._TASKS
+    own = tasks.get(run_id)
+    if own is None:
+        # No task for this run is the answer by itself: nothing remains that could move the row, so the row is
+        # frozen because its writer is gone, not because the writer is slow.
+        lines.append(
+            f"  task registry: no task for {run_id}; {len(tasks)} registered ({sorted(tasks)[:4]})"
+        )
+    else:
+        frame = StringIO()
+        if own.done():
+            outcome = "cancelled" if own.cancelled() else f"raised {own.exception()!r}"
+        else:
+            own.print_stack(file=frame)
+            outcome = "pending"
+        own_loop = own.get_loop()
+        lines.append(
+            f"  task {run_id}: {outcome}; same loop as running={own_loop is running}; "
+            f"task loop closed={own_loop.is_closed()}"
+        )
+        for entry in [e.strip() for e in frame.getvalue().splitlines() if e.strip()][-4:]:
+            lines.append(f"    await: {entry}")
+
+    # The line the CI samples have been missing: with no registry entry the census and the thread scan can only
+    # say "not here", which fits both "the writer finished" and "the writer is parked on a loop that closed".
+    # The loop captured at schedule time discriminates them -- `same as polling loop=False, closed=True` is the
+    # orphan, and `True` says the run was on the loop that is still asking about it.
+    scheduled = _SCHEDULED_ON.get(run_id)
+    if scheduled is None:
+        lines.append(
+            f"  scheduled loop: never recorded for {run_id}; "
+            f"{len(_SCHEDULED_ON)} run(s) recorded this session ({list(_SCHEDULED_ON)[:4]})"
+        )
+    else:
+        lines.append(
+            f"  scheduled loop: {id(scheduled):#x}; same as polling loop={scheduled is running}; "
+            f"that loop closed={scheduled.is_closed()}"
+        )
+    # The line that settles the enumeration. `execute` has no exit that both leaves the row in flight and stays
+    # silent, so "no lifecycle line for this run" was carrying the whole argument -- and an argument carried by
+    # a log inherits every assumption about how logs get captured. This asks the task object instead. An absent
+    # outcome is itself an answer: the coroutine reached no done state on this loop, or the loop stopped before
+    # running the callbacks that would have said so.
+    outcome = _SCHEDULED_OUTCOME.get(run_id)
+    ended = (
+        "not recorded (no done callback ran)" if outcome is None else f"{outcome[0]} ({outcome[1]})"
+    )
+    # "not recorded" has two very different causes -- the coroutine is still in flight, or it ended and the loop
+    # dropped the callbacks -- so the object itself is asked, through a weak reference that cannot keep it alive.
+    held = _SCHEDULED_TASK.get(run_id)
+    alive = held() if held is not None else None
+    task_state = (
+        "never scheduled here"
+        if held is None
+        else ("garbage-collected" if alive is None else f"done={alive.done()}")
+    )
+    lines.append(f"  how the lifecycle task ended: {ended}; task object: {task_state}")
+
+    # The discriminator the registry alone cannot supply: an absent entry means either "the writer finished" or
+    # "the writer is running and nothing points at it", and those two have different owners. So ask the loop
+    # directly -- by coroutine name, and by the run id in that frame's locals -- instead of inferring it.
+    live_by_name: dict[str, int] = {}
+    for candidate in asyncio.all_tasks():
+        if candidate is asyncio.current_task() or candidate.done():
+            continue
+        coro = candidate.get_coro()
+        name = getattr(coro, "__name__", type(coro).__name__)
+        live_by_name[name] = live_by_name.get(name, 0) + 1
+        if name != "execute":
+            continue
+        held = getattr(coro, "cr_frame", None)
+        if held is None or held.f_locals.get("run_id") != run_id:
+            continue
+        stack = StringIO()
+        candidate.print_stack(file=stack)
+        suspended = [e.strip() for e in stack.getvalue().splitlines() if e.strip()]
+        lines.append(
+            f"  a live execute() for {run_id} IS on this loop while the registry says otherwise -- "
+            "the entry was dropped, the task was not. Suspended at:"
+        )
+        lines.extend(f"    {entry}" for entry in suspended[-4:])
+    lines.append(
+        f"  live tasks on THIS loop (all_tasks() cannot see another loop's tasks): {live_by_name}"
+    )
+    # ...so an empty census above is not by itself proof the writer finished: verified against a live task on a
+    # second thread's loop, which `all_tasks()` does not list. Frames are thread-wide, so this scan is what
+    # licenses the stronger reading -- a coroutine still inside the lifecycle would show its line here, and an
+    # empty result with an empty registry means the writer really is gone rather than merely elsewhere.
+    frames = []
+    for tid, held_frame in sys._current_frames().items():
+        node, depth = held_frame, 0
+        while node is not None and depth < 30:
+            name = node.f_code.co_filename
+            if "run_lifecycle.py" in name or "dsa_agent/graph.py" in name:
+                frames.append(
+                    f"    thread {tid}: {name.rsplit('/', 1)[-1]}:{node.f_lineno} "
+                    f"in {node.f_code.co_name}"
+                )
+                break
+            node, depth = node.f_back, depth + 1
+    lines.append(f"  threads still inside the lifecycle or the graph: {len(frames)}")
+    lines.extend(frames[:6])
+    # Two module objects for one file would explain a census that says no task while a task runs: the registry
+    # written by the route and the registry read here would be different dicts. The vendored copies under
+    # `_vendor` are omitted from coverage, so nothing else in the report would ever show the split. Matched on
+    # the shipped module path rather than the bare suffix: `test_analysis_run_lifecycle` ends the same way and
+    # is a test module -- the first CI run of this line reported it as though it were a second copy of the code.
+    lines.append(
+        "  lifecycle module objects loaded: "
+        f"{sorted(m for m in sys.modules if m.endswith('dsa_api.services.run_lifecycle'))}"
+    )
+    returned = _GRAPH_RETURN.get(run_id)
+    sequence = _ON_UPDATE_SEQUENCE.get(run_id) or []
+    if returned is None:
+        lines.append(
+            f"  graph call for {run_id}: not recorded (no wrapped run_analysis carried this id); "
+            f"{len(_GRAPH_RETURN)} id(s) recorded ({list(_GRAPH_RETURN)[:3]})"
+        )
+    else:
+        lines.append(
+            f"  graph call for {run_id}: {returned[0]} status={returned[1]} state.run_id={returned[2]}; "
+            f"on_update awaited {len(sequence)}x, last three {sequence[-3:]}"
+        )
+    seen_for_run = sorted({m for rid, m in _LIFECYCLE_RECORDS if rid == run_id})
+    sample = [f"{rid}: {m}" for rid, m in _LIFECYCLE_RECORDS[:4]]
+    lines.append(
+        f"  lifecycle lines emitted for {run_id} anywhere in this process: "
+        f"{seen_for_run or 'none'}; {len(_LIFECYCLE_RECORDS)} WARNING+ line(s) seen session-wide"
+    )
+    # Whose lines they are matters as much as how many: a session that spoke about other runs while staying
+    # quiet about this one is a different failure from a session that never reached either branch.
+    if sample:
+        lines.append(f"  session-wide lines (first {len(sample)}): {sample}")
+    lines.append(f"  engine pool: {app_database.engine.pool.status()}")
+    lines.append(
+        f"  engine url={app_database.engine.url!r}; cwd={Path.cwd()}; "
+        f"threads={[t.name for t in threading.enumerate() if 'Thread' in t.name][:6]}"
+    )
+    return "\n".join(lines)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def demo_seeding_off_by_default() -> None:
+    """No test asks for the demo, so no test should pay for it or be disturbed by it.
+
+    `dsa_api.main`'s lifespan seeds the sample datasets and, in a mode that calls no model, runs one analysis
+    per seeded dataset so the first screen has a finished report to show (web plan R-01). Eight unrelated
+    files open `TestClient(app)`, and that context manager runs the lifespan -- so a default-on boot would
+    execute the agent inside each of them, add seconds per file, and write rows into whichever database the
+    process happens to have configured. Measured on 2026-10-15: with the hook live and the flag absent,
+    `tests/integration/test_agent_analysis.py::test_api_analysis_flow` timed out waiting for its own run to
+    finish, because two boot-generated analyses were writing to the same sqlite file.
+
+    The default in the product stays on -- an opt-in demo would leave a plain `docker compose up` showing the
+    empty list the requirement exists to end. `tests/integration/test_demo_seeding.py` turns it back on, and
+    one of its tests asserts the flag is what makes the difference, so this line cannot silently stop working.
+    """
+    import os
+
+    os.environ.setdefault("DSA_DEMO_SEEDING", "off")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def default_database_has_schema() -> None:
+    """Guarantee the ORM tables exist in the database the app's module engine points at, once per run.
+
+    Several suites drive the app with `httpx.AsyncClient(transport=ASGITransport(app=app))`, which never runs
+    the lifespan where `init_db()` lives. Those tests therefore issue reads against a database nobody in
+    their own process created: they pass only because some earlier test opened a `TestClient` (whose context
+    manager does run the lifespan), or because the machine already had a populated `data/dsa.db`. On a clean
+    checkout the outcome depends on collection order, and that is exactly what CI showed -- `no such table:
+    datasets` from `apps/api/tests/test_security.py` and `no such table: analysis_runs` from the startup
+    sweep, green on every developer machine that had run the app. The application guarantees its own schema at
+    boot; this guarantees the same fact for the test process rather than borrowing it from a neighbour.
+
+    The DDL goes through a sync engine on purpose. The module-level async engine binds to whichever event loop
+    touches it first, and a session-scoped fixture cannot claim the per-test loops that follow; a sqlite file
+    created by one driver is fully visible to the other.
+
+    CI status of this fixture: at `bccb4e0` it created the file and the same seven tests still failed, so
+    writing the DDL is necessary but not sufficient -- what is asserted below is the disagreement itself.
+    """
+    from pathlib import Path
+
+    from sqlalchemy import create_engine
+
+    # Register the models on Base.metadata, the same three imports apps/api/src/dsa_api/main.py makes.
+    import dsa_api.models.analysis  # noqa: F401
+    import dsa_api.models.dataset  # noqa: F401
+    import dsa_api.models.experiment  # noqa: F401
+    from dsa_api.core.config import settings
+    from dsa_api.core.database import Base
+
+    url = settings.database_url
+    if "+aiosqlite" in url:
+        url = url.replace("+aiosqlite", "")
+    if url.startswith("sqlite:"):
+        Path(url.rsplit("///", 1)[-1]).parent.mkdir(parents=True, exist_ok=True)
+
+    sync_engine = create_engine(url)
+    Base.metadata.create_all(sync_engine, checkfirst=True)
+    sync_engine.dispose()
+
+    # Verify through the seam the application itself uses, not only through the engine that wrote the DDL.
+    # The first CI run of this fixture created the file and the auth suite still failed with `no such table`,
+    # which can only mean the two ends disagree about which database this URL names. Saying so here is the
+    # point: a named failure at session setup beats seven downstream ones whose cause is inferred from a
+    # traceback that cannot show what the process actually opened.
+    import asyncio
+
+    from sqlalchemy import inspect as sqlalchemy_inspect
+
+    from dsa_api.core import database as app_database
+
+    async def _tables() -> list[str]:
+        async with app_database.engine.connect() as conn:
+            return await conn.run_sync(
+                lambda sync_conn: sorted(sqlalchemy_inspect(sync_conn).get_table_names())
+            )
+
+    seen = asyncio.run(_tables())
+    # Connections created above are bound to this throwaway loop; drop them before the per-test loops start.
+    asyncio.run(app_database.engine.dispose())
+    missing = sorted({"datasets", "analysis_runs", "experiments"} - set(seen))
+    if missing:
+        # Warned here rather than raised: a session-scoped autouse fixture that raises reddens every test in the
+        # run, which is a worse signal than one named failure. The hard assertion lives in
+        # tests/contract/test_test_database_is_reachable.py, where it can fail on its own and name both urls.
+        warnings.warn(
+            f"schema was written through {url!r} but the application's engine sees no {missing} "
+            f"(engine url={app_database.engine.url!r}, cwd={Path.cwd()}) -- the test process and the "
+            "application are opening different databases",
+            stacklevel=1,
+        )
+
+
+@pytest.fixture(autouse=True)
+def isolate_database_binding(request: pytest.FixtureRequest):
+    """Pin the two names the routes resolve through, and say who moved them.
+
+    `isolate_process_global_state` restores the *contents* of known containers, which cannot see a rebinding:
+    a suite that assigns `database.AsyncSessionLocal = async_sessionmaker(tmp_engine)` and leaves it in place
+    sends every later route to a different database than the one `engine` -- and therefore the schema-creating
+    fixture -- refers to. That is the shape CI is reporting: the session's own guard sees the tables through
+    `engine` while `apps/api/tests/test_security.py`, in the same run, gets `no such table: datasets`. So the
+    binding goes back, and the test that moved it is named rather than left to be inferred from a failure
+    forty files away.
+    """
+    from dsa_api.core import database
+
+    before = (database.AsyncSessionLocal, database.engine)
+    yield
+    after = (database.AsyncSessionLocal, database.engine)
+    if after != before:
+        warnings.warn(
+            f"{request.node.nodeid} rebound dsa_api.core.database.AsyncSessionLocal/engine "
+            f"(before={before[0].kw.get('bind')!r} after={after[0].kw.get('bind')!r}) without restoring it; "
+            "the binding has been put back for the rest of the run",
+            stacklevel=1,
+        )
+        database.AsyncSessionLocal, database.engine = before
+
+
 @pytest.fixture(autouse=True)
 def isolate_process_global_state():
     """Reset every writable module-level container after each test, whatever the test did to it."""
@@ -110,3 +617,30 @@ def isolate_process_global_state():
     yield
     for obj, saved in live:
         _restore(obj, saved)
+
+
+@pytest.fixture(autouse=True)
+def isolate_rate_limit_windows():
+    """Give each test its own sliding-window budget, on both sides of the test.
+
+    Measured (audit §213): the suite crosses the shipped 30-uploads-per-minute rule inside one process,
+    because `_limiters` is module-global and every `TestClient` request presents the same host, so the key is
+    one shared `127.0.0.1:/api/v1/datasets` window for the whole run. The count reached 30/30 at
+    `tests/integration/test_phase6_api.py::test_sse_events_and_json_fallback` and the next upload in
+    `test_progress_and_evidence_trace` was answered 429 -- red, and red only in the order and at the speed the
+    run happened to have, which is why it looked like a flake rather than a budget.
+
+    Why the reset is synchronous: the shipped `clear_rate_limit_state()` is a coroutine, and an async autouse
+    fixture does not run for the sync tests that also upload (`tests/unit/test_more_coverage.py` among them),
+    so awaiting here would isolate a subset of the suite silently. The windows are plain deques and no request
+    is in flight at a fixture boundary, so clearing them needs no lock.
+    """
+
+    def _reset() -> None:
+        for module_name, attr in _ISOLATED_RESETS:
+            for holder in getattr(importlib.import_module(module_name), attr):
+                holder._hits.clear()
+
+    _reset()
+    yield
+    _reset()

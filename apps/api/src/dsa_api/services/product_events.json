@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "description": "R-15: the product's event vocabulary, published as data. Every reported count is derived from records the emitter wrote against this file; no number is typed into a document. Web-side events are declared with their emitter and are not emitted by this API.",
+  "consent": {
+    "env": "DSA_TELEMETRY",
+    "default": "off",
+    "meaning": {
+      "on": "append events to the event log",
+      "off": "emit nothing at all, write nothing, create no file"
+    }
+  },
+  "storage": {
+    "format": "jsonl, one event object per line, in emission order",
+    "path_env": "DSA_EVENT_LOG",
+    "default_path": "data/events/events.jsonl"
+  },
+  "prohibited_payload_keys": [
+    "query",
+    "user_query",
+    "task",
+    "objective",
+    "sql",
+    "code",
+    "content",
+    "filename",
+    "dataset_path",
+    "path",
+    "rows",
+    "columns",
+    "profile",
+    "result",
+    "output",
+    "user_id",
+    "session_id",
+    "email",
+    "ip"
+  ],
+  "prohibited_value_rule": "A payload value must be null, boolean, integer, or a string matching ^[A-Za-z0-9._:/-]{0,64}$ -- identifiers, modes and counts only, never free text. The rule is enforced at emit time and re-checked from the log by the guard.",
+  "events": [
+    {
+      "name": "run_started",
+      "emitter": "api",
+      "status": "active",
+      "answers": "funnel: run started",
+      "counts": "One record per run this instance created, whichever path created it -- the endpoint for a visitor (`initiated_by: user`) and the boot seeder for its own example runs (`initiated_by: seeding`). Without the second the funnel would report more completions than starts, because the seeder writes through the service rather than the endpoint.",
+      "payload": {
+        "dataset_id": "string identifier of the dataset row",
+        "reasoning_mode": "the effective reasoning mode at creation",
+        "initiated_by": "user | seeding"
+      }
+    },
+    {
+      "name": "run_completed",
+      "emitter": "api",
+      "status": "active",
+      "answers": "funnel: run completed",
+      "payload": {
+        "run_status": "the terminal status the row actually reached"
+      }
+    },
+    {
+      "name": "export_taken",
+      "emitter": "api",
+      "status": "active",
+      "answers": "funnel: export taken",
+      "payload": {
+        "export_format": "markdown | html",
+        "mode": "findings | audited"
+      }
+    },
+    {
+      "name": "arrival",
+      "emitter": "web",
+      "status": "active",
+      "answers": "funnel: arrival",
+      "counts": "One record per page view, relayed by POST /api/v1/events because only the browser knows it. This is the one event a human being's browsing produces rather than a computation the server performed, so two switches stand in front of it and both default off: the client sends nothing at all unless it was BUILT with NEXT_PUBLIC_TELEMETRY=on, and the instance writes nothing unless it RUNS with DSA_TELEMETRY=on. A visitor on the public demo is therefore not counted by default, and turning it on is the operator's disclosure obligation, not a deployment detail. No identifier, session token, referrer, user agent or URL path is accepted; `page` is the vocabulary's own short label.",
+      "payload": {
+        "page": "landing | datasets"
+      }
+    },
+    {
+      "name": "starter_question_used",
+      "emitter": "api",
+      "status": "active",
+      "answers": "funnel: starter question used",
+      "counts": "A run started whose question equals, after stripping, one of the questions the tracked catalog publishes. The click itself is not counted -- a visitor who opens a starter question and never submits leaves no record -- and neither is a question that merely resembles a published one. The denominator is therefore runs, not clicks.",
+      "payload": {
+        "dataset_id": "string identifier of the dataset row"
+      }
+    }
+  ]
+}

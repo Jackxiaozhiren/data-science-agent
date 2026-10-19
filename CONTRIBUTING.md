@@ -6,13 +6,14 @@ Before PR — these mirror `.github/workflows/ci.yml` verbatim, and
 `tests/test_ci_gate_integrity.py` fails if the two ever drift apart:
 
 ```bash
-uv sync --dev
 uv lock --check                                  # §46 dependency pinning
+uv sync --dev                                    # keep it after the line above: this rewrites uv.lock
 uv run python scripts/audit_facts.py --check
 uv run python scripts/sync_vendor.py --check     # vendored dsa_* must match source
 uv run python scripts/check_npm_workspace_lock.py
 uv run python scripts/check_public_claims.py --require-released-tags
-uv run python scripts/find_orphan_reads.py --check
+uv run python scripts/find_orphan_reads.py --check  # audit §208: a ledger section number is issued once
+uv run python scripts/check_ledger_identifiers.py --check
 uv run ruff check packages apps/api tests src apps/jupyter scripts
 uv run ruff format --check packages apps/api tests src apps/jupyter scripts
 uv run mypy packages apps/api src apps/jupyter --ignore-missing-imports
@@ -35,9 +36,10 @@ One command for the whole list: `scripts/run_gates.sh` (add `--list` to print th
 without running them). `tests/test_command_surface.py` fails if that runner and `ci.yml` ever
 cover different gates, which is what keeps this list from becoming a second, smaller truth.
 
-Run the list, do not sample it. `scripts/run_gates.sh` ends with `scripts/sync_vendor.py --check`, and
-a format pass rewrites the sources the `_vendor` mirrors were copied from: mirror **after** formatting,
-and let the check be the last thing before you commit. Skipping a gate because it is already red for
+Run the list, do not sample it. `scripts/run_gates.sh` runs `scripts/sync_vendor.py --check` third -- before its
+own `ruff format --check`, and a format pass rewrites the sources the `_vendor` mirrors were copied from: mirror
+**after** formatting, and re-run that check before you commit, because the one in the list has already passed by
+then. Skipping a gate because it is already red for
 someone else's file removes the only thing that could catch yours -- `--check` names the drifted files
 now, so read that list and compare it against what you do not own (§127.1 cost a red `main`).
 

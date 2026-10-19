@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from dsa_evaluation import ui
 from dsa_evaluation.reproduce import reproduce_benchmark
 from dsa_evaluation.runner import run_benchmark
 
@@ -38,7 +39,28 @@ def _resolve_datasets_dir(catalog: Path | None, datasets: Path | None) -> Path:
     return _DEFAULT_DATASETS
 
 
-def main() -> None:
+def default_web_dir() -> Path:
+    """The built web app to serve, found the same way `demo_seed.repo_root()` finds its samples.
+
+    A depth count would break the first time the package moves; walking up to a directory that contains
+    `apps/web` is the fact being asked for. In an installed wheel there is no `apps/web` at all, and the
+    preflight then refuses with a message naming `--web-dir` rather than serving a path that does not exist.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidate = parent / "apps" / "web"
+        if candidate.is_dir():
+            return candidate
+    return Path("apps/web")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI surface as a value, so a test can read what `dsa --help` advertises.
+
+    `tests/unit/test_cli_help_surface.py` records why this seam exists: appending `--help` makes
+    argparse exit before it can report an unrecognised positional, so a help-only subprocess run
+    cannot prove that an advertised flag is real. Building the parser without dispatching can.
+    """
     ap = argparse.ArgumentParser(description="DS-Agent-Benchmark runner")
     sub = ap.add_subparsers(dest="cmd")
     p_demo = sub.add_parser(
@@ -127,6 +149,54 @@ def main() -> None:
     p_plugin.add_argument("--json", action="store_true", help="JSON output")
     p_mcp = sub.add_parser("mcp", help="MCP (§32): list the tool surface (dsa mcp [--json])")
     p_mcp.add_argument("--json", action="store_true", help="JSON output")
+    p_ui = sub.add_parser(
+        "ui",
+        help=(
+            "Run the whole product locally (R-04): one command, loopback by default, your data stays "
+            "on this machine"
+        ),
+    )
+    p_ui.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="bind address; loopback by default, and a public bind is refused without --allow-public",
+    )
+    p_ui.add_argument("--allow-public", action="store_true", help="permit a non-loopback --host")
+    p_ui.add_argument(
+        "--port",
+        type=int,
+        default=ui.DEFAULT_UI_PORT,
+        help=f"web port (default {ui.DEFAULT_UI_PORT})",
+    )
+    p_ui.add_argument(
+        "--api-port",
+        type=int,
+        default=ui.DEFAULT_API_PORT,
+        help=(
+            f"API port (default {ui.DEFAULT_API_PORT}). The web client is compiled against one origin, so "
+            "a different number is refused until the bundle is rebuilt with NEXT_PUBLIC_API_URL set"
+        ),
+    )
+    p_ui.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="where the database, uploads and artifacts live (default: ~/.dsa/ui)",
+    )
+    p_ui.add_argument(
+        "--web-dir",
+        type=Path,
+        default=None,
+        help="the built web app to serve (default: this checkout's apps/web)",
+    )
+    p_ui.add_argument(
+        "--json",
+        action="store_true",
+        help="preflight only: report what would stop a start and exit non-zero, without starting",
+    )
+    p_ui.add_argument(
+        "--no-browser", action="store_true", help="do not open a browser once the UI answers"
+    )
 
     # Default benchmark run (backward compatible: `dsa --catalog ... --limit 50`)
     ap.add_argument("--catalog", type=Path, default=_DEFAULT_CATALOG)
@@ -143,6 +213,11 @@ def main() -> None:
         default=None,
         help="Run reproduction harness: --reproduce [benchmark]",
     )
+    return ap
+
+
+def main() -> None:
+    ap = build_parser()
     args = ap.parse_args()
 
     if args.cmd == "demo":
@@ -483,6 +558,21 @@ def main() -> None:
         tools = mcp_list()
         print(json.dumps(list(tools), ensure_ascii=False))
         return
+
+    if args.cmd == "ui":
+        web_dir = args.web_dir or default_web_dir()
+        data_dir = args.data_dir or Path.home() / ".dsa" / "ui"
+        common = {
+            "web_dir": web_dir,
+            "data_dir": data_dir,
+            "host": args.host,
+            "api_port": args.api_port,
+            "ui_port": args.port,
+            "allow_public": args.allow_public,
+        }
+        if args.json:
+            sys.exit(ui.check_only(**common))
+        sys.exit(ui.serve(**common, open_url_when_ready=not args.no_browser))
 
     if args.reproduce is not None:
         # §132 (D-L4-12). This block used to open with two conditional expressions whose branches

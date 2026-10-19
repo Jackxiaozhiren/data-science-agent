@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "external-validation/STUDY3_RESULTS_SCHEMA.json",
+  "title": "Data Science Agent — Study 3 reviewer usability, one reviewer record",
+  "description": "Web plan §12 Study 3, protocol in STUDY3_REVIEWER_USABILITY.md. One JSON document per reviewer. No field is pre-filled by the project; every value comes from a real session. Not conducted yet (PENDING EXTERNAL ACTOR).",
+  "type": "object",
+  "required": ["study", "reviewer", "session", "materials", "claims", "could_not_verify_verbatim", "consent"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "study": {
+      "type": "object",
+      "required": ["id", "run_id", "round"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "const": "study3_reviewer_usability" },
+        "run_id": { "type": "string", "pattern": "^run-[0-9a-f]{10}$" },
+        "round": { "type": "integer", "minimum": 1 },
+        "preflight_offline_check_passed": {
+          "type": "boolean",
+          "description": "The coordinator ran the repository's zero-network-request acceptance on this exact file before the session, per protocol §3."
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "required": ["id_or_pseudonym", "background", "is_project_author"],
+      "additionalProperties": false,
+      "properties": {
+        "id_or_pseudonym": { "type": "string", "minLength": 1 },
+        "background": { "type": "string", "minLength": 1 },
+        "is_project_author": {
+          "type": "boolean",
+          "description": "Must be false for the session to count."
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["review_date", "opened_as", "total_minutes", "help_events"],
+      "additionalProperties": false,
+      "properties": {
+        "review_date": { "type": "string", "format": "date" },
+        "opened_as": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Browser and file:// vs hosted URL, in the reviewer's own terms — how the file was opened is part of what R-07 claims."
+        },
+        "total_minutes": { "type": "number", "exclusiveMinimum": 0 },
+        "help_events": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Times the coordinator answered a question, per protocol §4 preamble."
+        }
+      }
+    },
+    "materials": {
+      "type": "object",
+      "required": ["report_file"],
+      "additionalProperties": false,
+      "properties": {
+        "report_file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The offline report file's name as handed over."
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The claims as the reviewer themselves segmented them, in their order; one timed attempt per claim.",
+      "items": {
+        "type": "object",
+        "required": ["claim_verbatim", "outcome", "minutes", "drill_down_used"],
+        "additionalProperties": false,
+        "properties": {
+          "claim_verbatim": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The claim as the reviewer phrased it; their segmentation is data."
+          },
+          "outcome": {
+            "enum": ["verified", "not_verified_within_5m", "unable_to_attempt"]
+          },
+          "minutes": { "type": "number", "exclusiveMinimum": 0 },
+          "drill_down_used": {
+            "type": "boolean",
+            "description": "Whether an in-page expansion or anchor was followed during the attempt."
+          },
+          "reason_verbatim": {
+            "type": "string",
+            "description": "Required in the reviewer's words when the outcome is not_verified_within_5m."
+          }
+        }
+      }
+    },
+    "could_not_verify_verbatim": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The answer to the mandatory closing question, protocol §4.4 — names at least one claim, or states that every claim verified."
+    },
+    "consent": {
+      "type": "object",
+      "required": ["words_recorded"],
+      "additionalProperties": false,
+      "properties": {
+        "words_recorded": {
+          "type": "boolean",
+          "description": "The reviewer consented to their own words being recorded and archived."
+        }
+      }
+    },
+    "raw_archive_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where the session's raw record lives, appended under external-validation/ in a dated file."
+    }
+  }
+}

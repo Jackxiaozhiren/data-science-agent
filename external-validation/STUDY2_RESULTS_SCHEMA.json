@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "external-validation/STUDY2_RESULTS_SCHEMA.json",
+  "title": "Data Science Agent — Study 2 paired blind review, one participant record",
+  "description": "Web plan §12 Study 2, protocol in STUDY2_PAIRED_BLIND.md. One JSON document per participant. No field is pre-filled by the project; every value comes from a real reviewer session. Not conducted yet (PENDING EXTERNAL ACTOR).",
+  "type": "object",
+  "required": ["study", "participant", "session", "documents", "paired_difference", "provenance_verdict", "consent"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "study": {
+      "type": "object",
+      "required": ["id", "run_id", "round"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "const": "study2_paired_blind" },
+        "run_id": { "type": "string", "pattern": "^run-[0-9a-f]{10}$" },
+        "round": { "type": "integer", "minimum": 1 },
+        "converter_used": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The one converter and flow that produced both delivery files, recorded per the protocol's §3.3."
+        }
+      }
+    },
+    "participant": {
+      "type": "object",
+      "required": ["id_or_pseudonym", "background", "is_project_author"],
+      "additionalProperties": false,
+      "properties": {
+        "id_or_pseudonym": { "type": "string", "minLength": 1 },
+        "background": { "type": "string", "minLength": 1 },
+        "is_project_author": {
+          "type": "boolean",
+          "description": "Must be false for the session to count."
+        },
+        "participant_index": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Index within the round; odd means the A document was read first (protocol §4.2)."
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["review_date", "order"],
+      "additionalProperties": false,
+      "properties": {
+        "review_date": { "type": "string", "format": "date" },
+        "order": {
+          "enum": ["A_first", "B_first"],
+          "description": "Which named file was read first. The file-to-mode mapping lives in the coordinator's pairing key, not here."
+        }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "One entry per document, in reading order.",
+      "items": {
+        "type": "object",
+        "required": ["file", "trust_1_to_7", "claims_would_verify", "minutes", "verbatim_sentence"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "enum": ["report_A", "report_B"] },
+          "trust_1_to_7": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "claims_would_verify": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How many of the document's claims the reviewer would verify before acting on it."
+          },
+          "minutes": { "type": "number", "exclusiveMinimum": 0 },
+          "verbatim_sentence": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "paired_difference": {
+      "type": "object",
+      "required": ["trust_audited_minus_findings"],
+      "additionalProperties": false,
+      "properties": {
+        "trust_audited_minus_findings": {
+          "type": "integer",
+          "minimum": -6,
+          "maximum": 6,
+          "description": "Filled by the coordinator after unblinding, from the two trust ratings and the pairing key."
+        }
+      }
+    },
+    "provenance_verdict": {
+      "enum": ["helped", "hindered", "neutral", "mixed"],
+      "description": "The coordinator's classification of the debrief answer, per protocol §4.4. 'hindered' is an expected outcome the product must be able to act on, not a failed study."
+    },
+    "provenance_verbatim": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The debrief answer, verbatim."
+    },
+    "help_events": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Times the coordinator answered a task question, per protocol §4.1."
+    },
+    "consent": {
+      "type": "object",
+      "required": ["words_recorded"],
+      "additionalProperties": false,
+      "properties": {
+        "words_recorded": {
+          "type": "boolean",
+          "description": "The participant consented to their own words being recorded and archived."
+        }
+      }
+    },
+    "raw_archive_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where the session's raw record lives, appended under external-validation/ in a dated file."
+    }
+  }
+}

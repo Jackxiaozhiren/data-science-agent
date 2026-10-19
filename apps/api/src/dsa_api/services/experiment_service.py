@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dsa_api.core.ownership import visible_to
 from dsa_api.models.experiment import ExperimentORM
 
 
@@ -18,6 +19,8 @@ async def create_experiment(
     params: dict[str, Any] | None = None,
     metrics: dict[str, Any] | None = None,
     artifact_path: str | None = None,
+    *,
+    owner: str,
 ) -> dict[str, Any]:
     exp_id = f"exp-{uuid.uuid4().hex[:10]}"
     orm = ExperimentORM(
@@ -28,6 +31,7 @@ async def create_experiment(
         params_json=json.dumps(params or {}),
         metrics_json=json.dumps(metrics or {}),
         artifact_path=artifact_path,
+        owner=owner,
     )
     session.add(orm)
     await session.commit()
@@ -36,12 +40,21 @@ async def create_experiment(
 
 
 async def list_experiments(
-    session: AsyncSession, run_id: str | None = None, limit: int = 100, offset: int = 0
+    session: AsyncSession,
+    run_id: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    *,
+    owner: str,
 ) -> tuple[list[dict[str, Any]], int]:
     from sqlalchemy import func as _func
 
-    base = select(ExperimentORM)
-    count_q = select(_func.count()).select_from(ExperimentORM)
+    base = select(ExperimentORM).where(ExperimentORM.owner.in_(visible_to(owner)))
+    count_q = (
+        select(_func.count())
+        .select_from(ExperimentORM)
+        .where(ExperimentORM.owner.in_(visible_to(owner)))
+    )
     if run_id:
         base = base.where(ExperimentORM.run_id == run_id)
         count_q = count_q.where(ExperimentORM.run_id == run_id)
@@ -51,9 +64,17 @@ async def list_experiments(
     return [r.to_dict() for r in rows], total
 
 
-async def get_experiment(session: AsyncSession, exp_id: str) -> dict[str, Any] | None:
+async def get_experiment(
+    session: AsyncSession, exp_id: str, *, owner: str
+) -> dict[str, Any] | None:
     row = (
-        (await session.execute(select(ExperimentORM).where(ExperimentORM.id == exp_id)))
+        (
+            await session.execute(
+                select(ExperimentORM).where(
+                    ExperimentORM.id == exp_id, ExperimentORM.owner.in_(visible_to(owner))
+                )
+            )
+        )
         .scalars()
         .first()
     )

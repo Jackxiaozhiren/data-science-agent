@@ -58,6 +58,22 @@ A canonical acceptance question is:
 
 A successful run should show completed tool calls, evidence marked `verified`, no tool errors, and a final `COMPLETED` report. A causal check may deliberately return `causal_bar=fail`; that is a guardrail indicating that an observational difference is not sufficient to establish causation.
 
+## The same path in Chinese, and by keyboard
+
+The header offers English and 中文 (R-13). It is not a cosmetic switch: the starter questions are published in
+both wordings, and **the wording the reader sees is the wording that is sent**, so a Chinese visitor's run has a
+Chinese objective -- and the funnel's `starter_question_used` link matches either spelling, so choosing the other
+language does not silently drop the click out of the measurement. The interface language never rewrites a
+deliverable: a report stays in the language the run was asked in.
+
+Measured on a local `dsa ui` instance at `127.0.0.1:3000`: the server renders `/datasets` and `/analysis` already
+in Chinese (no English-then-Chinese re-paint), the landing's primary action carried
+`对 Titanic 数据集做探索性分析，重点关注生还模式。`, and the run it started reached `COMPLETED`. The keyboard half is a
+gate, not a screenshot: `apps/web/scripts/regression.mjs` walks the analyst's routes and requires a visible focus
+indicator on every tab stop and that each `<details>` drill-down opens on Enter.
+
+The public deployment above has not been redeployed since, so what it serves is still the earlier build.
+
 ## Product capture (30 s, recorded 2026-09-11 against the live deployment)
 
 <video src="assets/demo/dsa-demo-30s.webm" controls preload="metadata" width="100%"></video>
@@ -86,10 +102,54 @@ No model credential or CORS value is required to get the API itself healthy. Fir
 For the current public deployment:
 
 ```bash
-DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
+DSA_CORS_ORIGINS=https://data-science-agent-web-rr93.vercel.app
+DSA_DATABASE_URL=sqlite+aiosqlite:////tmp/dsa.db
+DSA_DATASET_DIR=/tmp/datasets
+DSA_ARTIFACT_ROOT=/tmp/artifacts
 ```
 
+All three writable roots sit on the free instance's container filesystem, which is ephemeral: a restart, an
+idle shutdown or a redeploy clears them together. They are named explicitly rather than left to the image
+default because `/app/...` is not a path the app recognises as throwaway, and the disclosure in `/version` --
+the `not kept` badge in the shell -- reports only the roots it can tell apart. Unsetting them would make the
+badge quieter, not the storage safer. `deploy/render-persistent.example.yaml` is the configuration that moves
+all three onto a real disk.
+
 If an existing Blueprint has a failed deploy, keep the same Blueprint and use **Manual sync** or **Manual Deploy** after the repository fix is merged. Do not create a second Blueprint for the same service.
+
+### Product events are off on the demo unless the operator turns them on
+
+The API can count the funnel -- arrival, then a starter question used, then run started, run completed,
+export taken -- and the vocabulary that defines every one of them is
+`apps/api/src/dsa_api/services/product_events.json`. Nothing is recorded unless the operator asks for it, and
+because the first link is something only a browser can know, **counting it takes two deliberate acts, one on
+each service.** Setting only one is a real and easy mistake: it yields a live counter that reports zero for
+the step nobody configured.
+
+| What you set | What the instance records |
+|---|---|
+| neither (the state of the current deployment) | nothing. No file is created, and the web bundle sends no event request at all |
+| `DSA_TELEMETRY=on` on the Render service only | the server-observed steps (`run_started`, `run_completed`, `export_taken`, and `starter_question_used` when a run's question matches a published one). `arrival` stays zero, because the deployed web bundle was not built to report it |
+| `NEXT_PUBLIC_TELEMETRY=on` in Vercel's build environment only | nothing. The browser posts, and the API's own gate discards every post |
+| both | the whole funnel, including arrivals |
+
+`NEXT_PUBLIC_*` values are inlined when Vercel builds the site, so changing it means a **rebuild**, not a
+restart -- a bundle built without it cannot reach the events endpoint even if the API is counting. Set it in
+Vercel's Environment Variables (Production), then deploy, and confirm the deployed JS actually contains the
+change rather than assuming the setting took effect.
+
+On the API side, `DSA_TELEMETRY=on` appends one JSONL line per event to `DSA_EVENT_LOG` (default
+`data/events/events.jsonl`), which on the free tier sits on the ephemeral disk -- so the log vanishes on
+restart, exactly like the runs table. A count you have not read out of the instance is a count you do not
+have.
+
+Counting arrivals is a decision about a stranger's session, not a deployment detail, and it is left to the
+maintainer for that reason. If you turn it on, say so where a visitor can read it: the event carries only a
+short page label from the vocabulary's own choice list -- no URL, referrer, user agent, cookie or identifier
+is accepted, and the relay refuses values it was never told about -- but "we count page views on this demo"
+still has to be written down somewhere a person can see. The payload contract itself does not change with
+consent: query text, dataset content and user-identifying values are refused at emit time, before the consent
+check, whether or not counting is on.
 
 ### Verify a deploy from the outside
 
@@ -107,6 +167,35 @@ its package metadata, plus the effective reasoning mode (`/health` stays import-
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
 idle. The dataset listing is expected to be empty after a deploy -- see the storage note below -- so an
 empty list is the healthy answer, not a failure.
+
+`/version` also answers `storage`, and on the free demo it says so out loud:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/version \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['storage'])"
+# {'durable': False, 'ephemeral_roots': ['database']}
+```
+
+`ephemeral_roots` names which of `database` / `datasets` / `artifacts` sit on a path the host may clear, and
+the web header renders "not kept" whenever `durable` is false -- so a visitor who returns to an empty run
+list sees a stated property of the instance rather than an unexplained loss. It publishes roles, not paths,
+because the route is unauthenticated; and after Stage 1 in
+[Production Persistence Hardening](production-hardening.md) it is the check that the mount is actually
+configured, since a `/var/data` database with `/app/artifacts` charts reports `["artifacts"]`.
+
+To confirm which build the API is serving, read its own schema rather than the dashboard:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/openapi.json \
+  | python3 -c "import json,sys; p=json.load(sys.stdin)['paths']['/api/v1/analysis/{run_id}/report']['get']['parameters']; print([q['name'] for q in p])"
+```
+
+Some networks cannot reach `*.vercel.app` at all: DNS answers an address outside Vercel's ranges and TCP to
+port 443 times out, while `vercel.com` itself still connects. That is an environment condition, not a product
+defect, and it does not block a deploy check -- the API census above runs from anywhere. To confirm the web
+half without a browser, check the commit the platform built (`git show <sha>:<file>` for the change you
+expect) together with the `web-regression` CI job for that commit, and say plainly that the rendered page was
+not observed.
 
 ## Dataset storage behavior
 
@@ -129,11 +218,53 @@ For the public demo, visitors should assume:
 - uploaded datasets are temporary;
 - generated chart/report files are temporary;
 - a restart or redeploy may require re-uploading the dataset;
-- the free instance may need a short cold start after inactivity.
+- the free instance sleeps when idle, and the first request after an idle period was measured at 44.5 s to answer `/health`. The web app now says this up front and shows a bounded "waking up" retry rather than a spinner; see R-11 in the changelog.
 
 A production deployment should replace ephemeral local dataset/artifact storage with durable object storage, a persistent disk, or another explicitly managed persistence layer.
 
 For the recommended low-risk path from the current single-instance demo to durable storage, see [Production Persistence Hardening](production-hardening.md). The first stage deliberately keeps SQLite and local-file semantics, but moves them under one persistent `/var/data` mount before introducing Postgres or object storage.
+
+## Visitors are separated by an id, not by an account
+
+R-08 does not add a sign-in. It adds an owner to every stored row. The sample datasets and the example runs this
+project publishes are marked `shared`; anything a visitor uploads or runs is marked with an id that belongs to
+that one browser.
+
+- **Where the id comes from.** The web app's proxy mints a random id and sets it in a **first-party cookie**
+  before the first render, and every API call carries it in the `X-DSA-Owner` header. The three report links
+  that open in a new tab carry it as `?owner=` instead, because a browser navigation cannot add a header -- that
+  is the only place it appears in a URL. There is nothing for an operator to configure.
+- **What no id means.** A request with no header -- `curl`, the CLI, a browser that refused the cookie -- acts as
+  the `local` owner, which is also the value every pre-R-08 row was backfilled to. So a plain `curl` reads the
+  published sample and whatever was uploaded without an id, and none of what a scoped visitor uploaded.
+- **What this stops.** The next visitor listing your datasets, opening your run, reading your report, downloading
+  your bundle, or approving your run. Every one of those answers with the same `404` and the same words an id
+  that was never issued would get, so a stranger cannot even learn that your run exists. Starting a run on
+  someone else's dataset is refused the same way, and one visitor's duplicate-submit suppression never answers
+  for another's.
+- **What this does not stop.** Anyone holding your cookie, or reading the `owner=` parameter out of a shared
+  machine's browser history. It is a bearer value with nothing behind it: there is no password to check, because
+  the free demo has no user table to check it against. Clearing site data loses the rows for you as well -- the
+  files sit on the instance until it restarts, and nothing lets you reclaim them under a fresh id.
+- **`shared` is reserved.** A client that sends `X-DSA-Owner: shared` is normalised to `local`, so a visitor can
+  read the published sample but cannot publish their own file to everyone, and cannot claim the reserved rows.
+- **The promise a deployment can make** is "visitors cannot see each other's uploads", not "your data is private
+  on this server". `/datasets` says it in the browser, at the upload control, in those terms.
+
+### The demo takes no model key, and says so on the page
+
+`PUT /api/v1/provider` answers 403 on this deployment, and `/settings` renders the refusal rather than a form
+that would fail. The rule is mechanical: the API accepts a credential only when `DSA_PROVIDER_CONFIG` names a
+file to keep it in, and the hosted service never sets it. An instance with nowhere to store a secret between
+visits should not collect one -- accepting a key, holding it in memory, and losing it at the next idle restart
+is a worse experience than refusing, and a stranger's key sitting in a shared process is the same exposure R-08
+just closed for data.
+
+Consequences an operator should state rather than imply: the public demo runs on the deterministic planner
+(`heuristic`), so what a visitor sees is the product's reasoning *shape* without a model's; provider
+credentials belong to a private instance started with `dsa ui`, where the key is stored 0600 in that user's own
+data directory. `GET /version`'s `reasoning_mode.source` tells a reader which knob decided the mode on the
+instance they are talking to.
 
 ## Required configuration
 

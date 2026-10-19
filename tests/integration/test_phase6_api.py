@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -23,9 +25,23 @@ def _sse_data_frames(body: str) -> list[dict[str, object]]:
     return frames
 
 
+def _database_url(tmp_path: Any) -> str:
+    """The database this file's tests run against, owned by one function.
+
+    An in-memory sqlite URL resolves to StaticPool, which gives every session in a test the same DBAPI
+    connection -- so a client request that opens and closes a session rolls back whatever the run's task had
+    flushed but not yet committed, and that task's own commit then commits nothing, without an error and
+    without a log (audit §203). Both roles have to be able to see the same *committed* rows, which is what a
+    file database gives them: one connection per session, real transaction isolation.
+    """
+    return f"sqlite+aiosqlite:///{tmp_path / 'phase6.db'}"
+
+
 @pytest.fixture
-async def ac():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+async def ac(tmp_path: Any):
+    from dsa_api.core import database
+
+    engine = create_async_engine(_database_url(tmp_path), echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -34,29 +50,41 @@ async def ac():
         async with SessionLocal() as s:
             yield s
 
+    # A run now executes in a background task that opens its own session, so the request-scoped override
+    # alone is not enough: without this the task would write to the app's real database and the test would
+    # read a row that never changes.
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = SessionLocal
     app.dependency_overrides[get_session] = _get_session
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()
+    database.AsyncSessionLocal = previous
     await engine.dispose()
 
 
-async def _upload_and_run(ac: AsyncClient) -> tuple[str, str]:
+async def _upload_and_run(
+    ac: AsyncClient,
+    await_terminal_run: Callable[..., Any],
+    *,
+    query: str = "Analyze correlation between a and b",
+) -> tuple[str, str]:
     csv = b"a,b,group\n1,2.0,A\n2,3.5,B\n3,4.1,A\n4,6.0,B\n5,7.2,A\n6,8.1,B\n7,9.0,A\n8,10.2,B\n9,11.1,A\n10,12.3,B\n11,13.0,A\n12,14.5,B\n"
     r = await ac.post("/api/v1/datasets/", files={"file": ("t.csv", csv, "text/csv")})
     assert r.status_code == 201, r.text
     ds_id = r.json()["id"]
-    r2 = await ac.post(
-        "/api/v1/analysis/",
-        json={"dataset_id": ds_id, "user_query": "Analyze correlation between a and b"},
-    )
-    assert r2.status_code == 201, r2.text
-    return ds_id, r2.json()["id"]
+    r2 = await ac.post("/api/v1/analysis/", json={"dataset_id": ds_id, "user_query": query})
+    assert r2.status_code == 202, r2.text
+    run_id = r2.json()["id"]
+    await await_terminal_run(ac, run_id)
+    return ds_id, run_id
 
 
 @pytest.mark.asyncio
-async def test_sse_events_and_json_fallback(ac: AsyncClient) -> None:
-    _, run_id = await _upload_and_run(ac)
+async def test_sse_events_and_json_fallback(
+    ac: AsyncClient, await_terminal_run: Callable[..., Any]
+) -> None:
+    _, run_id = await _upload_and_run(ac, await_terminal_run)
     # SSE
     r = await ac.get(f"/api/v1/analysis/{run_id}/events", headers={"Accept": "text/event-stream"})
     assert r.status_code == 200
@@ -78,8 +106,10 @@ async def test_sse_events_and_json_fallback(ac: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_progress_and_evidence_trace(ac: AsyncClient) -> None:
-    _, run_id = await _upload_and_run(ac)
+async def test_progress_and_evidence_trace(
+    ac: AsyncClient, await_terminal_run: Callable[..., Any]
+) -> None:
+    _, run_id = await _upload_and_run(ac, await_terminal_run)
     r = await ac.get(f"/api/v1/analysis/{run_id}/progress")
     assert r.status_code == 200
     data = r.json()
@@ -114,3 +144,52 @@ async def test_progress_and_evidence_trace(ac: AsyncClient) -> None:
     assert r7.status_code == 404
     r8 = await ac.get("/api/v1/analysis/not-exist/events")
     assert r8.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_terminal_write_survives_a_client_poll_on_the_same_tick(tmp_path: Any) -> None:
+    """A concurrent reader must not be able to erase the lifecycle's terminal write (audit §203).
+
+    Driven through the two functions the run task and the request path actually use, started on the same tick,
+    because that is the shape that loses the write when both roles share one DBAPI connection. Nothing here
+    depends on the router: the defect was never in the request handling, it is in what the database hands the
+    second session.
+    """
+    import asyncio
+
+    from dsa_api.core import database
+    from dsa_api.models.analysis import AnalysisRunORM
+    from dsa_api.services import run_lifecycle
+
+    engine = create_async_engine(_database_url(tmp_path), echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = maker
+    try:
+        async with maker() as session:
+            session.add(
+                AnalysisRunORM(
+                    id="run-same-tick",
+                    dataset_id="ds",
+                    dataset_path="/tmp/does-not-matter.csv",
+                    user_query="q",
+                    status="VALIDATION",
+                )
+            )
+            await session.commit()
+
+        await asyncio.gather(
+            run_lifecycle._write("run-same-tick", status="COMPLETED"),
+            run_lifecycle.read_run("run-same-tick"),
+        )
+        row = await run_lifecycle.read_run("run-same-tick")
+        assert row is not None
+        assert row["status"] == "COMPLETED", (
+            f"the concurrent reader rolled the terminal write back: the row still reads "
+            f"{row['status']} (updated_at {row['updated_at']}) -- see audit §203"
+        )
+    finally:
+        database.AsyncSessionLocal = previous
+        await engine.dispose()

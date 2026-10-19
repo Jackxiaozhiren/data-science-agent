@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { ErrorState } from "@/app/components/data/States";
+import { t as tt } from "@/lib/locale";
 
 type RunSummary = {
   id: string;
@@ -21,7 +23,7 @@ type RunSummary = {
 
 async function fetchRun(id: string): Promise<{ record: RunSummary | null; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl(`/api/v1/analysis/${id}`), { cache: "no-store" });
+    const res = await serverFetch(`/api/v1/analysis/${id}`, { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { record: null, failure };
     return { record: (await res.json()) as RunSummary, failure: null };
@@ -31,6 +33,8 @@ async function fetchRun(id: string): Promise<{ record: RunSummary | null; failur
 }
 
 export default async function RunDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const locale = await serverLocale();
+  const shared = failurePresentation(locale);
   const { id } = await params;
   const { record: run, failure } = await fetchRun(id);
   // A 404 is this page's own not-found answer; every other outcome is a request that failed and must
@@ -40,7 +44,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
       <div className="space-y-4">
         <PageHeader eyebrow="Step 3 · Trace run" title={`Run ${id.slice(0, 12)}`} description="This run could not be loaded." />
         <ErrorState
-          message={FAILURE_PRESENTATION[failure]}
+          message={shared[failure]}
           diagnostics={<Link href="/runs"><Button variant="secondary" size="sm">Back to Runs</Button></Link>}
         />
       </div>

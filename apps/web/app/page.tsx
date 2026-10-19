@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { BarChart3, MessageCircleQuestion, ShieldCheck, ArrowRight, Github } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverLocale } from "@/lib/serverApi";
+import { t } from "@/lib/locale";
+import { serverFetch } from "@/lib/serverApi";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -8,12 +11,13 @@ import { StatCard } from "@/app/components/data/StatCard";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { HeroVisual } from "@/app/components/data/HeroVisual";
+import { firstStarter, sampleInfo, type SampleInfo } from "@/app/lib/sampleData";
 
 type AnalysisSummary = { id: string; status: string; user_query: string; created_at: string | null };
 
 async function fetchRecent(): Promise<{ recent: AnalysisSummary[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/analysis/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { recent: [], failure };
     const data = (await res.json()) as { analyses: AnalysisSummary[] };
@@ -26,10 +30,10 @@ async function fetchRecent(): Promise<{ recent: AnalysisSummary[]; failure: ApiF
 async function fetchCounts(): Promise<{ analyses: number | null; datasets: number | null }> {
   try {
     const [a, d] = await Promise.all([
-      fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" }).then(async (r) =>
+      serverFetch("/api/v1/analysis/", { cache: "no-store" }).then(async (r) =>
         r.ok ? (((await r.json()) as { analyses: unknown[] }).analyses.length as number) : null
       ),
-      fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" }).then(async (r) =>
+      serverFetch("/api/v1/datasets/", { cache: "no-store" }).then(async (r) =>
         r.ok ? (((await r.json()) as { datasets: unknown[] }).datasets.length as number) : null
       ),
     ]);
@@ -39,14 +43,40 @@ async function fetchCounts(): Promise<{ analyses: number | null; datasets: numbe
   }
 }
 
-const steps = [
-  { icon: MessageCircleQuestion, no: "01 · Ask", title: "Start with the business question", body: "Use a CSV, Parquet, JSON, or Excel file and describe what you actually want to learn." },
-  { icon: BarChart3, no: "02 · Analyze", title: "Let tools do the computation", body: "DSA plans and executes data-science tools instead of inventing numerical results in prose." },
-  { icon: ShieldCheck, no: "03 · Verify", title: "Inspect where each claim came from", body: "Review the agent trace, claim-level evidence, validation checks, and reproducible artifacts." },
+const STEPS = [
+  { icon: MessageCircleQuestion, key: "step1" },
+  { icon: BarChart3, key: "step2" },
+  { icon: ShieldCheck, key: "step3" },
 ];
 
+type DatasetRow = { id: string; metadata?: unknown };
+
+/** R-01: the sample data the API rebuilt on boot, read through the one marker owner. */
+async function fetchSamples(): Promise<{ samples: { id: string; sample: SampleInfo }[]; failure: ApiFailure | null }> {
+  try {
+    const res = await serverFetch("/api/v1/datasets/", { cache: "no-store" });
+    const failure = classifyResponse(res);
+    if (failure) return { samples: [], failure };
+    const data = (await res.json()) as { datasets: DatasetRow[] };
+    const samples = (data.datasets || [])
+      .map((row) => ({ id: row.id, sample: sampleInfo(row.metadata) }))
+      .filter((entry): entry is { id: string; sample: SampleInfo } => entry.sample !== null);
+    return { samples, failure: null };
+  } catch {
+    return { samples: [], failure: "transport" };
+  }
+}
+
 export default async function Home() {
-  const [{ recent, failure }, counts] = await Promise.all([fetchRecent(), fetchCounts()]);
+  const [locale, { recent, failure }, counts, seeded] = await Promise.all([
+    serverLocale(),
+    fetchRecent(),
+    fetchCounts(),
+    fetchSamples(),
+  ]);
+  const shared = failurePresentation(locale);
+  const starter = firstStarter(seeded.samples, locale);
+  const exampleRunId = seeded.samples.find((entry) => entry.sample.exampleRunId)?.sample.exampleRunId ?? null;
 
   return (
     <div className="space-y-6">
@@ -59,44 +89,64 @@ export default async function Home() {
         </div>
         <div className="relative grid gap-6 p-6 sm:p-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Verifiable AI data science</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">The AI data scientist that shows its work.</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-600 sm:text-base sm:leading-7">
-              Upload a dataset and ask a question in natural language. DSA runs statistics, SQL, machine learning, and visualization — then preserves the evidence behind every supported finding.
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">{t(locale, "home.eyebrow")}</p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">{t(locale, "home.title")}</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-600 sm:text-base sm:leading-7">{t(locale, "home.body")}</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/datasets">
-                <Button size="lg">Try with your data <ArrowRight className="size-4" aria-hidden /></Button>
-              </Link>
+              {starter ? (
+                <Link
+                  href={`/analysis?dataset=${encodeURIComponent(starter.datasetId)}&q=${encodeURIComponent(starter.question)}`}
+                  data-start-here="true"
+                >
+                  <Button size="lg" title={starter.question}>
+                    {t(locale, "home.cta.askSample")}{" "}
+                    <span className="max-w-[18ch] truncate sm:max-w-[34ch]">
+                      {starter.question.replace(/^(Summarize|Provide)[,:]? ?/i, "").slice(0, 46)}…
+                    </span>{" "}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/datasets" data-start-here="upload">
+                  <Button size="lg">{t(locale, "home.cta.tryYourData")} <ArrowRight className="size-4" aria-hidden /></Button>
+                </Link>
+              )}
+              {exampleRunId && (
+                <Link href={`/analysis/${exampleRunId}`} data-example-report={exampleRunId}>
+                  <Button variant="secondary" size="lg">{t(locale, "home.cta.openExample")} <ArrowRight className="size-4" aria-hidden /></Button>
+                </Link>
+              )}
               <a href="https://github.com/Jackxiaozhiren/data-science-agent" target="_blank" rel="noreferrer">
-                <Button variant="secondary" size="lg"><Github className="size-4" aria-hidden /> View on GitHub ↗</Button>
+                <Button variant="secondary" size="lg"><Github className="size-4" aria-hidden /> {t(locale, "home.cta.github")}</Button>
               </a>
             </div>
-            <p className="mt-3 text-xs text-zinc-500">Question → execution → evidence → claim → reproducible report</p>
+            <p className="mt-3 text-xs text-zinc-500">
+              {starter ? t(locale, "home.heroNote.sample") : t(locale, "home.heroNote.flow")}
+            </p>
           </div>
           <HeroVisual />
         </div>
       </section>
 
       {/* Stats strip — live counts when the API is reachable, placeholders otherwise */}
-      <section aria-label="Project statistics" className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Analyses" value={counts.analyses != null ? String(counts.analyses) : "—"} hint={counts.analyses != null ? "Runs in this environment" : "Connect the API to see live counts"} />
-        <StatCard label="Datasets" value={counts.datasets != null ? String(counts.datasets) : "—"} hint={counts.datasets != null ? "Uploaded files" : "Connect the API to see live counts"} />
-        <StatCard label="Evidence coverage" value="—" hint="Computed per run · see Evaluation" accent="emerald" />
+      <section aria-label={t(locale, "home.stats.aria")} className="grid gap-4 sm:grid-cols-3">
+        <StatCard label={t(locale, "home.stats.analyses")} value={counts.analyses != null ? String(counts.analyses) : "—"} hint={counts.analyses != null ? t(locale, "home.stats.runsHere") : t(locale, "home.stats.connectApi")} />
+        <StatCard label={t(locale, "home.stats.datasets")} value={counts.datasets != null ? String(counts.datasets) : "—"} hint={counts.datasets != null ? t(locale, "home.stats.uploaded") : t(locale, "home.stats.connectApi")} />
+        <StatCard label={t(locale, "home.stats.coverage")} value="—" hint={t(locale, "home.stats.coverageHint")} accent="emerald" />
       </section>
 
       {/* 3 steps */}
       <section className="grid gap-4 md:grid-cols-3">
-        {steps.map((s) => {
+        {STEPS.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.no}>
+            <Card key={s.key}>
               <CardContent className="p-5 pt-5">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  <Icon className="size-4 text-zinc-500" aria-hidden /> {s.no}
+                  <Icon className="size-4 text-zinc-500" aria-hidden /> {t(locale, `home.${s.key}.label`)}
                 </div>
-                <h2 className="mt-2 font-semibold tracking-tight">{s.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-600">{s.body}</p>
+                <h2 className="mt-2 font-semibold tracking-tight">{t(locale, `home.${s.key}.title`)}</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">{t(locale, `home.${s.key}.body`)}</p>
               </CardContent>
             </Card>
           );
@@ -105,42 +155,42 @@ export default async function Home() {
 
       {/* Why DSA */}
       <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-zinc-100 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">Why DSA</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">{t(locale, "home.why.eyebrow")}</p>
         <div className="mt-4 grid gap-5 md:grid-cols-[1.15fr_0.85fr] md:items-center">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Most AI analysis tools give you an answer. DSA gives you the answer and the evidence behind it.</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">That makes generated analysis easier to inspect, challenge, reproduce, and trust.</p>
+            <h2 className="text-2xl font-semibold tracking-tight">{t(locale, "home.why.title")}</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">{t(locale, "home.why.body")}</p>
             <Link href="/analysis" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-emerald-300 hover:underline">
-              Start with Step 2 · Ask <ArrowRight className="size-4" aria-hidden />
+              {t(locale, "home.why.link")} <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
-          <pre className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900 p-4 font-mono text-xs leading-6 text-zinc-300">{`Claim\n └── Evidence\n      └── Tool call\n           └── Computation\n                └── Dataset hash`}</pre>
+          <pre className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900 p-4 font-mono text-xs leading-6 text-zinc-300">{t(locale, "home.why.chain")}</pre>
         </div>
       </section>
 
       {/* Recent analyses */}
       <section>
         <PageHeader
-          eyebrow="Step 3 · Proof, not promises"
-          title="Recent analyses"
-          description="Latest runs in this environment. Open one to inspect its evidence chain."
+          eyebrow={t(locale, "home.recent.eyebrow")}
+          title={t(locale, "home.recent.title")}
+          description={t(locale, "home.recent.description")}
           actions={
             <Link href="/analysis">
-              <Button variant="secondary" size="sm">Start analysis</Button>
+              <Button variant="secondary" size="sm">{t(locale, "home.recent.start")}</Button>
             </Link>
           }
         />
         <Card className="mt-3">
           <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
             {failure ? (
-              <ErrorState message={FAILURE_PRESENTATION[failure]} />
+              <ErrorState message={shared[failure]} />
             ) : recent.length === 0 ? (
               <EmptyState
-                title="No analysis runs yet in this environment"
-                description="Upload a dataset and create the first run to see the evidence chain in action."
+                title={t(locale, "home.recent.emptyTitle")}
+                description={t(locale, "home.recent.emptyBody")}
                 action={
                   <Link href="/datasets">
-                    <Button size="sm">Upload a dataset →</Button>
+                    <Button size="sm">{t(locale, "home.recent.upload")}</Button>
                   </Link>
                 }
               />

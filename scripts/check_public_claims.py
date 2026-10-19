@@ -17,7 +17,7 @@ ROOT = Path(__file__).parents[1]
 # the patterns below hard-code their own literals instead -- so listing them read
 # as live expectations while nothing compared against them.
 EXPECTED = {
-    "version": "4.5.0",
+    "version": "4.6.0",
 }
 
 # Build/dependency trees that never carry a public claim. `.workspace` is the vendored DataSciBench

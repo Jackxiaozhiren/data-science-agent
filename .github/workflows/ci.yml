@@ -74,8 +74,12 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with: { python-version: "3.12" }
       - run: pip install "uv==0.12.7"
-      - run: uv sync --dev
+      # The order here is the gate. A non-frozen `uv sync` rewrites `uv.lock` in the checkout, so checking after
+      # it measures a lockfile this job just repaired: `uv lock --check` exited 0 on `af4a725` in CI while the
+      # same content exported clean exited 1 (audit §215). Keep it above the sync; `tests/test_ci_gate_integrity.py`
+      # now fails if the two swap back.
       - run: uv lock --check  # §46 dependency pinning
+      - run: uv sync --dev
       - run: uv run python scripts/audit_facts.py --check  # debt may only shrink (audit §20.0)
       - run: uv run python scripts/sync_vendor.py --check  # vendored dsa_* must match source
       - run: uv run python scripts/check_npm_workspace_lock.py  # root npm lock must match workspace manifests
@@ -89,6 +93,7 @@ jobs:
       # from in docs/audit/orphan-reads.json, and a declared key that gains a producer must be
       # pruned (audit §102).
       - run: uv run python scripts/find_orphan_reads.py --check
+      - run: uv run python scripts/check_ledger_identifiers.py --check  # a ledger section number is issued once (audit §208)
       # Node deps: tests/vscode runs `npm run compile` (tsc) and the web build
       # at the end need node_modules; clean runners have none installed.
       - run: npm --prefix apps/vscode ci --legacy-peer-deps

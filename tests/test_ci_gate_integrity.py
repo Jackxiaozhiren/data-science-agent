@@ -173,6 +173,8 @@ def _classify(tokens: set[str]) -> str | None:
         return "vendor"
     if any(tok.endswith("check_npm_workspace_lock.py") for tok in tokens):
         return "workspace-lock"
+    if any(tok.endswith("check_ledger_identifiers.py") for tok in tokens):
+        return "ledger-identifiers"
     if any(tok.endswith("generate_sbom.py") for tok in tokens):
         return "sbom"
     if "lock" in tokens and "--check" in tokens:
@@ -500,3 +502,42 @@ def _checkout_with(body: str) -> dict[str, str]:
             out[key.strip()] = value.strip().strip("'\"")
         return out
     raise AssertionError("no actions/checkout step found in this job body")
+
+
+# `uv lock --check` (§46) and `uv sync --dev` are the one gate whose *order* decides whether it can fail: a
+# non-frozen sync rewrites `uv.lock` in the checkout, so checking after it inspects a lockfile the same job just
+# repaired. Measured on `af4a725`: CI's step exited 0 while `git archive` of that same commit exited 1 under both
+# uv 0.11.7 and the runner's pinned 0.12.7 -- the checker is not blind, the ordering made it mute (audit §215).
+def _lock_check_is_muted_by_order(text: str) -> str | None:
+    """Name the ordering violation, or return None when the check runs before anything can repair the lock."""
+    steps = _single_line_run_steps(text)
+    check = next((i for i, (_, cmd) in enumerate(steps) if "uv lock --check" in cmd), None)
+    sync = next((i for i, (_, cmd) in enumerate(steps) if cmd.strip().startswith("uv sync")), None)
+    if check is None or sync is None:
+        return f"lock check step or sync step missing (check={check} sync={sync})"
+    if check > sync:
+        return (
+            f"`uv lock --check` is step {check + 1}, after `uv sync --dev` at step {sync + 1}: "
+            "the sync rewrites uv.lock, so this gate measures a lockfile it just repaired"
+        )
+    return None
+
+
+def test_the_lock_check_runs_before_the_sync_that_repairs_the_lock() -> None:
+    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    violation = _lock_check_is_muted_by_order(ci)
+    assert violation is None, violation
+
+    # The control: the same reader must call the previous order muted, or the assertion above certifies nothing.
+    before = [
+        '      - run: pip install "uv==0.12.7"',
+        "      - run: uv sync --dev",
+        "      - run: uv lock --check  # §46 dependency pinning",
+    ]
+    assert _lock_check_is_muted_by_order("\n".join(before)) is not None, (
+        "the reader accepted sync-then-check, so it cannot detect the ordering defect it exists for"
+    )
+    after = [before[0], before[2], before[1]]
+    assert _lock_check_is_muted_by_order("\n".join(after)) is None, (
+        "the reader rejected the order ci.yml now ships, so its verdict is not about order"
+    )

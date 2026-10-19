@@ -4,51 +4,52 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Play, ShieldCheck, Repeat2, Zap } from "lucide-react";
-import { API_BASE_URL, apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { clientFetch, API_BASE_URL, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { t, type Locale } from "@/lib/locale";
+import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Select, Textarea } from "@/app/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/app/components/ui/dialog";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { ErrorState, CardsSkeleton } from "@/app/components/data/States";
+import { useBackendProbe } from "@/app/lib/backendProbe";
 
 type Ds = { id: string; filename: string };
 
-const DEFAULT_QUERY = "Which factors explain the outcome, and are the effects statistically significant?";
-
 // Inherits the shared wording, and keeps this page's own line for the transport case: which base URL
-// was unreachable is the diagnostic a reader needs here.
-const ANALYSIS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
-  ...FAILURE_PRESENTATION,
-  transport: `Could not reach the DSA API at ${API_BASE_URL}.`,
-};
+// was unreachable is the diagnostic a reader needs here. The line itself comes from the locale owner with
+// the URL substituted into it, so the sentence is bilingual and the origin is still the running instance's.
+function askMessages(locale: Locale): Record<ApiFailure, string> {
+  return { ...failurePresentation(locale), transport: t(locale, "ask.transport").replace("{url}", API_BASE_URL) };
+}
 
-const staticExamples = [
-  "What is driving the target, and which effects are statistically significant?",
-  "Compare the main groups and explain the strongest differences.",
-  "Find the most important patterns, limitations, and evidence behind them.",
-];
-
-function cleanDetail(value: unknown): string {
+function cleanDetail(value: unknown, locale: Locale): string {
   const raw = typeof value === "string" ? value : JSON.stringify(value ?? "");
-  return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300) || "Analysis request failed.";
+  return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300) || t(locale, "ask.requestFailed");
 }
 
-function columnChips(columns: string[]): string[] {
+// The chips are sentences with a column name in them, so the template belongs to the locale owner and the
+// name is substituted here. Building the sentence in the component would put a second copy of the wording
+// outside UI_STRINGS, where the parity guard cannot see it.
+function chipTemplates(locale: Locale): [(c: string) => string, (c: string) => string, (c: string) => string] {
+  const fill = (key: string) => (column: string) => t(locale, key).replaceAll("{c}", column);
+  return [fill("ask.chipVary"), fill("ask.chipSpread"), fill("ask.chipExplain")];
+}
+
+function columnChips(columns: string[], locale: Locale): string[] {
   const [c0, c1, c2] = columns;
-  if (!c0) return staticExamples;
-  return [
-    `How does ${c0} vary, and what explains the differences?`,
-    `What is the distribution of ${c1 ?? c0}, and are there outliers?`,
-    `Which factors explain ${c2 ?? c0}, and are the effects significant?`,
-  ];
+  if (!c0) return [t(locale, "ask.example1"), t(locale, "ask.example2"), t(locale, "ask.example3")];
+  const [vary, spread, explain] = chipTemplates(locale);
+  return [vary(c0), spread(c1 ?? c0), explain(c2 ?? c0)];
 }
 
-function AnalysisWorkspace() {
+function AnalysisWorkspace({ locale }: { locale: Locale }) {
+  const messages = askMessages(locale);
   const sp = useSearchParams();
   const router = useRouter();
   const initialDs = sp.get("dataset") || "";
-  const initialQ = sp.get("q") || DEFAULT_QUERY;
+  const initialQ = sp.get("q") || t(locale, "ask.defaultQuery");
   const [datasets, setDatasets] = useState<{ items: Ds[]; failure: ApiFailure | null }>({
     items: [],
     failure: null,
@@ -59,14 +60,17 @@ function AnalysisWorkspace() {
   const [err, setErr] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // The dataset list here is empty during a cold start for a different reason than it is empty for a new
+  // account, and only the probe can tell them apart (web plan B3/B4).
+  const { phase, copy, retry } = useBackendProbe();
 
   useEffect(() => {
-    fetch(apiUrl("/api/v1/datasets/"))
+    clientFetch("/api/v1/datasets/")
       .then(async (r) => {
         const failure = classifyResponse(r);
         if (failure) {
           setDatasets({ items: [], failure });
-          setErr(ANALYSIS_FAILURE_MESSAGE[failure]);
+          setErr(messages[failure]);
           return;
         }
         const d = (await r.json()) as { datasets: Ds[] };
@@ -74,7 +78,7 @@ function AnalysisWorkspace() {
       })
       .catch(() => {
         setDatasets({ items: [], failure: "transport" });
-        setErr(ANALYSIS_FAILURE_MESSAGE.transport);
+        setErr(messages.transport);
       });
   }, []);
 
@@ -85,7 +89,7 @@ function AnalysisWorkspace() {
       return;
     }
     let cancelled = false;
-    fetch(apiUrl(`/api/v1/datasets/${datasetId}`))
+    clientFetch(`/api/v1/datasets/${datasetId}`)
       .then(async (r) => {
         if (!r.ok) return;
         const d = (await r.json()) as { profile?: { column_profiles?: { name: string }[] } | null };
@@ -100,18 +104,18 @@ function AnalysisWorkspace() {
   }, [datasetId]);
 
   const datasetName = datasets.items.find((d) => d.id === datasetId)?.filename ?? datasetId.slice(0, 12);
-  const examples = columnChips(columns);
+  const examples = columnChips(columns, locale);
 
   async function run() {
     setErr(null);
     setConfirmOpen(false);
     if (!datasetId || !query.trim()) {
-      setErr("Select a dataset and enter a question.");
+      setErr(t(locale, "ask.needBoth"));
       return;
     }
     setRunning(true);
     try {
-      const res = await fetch(apiUrl("/api/v1/analysis/"), {
+      const res = await clientFetch("/api/v1/analysis/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset_id: datasetId, user_query: query }),
@@ -119,12 +123,12 @@ function AnalysisWorkspace() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = (data as { detail?: unknown }).detail ?? data;
-        setErr(cleanDetail(detail));
+        setErr(cleanDetail(detail, locale));
         return;
       }
       router.push(`/analysis/${(data as { id: string }).id}`);
     } catch (e) {
-      setErr(`Analysis could not start because the DSA API at ${API_BASE_URL} is unavailable. ${String(e)}`);
+      setErr(`${t(locale, "ask.couldNotStart").replaceAll("{url}", API_BASE_URL)} ${String(e)}`);
     } finally {
       setRunning(false);
     }
@@ -133,42 +137,54 @@ function AnalysisWorkspace() {
   function askConfirm() {
     setErr(null);
     if (!datasetId || !query.trim()) {
-      setErr("Select a dataset and enter a question.");
+      setErr(t(locale, "ask.needBoth"));
       return;
     }
     setConfirmOpen(true);
   }
 
   const words = query.trim() ? query.trim().split(/\s+/).length : 0;
+  const steps = [
+    { icon: Zap, title: "ask.step1", body: "ask.step1Body" },
+    { icon: ShieldCheck, title: "ask.step2", body: "ask.step2Body" },
+    { icon: Repeat2, title: "ask.step3", body: "ask.step3Body" },
+  ];
 
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 2 · Ask a question"
-        title="Ask a real data-science question"
-        description="DSA will plan the analysis, execute tools, build evidence, and preserve the trace."
+        eyebrow={t(locale, "ask.eyebrow")}
+        title={t(locale, "ask.title")}
+        description={t(locale, "ask.description")}
       />
       <div className="grid items-start gap-4 lg:grid-cols-[1.25fr_0.75fr]">
         <Card className="min-w-0">
           <CardContent className="space-y-4 p-4 pt-4 sm:p-5 sm:pt-5">
             <div>
-              <label htmlFor="dataset" className="block text-sm font-medium">Dataset</label>
-              <Select id="dataset" value={datasetId} onChange={(e) => setDatasetId(e.target.value)} className="mt-1.5" aria-label="Select dataset">
-                <option value="">— select —</option>
+              <label htmlFor="dataset" className="block text-sm font-medium">{t(locale, "ask.datasetLabel")}</label>
+              <Select id="dataset" value={datasetId} onChange={(e) => setDatasetId(e.target.value)} className="mt-1.5" aria-label={t(locale, "ask.datasetSelectAria")}>
+                <option value="">{t(locale, "ask.selectNone")}</option>
                 {datasets.items.map((d) => (
                   <option key={d.id} value={d.id}>{d.filename} ({d.id.slice(0, 8)})</option>
                 ))}
               </Select>
               {datasets.items.length === 0 && !datasets.failure && (
-                <p className="mt-1.5 text-xs text-zinc-500">
-                  No datasets loaded. <Link href="/datasets" className="font-medium underline">Upload one in Step 1 →</Link>
-                </p>
+                phase === "ready" ? (
+                  <p className="mt-1.5 text-xs text-zinc-500">
+                    {t(locale, "ask.noDatasets")}{" "}
+                    <Link href="/datasets" className="font-medium underline">{t(locale, "ask.uploadOne")}</Link>
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-amber-800" role="status" aria-live="polite">{copy}</p>
+                )
               )}
             </div>
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <label htmlFor="query" className="block text-sm font-medium">Natural-language question</label>
-                <span className="text-xs tabular-nums text-zinc-400" aria-label={`${words} words`}>{query.length} chars · {words} words</span>
+                <label htmlFor="query" className="block text-sm font-medium">{t(locale, "ask.questionLabel")}</label>
+                <span className="text-xs tabular-nums text-zinc-400" aria-label={`${words} ${t(locale, "ask.wordCountAria")}`}>
+                  {query.length} {t(locale, "ask.charUnit")} · {words} {t(locale, "ask.wordUnit")}
+                </span>
               </div>
               <Textarea
                 id="query"
@@ -177,11 +193,11 @@ function AnalysisWorkspace() {
                 rows={4}
                 maxLength={2000}
                 className="mt-1.5"
-                placeholder="e.g. What is driving churn, and which findings are statistically supported?"
+                placeholder={t(locale, "ask.placeholder")}
               />
-              <div className="mt-2 flex flex-wrap gap-2" aria-label="Example questions">
+              <div className="mt-2 flex flex-wrap gap-2" aria-label={t(locale, "ask.examplesAria")}>
                 {columns.length > 0 && (
-                  <span className="w-full text-[11px] uppercase tracking-wider text-zinc-400">Suggested for this dataset</span>
+                  <span className="w-full text-[11px] uppercase tracking-wider text-zinc-400">{t(locale, "ask.suggestedFor")}</span>
                 )}
                 {examples.map((example) => (
                   <button
@@ -197,40 +213,46 @@ function AnalysisWorkspace() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={askConfirm} disabled={running} aria-busy={running}>
-                {running ? <><Loader2 className="size-4 animate-spin" aria-hidden /> Running analysis…</> : <><Play className="size-4" aria-hidden /> Run analysis →</>}
+              {/* Submitting into an instance that has not answered yet queues a request the reader cannot
+                  see, so the button says why it is waiting instead of going quiet. */}
+              <Button onClick={askConfirm} disabled={running || phase === "warming" || phase === "probing"} aria-busy={running}>
+                {running ? <><Loader2 className="size-4 animate-spin" aria-hidden /> {t(locale, "ask.startingButton")}</> : <><Play className="size-4" aria-hidden /> {t(locale, "ask.runNow")}</>}
               </Button>
-              {running && <p className="text-xs text-zinc-500">Planning and executing tools — this can take a minute.</p>}
+              {running && <p className="text-xs text-zinc-500">{t(locale, "ask.watchNextPage")}</p>}
+              {(phase === "warming" || phase === "probing") && !running && (
+                <p className="text-xs text-amber-800" role="status" aria-live="polite">{copy}</p>
+              )}
+              {phase === "unreachable" && (
+                <Button variant="secondary" size="sm" onClick={retry}>{t(locale, "probe.retryCheck")}</Button>
+              )}
             </div>
             {err && <ErrorState message={err} />}
           </CardContent>
         </Card>
 
         <div className="min-w-0 space-y-3 lg:sticky lg:top-20">
-          {[
-            { icon: Zap, t: "1. Execute", b: "SQL, statistics, ML, and visualization tools run against your dataset — no invented numbers." },
-            { icon: ShieldCheck, t: "2. Verify", b: "Every claim links back to evidence, tool calls, and the pinned dataset hash." },
-            { icon: Repeat2, t: "3. Reproduce", b: "Inspect the trace, artifacts, and Markdown report in Step 3." },
-          ].map((c) => {
+          {steps.map((c) => {
             const Icon = c.icon;
             return (
-              <Card key={c.t}>
+              <Card key={c.title}>
                 <CardContent className="flex gap-3 p-4 pt-4">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100" aria-hidden>
                     <Icon className="size-4 text-zinc-600" />
                   </span>
                   <span>
-                    <strong className="text-sm">{c.t}</strong>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">{c.b}</p>
+                    <strong className="text-sm">{t(locale, c.title)}</strong>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">{t(locale, c.body)}</p>
                   </span>
                 </CardContent>
               </Card>
             );
           })}
           <Card>
-            <CardHeader><CardTitle className="text-sm">New here?</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm">{t(locale, "ask.newHere")}</CardTitle></CardHeader>
             <CardContent className="-mt-2 text-xs leading-5 text-zinc-500">
-              Start at <Link href="/datasets" className="font-medium text-zinc-900 underline">Step 1 · Bring your data</Link>, then come back to ask.
+              {t(locale, "ask.newHereBodyPre")}{" "}
+              <Link href="/datasets" className="font-medium text-zinc-900 underline">{t(locale, "ask.newHereLink")}</Link>
+              {t(locale, "ask.newHereBodyPost")}
             </CardContent>
           </Card>
         </div>
@@ -239,23 +261,25 @@ function AnalysisWorkspace() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent onClose={() => setConfirmOpen(false)}>
           <DialogHeader>
-            <DialogTitle>Confirm analysis run</DialogTitle>
-            <DialogDescription>Review before DSA starts planning and executing tools.</DialogDescription>
+            <DialogTitle>{t(locale, "ask.confirmTitle")}</DialogTitle>
+            <DialogDescription>{t(locale, "ask.confirmBody")}</DialogDescription>
           </DialogHeader>
           <dl className="space-y-2 text-sm">
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Dataset</dt>
+              <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t(locale, "ask.datasetLabel")}</dt>
               <dd className="mt-0.5 font-medium">{datasetName}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Question ({query.length} chars · {words} words)</dt>
+              <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+                {t(locale, "ask.questionLabel")} ({query.length} {t(locale, "ask.charUnit")} · {words} {t(locale, "ask.wordUnit")})
+              </dt>
               <dd className="mt-0.5 max-h-32 overflow-auto rounded-lg bg-zinc-50 p-2.5 text-sm leading-6">{query}</dd>
             </div>
           </dl>
           <div className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setConfirmOpen(false)}>Back</Button>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmOpen(false)}>{t(locale, "ask.back")}</Button>
             <Button size="sm" onClick={run} disabled={running}>
-              {running ? "Starting…" : "Confirm & run →"}
+              {running ? t(locale, "ask.starting") : t(locale, "ask.confirmRun")}
             </Button>
           </div>
         </DialogContent>
@@ -265,9 +289,10 @@ function AnalysisWorkspace() {
 }
 
 export default function AnalysisPage() {
+  const locale = useLocale();
   return (
     <Suspense fallback={<CardsSkeleton count={2} />}>
-      <AnalysisWorkspace />
+      <AnalysisWorkspace locale={locale} />
     </Suspense>
   );
 }

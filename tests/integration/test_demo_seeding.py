@@ -1,0 +1,784 @@
+"""R-01: the first screen is never empty -- and the demo may only read what ships.
+
+Measured while writing this (2026-10-15), and the measurement corrected the plan twice.
+
+The first version of `demo_seed.py` took its questions and its example run from
+`benchmarks/ds-agent-benchmark/results/**/raw_runs.json`. Those are real completed runs, so it looked like the
+stronger source. It was the weaker one: `.gitignore:36` excludes that entire directory, so the "committed
+benchmark results" existed only on the machine that last ran a benchmark. A fresh clone -- which is what a
+deploy builds and what a reviewer reads -- would have seeded two datasets and no questions, and every test
+here would have passed anyway, because the developer's tree has the files. `test_the_demo_reads_only_tracked
+_files` is the guard that was missing.
+
+The second correction: those recorded runs are stale in a way the page cannot hide. All four committed
+`titanic.csv` runs reach `COMPLETED` with 4-8 errored tool calls inside them (a planner that emitted `x`
+missing and `test: "t-test"` instead of `"t_test"`), so promoting one put a red "This run failed -- 4 tool
+calls errored" panel on the exact link the landing page advertises. The example is now produced by the code
+that is shipping, and only linked if its own row shows no errored tool call and no failing check.
+
+Facts this suite depends on: `examples/datasets/` holds `sales.csv` and `titanic.csv`; both have a
+byte-identical twin under `benchmarks/v2/datasets/`; and `benchmarks/v2/catalog.json` names tasks for those
+two filenames (`eda-01` + 8 more for sales, `eda-05` + 5 more for titanic) and nothing for `correlation.csv`
+and friends, which are not samples.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import asyncio
+import json
+import subprocess
+from collections.abc import AsyncGenerator
+from pathlib import Path
+from typing import Any
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from dsa_api.core.database import Base, get_session
+
+REPO = Path(__file__).resolve().parents[2]
+SAMPLES = REPO / "examples/datasets"
+CATALOG = REPO / "benchmarks/v2/catalog.json"
+CATALOG_DATASETS = REPO / "benchmarks/v2/datasets"
+
+MARKER = "dsa_sample_dataset"
+
+#: The path the first version trusted, kept here so the negative control can name it rather than describe it.
+IGNORED_BENCHMARK_RESULTS = "benchmarks/ds-agent-benchmark/results/dsa/raw_runs.json"
+
+#: A question the demo itself publishes, so the run below is asked to do something the mode can finish.
+STARTER = "Summarize the sales dataset: rows, columns, missing values and duplicates."
+
+
+@pytest.fixture
+async def limiter_left_as_found():
+    """This file writes over the same transport the API rate-limits, so the next suite pays for it.
+
+    The counters are module-level and keyed by client IP: the upload rule is 30 per minute, and the R-14 parity
+    test pushes a second upload plus a started run onto the bucket the whole gate already filled. Measured, not
+    guessed -- on CI, `tests/integration/test_phase6_api.py::test_progress_and_evidence_trace` came back
+    `429 Rate limit exceeded` where it asserts `201`, the first time that line moved red, and both extra writes
+    belong to this test. `tests/security/test_security_phase8.py` and `apps/api/tests/test_security.py` reset for
+    the same reason. Nothing is loosened: the assertions still demand the status each names, and this only makes
+    the bucket this test's own. Requested by name rather than autouse because one test in this file is
+    synchronous, and an async autouse fixture would have been applied to it too.
+    """
+    from dsa_api.core.security import clear_rate_limit_state
+
+    await clear_rate_limit_state()
+    yield
+    await clear_rate_limit_state()
+
+
+def _sha(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(65536), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+@pytest.fixture
+async def seed_env(tmp_path: Path) -> AsyncGenerator[dict[str, Any], None]:
+    """A fresh database in a temp directory -- the cold-boot state a first visitor actually meets.
+
+    `dsa_api.main` is imported before `create_all` so the ORM modules register their tables, as §174 records.
+    Both writable roots move to the temp dir: seeding writes through the real upload path, and an example run
+    writes real artifacts, which must not land in the developer's own `data/`.
+    """
+    import os
+
+    from dsa_api.core import database
+    from dsa_api.main import app
+
+    url = f"sqlite+aiosqlite:///{tmp_path / 'seed.db'}"
+    engine = create_async_engine(url, echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _get_session() -> AsyncGenerator[AsyncSession, None]:
+        async with factory() as s:
+            yield s
+
+    previous = database.AsyncSessionLocal
+    database.AsyncSessionLocal = factory
+    app.dependency_overrides[get_session] = _get_session
+    saved = {
+        key: os.environ.get(key)
+        for key in ("DSA_DATASET_DIR", "DSA_ARTIFACT_ROOT", "DSA_LLM_MODE", "DSA_DEMO_SEEDING")
+    }
+    os.environ["DSA_DATASET_DIR"] = str(tmp_path / "datasets")
+    os.environ["DSA_ARTIFACT_ROOT"] = str(tmp_path / "artifacts")
+    # The example run is generated by whatever mode the process resolves, so the mode is part of the premise.
+    os.environ["DSA_LLM_MODE"] = "heuristic"
+    # The suite turns the demo off for every test (root conftest); this file is the reason it exists, so it
+    # turns it back on explicitly rather than depending on the ambient value.
+    os.environ["DSA_DEMO_SEEDING"] = "on"
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            yield {"client": client, "factory": factory, "app": app, "tmp": tmp_path}
+    finally:
+        app.dependency_overrides.clear()
+        database.AsyncSessionLocal = previous
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        await engine.dispose()
+
+
+async def _seed(env: dict[str, Any], **kwargs: Any) -> Any:
+    from dsa_api.services.demo_seed import seed_demo_data
+
+    async with env["factory"]() as session:
+        return await seed_demo_data(session, **kwargs)
+
+
+async def _seed_and_examples(env: dict[str, Any]) -> list[dict[str, str]]:
+    from dsa_api.services.demo_seed import ensure_example_runs, seed_demo_data
+
+    async with env["factory"]() as session:
+        await seed_demo_data(session)
+        return await ensure_example_runs(session)
+
+
+async def _rows(env: dict[str, Any]) -> list[dict[str, Any]]:
+    r = await env["client"].get("/api/v1/datasets/")
+    assert r.status_code == 200, r.text
+    return list(r.json()["datasets"])
+
+
+async def _runs(env: dict[str, Any]) -> list[dict[str, Any]]:
+    r = await env["client"].get("/api/v1/analysis/")
+    assert r.status_code == 200, r.text
+    return list(r.json()["analyses"])
+
+
+def _tracked() -> set[str]:
+    out = subprocess.run(
+        ["git", "ls-files", "-z"],  # noqa: S603 - fixed argv, read-only, no shell
+        cwd=REPO,
+        capture_output=True,
+        check=True,
+    )
+    return {item.decode() for item in out.stdout.split(b"\0") if item}
+
+
+@pytest.mark.asyncio
+async def test_the_demo_reads_only_tracked_files() -> None:
+    """The premise that broke: a source that exists only on the machine that produced it.
+
+    This is the whole reason the seeder points at the catalog now. It asserts on the constants the module
+    actually opens -- not on a prose list -- so moving the source moves the check, and it proves the check can
+    fail by naming the ignored path the first version used.
+    """
+    from dsa_api.services import demo_seed
+
+    tracked = _tracked()
+    for name in (demo_seed.CATALOG, demo_seed.CATALOG_DATASETS, "examples/datasets"):
+        assert name in tracked or any(entry.startswith(f"{name}/") for entry in tracked), (
+            f"{name} is opened by demo_seed but is not in git: a clone gets no demo from it"
+        )
+
+    assert IGNORED_BENCHMARK_RESULTS not in tracked, (
+        "the negative control stopped controlling: if the benchmark results are committed now, the "
+        "byte-matched-run source this suite replaced would be legal again -- delete this assertion on purpose"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_cold_boot_ends_up_with_datasets_and_markers(seed_env: dict[str, Any]) -> None:
+    """B4's `{"datasets":[]}` is the first screen today; seeding must replace it, not decorate it."""
+    r = await seed_env["client"].get("/api/v1/datasets/")
+    before = r.json()["datasets"]
+    assert before == [], f"the fresh database was not empty to begin with: {before}"
+
+    await _seed(seed_env)
+    rows = await _rows(seed_env)
+    committed = sorted(
+        p.name for p in SAMPLES.glob("*") if p.suffix in {".csv", ".parquet", ".json", ".xlsx"}
+    )
+    assert committed, (
+        "no committed sample datasets found -- the premise of this whole requirement moved"
+    )
+
+    seeded = [row for row in rows if MARKER in (row.get("metadata") or {})]
+    assert len(seeded) == len(committed), (
+        f"seeded {len(seeded)} rows for {len(committed)} committed samples"
+    )
+    assert {row["filename"] for row in seeded} == set(committed)
+    assert seeded[0]["metadata"][MARKER]["seeded_by"] == "dsa_api.services.demo_seed"
+    for row in seeded:
+        assert Path(row["path"]).is_file(), (
+            f"seeded row {row['id']} points at a missing file {row['path']}"
+        )
+        assert row["metadata"][MARKER]["source"].startswith("examples/datasets/"), row["metadata"]
+
+
+@pytest.mark.asyncio
+async def test_a_sample_that_is_not_on_disk_is_not_seeded(
+    seed_env: dict[str, Any], tmp_path: Path
+) -> None:
+    """The spec's falsification: delete one source file and the seeded set must shrink, not dangle.
+
+    A seed list hardcoded in source would create a row whose path does not exist, and the visitor would then
+    meet a dataset that 404s on every read -- a worse first screen than an empty one.
+    """
+    scratch = tmp_path / "samples"
+    scratch.mkdir()
+    kept = scratch / "sales.csv"
+    kept.write_bytes((SAMPLES / "sales.csv").read_bytes())
+    before = await _seed(seed_env, sample_dir=scratch)
+    assert [
+        row["filename"] for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})
+    ] == ["sales.csv"]
+
+    kept.unlink()
+    after = await _seed(seed_env, sample_dir=scratch)
+    assert [
+        row["filename"] for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})
+    ] == ["sales.csv"], (
+        "the row created from a deleted file was re-seeded or removed by luck; the skip must be by construction"
+    )
+    assert after.seeded_datasets == 0, (
+        f"seeded {after.seeded_datasets} after the only source file was deleted"
+    )
+    assert before.seeded_datasets == 1
+    assert after.skipped, "a silent skip is the failure mode this test exists to name"
+
+
+@pytest.mark.asyncio
+async def test_starter_questions_are_only_advertised_where_the_bytes_match(
+    seed_env: dict[str, Any],
+) -> None:
+    """Each advertised question must be a catalog task written for these exact bytes.
+
+    A dataset may legitimately have several tasks, so the truth is a set per sha, not one query. The
+    `else` arm is the requirement's own exemption, tested from the other side: a sample with no byte-matched
+    task must publish nothing, and a sample that does have one must not stay silent.
+    """
+    await _seed(seed_env)
+    rows = [row for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})]
+    tasks = json.loads(CATALOG.read_text(encoding="utf-8"))["tasks"]
+    usable: dict[str, set[str]] = {}
+    for task in tasks:
+        twin = CATALOG_DATASETS / str(task.get("dataset") or "")
+        question = str(task.get("question") or "").strip()
+        if question and twin.is_file():
+            usable.setdefault(_sha(twin), set()).add(question)
+
+    published = 0
+    for row in rows:
+        questions = row["metadata"][MARKER]["starter_questions"]
+        if questions:
+            published += 1
+            assert row["sha256"] in usable, (
+                f"{row['filename']} advertises questions but its sha256 {row['sha256'][:12]} matches no "
+                "catalog task's dataset -- the question would be offered for data it was never written about"
+            )
+            for question in questions:
+                assert question in usable[row["sha256"]], (
+                    f"question {question!r} is not a catalog task for these bytes"
+                )
+        else:
+            assert row["sha256"] not in usable, (
+                f"{row['filename']} has byte-matched catalog tasks but advertises nothing -- the exemption "
+                "was applied where questions exist"
+            )
+    assert published == len(rows), (
+        f"only {published} of {len(rows)} seeded datasets carry questions; a sample nobody can ask about "
+        "is a first screen that still looks broken"
+    )
+
+
+@pytest.mark.asyncio
+async def test_seeding_twice_leaves_the_first_screen_unchanged(seed_env: dict[str, Any]) -> None:
+    """Free-tier booting rebuilds rather than persists (§176), so repeated boots must not pile up rows."""
+    await _seed(seed_env)
+    once = await _rows(seed_env)
+    await _seed(seed_env)
+    twice = await _rows(seed_env)
+    assert len(twice) == len(once), (
+        f"a second boot added {len(twice) - len(once)} duplicate datasets"
+    )
+    assert {row["id"] for row in twice} == {row["id"] for row in once}
+
+
+@pytest.mark.asyncio
+async def test_seeding_never_starts_a_run(seed_env: dict[str, Any]) -> None:
+    """The split is the design: `seed_demo_data` is data, `ensure_example_runs` is execution.
+
+    Without this line the two get merged back for convenience, and every caller that only wants the rows --
+    including the tests above -- quietly starts agent runs and writes artifacts.
+    """
+    await _seed(seed_env)
+    assert await _runs(seed_env) == [], (
+        "seeding the data also ran the product, so it is no longer cheap"
+    )
+
+
+def _row_with(**state: Any) -> dict[str, Any]:
+    return {"status": "COMPLETED", "state": state}
+
+
+@pytest.mark.parametrize(
+    ("state", "wanted"),
+    [
+        (_row_with(tool_calls=[{"status": "ok"}], validation_results=[{"passed": True}]), True),
+        (
+            _row_with(tool_calls=[{"status": "ok"}, {"status": "error"}], validation_results=[]),
+            False,
+        ),
+        (_row_with(tool_calls=[{"status": "ok"}], validation_results=[{"passed": False}]), False),
+        (_row_with(tool_calls=[], validation_results=[{"passed": True}]), False),
+        ({"status": "FAILED", "state": {"tool_calls": [{"status": "ok"}]}}, False),
+    ],
+)
+def test_the_cleanliness_gate_refuses_the_states_the_demo_must_not_show(
+    state: dict[str, Any], wanted: bool
+) -> None:
+    """`COMPLETED` alone is not the gate: the stale Titanic runs were `COMPLETED` with four errored calls.
+
+    The empty-tool-call row is refused because a run that called nothing proves nothing about the pipeline,
+    even though no screen would complain about it.
+    """
+    from dsa_api.services.demo_seed import run_is_clean
+
+    assert run_is_clean(state) is wanted
+
+
+@pytest.mark.asyncio
+async def test_an_example_run_is_generated_and_stays_clean(seed_env: dict[str, Any]) -> None:
+    """R-01 item 3, and the reason the example is made rather than replayed.
+
+    The promoted row must be clean by the same gate the page would fail on -- and the page is the point: the
+    first version of this test asserted `COMPLETED` and passed while the report it linked said "This run
+    failed -- 4 tool calls errored".
+    """
+    from dsa_api.services.demo_seed import run_is_clean
+
+    examples = await _seed_and_examples(seed_env)
+    assert examples, "no example run was produced, so R-01 item 3 is unmet"
+    rows = [row for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})]
+    linked = {
+        row["metadata"][MARKER].get("example_run_id")
+        for row in rows
+        if (row["metadata"].get(MARKER) or {}).get("example_run_id")
+    }
+    assert {entry["run_id"] for entry in examples} == linked, (
+        f"the runs produced at boot {sorted(map(str, linked))} are not the runs the datasets link"
+    )
+
+    for entry in examples:
+        body = (await seed_env["client"].get(f"/api/v1/analysis/{entry['run_id']}")).json()
+        assert run_is_clean(body), (
+            f"the demo links {entry['run_id']}, which is not clean: "
+            f"{[c for c in (body['state'].get('tool_calls') or []) if c.get('status') != 'ok']}"
+        )
+        assert body["state"].get("report_markdown"), "the example row carries no report to render"
+
+
+@pytest.mark.asyncio
+async def test_the_example_report_renders_with_an_empty_artifact_root(
+    seed_env: dict[str, Any], tmp_path: Path
+) -> None:
+    """A free instance's artifact directory is empty after a redeploy by design (§176).
+
+    The report has to come from the row. This points `DSA_ARTIFACT_ROOT` at a directory that is never written
+    and asks the real endpoint, so a report that silently depended on files on disk goes red here instead of
+    on the hosted demo.
+    """
+    import os
+
+    examples = await _seed_and_examples(seed_env)
+    assert examples, "no example run to render"
+    run_id = examples[0]["run_id"]
+
+    empty = tmp_path / "wiped-by-redeploy"
+    empty.mkdir()
+    previous = os.environ.get("DSA_ARTIFACT_ROOT")
+    os.environ["DSA_ARTIFACT_ROOT"] = str(empty)
+    try:
+        report = await seed_env["client"].get(f"/api/v1/analysis/{run_id}/report?format=markdown")
+    finally:
+        if previous is None:
+            os.environ.pop("DSA_ARTIFACT_ROOT", None)
+        else:
+            os.environ["DSA_ARTIFACT_ROOT"] = previous
+    assert report.status_code == 200, report.text[:200]
+    assert report.text.strip(), "the example run renders an empty report"
+
+
+@pytest.mark.asyncio
+async def test_no_example_run_is_generated_when_the_instance_would_call_a_model(
+    seed_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The standing rule is that the project spends nothing it was not asked to spend.
+
+    Boot is not a request, so a boot that started a run against a configured provider would be the demo
+    charging the owner's key for a visitor who has not clicked anything. The questions stay offered.
+    """
+    from dsa_api.core import database
+    from dsa_api.services import demo_seed
+    from dsa_llm.providers import LlmMode
+
+    monkeypatch.setattr(
+        demo_seed,
+        "resolve_llm_mode",
+        lambda: LlmMode(mode="real", stub=False, provider="dashscope", model="qwen-max"),
+    )
+    async with database.AsyncSessionLocal() as session:
+        await demo_seed.seed_demo_data(session)
+        examples = await demo_seed.ensure_example_runs(session)
+    assert examples == [], "boot started runs while pointed at a paid provider"
+    assert await _runs(seed_env) == []
+    rows = [row for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})]
+    assert all(row["metadata"][MARKER]["starter_questions"] for row in rows), (
+        "the mode gate also took the questions away: a visitor can still ask, only nobody asked for them"
+    )
+
+
+@pytest.mark.asyncio
+async def test_nothing_offers_to_delete_a_seeded_dataset(seed_env: dict[str, Any]) -> None:
+    """Item 4 is satisfied today by absence, which is exactly why it needs a pin.
+
+    There is no DELETE route and no delete control in the datasets UI, so "sample datasets are read-only from
+    the UI" holds without building anything. That is only true until someone adds the obvious feature; this
+    test makes the addition a decision rather than an oversight, by naming the two surfaces that must keep
+    refusing a seeded row.
+    """
+    spec = await seed_env["client"].get("/openapi.json")
+    assert spec.status_code == 200, spec.text
+    dataset_paths = {path: ops for path, ops in spec.json()["paths"].items() if "datasets" in path}
+    for path, ops in dataset_paths.items():
+        assert "delete" not in ops, (
+            f"{path} exposes DELETE; a seeded sample can then be removed by a visitor"
+        )
+
+    surfaces = {
+        "apps/web/app/datasets/page.tsx": REPO / "apps/web/app/datasets/page.tsx",
+        "apps/web/app/datasets/[id]/page.tsx": REPO / "apps/web/app/datasets/[id]/page.tsx",
+    }
+    for name, path in surfaces.items():
+        if not path.is_file():
+            continue
+        source = path.read_text(encoding="utf-8")
+        assert 'method: "DELETE"' not in source and "method: 'DELETE'" not in source, (
+            f"{name} now issues a DELETE -- give seeded rows a refusal before shipping it"
+        )
+
+
+@pytest.mark.asyncio
+async def test_the_startup_hook_seeds_and_examples_through_the_lifespan(
+    seed_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The wiring is the part nobody would notice missing.
+
+    Every other test here calls the seeder directly, and every suite that uses ``ASGITransport`` skips the
+    lifespan -- so a lifespan that forgot to call the hook would leave this requirement looking delivered while
+    the hosted demo kept answering ``{"datasets": []}``. So drive the real app through its real startup, with
+    the session factory pointed at the temp database so the boot writes here rather than into the developer's
+    own ``data/dsa.db``.
+
+    The startup half runs with the instance configured for a model, which is the mode in which the hook seeds
+    and *skips* the example run. That is deliberate, and it is the second half of this test: the example path is
+    exercised below on this test's own loop, through the same entry point, so nothing the boot starts has to
+    outlive a loop this process closes.
+    """
+    from dsa_api.core import database
+    from dsa_api.main import app
+    from dsa_api.services.demo_seed import ensure_demo_data_at_boot
+
+    monkeypatch.setattr(database, "AsyncSessionLocal", seed_env["factory"])
+    monkeypatch.setenv("DSA_LLM_MODE", "real")
+    # The lifespan on this test's own loop, not through `TestClient`: TestClient runs it on a fresh loop in a
+    # thread and closes that loop on exit, and the connections the boot opened on the module engine then belong
+    # to a loop that no longer exists. Measured: with the TestClient form, this file was the first lifespan boot
+    # in the run and `tests/integration/test_phase6_api.py::test_progress_and_evidence_trace` -- 40 tests later
+    # -- timed out waiting for a terminal write, with two orphaned aiosqlite worker threads still alive.
+    async with app.router.lifespan_context(app):
+        assert (await seed_env["client"].get("/health")).status_code == 200
+
+    rows = [row for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})]
+    assert rows, "the app booted and seeded nothing -- the first screen is still empty"
+    assert await _runs(seed_env) == [], (
+        "a boot against a configured provider started analyses unasked: the demo may not spend the owner's "
+        "key for a visitor who has not clicked anything"
+    )
+
+    # Same entry point, this test's loop, the mode the hosted demo actually runs in.
+    monkeypatch.setenv("DSA_LLM_MODE", "heuristic")
+    outcome = await ensure_demo_data_at_boot()
+    assert outcome is not None and outcome["example_run_id"], (
+        f"the hook reports no example run in a no-model mode: {outcome}"
+    )
+    runs = await _runs(seed_env)
+    assert runs, "boot seeded datasets but no example run, so the report page is still empty"
+    assert outcome["example_run_id"] in {run["id"] for run in runs}
+    # Re-read the rows: the marker is written by the same call that produced the run, so a list captured
+    # before it cannot show the link.
+    linked = {
+        row["metadata"][MARKER].get("example_run_id")
+        for row in await _rows(seed_env)
+        if (row["metadata"].get(MARKER) or {}).get("example_run_id")
+    }
+    assert linked, "the boot ran the example but no dataset links it, so nothing can be clicked"
+    assert linked <= {run["id"] for run in runs}
+
+
+@pytest.mark.asyncio
+async def test_the_switch_the_suite_relies_on_actually_switches_it_off(
+    seed_env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`conftest.py` sets `DSA_DEMO_SEEDING=off` for the whole suite, and that line is both load-bearing and
+    invisible: if the hook ever stops reading the variable, eight unrelated files start executing the agent
+    again and the only symptom is a timeout somewhere far away. So the assertion lives here, next to the
+    consequence, and it also holds the product default -- an unset variable must still mean on, or a fresh
+    deploy boots back into the empty first screen this module exists to end.
+    """
+    from dsa_api.core import database
+    from dsa_api.services.demo_seed import ensure_demo_data_at_boot, seeding_enabled
+
+    assert seeding_enabled(), "this file's own fixture is supposed to turn the demo on"
+
+    monkeypatch.setattr(database, "AsyncSessionLocal", seed_env["factory"])
+    monkeypatch.setenv("DSA_DEMO_SEEDING", "off")
+    assert not seeding_enabled(), "the off spellings stopped meaning off"
+    assert await ensure_demo_data_at_boot() is None, "the hook reported work it was told not to do"
+
+    assert await _rows(seed_env) == [], "the boot seeded despite the switch saying off"
+    assert await _runs(seed_env) == [], "the boot ran the agent despite the switch saying off"
+
+    monkeypatch.delenv("DSA_DEMO_SEEDING", raising=False)
+    assert seeding_enabled(), (
+        "the default flipped to off, so a deploy would ship the empty first screen"
+    )
+
+
+@pytest.mark.asyncio
+async def test_two_boots_leave_one_example_run_per_seeded_dataset(seed_env: dict[str, Any]) -> None:
+    """The determinism claim, tested rather than asserted in a comment.
+
+    A first version chose a recorded run by ``max`` over ``(evidence, filename)``, which is stable only while
+    the filenames sort the way they did that day; a boot that chose differently left a second example behind
+    and a marker pointing at the first. Now that the example is generated, the risk is the mirror image: a
+    second boot that runs the question again instead of reusing the finished row, so every restart of a
+    long-lived instance adds two more runs to the list a visitor reads as "the demo's".
+    """
+    first_examples = await _seed_and_examples(seed_env)
+    first_ids = sorted(run["id"] for run in await _runs(seed_env))
+    second_examples = await _seed_and_examples(seed_env)
+    second_ids = sorted(run["id"] for run in await _runs(seed_env))
+    assert first_ids == second_ids, (
+        f"the second boot changed the run list: {first_ids} -> {second_ids}"
+    )
+    assert {entry["run_id"] for entry in first_examples} == {
+        entry["run_id"] for entry in second_examples
+    }, "the second boot generated new examples instead of reusing the clean ones"
+    assert all(entry["how"] == "reused" for entry in second_examples), (
+        f"the second boot did: {[entry['how'] for entry in second_examples]}"
+    )
+
+    rows = [row for row in await _rows(seed_env) if MARKER in (row.get("metadata") or {})]
+    with_example = [row for row in rows if (row["metadata"][MARKER] or {}).get("example_run_id")]
+    assert len(with_example) == len(
+        {row["metadata"][MARKER]["example_run_id"] for row in with_example}
+    ), "two seeded datasets link to the same example run; each links the run that answers it"
+
+    for row in with_example:
+        run_id = row["metadata"][MARKER]["example_run_id"]
+        body = (await seed_env["client"].get(f"/api/v1/analysis/{run_id}")).json()
+        assert body["status"] == "COMPLETED", body["status"]
+        assert body["dataset_id"] == row["id"], "the example run is attached to a different dataset"
+
+
+@pytest.mark.asyncio
+async def test_a_visitor_with_an_id_of_their_own_still_sees_the_published_sample(
+    seed_env: dict[str, Any],
+) -> None:
+    """R-08 that empties R-01's first screen is a different product, so the sample is published, not owned.
+
+    The pair matters: the sample has to be readable by an id the demo never issued, and a visitor's own row
+    must not become readable while it is.
+    """
+    from dsa_api.core.ownership import OWNER_HEADER
+
+    examples = await _seed_and_examples(seed_env)
+    assert examples, "the boot produced no example to look at"
+    visitor = {OWNER_HEADER: "0f1e2d3c4b5a-4e8f-9d3d"}
+
+    rows = (await seed_env["client"].get("/api/v1/datasets/", headers=visitor)).json()["datasets"]
+    samples = [row for row in rows if MARKER in (row.get("metadata") or {})]
+    assert samples, f"a visitor holding their own id saw {rows!r}, none of it published"
+
+    for row in samples:
+        linked = (row["metadata"][MARKER] or {}).get("example_run_id")
+        if not linked:
+            continue
+        run = await seed_env["client"].get(f"/api/v1/analysis/{linked}", headers=visitor)
+        assert run.status_code == 200, (
+            f"the example link on {row['filename']} is a {run.status_code}"
+        )
+        assert run.json()["owner"] == "shared"
+
+    private = await seed_env["client"].post(
+        "/api/v1/datasets/",
+        files={"file": ("mine.csv", b"a,b\n1,2\n", "text/csv")},
+        headers=visitor,
+    )
+    assert private.status_code == 201, private.text
+    mine = str(private.json()["id"])
+    assert mine not in [row["id"] for row in samples]
+    as_local = await seed_env["client"].get(f"/api/v1/datasets/{mine}")
+    assert as_local.status_code == 404, "a visitor's upload is readable by the local owner too"
+
+
+@pytest.mark.asyncio
+async def test_a_sample_row_from_before_the_owner_column_is_republished(
+    seed_env: dict[str, Any],
+) -> None:
+    """The migration backfills old rows to `local` -- including the demo's own, which the seeder must fix.
+
+    Without the relabelling the upgraded instance keeps a correct-looking database and an empty first screen,
+    and nothing but this test notices. `how == "reused"` is the load-bearing assertion: it is only reachable
+    if the example run itself became published, because a run the seeder cannot see would be re-executed and
+    would arrive as a new id.
+    """
+    from sqlalchemy import select
+
+    from dsa_api.core.ownership import OWNER_DEFAULT, OWNER_HEADER, OWNER_SHARED
+    from dsa_api.models.analysis import AnalysisRunORM
+    from dsa_api.models.dataset import DatasetORM
+
+    first = await _seed_and_examples(seed_env)
+    visitor = {OWNER_HEADER: "0f1e2d3c4b5a-4e8f-9d3d"}
+
+    async with seed_env["factory"]() as session:
+        for row in (await session.execute(select(DatasetORM))).scalars().all():
+            row.owner = OWNER_DEFAULT
+        for row in (await session.execute(select(AnalysisRunORM))).scalars().all():
+            row.owner = OWNER_DEFAULT
+        await session.commit()
+
+    hidden = (await seed_env["client"].get("/api/v1/datasets/", headers=visitor)).json()["datasets"]
+    assert hidden == [], f"the pre-R-08 state was not reproduced: {hidden!r}"
+
+    second = await _seed(seed_env)
+
+    visible = (await seed_env["client"].get("/api/v1/datasets/", headers=visitor)).json()[
+        "datasets"
+    ]
+    local_rows = await _rows(seed_env)
+    assert sorted(row["filename"] for row in visible) == sorted(
+        row["filename"] for row in local_rows
+    ), "the local owner can see the sample but a visitor holding an id cannot"
+    assert {row["owner"] for row in visible} == {OWNER_SHARED}, (
+        f"the sample rows were not republished: {[(r['filename'], r['owner']) for r in visible]}"
+    )
+    assert [row["id"] for row in visible] == [row["id"] for row in local_rows], (
+        f"the repair rebuilt the sample instead of relabelling it: {second}"
+    )
+
+    async with seed_env["factory"]() as session:
+        run_owners = {row[0] for row in (await session.execute(select(AnalysisRunORM.owner))).all()}
+    assert run_owners == {OWNER_SHARED}, f"{sorted(run_owners)}: a published run is still private"
+    assert {entry["run_id"] for entry in first} == {
+        (row["metadata"][MARKER] or {}).get("example_run_id")
+        for row in visible
+        if (row["metadata"][MARKER] or {}).get("example_run_id")
+    }, "the relabelled rows no longer link the examples the boot produced"
+
+    for row in visible:
+        linked = (row["metadata"][MARKER] or {}).get("example_run_id")
+        if not linked:
+            continue
+        run = await seed_env["client"].get(f"/api/v1/analysis/{linked}", headers=visitor)
+        assert run.status_code == 200 and run.json()["status"] == "COMPLETED", (
+            f"the example link a visitor is shown answers {run.status_code}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_the_mcp_app_shows_a_stored_run_with_the_bytes_the_export_hands_over(
+    seed_env: dict[str, Any], limiter_left_as_found: None
+) -> None:
+    """R-14: the client-facing App surface has to show the runs the product has, not only the ones a client
+    drove through this process's own tools.
+
+    Measured before it was fixed, on a live `dsa ui`: `run-65becae7af` answered 200 with 32,755 bytes at
+    `/api/v1/analysis/{id}/report?format=html&mode=audited` and 404 `No stored analysis for this run_id` at
+    `/mcp-app/report/{id}` -- same process, same database, one run. The renderer was already shared; the
+    *reading* was not, which is the half a single-renderer claim can miss while every existing test stays green.
+
+    The byte equality is the point, so this is asserted as parity rather than two 200s: the App is the same
+    document, and a client that embeds it is not being shown a second, quieter rendering of the run.
+
+    Lives here rather than in a file of its own because the completed run it needs is what this fixture already
+    builds -- the demo's own example, produced by the seeder on this test's loop.
+    """
+    from dsa_api.core.ownership import OWNER_HEADER
+
+    visitor = {OWNER_HEADER: "0f1e2d3c4b5a-4e8f-9d3d"}
+    published = await _seed_and_examples(seed_env)
+    run_ids = {entry["run_id"] for entry in published if entry.get("run_id")}
+    assert run_ids, "the demo produced no example run, so there is nothing for the App to show"
+
+    client = seed_env["client"]
+    example = sorted(run_ids)[0]
+    web = await client.get(f"/api/v1/analysis/{example}/report?format=html&mode=audited")
+    assert web.status_code == 200, web.text
+    assert "evidence" in web.text.lower(), "the audited rendering lost the material it is named for"
+
+    app_view = await client.get(f"/mcp-app/report/{example}")
+    assert app_view.status_code == 200, (
+        f"the MCP App cannot open a run the product stored and the web just rendered: {app_view.status_code} "
+        f"{app_view.text[:160]}"
+    )
+    assert app_view.text == web.text, (
+        "the App and the export no longer hand over the same bytes -- the second renderer is back, by way of a "
+        "different document rather than different code"
+    )
+
+    # The other half of the claim: this surface has no visitor identity, so it must read published rows only.
+    private = await client.post(
+        "/api/v1/datasets/",
+        files={"file": ("private-sales.csv", (SAMPLES / "sales.csv").read_bytes(), "text/csv")},
+        headers=visitor,
+    )
+    assert private.status_code == 201, private.text
+    started = await client.post(
+        "/api/v1/analysis/",
+        json={"dataset_id": private.json()["id"], "user_query": STARTER},
+        headers=visitor,
+    )
+    assert started.status_code == 202, started.text
+    theirs = str(started.json()["id"])
+
+    # The premise has to be forced, not assumed: an assertion that the App answers 404 is worthless while the
+    # run has no rendered state yet, because then it 404s for a reason that has nothing to do with ownership.
+    # Measured -- with the loader deliberately un-scoped, this assertion still passed, until the run was waited
+    # for. So: the visitor's own export proves the row is renderable, and only then is the App asked for it.
+    for _ in range(120):
+        status = (await client.get(f"/api/v1/analysis/{theirs}", headers=visitor)).json()["status"]
+        if status in {"COMPLETED", "FAILED"}:
+            break
+        await asyncio.sleep(0.25)
+    assert status == "COMPLETED", (
+        f"the private run ended {status}, so it proves nothing about scoping"
+    )
+    theirs_report = await client.get(
+        f"/api/v1/analysis/{theirs}/report?format=html&mode=audited", headers=visitor
+    )
+    assert theirs_report.status_code == 200, (
+        f"the owner cannot even export their own run: {theirs_report.status_code} {theirs_report.text[:120]}"
+    )
+
+    via_app = await client.get(f"/mcp-app/report/{theirs}")
+    assert via_app.status_code == 404, (
+        f"an unidentified client surface read a visitor's completed run ({theirs}): the App loader is not "
+        "scoped to what the instance publishes, and R-08 has a hole in it"
+    )

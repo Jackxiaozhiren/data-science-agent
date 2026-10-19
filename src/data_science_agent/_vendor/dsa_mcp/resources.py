@@ -44,10 +44,22 @@ def _discover_datasets() -> list[dict[str, str]]:
 
 # §38 Explicit state store (analysis_id/run_id handles, not session)
 _ANALYSIS_STORE: dict[str, dict[str, Any]] = {}
+#: The original AnalysisState behind the handle, for surfaces that *render* the run rather than read its
+#: fields -- R-14's app view hands this to the one report renderer instead of assembling its own.
+_STATE_STORE: dict[str, Any] = {}
 
 
 def store_analysis(run_id: str, payload: dict[str, Any]) -> None:
     _ANALYSIS_STORE[run_id] = payload
+
+
+def store_state(run_id: str, state: Any) -> None:
+    if state is not None:
+        _STATE_STORE[run_id] = state
+
+
+def get_state(run_id: str) -> Any | None:
+    return _STATE_STORE.get(run_id)
 
 
 def list_resources() -> list[dict[str, Any]]:

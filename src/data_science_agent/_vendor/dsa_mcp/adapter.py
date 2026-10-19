@@ -277,6 +277,9 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             payload = _json.loads(_json.dumps(payload_raw, default=str, ensure_ascii=False))
             # Store for explicit resource handles (§38)
             store_analysis(analysis_res.run_id, payload)
+            from dsa_mcp.resources import store_state
+
+            store_state(analysis_res.run_id, analysis_res.raw_state)
             return {
                 "isError": False,
                 "mcp_tool": name,

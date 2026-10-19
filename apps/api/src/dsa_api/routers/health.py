@@ -84,15 +84,21 @@ async def version() -> dict[str, Any]:
     and no optional LLM import, and a hosting probe must not gain a reason to fail. It is not optional
     information: a visitor reading a result from this instance has to be able to tell a deterministic
     plan from a model's, so it ships with the identifier of the build that produced it.
+
+    ``storage`` joins it for the same reason and with the same non-guarantee: it says whether the process
+    writes to paths the platform may throw away, which is the difference between a demo that loses a run
+    and an application that does. It reports modes, never locations -- this route is unauthenticated.
     """
     # Imported here for the same reason /health/dependencies imports lazily: this module must stay
     # loadable by an instance that has not pulled the LLM stack in yet.
+    from dsa_api.core.storage_state import storage_report
     from dsa_llm.providers import resolve_llm_mode
 
     return {
         "version": settings.version,
         "distribution": DISTRIBUTION,
         "reasoning_mode": resolve_llm_mode().as_dict(),
+        "storage": storage_report(),
     }
 
 

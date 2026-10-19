@@ -7,15 +7,20 @@ import { Button } from "@/app/components/ui/button";
 import { ApiStatusDot } from "@/app/components/layout/ApiStatusDot";
 import { ProvenanceStatus } from "@/app/components/layout/ProvenanceStatus";
 
-// Sticky top bar: logo + Try DSA primary + Analysis/Evaluation/Research/GitHub + API dot + mobile menu.
-// Structure reference: TailAdmin / next-shadcn-dashboard topbar pattern.
-const links = [
-  { href: "/analysis", label: "Analysis" },
-  { href: "/benchmarks", label: "Evaluation" },
-  { href: "/research", label: "Research" },
-];
+// Sticky top bar: logo + the analyst loop + GitHub + API dot + mobile menu.
+//
+// R-10 removed the flat "Analysis | Evaluation | Research" row: it put a measurement of the agent next to the
+// thing a visitor came to do, at the same weight, and it named `/analysis` "Analysis" while the sidebar called
+// the same route "Ask". The labels now come from the one navigation owner (Sidebar.NAV_GROUPS), and the
+// benchmark/evaluation surfaces live in the sidebar group that says what they are. Structure reference:
+// TailAdmin / next-shadcn-dashboard topbar pattern.
+import { NAV_GROUPS } from "@/app/components/layout/Sidebar";
+import { LanguageToggle } from "@/app/components/layout/LanguageToggle";
+import { t, type Locale } from "@/lib/locale";
 
-export function SiteHeader() {
+const [analystGroup, systemGroup] = NAV_GROUPS;
+
+export function SiteHeader({ locale }: { locale: Locale }) {
   const [open, setOpen] = React.useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur">
@@ -27,7 +32,7 @@ export function SiteHeader() {
           <span className="truncate">Data Science Agent</span>
         </Link>
         <div className="hidden items-center gap-1 text-sm md:flex">
-          {links.map((l) => (
+          {analystGroup.items.slice(0, 2).map((l) => (
             <Link key={l.href} href={l.href} className="rounded-lg px-3 py-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900">
               {l.label}
             </Link>
@@ -42,10 +47,11 @@ export function SiteHeader() {
           </a>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageToggle locale={locale} />
           <ApiStatusDot />
           <ProvenanceStatus />
           <Link href="/datasets" className="hidden md:inline-flex">
-            <Button size="sm">Try DSA</Button>
+            <Button size="sm">{t(locale, "header.try")}</Button>
           </Link>
           <button
             type="button"
@@ -64,8 +70,16 @@ export function SiteHeader() {
             <Link href="/datasets" onClick={() => setOpen(false)} className="rounded-lg bg-zinc-900 px-3 py-2 font-medium text-white">
               Try DSA
             </Link>
-            {links.map((l) => (
+            {analystGroup.items.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100">
+                {l.label}
+              </Link>
+            ))}
+            <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              {systemGroup.label}
+            </p>
+            {systemGroup.items.map((l) => (
+              <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100">
                 {l.label}
               </Link>
             ))}

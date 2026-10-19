@@ -158,3 +158,196 @@ def test_module_is_valid_typescript_shape() -> None:
     # every extracted element must be an UPPER_SNAKE status name, not a stray token
     vocab = _ts_array(source, "ANALYSIS_STATUSES") or set()
     assert all(re.fullmatch(r"[A-Z][A-Z0-9_]*", v) for v in vocab), sorted(vocab)
+
+
+# ---------------------------------------------------------------------------
+# R-13: status is a word, not a colour.
+#
+# Status badges are the primary signal in this app, and the requirement is that they read for a reader who
+# cannot distinguish amber from grey. `StatusBadge` is written that way today -- every branch renders the
+# state text and the pulsing dot is `aria-hidden` -- and this is the guard that keeps a later edit from
+# turning one branch into a colour swatch. A browser check could not cover it: the badges render only when
+# a run exists, and the web tour is deliberately backend-independent. So the invariant is asserted where
+# the choice is made, over every badge in the app, enumerated rather than named.
+# ---------------------------------------------------------------------------
+
+BADGE_OWNER = WEB_APP / "components/data/StatusBadge.tsx"
+
+# A badge carries a word when, with every element stripped out, some word character is left: `{status}` and
+# `A: {c.name}` do, `<Icon />` alone does not, and neither does `{" "}` -- which is why the test is a word
+# search over the stripped children rather than "has a brace expression". Attributes holding a literal `>`
+# would fool the tag stripper, so `_iter_badges` above is what keeps the element boundaries honest.
+_WORD = re.compile(r"\w")
+_TAG_ONLY = re.compile(r"<[^>]*>")
+
+
+def _find_badge(text: str, i: int) -> int:
+    """Index of the next real `<Badge` element, or -1 -- `<Badger` and `<StatusBadge` are not it."""
+    while True:
+        start = text.find("<Badge", i)
+        if start == -1:
+            return -1
+        nxt = text[start + len("<Badge") :]
+        if nxt[:1] in (" ", "\t", "\n", ">", "/", "{"):
+            return start
+        i = start + 1
+
+
+def _iter_badges(text: str):
+    """Yield `(opening_tag, children_or_None)` for every `<Badge ...>` JSX element.
+
+    Hand-written rather than regex-paired because an attribute legitimately holds a `>` inside braces
+    (`{"A > B"}`): a `.*?` match would end the opening tag early and mis-pair the children with some other
+    element's `</Badge>`. `None` children means the element was self-closing -- and the slash that says so
+    sits *before* the `>`, which the test below keeps asserted.
+    """
+    out = []
+    i = 0
+    while True:
+        start = _find_badge(text, i)
+        if start == -1:
+            return out
+        depth, j = 0, start + len("<Badge")
+        while j < len(text):
+            ch = text[j]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+            elif ch == ">" and depth == 0:
+                break
+            j += 1
+        else:
+            raise AssertionError(f"unterminated <Badge at offset {start}")
+        opening = text[start : j + 1]
+        if text[start:j].rstrip().endswith("/"):
+            out.append((opening, None))
+            i = j + 1
+            continue
+        # Walk the children, counting nested badges so a badge inside a badge closes at the right tag.
+        k, nested = j + 1, 0
+        while True:
+            nxt_open = _find_badge(text, k)
+            nxt_close = text.find("</Badge>", k)
+            if nxt_close == -1:
+                raise AssertionError(f"unclosed <Badge> opened at offset {start}")
+            if nxt_open != -1 and nxt_open < nxt_close:
+                nested += 1
+                k = nxt_open + len("<Badge")
+                continue
+            if nested == 0:
+                out.append((opening, text[j + 1 : nxt_close]))
+                # Recurse so a badge nested inside a badge is censused on its own; the outer element's text
+                # may be perfectly good while the inner one is a bare colour swatch.
+                out.extend(_iter_badges(text[j + 1 : nxt_close]))
+                i = nxt_close + len("</Badge>")
+                break
+            nested -= 1
+            k = nxt_close + len("</Badge>")
+
+
+def _badge_sites() -> list[tuple[Path, str, str | None]]:
+    sites: list[tuple[Path, str, str | None]] = []
+    for path in sorted(WEB_APP.rglob("*.tsx")):
+        text = path.read_text(encoding="utf-8")
+        for opening, children in _iter_badges(text):
+            sites.append((path, opening, children))
+    return sites
+
+
+def test_badge_parser_reads_the_shapes_the_corpus_can_hold() -> None:
+    """The parser is asserted against synthetic JSX, because a parser that silently mis-pairs makes the
+    census above pass on an empty or wrong list.
+
+    Each case is a shape the app can legitimately grow: a self-closing badge (the mutation the guard exists
+    to catch), a `>` inside an attribute expression, and a badge nested in a badge. `<StatusBadge` is the
+    negative control -- matching it would double-count the owner file's own consumers.
+    """
+    cases = [
+        ('<Badge variant="secondary" />', [('<Badge variant="secondary" />', None)]),
+        ("<Badge>{x}</Badge>", [("<Badge>", "{x}")]),
+        ('<Badge label={"A > B"}>{s}</Badge>', [('<Badge label={"A > B"}>', "{s}")]),
+        (
+            "<Badge><Badge>{inner}</Badge>{outer}</Badge>",
+            [
+                ("<Badge>", "<Badge>{inner}</Badge>{outer}"),
+                ("<Badge>", "{inner}"),
+            ],
+        ),
+        ("<StatusBadge status={r} />", []),
+    ]
+    for source, wanted in cases:
+        got = _iter_badges(source)
+        assert got == wanted, f"parsed {got} from {source!r}, wanted {wanted}"
+
+
+def test_badge_word_rule_rejects_a_brace_that_holds_nothing() -> None:
+    """The census above asks for a word in the children with the elements stripped, and this is that rule
+    pinned on its own -- `{" "}` is a badge that renders a space, and a mutation that turns a state badge
+    into one must not be able to hide behind the brace expression.
+    """
+    for children, carries_word in [
+        ("{status}", True),
+        ("A: {c.name}", True),
+        ('{t(locale, "home.title")}', True),
+        ("{'completed'}", True),
+        ('<Plug2 className="size-3" aria-hidden /> {t}', True),
+        (" ", False),
+        ('{" "}', False),
+        ('<span className="size-1.5 bg-amber-500" aria-hidden />', False),
+        ("{ }", False),
+    ]:
+        assert bool(_WORD.search(_TAG_ONLY.sub("", children))) is carries_word, children
+
+
+def test_every_badge_renders_text_and_only_decorates_with_colour() -> None:
+    sites = _badge_sites()
+    # Two independently derived denominators: the parser's own count against a plain substring count over
+    # the same corpus, and the four branches of the file that owns run-status presentation. Without these a
+    # parser that silently matched nothing would report a clean sweep of an empty list.
+    raw = sum(
+        path.read_text(encoding="utf-8").count("<Badge") for path in sorted(WEB_APP.rglob("*.tsx"))
+    )
+    assert len(sites) == raw, (
+        f"the badge parser accounted for {len(sites)} of {raw} `<Badge` occurrences"
+    )
+    owner_sites = [s for s in sites if s[0] == BADGE_OWNER]
+    assert len(owner_sites) == 4, (
+        f"StatusBadge.tsx contributed {len(owner_sites)} badges; the guard is written for its four branches "
+        "and a fifth return path needs its text child checked by hand"
+    )
+
+    problems: list[str] = []
+    for path, opening, children in sites:
+        where = f"{path.relative_to(ROOT)}: {opening.splitlines()[0][:72]}"
+        if children is None:
+            problems.append(
+                f"{where} -- a self-closing badge has no text child, so it speaks only in colour"
+            )
+            continue
+        if not children.strip():
+            problems.append(f"{where} -- empty badge, colour only")
+            continue
+        if not _WORD.search(_TAG_ONLY.sub("", children)):
+            problems.append(f"{where} -- children carry no word: {children.strip()[:60]!r}")
+        # A coloured element inside a badge is fine while it is hidden from the accessibility tree; a
+        # second, *unhidden* colour swatch is where the state starts living only in hue.
+        for tag in re.findall(r"<[a-zA-Z][^>]*>", children):
+            if (
+                re.search(r"\bbg-(?:red|amber|emerald|green|yellow|orange|rose|lime)-\d", tag)
+                and "aria-hidden" not in tag
+            ):
+                problems.append(f"{where} -- coloured element without aria-hidden: {tag[:80]}")
+    assert not problems, "badges that can convey state by colour alone:\n  " + "\n  ".join(problems)
+
+
+def test_status_badge_branches_all_carry_the_state_word() -> None:
+    """The narrower claim for the run-status owner: the text child is the status itself."""
+    source = BADGE_OWNER.read_text(encoding="utf-8")
+    branches = [(opening, children) for opening, children in _iter_badges(source)]
+    assert len(branches) == 4, f"expected StatusBadge's four branches, parsed {len(branches)}"
+    for opening, children in branches:
+        assert children is not None and "status" in children, (
+            f"a run-status badge branch no longer renders the state text: {opening[:60]} -> "
+            f"{(children or '').strip()[:60]!r}"
+        )

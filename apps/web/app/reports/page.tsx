@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import { apiUrl, classifyResponse, FAILURE_PRESENTATION, type ApiFailure } from "@/lib/api";
+import { apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { serverFetch, serverLocale } from "@/lib/serverApi";
+import { t, type Locale } from "@/lib/locale";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -11,14 +13,13 @@ type RunItem = { id: string; dataset_id: string; status: string; user_query: str
 
 // Inherits the shared wording, and keeps this page's own line for the transport case: the report list
 // below really is a fallback rendering, not a statement about stored reports.
-const REPORTS_FAILURE_MESSAGE: Record<ApiFailure, string> = {
-  ...FAILURE_PRESENTATION,
-  transport: "Could not reach the DSA API — showing an empty report list instead of a blank page.",
-};
+function reportsMessages(locale: Locale): Record<ApiFailure, string> {
+  return { ...failurePresentation(locale), transport: t(locale, "reports.transport") };
+}
 
 async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/analysis/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/analysis/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { runs: [], failure };
     const d = (await res.json()) as { analyses: RunItem[] };
@@ -30,7 +31,7 @@ async function fetchRuns(): Promise<{ runs: RunItem[]; failure: ApiFailure | nul
 
 async function fetchDatasetNames(): Promise<{ names: Map<string, string>; failure: ApiFailure | null }> {
   try {
-    const res = await fetch(apiUrl("/api/v1/datasets/"), { cache: "no-store" });
+    const res = await serverFetch("/api/v1/datasets/", { cache: "no-store" });
     const failure = classifyResponse(res);
     if (failure) return { names: new Map(), failure };
     const d = (await res.json()) as { datasets: { id: string; filename: string }[] };
@@ -41,6 +42,8 @@ async function fetchDatasetNames(): Promise<{ names: Map<string, string>; failur
 }
 
 export default async function ReportsPage() {
+  const locale = await serverLocale();
+  const messages = reportsMessages(locale);
   const [{ runs, failure: runsFailure }, { names, failure: namesFailure }] = await Promise.all([
     fetchRuns(),
     fetchDatasetNames(),
@@ -65,7 +68,7 @@ export default async function ReportsPage() {
           <Link href="/analysis"><Button size="sm">New analysis →</Button></Link>
         }
       />
-      {failure && <ErrorState message={REPORTS_FAILURE_MESSAGE[failure]} />}
+      {failure && <ErrorState message={messages[failure]} />}
       <Card>
         <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
           {runs.length === 0 ? (

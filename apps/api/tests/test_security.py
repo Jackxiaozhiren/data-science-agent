@@ -33,13 +33,31 @@ async def test_analysis_500_does_not_leak_internals(monkeypatch: pytest.MonkeyPa
     async def _boom(*args: object, **kwargs: object) -> object:
         raise RuntimeError("super secret traceback details")
 
-    monkeypatch.setattr(analysis_router, "create_analysis_run", _boom)
+    # R-03 renamed the create-path service call; the seam this guards is the same one -- a failure while
+    # the run is being set up still answers 500 with a generic detail.
+    monkeypatch.setattr(analysis_router, "create_pending_run", _boom)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         r = await ac.post("/api/v1/analysis/", json={"dataset_id": "ds1", "user_query": "q"})
         assert r.status_code == 500
         detail = r.json()["detail"]
         assert "super secret" not in detail
         assert "traceback" not in detail.lower()
+
+
+def test_a_crash_inside_the_run_is_described_without_being_quoted() -> None:
+    """The other half of R-03: a failure now lands on a public row instead of on a response.
+
+    Nothing about the non-disclosure rule changed when the run became a task, so the shaping function is
+    pinned here and the end-to-end path is covered by
+    ``tests/integration/test_analysis_run_lifecycle.py::test_an_exception_inside_the_task_lands_on_the_row_not_on_the_read``.
+    """
+    from dsa_api.services.run_lifecycle import abandoned_message, failure_message
+
+    detail = failure_message(RuntimeError("super secret traceback details"))
+    assert "super secret" not in detail
+    assert "traceback" not in detail.lower()
+    assert "RuntimeError" in detail, "a reader must still learn what kind of thing stopped the run"
+    assert "restart" in abandoned_message().lower() or "restarted" in abandoned_message().lower()
 
 
 async def test_rate_limiter_allows_then_denies() -> None:
