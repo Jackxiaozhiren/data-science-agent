@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
 import { clientFetch, apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
-import { t as tt } from "@/lib/locale";
+import { t } from "@/lib/locale";
 import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
@@ -74,7 +74,7 @@ function useLiveProgress(runId: string, initialStatus: string) {
   // product title, not a second copy of it -- the sweep in tests/contract/test_web_locale_parity.py refuses a
   // page that keeps its own version of a sentence the locale owner has.
   const origTitle = React.useRef(
-    typeof document !== "undefined" ? document.title : tt(locale, "meta.title")
+    typeof document !== "undefined" ? document.title : t(locale, "meta.title")
   );
 
   React.useEffect(() => {
@@ -86,16 +86,16 @@ function useLiveProgress(runId: string, initialStatus: string) {
         if (!r.ok || stop) return;
         const p = (await r.json()) as Progress;
         setProg(p);
-        document.title = tt(locale, "run.liveTitle")
+        document.title = t(locale, "run.liveTitle")
           .replace("{pct}", String(p.progress_pct))
           .replace("{id}", runId.slice(0, 8));
         const terminal = TERMINAL.has(p.status.trim().toUpperCase());
         if (terminal) {
           setLive(false);
-          document.title = origTitle.current || tt(locale, "meta.title");
+          document.title = origTitle.current || t(locale, "meta.title");
           if (notify && "Notification" in window && Notification.permission === "granted") {
-            new Notification(tt(locale, "run.notifyTitle").replace("{status}", p.status), {
-              body: tt(locale, "run.notifyBody")
+            new Notification(t(locale, "run.notifyTitle").replace("{status}", p.status), {
+              body: t(locale, "run.notifyBody")
                 .replace("{id}", runId.slice(0, 12))
                 .replace("{evidence}", String(p.evidence)),
             });
@@ -114,7 +114,7 @@ function useLiveProgress(runId: string, initialStatus: string) {
     return () => {
       stop = true;
       clearInterval(id);
-      document.title = origTitle.current || tt(locale, "meta.title");
+      document.title = origTitle.current || t(locale, "meta.title");
     };
   }, [runId, live, notify, router, locale]);
 
@@ -128,7 +128,11 @@ function useLiveProgress(runId: string, initialStatus: string) {
   return { prog, live, notify, toggleNotify };
 }
 
-const MACHINE = ["Queued", "Planning", "Executing", "Validating", "Done"];
+// The five stage names a reader sees under the status badge. They are the interface's words for where a
+// run is, not the API's status tokens -- those stay untranslated in the badge and the JSON.
+const MACHINE = ["insp.machineQueued", "insp.machinePlanning", "insp.machineExecuting",
+  "insp.machineValidating", "insp.machineDone"];
+
 
 function machineIndex(status: string, stepsDone: number, hasValidation: boolean): number {
   const s = status.trim().toUpperCase();
@@ -141,11 +145,12 @@ function machineIndex(status: string, stepsDone: number, hasValidation: boolean)
 }
 
 function ValidationRing({ passed, total }: { passed: number; total: number }) {
+  const locale = useLocale();
   const pct = total === 0 ? 0 : Math.round((passed / total) * 100);
   const r = 26;
   const c = 2 * Math.PI * r;
   return (
-    <div className="flex items-center gap-3" role="img" aria-label={`Validation ${passed} of ${total} passed (${pct}%)`}>
+    <div className="flex items-center gap-3" role="img" aria-label={t(locale, "insp.validationAria").replace("{passed}", String(passed)).replace("{total}", String(total)).replace("{pct}", String(pct))}>
       <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden>
         <circle cx="32" cy="32" r={r} fill="none" stroke="#e4e4e7" strokeWidth="7" />
         <circle
@@ -158,14 +163,15 @@ function ValidationRing({ passed, total }: { passed: number; total: number }) {
         <text x="32" y="36" textAnchor="middle" fontSize="13" fontWeight="700" fill="#3f3f46">{pct}%</text>
       </svg>
       <div>
-        <p className="text-sm font-semibold">{passed}/{total} checks passed</p>
-        <p className="text-xs text-zinc-500">Validation gate for this run</p>
+        <p className="text-sm font-semibold">{t(locale, "insp.checksPassed").replace("{passed}", String(passed)).replace("{total}", String(total))}</p>
+        <p className="text-xs text-zinc-500">{t(locale, "insp.validationSub")}</p>
       </div>
     </div>
   );
 }
 
 function ApprovalCard({ runId }: { runId: string }) {
+  const locale = useLocale();
   const router = useRouter();
   const [note, setNote] = React.useState("Approved by human");
   const [busy, setBusy] = React.useState(false);
@@ -183,12 +189,16 @@ function ApprovalCard({ runId }: { runId: string }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = (data as { detail?: unknown }).detail;
-        setErr(typeof detail === "string" ? stripHtml(detail).slice(0, 300) : `Approval failed (HTTP ${res.status}).`);
+        setErr(
+          typeof detail === "string"
+            ? stripHtml(detail).slice(0, 300)
+            : t(locale, "run.approvalFailed").replace("{status}", String(res.status))
+        );
         return;
       }
       router.refresh();
     } catch (e) {
-      setErr(`Approval request failed. ${String(e)}`);
+      setErr(t(locale, "run.approvalUnavailable").replace("{detail}", String(e)));
     } finally {
       setBusy(false);
     }
@@ -197,17 +207,17 @@ function ApprovalCard({ runId }: { runId: string }) {
   return (
     <Card className="border-amber-200 bg-amber-50/60">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm"><AlertTriangle className="size-4 text-amber-600" aria-hidden /> Human review requested</CardTitle>
-        <CardDescription className="text-xs">This run is paused at a review gate. Approve to mark it COMPLETED.</CardDescription>
+        <CardTitle className="flex items-center gap-2 text-sm"><AlertTriangle className="size-4 text-amber-600" aria-hidden /> {t(locale, "insp.reviewTitle")}</CardTitle>
+        <CardDescription className="text-xs">{t(locale, "insp.reviewBody")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
-          <label htmlFor="approval-note" className="block text-xs font-medium text-amber-900">Approval note</label>
+          <label htmlFor="approval-note" className="block text-xs font-medium text-amber-900">{t(locale, "insp.approvalLabel")}</label>
           <Input id="approval-note" value={note} onChange={(e) => setNote(e.target.value)} className="mt-1 bg-white" maxLength={300} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={approve} disabled={busy}>
-            {busy ? <><Loader2 className="size-4 animate-spin" aria-hidden /> Approving…</> : <><Check className="size-4" aria-hidden /> Approve run</>}
+            {busy ? <><Loader2 className="size-4 animate-spin" aria-hidden /> {t(locale, "insp.approving")}</> : <><Check className="size-4" aria-hidden /> {t(locale, "insp.approve")}</>}
           </Button>
           {err && <p className="text-xs text-red-600" role="alert">{err}</p>}
         </div>
@@ -217,6 +227,7 @@ function ApprovalCard({ runId }: { runId: string }) {
 }
 
 function FailureCard({ run }: { run: RunDetail }) {
+  const locale = useLocale();
   const st = run.state;
   const failed = (st?.tool_calls ?? []).filter((tc) => tc.status !== "ok");
   const [copied, setCopied] = React.useState(false);
@@ -251,7 +262,7 @@ function FailureCard({ run }: { run: RunDetail }) {
       <CardContent className="space-y-2">
         {run.error && (
           <p className="rounded-lg border border-red-200 bg-white p-2.5 text-xs leading-5">
-            <strong>Reason</strong>
+            <strong>{t(locale, "insp.colReason")}</strong>
             <span className="ml-1 break-words text-red-700">{stripHtml(String(run.error)).slice(0, 500)}</span>
           </p>
         )}
@@ -264,11 +275,11 @@ function FailureCard({ run }: { run: RunDetail }) {
         ))}
         <div className="flex flex-wrap gap-2 pt-1">
           <Button variant="secondary" size="sm" onClick={copyDiagnostics}>
-            {copied ? <><Check className="size-3.5" aria-hidden /> Copied</> : <><Copy className="size-3.5" aria-hidden /> Copy diagnostics</>}
+            {copied ? <><Check className="size-3.5" aria-hidden /> {t(locale, "insp.copied")}</> : <><Copy className="size-3.5" aria-hidden /> {t(locale, "insp.copyDiagnostics")}</>}
           </Button>
           {run.dataset_id && (
             <Link href={`/analysis?dataset=${run.dataset_id}&q=${encodeURIComponent(run.user_query)}`}>
-              <Button variant="secondary" size="sm">Rerun with same question →</Button>
+              <Button variant="secondary" size="sm">{t(locale, "insp.rerun")}</Button>
             </Link>
           )}
         </div>
@@ -278,6 +289,7 @@ function FailureCard({ run }: { run: RunDetail }) {
 }
 
 function FollowUpBox({ run }: { run: RunDetail }) {
+  const locale = useLocale();
   const router = useRouter();
   const [q, setQ] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -286,11 +298,11 @@ function FollowUpBox({ run }: { run: RunDetail }) {
   async function submit() {
     setErr(null);
     if (!q.trim()) {
-      setErr("Enter a follow-up question.");
+      setErr(t(locale, "insp.followupEmpty"));
       return;
     }
     if (!run.dataset_id) {
-      setErr("This run has no linked dataset, so a follow-up cannot be started.");
+      setErr(t(locale, "insp.noDatasetFollowup"));
       return;
     }
     setBusy(true);
@@ -303,12 +315,12 @@ function FollowUpBox({ run }: { run: RunDetail }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = (data as { detail?: unknown }).detail ?? data;
-        setErr(typeof detail === "string" ? stripHtml(detail).slice(0, 300) : "Follow-up could not start.");
+        setErr(typeof detail === "string" ? stripHtml(detail).slice(0, 300) : t(locale, "insp.followupFailed"));
         return;
       }
       router.push(`/analysis/${(data as { id: string }).id}?from=${run.id}`);
     } catch (e) {
-      setErr(`Follow-up could not start. ${String(e)}`);
+      setErr(t(locale, "insp.followupUnavailable").replace("{detail}", String(e)));
     } finally {
       setBusy(false);
     }
@@ -317,23 +329,23 @@ function FollowUpBox({ run }: { run: RunDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Ask a follow-up</CardTitle>
-        <CardDescription className="text-xs">Runs on the same dataset — the new run links back here as its parent.</CardDescription>
+        <CardTitle className="text-sm">{t(locale, "insp.followupTitle")}</CardTitle>
+        <CardDescription className="text-xs">{t(locale, "insp.followupBody")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <label htmlFor="followup" className="sr-only">Follow-up question</label>
+        <label htmlFor="followup" className="sr-only">{t(locale, "insp.followupLabel")}</label>
         <textarea
           id="followup"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           rows={2}
           maxLength={2000}
-          placeholder="e.g. Now break that down by the largest group…"
+          placeholder={t(locale, "insp.followupPh")}
           className="flex min-h-[64px] w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm leading-6 shadow-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={submit} disabled={busy}>
-            {busy ? <><Loader2 className="size-4 animate-spin" aria-hidden /> Starting…</> : <><Send className="size-4" aria-hidden /> Run follow-up</>}
+            {busy ? <><Loader2 className="size-4 animate-spin" aria-hidden /> {t(locale, "insp.starting")}</> : <><Send className="size-4" aria-hidden /> {t(locale, "insp.runFollowup")}</>}
           </Button>
           {err && <p className="text-xs text-red-600" role="alert">{err}</p>}
         </div>
@@ -483,15 +495,15 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
     <div className="space-y-4">
       <PageHeader
         eyebrow="Step 3 · Inspect the evidence"
-        title={`Analysis ${run.id.slice(0, 12)}`}
-        description={`Objective: ${st?.objective || run.user_query}`}
+        title={t(locale, "insp.analysisTitle").replace("{id}", run.id.slice(0, 12))}
+        description={t(locale, "insp.objectivePrefix").replace("{value}", st?.objective || run.user_query)}
         actions={
           <>
             <StatusBadge status={statusNow} />
             <ReasoningModeBadge />
             {st?.report_markdown && (
               <a href={reportUrl} target="_blank" rel="noreferrer">
-                <Button variant="secondary" size="sm"><Download className="size-4" aria-hidden /> Download report</Button>
+                <Button variant="secondary" size="sm"><Download className="size-4" aria-hidden /> {t(locale, "insp.downloadReport")}</Button>
               </a>
             )}
             {st?.report_markdown && findingsUrl && (
@@ -499,9 +511,9 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                 <Button
                   variant="secondary"
                   size="sm"
-                  title="The same conclusions, numbers and limitations without evidence ids, tool trace or file paths — the document to attach to a submission"
+                  title={t(locale, "insp.plainTitle")}
                 >
-                  <Download className="size-4" aria-hidden /> Download plain findings
+                  <Download className="size-4" aria-hidden /> {t(locale, "insp.downloadPlain")}
                 </Button>
               </a>
             )}
@@ -510,9 +522,9 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                 <Button
                   variant="secondary"
                   size="sm"
-                  title="One self-contained file: charts inlined, evidence chains expand in page, opens with no server and no network"
+                  title={t(locale, "insp.offlineTitle")}
                 >
-                  <Download className="size-4" aria-hidden /> Download offline HTML
+                  <Download className="size-4" aria-hidden /> {t(locale, "insp.downloadOffline")}
                 </Button>
               </a>
             )}
@@ -521,7 +533,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               size="sm"
               onClick={downloadBundle}
               disabled={bundle === "sending"}
-              title="Every artifact this run recorded, in one archive, with a manifest naming the files it could not carry and why"
+              title={t(locale, "insp.bundleTitle")}
             >
               {bundle === "sending" ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -547,17 +559,17 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
           }`}
         >
           {bundle === "saved"
-            ? tt(locale, "run.bundleSaved")
+            ? t(locale, "run.bundleSaved")
             : bundle === "notFound"
-              ? tt(locale, "run.bundleUnavailable").replace("{line}", shared.notFound)
+              ? t(locale, "run.bundleUnavailable").replace("{line}", shared.notFound)
               : shared[bundle]}
         </p>
       )}
 
       {fromRunId && (
         <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs text-zinc-600 shadow-sm">
-          Follow-up of <Link href={`/analysis/${fromRunId}`} className="font-mono font-medium text-zinc-900 underline">{fromRunId}</Link>
-          {" · "}<Link href={`/analysis/${fromRunId}`} className="underline">View parent trace →</Link>
+          {t(locale, "insp.followupOf")} <Link href={`/analysis/${fromRunId}`} className="font-mono font-medium text-zinc-900 underline">{fromRunId}</Link>
+          {" · "}<Link href={`/analysis/${fromRunId}`} className="underline">{t(locale, "insp.viewParent")}</Link>
         </p>
       )}
 
@@ -584,12 +596,12 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                 </button>
               </div>
             </div>
-            <Progress value={prog?.progress_pct ?? 0} aria-label="Run progress" />
-            <ol className="flex flex-wrap items-center gap-1.5" aria-label="Run phase">
+            <Progress value={prog?.progress_pct ?? 0} aria-label={t(locale, "insp.progressAria")} />
+            <ol className="flex flex-wrap items-center gap-1.5" aria-label={t(locale, "insp.phaseAria")}>
               {MACHINE.map((m, i) => (
                 <li key={m} className="flex items-center gap-1.5">
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${i < mi ? "bg-emerald-50 text-emerald-700" : i === mi ? "bg-amber-50 text-amber-800" : "bg-zinc-100 text-zinc-500"}`}>
-                    {i < mi ? "✓ " : ""}{m}
+                    {i < mi ? "✓ " : ""}{t(locale, m)}
                   </span>
                   {i < MACHINE.length - 1 && <span aria-hidden className="text-zinc-300">→</span>}
                 </li>
@@ -604,11 +616,11 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="trace">Trace ({st?.tool_calls.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="evidence">Evidence ({st?.evidence.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="insights">Insights ({st?.insights.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="artifacts">Artifacts & Report</TabsTrigger>
+          <TabsTrigger value="overview">{t(locale, "insp.tabOverview")}</TabsTrigger>
+          <TabsTrigger value="trace">{t(locale, "insp.tabTrace").replace("{n}", String(st?.tool_calls.length ?? 0))}</TabsTrigger>
+          <TabsTrigger value="evidence">{t(locale, "insp.tabEvidence").replace("{n}", String(st?.evidence.length ?? 0))}</TabsTrigger>
+          <TabsTrigger value="insights">{t(locale, "insp.tabInsights").replace("{n}", String(st?.insights.length ?? 0))}</TabsTrigger>
+          <TabsTrigger value="artifacts">{t(locale, "insp.tabArtifacts")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -628,8 +640,8 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
           <div className="grid items-start gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Plan timeline</CardTitle>
-                <CardDescription className="text-xs">Ordered steps the agent planned before executing tools.</CardDescription>
+                <CardTitle className="text-sm">{t(locale, "insp.planTitle")}</CardTitle>
+                <CardDescription className="text-xs">{t(locale, "insp.planSub")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <TraceTimeline
@@ -646,12 +658,12 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
             </Card>
             <div className="space-y-4">
               <Card>
-                <CardHeader><CardTitle className="text-sm">Validation</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-sm">{t(locale, "insp.validationTitle")}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   <ValidationRing passed={passed} total={validations.length} />
                   <Separator />
                   <ul className="space-y-1.5 text-sm">
-                    {validations.length === 0 && <li className="text-xs text-zinc-500">No validation results.</li>}
+                    {validations.length === 0 && <li className="text-xs text-zinc-500">{t(locale, "insp.noValidation")}</li>}
                     {validations.map((v, i) => (
                       <li key={i} className={`flex items-start gap-2 text-xs leading-5 ${v.passed ? "text-emerald-700" : "text-red-600"}`}>
                         {v.passed ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" aria-hidden /> : <XCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />}
@@ -664,9 +676,9 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               <Card>
                 <CardContent className="grid grid-cols-3 gap-2 p-4 pt-4 text-center">
                   {[
-                    { v: String(st?.tool_calls.length ?? 0), l: "Tool calls" },
-                    { v: String(st?.evidence.length ?? 0), l: "Evidence" },
-                    { v: String(st?.artifacts.length ?? 0), l: "Artifacts" },
+                    { v: String(st?.tool_calls.length ?? 0), l: t(locale, "insp.statToolCalls") },
+                    { v: String(st?.evidence.length ?? 0), l: t(locale, "insp.statEvidence") },
+                    { v: String(st?.artifacts.length ?? 0), l: t(locale, "insp.statArtifacts") },
                   ].map((s) => (
                     <div key={s.l}>
                       <p className="text-xl font-semibold tabular-nums">{s.v}</p>
@@ -683,7 +695,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
           <Card>
             <CardContent className="space-y-3 p-3 pt-3 sm:p-4 sm:pt-4">
               <div className="flex flex-wrap items-center gap-2">
-                <div role="group" aria-label="Filter by status" className="inline-flex rounded-lg bg-zinc-100 p-1 text-xs font-medium">
+                <div role="group" aria-label={t(locale, "insp.filterAria")} className="inline-flex rounded-lg bg-zinc-100 p-1 text-xs font-medium">
                   {(["all", "ok", "error"] as const).map((f) => (
                     <button
                       key={f}
@@ -696,26 +708,26 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                     </button>
                   ))}
                 </div>
-                <label htmlFor="trace-search" className="sr-only">Search tools</label>
+                <label htmlFor="trace-search" className="sr-only">{t(locale, "insp.searchLabel")}</label>
                 <Input
                   id="trace-search"
                   value={traceQuery}
                   onChange={(e) => setTraceQuery(e.target.value)}
-                  placeholder="Search tools…"
+                  placeholder={t(locale, "insp.searchPh")}
                   className="h-8 w-44"
                 />
                 <span className="text-xs text-zinc-400" aria-live="polite">{toolCalls.length} of {st?.tool_calls.length ?? 0} calls</span>
               </div>
               {(st?.tool_calls.length ?? 0) === 0 ? (
-                <EmptyState title="No tool calls" description="This run has no recorded tool executions yet." />
+                <EmptyState title={t(locale, "insp.noToolsTitle")} description={t(locale, "insp.noToolsBody")} />
               ) : toolCalls.length === 0 ? (
-                <EmptyState title="No calls match" description="Adjust the status filter or search text." />
+                <EmptyState title={t(locale, "insp.noMatchTitle")} description={t(locale, "insp.noMatchBody")} />
               ) : (
                 <TableWrapper>
                   <Table>
-                    <caption className="sr-only">Agent tool calls</caption>
+                    <caption className="sr-only">{t(locale, "insp.toolCallsCaption")}</caption>
                     <TableHeader>
-                      <TableRow><TableHead>Tool</TableHead><TableHead>Status</TableHead><TableHead>Duration</TableHead><TableHead>Call ID</TableHead><TableHead /></TableRow>
+                      <TableRow><TableHead>{t(locale, "insp.colTool")}</TableHead><TableHead>{t(locale, "insp.colStatus")}</TableHead><TableHead>{t(locale, "insp.colDuration")}</TableHead><TableHead>{t(locale, "insp.colCallId")}</TableHead><TableHead /></TableRow>
                     </TableHeader>
                     <TableBody>
                       {toolCalls.map((tc) => (
@@ -745,7 +757,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                                       key={eid}
                                       type="button"
                                       onClick={() => jumpToEvidence(eid)}
-                                      title={`View evidence ${eid}`}
+                                      title={t(locale, "insp.viewEvidenceTitle").replace("{eid}", eid)}
                                       className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-[11px] text-emerald-700 hover:bg-emerald-100"
                                     >
                                       {eid}
@@ -759,7 +771,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                                 </summary>
                                 <div className="mt-2 space-y-2">
                                   <div>
-                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Input</p>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">{t(locale, "insp.colInput")}</p>
                                     <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-zinc-950 p-2 font-mono text-[11px] leading-5 text-zinc-200">{JSON.stringify(tc.input, null, 2)}</pre>
                                   </div>
                                   <div>
@@ -786,7 +798,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               <ConfidenceBars values={(st?.evidence ?? []).map((e) => e.confidence)} />
             )}
             {(st?.evidence.length ?? 0) === 0 && (
-              <EmptyState title="No evidence" description="No claim-level evidence was preserved for this run." />
+              <EmptyState title={t(locale, "insp.noEvidenceTitle")} description={t(locale, "insp.noEvidenceBody")} />
             )}
             <ul className="grid gap-3">
               {(st?.evidence ?? []).map((ev) => (
@@ -803,15 +815,15 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                               onClick={() => jumpToCall(ev.source_id)}
                               className="rounded-lg border border-zinc-200 bg-white px-2 py-0.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
                             >
-                              View tool call →
+                              {t(locale, "insp.viewToolCall")}
                             </button>
                           )}
                         </span>
                       </div>
-                      <Progress value={ev.confidence * 100} aria-label={`Confidence ${ev.confidence.toFixed(2)}`} />
+                      <Progress value={ev.confidence * 100} aria-label={t(locale, "insp.confidenceAria").replace("{value}", ev.confidence.toFixed(2))} />
                       <p className="text-sm font-medium leading-6">{ev.claim}</p>
                       <details>
-                        <summary className="cursor-pointer text-xs font-medium text-zinc-600 hover:text-zinc-900">Result JSON</summary>
+                        <summary className="cursor-pointer text-xs font-medium text-zinc-600 hover:text-zinc-900">{t(locale, "insp.resultJson")}</summary>
                         <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-zinc-950 p-3 font-mono text-[11px] leading-5 text-zinc-200">{JSON.stringify(ev.result, null, 2)}</pre>
                       </details>
                     </CardContent>
@@ -825,7 +837,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
         <TabsContent value="insights">
           <div className="space-y-3">
             {(st?.insights.length ?? 0) === 0 && (
-              <EmptyState title="No insights" description="No summarized findings were produced for this run." />
+              <EmptyState title={t(locale, "insp.noInsightsTitle")} description={t(locale, "insp.noInsightsBody")} />
             )}
             {(st?.insights ?? []).map((ins) => (
               <Card key={ins.id}>
@@ -859,7 +871,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               </CardHeader>
               <CardContent className="space-y-3">
                 {(st?.artifacts.length ?? 0) === 0 && (
-                  <p className="text-sm text-zinc-500">No artifacts.</p>
+                  <p className="text-sm text-zinc-500">{t(locale, "insp.noArtifacts")}</p>
                 )}
                 {artifactGroups.map(([kind, items]) => {
                   const Icon = kindIcon(kind);
@@ -874,8 +886,8 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                             <button
                               type="button"
                               onClick={() => navigator.clipboard.writeText(a.path).catch(() => {})}
-                              title={`Copy path: ${a.path}`}
-                              aria-label={`Copy path of ${a.path.split("/").pop()}`}
+                              title={t(locale, "insp.copyPathTitle").replace("{path}", a.path)}
+                              aria-label={t(locale, "insp.copyPathAria").replace("{name}", a.path.split("/").pop() ?? "")}
                               className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
                             >
                               <Copy className="size-3.5" aria-hidden />
@@ -891,13 +903,13 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
             <Card>
               <CardHeader className="flex-row items-center justify-between space-y-0">
                 <div>
-                  <CardTitle className="text-sm">Report preview</CardTitle>
-                  <CardDescription className="text-xs">Reproducible Markdown preserved with the run.</CardDescription>
+                  <CardTitle className="text-sm">{t(locale, "insp.reportTitle")}</CardTitle>
+                  <CardDescription className="text-xs">{t(locale, "insp.reportSub")}</CardDescription>
                 </div>
                 {st?.report_markdown && (
                   <div className="flex gap-2">
                     <Button variant="secondary" size="sm" onClick={copyReport}>
-                      {copied ? <><Check className="size-3.5" aria-hidden /> Copied</> : <><Copy className="size-3.5" aria-hidden /> Copy Markdown</>}
+                      {copied ? <><Check className="size-3.5" aria-hidden /> {t(locale, "insp.copied")}</> : <><Copy className="size-3.5" aria-hidden /> {t(locale, "insp.copyMarkdown")}</>}
                     </Button>
                     <Button variant="secondary" size="sm" onClick={downloadReport}>
                       <Download className="size-3.5" aria-hidden /> .md
@@ -911,15 +923,15 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                     <div className="max-h-96 overflow-auto rounded-lg border border-zinc-100 p-3">
                       <Markdown text={st.report_markdown.slice(0, 6000)} />
                       {st.report_markdown.length > 6000 && (
-                        <p className="mt-2 text-xs text-zinc-400">Preview truncated — download or open the full report.</p>
+                        <p className="mt-2 text-xs text-zinc-400">{t(locale, "insp.reportTruncated")}</p>
                       )}
                     </div>
                     <a href={reportUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium underline">
-                      Open full Markdown report ↗
+                      {t(locale, "insp.openReport")}
                     </a>
                   </>
                 ) : (
-                  <EmptyState title="No report yet" description="The Markdown report is generated when the run completes." />
+                  <EmptyState title={t(locale, "insp.noReportTitle")} description={t(locale, "insp.noReportBody")} />
                 )}
               </CardContent>
             </Card>
@@ -930,8 +942,8 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
       <FollowUpBox run={run} />
 
       <p className="text-xs text-zinc-400">
-        Full trace via <code className="font-mono">GET /api/v1/analysis/{run.id}</code> · Evidence graph at{" "}
-        <code className="font-mono">/evidence/{"{evidence_id}"}</code> · <Link href="/runs" className="underline">All runs</Link>
+        {t(locale, "insp.fullTraceVia")} <code className="font-mono">GET /api/v1/analysis/{run.id}</code> · Evidence graph at{" "}
+        <code className="font-mono">/evidence/{"{evidence_id}"}</code> · <Link href="/runs" className="underline">{t(locale, "insp.allRuns")}</Link>
       </p>
     </div>
   );

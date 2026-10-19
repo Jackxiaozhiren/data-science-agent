@@ -33,6 +33,14 @@
   the two strings a running analysis writes outside the page: the tab title's live percentage and the completion
   notification. The probe's guard moved with the words -- it now reads the waking sentence out of the dictionary
   in *both* locales, so a Chinese reader is still promised the attempt count and the wait the budget covers.
+- **The run inspector is read in the visitor's language too.** Its tabs, table headers, empty states, download
+  labels, the five stage names under the status badge and the validation ring's accessible name now come from the
+  dictionary -- 67 strings, on the screen a reviewer actually reads. The run's own question, the tool names, the
+  artifact paths and the status tokens stay as data, because they are what the run produced, not what the product
+  says. Two guards had to be re-pointed rather than relaxed: one pinned the offline-HTML button by its English
+  label, the other pinned the parent-run line by the words in front of the id it displays; both now assert the key
+  call in the component and the sentence in the dictionary, and the retargeted-key plant that reddens the first one
+  is recorded in the ledger.
 - **One duplicate found by the guard that came with this.** The inspector kept its own copy of the product
   title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
   every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
