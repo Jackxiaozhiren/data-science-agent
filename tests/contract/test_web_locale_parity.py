@@ -28,6 +28,10 @@ WEB = ROOT / "apps/web"
 LOCALE_TS = WEB / "lib/locale.ts"
 
 #: The first-run strings R-13 names. Each must have exactly one owner: this dictionary.
+#: The last three are shared-chrome sentences shorter than the sweep's 40-character floor in
+#: `test_no_dictionary_sentence_is_also_written_into_a_page`, so they are named here instead -- "Something went
+#: wrong" is the heading a reader meets on every route's failure, and 21 characters is not long enough to be
+#: caught by a sweep that must stay silent on short fragments like `Ask: ` and `sample` to avoid false hits.
 OWNED_ENGLISH = [
     "The AI data scientist that shows its work.",
     "Ask this of the sample data",
@@ -36,6 +40,9 @@ OWNED_ENGLISH = [
     "Start with the business question",
     "Inspect where each claim came from",
     "No analysis runs yet in this environment",
+    "Something went wrong",
+    "Nothing here yet",
+    "Loading table",
 ]
 
 
