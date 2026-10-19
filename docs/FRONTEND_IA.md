@@ -247,4 +247,8 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   tripped the owner guard.
 - **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
   `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
-  would add a devDependency, and dependency changes are the user's call, not the agent's.
+  would add a devDependency, and dependency changes are the user's call, not the agent's. What the in-house
+  suite cannot do is reach the run report's drill-downs, because the tour refuses a live backend and an
+  inactive tab is never mounted: `apps/web/scripts/inspector-a11y.mjs` does that instead, against a seeded
+  instance, tab by tab, and refuses to pass when nothing was toggled (its first version did exactly that,
+  reporting PASS over zero disclosures -- see §228).
