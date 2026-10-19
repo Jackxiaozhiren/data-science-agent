@@ -53,7 +53,7 @@ export default async function RunsPage() {
                 icon={<History className="size-5 text-zinc-400" aria-hidden />}
                 title={t(locale, "runsPage.emptyTitle")}
                 description={t(locale, "runsPage.emptyBody")}
-                action={<Link href="/analysis"><Button size="sm">{t(locale, "mcp.back")}</Button></Link>}
+                action={<Link href="/analysis"><Button size="sm">{t(locale, "common.backToAnalysis")}</Button></Link>}
               />
             )
           ) : (
@@ -63,7 +63,7 @@ export default async function RunsPage() {
       </Card>
       <Card>
         <CardContent className="p-4 pt-4 text-xs leading-5 text-zinc-500">
-          {t(locale, "runsPage.traceFrom")} <code className="font-mono">GET /api/v1/analysis/{"{id}"}</code> · SSE: <code className="font-mono">/events</code> · Evidence graph at <code className="font-mono">/evidence/{"{evidence_id}"}</code>
+          {t(locale, "runsPage.traceFrom")} <code className="font-mono">GET /api/v1/analysis/{"{id}"}</code> · SSE: <code className="font-mono">/events</code> · {t(locale, "runsPage.evidenceGraphAt")} <code className="font-mono">/evidence/{"{evidence_id}"}</code>
         </CardContent>
       </Card>
     </div>

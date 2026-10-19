@@ -3,8 +3,11 @@
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
-export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+export function CopyButton({ text, label }: { text: string; label: string }) {
+  const locale = useLocale();
   const [copied, setCopied] = React.useState(false);
   return (
     <Button
@@ -19,9 +22,9 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
           setCopied(false);
         }
       }}
-      aria-label={`${label} runner command`}
+      aria-label={label}
     >
-      {copied ? <><Check className="size-3.5" aria-hidden /> Copied</> : <><Copy className="size-3.5" aria-hidden /> {label}</>}
+      {copied ? <><Check className="size-3.5" aria-hidden /> {t(locale, "copy.copied")}</> : <><Copy className="size-3.5" aria-hidden /> {label}</>}
     </Button>
   );
 }

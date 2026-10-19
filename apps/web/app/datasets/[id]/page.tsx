@@ -74,7 +74,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
   if (failure && failure !== "notFound") {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Step 1 · Dataset profile" title={t(locale, "dsd.unavailable")} description={t(locale, "dsd.requestFailed")} />
+        <PageHeader eyebrow={t(locale, "dsd.eyebrow")} title={t(locale, "dsd.unavailable")} description={t(locale, "dsd.requestFailed")} />
         <ErrorState
           message={shared[failure]}
           diagnostics={
@@ -87,7 +87,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
   if (!ds) {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Step 1 · Dataset profile" title={t(locale, "dsd.notFound")} description={t(locale, "dsd.requestFailedBody")} />
+        <PageHeader eyebrow={t(locale, "dsd.eyebrow")} title={t(locale, "dsd.notFound")} description={t(locale, "dsd.requestFailedBody")} />
         <ErrorState
           message={t(locale, "dsd.notFoundBody")}
           diagnostics={
@@ -105,9 +105,17 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 1 · Dataset profile"
+        eyebrow={t(locale, "dsd.eyebrow")}
         title={ds.filename}
-        description={`Format ${ds.format} · ${ds.rows} rows × ${ds.cols} columns${ds.created_at ? ` · Created ${ds.created_at.slice(0, 19).replace("T", " ")}` : ""}`}
+        description={
+          t(locale, "dsd.summaryLine")
+            .replace("{format}", String(ds.format))
+            .replace("{rows}", String(ds.rows))
+            .replace("{cols}", String(ds.cols)) +
+          (ds.created_at
+            ? t(locale, "dsd.createdSuffix").replace("{ts}", ds.created_at.slice(0, 19).replace("T", " "))
+            : "")
+        }
         actions={
           <Link href={`/analysis?dataset=${ds.id}`}>
             <Button size="sm">{t(locale, "dsd.askTitle")} <ArrowRight className="size-4" aria-hidden /></Button>
@@ -234,8 +242,8 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
             <CardContent className="space-y-2 font-mono text-xs">
               <p className="break-all"><span className="font-sans text-zinc-500">dataset_id · </span>{ds.id}</p>
               <p className="break-all"><span className="font-sans text-zinc-500">sha256 · </span>{ds.sha256 ?? "—"}</p>
-              <p><span className="font-sans text-zinc-500">source · </span>upload via POST /api/v1/datasets/</p>
-              <p><span className="font-sans text-zinc-500">downstream · </span>{analyses.length} linked analysis run{analyses.length === 1 ? "" : "s"}</p>
+              <p><span className="font-sans text-zinc-500">{t(locale, "dsd.sourceLabel")} · </span>{t(locale, "dsd.uploadedVia")}</p>
+              <p><span className="font-sans text-zinc-500">{t(locale, "dsd.downstreamLabel")} · </span>{t(locale, analyses.length === 1 ? "dsd.linkedRunOne" : "dsd.linkedRunMany").replace("{n}", String(analyses.length))}</p>
             </CardContent>
           </Card>
         </TabsContent>

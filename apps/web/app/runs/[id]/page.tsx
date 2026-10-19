@@ -94,7 +94,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">{t(locale, "runDetail.replayFork")}</CardTitle>
-          <CardDescription className="text-xs">Replay and fork need a checkpoint API that does not exist in this build.</CardDescription>
+          <CardDescription className="text-xs">{t(locale, "runDetail.replayNote")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Link href={`/runs/${id}/replay`}><Button variant="secondary" size="sm">{t(locale, "runDetail.openReplay")}</Button></Link>

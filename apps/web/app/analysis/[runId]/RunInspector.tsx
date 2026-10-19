@@ -494,7 +494,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 3 · Inspect the evidence"
+        eyebrow={t(locale, "analysis.eyebrow")}
         title={t(locale, "insp.analysisTitle").replace("{id}", run.id.slice(0, 12))}
         description={t(locale, "insp.objectivePrefix").replace("{value}", st?.objective || run.user_query)}
         actions={

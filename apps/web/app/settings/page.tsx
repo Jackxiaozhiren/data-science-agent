@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, KeyRound, Trash2 } from "lucide-react";
 import { clientFetch, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
+import { t } from "@/lib/locale";
 import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
@@ -114,7 +115,7 @@ export default function SettingsPage() {
         setNotice(`The settings could not be cleared: ${res.status}.`);
         return;
       }
-      setNotice("Stored settings deleted. The key stays only if your shell exported one.");
+      setNotice(t(locale, "settings.deletedNotice"));
       await refresh();
     } catch {
       setNotice(shared.transport);
@@ -124,7 +125,7 @@ export default function SettingsPage() {
   if (failure) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <PageHeader eyebrow="This instance" title="Model settings" description="Choose what produces the plan." />
+        <PageHeader eyebrow={t(locale, "shell.instanceEyebrow")} title={t(locale, "nav.settings")} description={t(locale, "settings.choose")} />
         <ErrorState message={shared[failure]} />
       </div>
     );
@@ -133,9 +134,9 @@ export default function SettingsPage() {
   if (!view) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <PageHeader eyebrow="This instance" title="Model settings" description="Choose what produces the plan." />
+        <PageHeader eyebrow={t(locale, "shell.instanceEyebrow")} title={t(locale, "nav.settings")} description={t(locale, "settings.choose")} />
         <p className="flex items-center gap-2 text-sm text-zinc-500">
-          <Loader2 className="size-4 animate-spin" aria-hidden /> Loading this instance&apos;s settings
+          <Loader2 className="size-4 animate-spin" aria-hidden /> {t(locale, "settings.loading")}
         </p>
       </div>
     );
@@ -144,10 +145,10 @@ export default function SettingsPage() {
   if (!view.local_settings) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <PageHeader eyebrow="This instance" title="Model settings" description="Why this deployment has no key field." />
+        <PageHeader eyebrow={t(locale, "shell.instanceEyebrow")} title={t(locale, "nav.settings")} description={t(locale, "settings.noKeyWhy")} />
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">This instance does not accept a model credential</CardTitle>
+            <CardTitle className="text-sm">{t(locale, "settings.noCredentialTitle")}</CardTitle>
             <CardDescription className="text-xs">
               A hosted demo has nowhere to keep a secret between visits, and a key that is accepted and then
               lost on restart is worse than one that is refused. So the setting is not partially supported
@@ -156,12 +157,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p>
-              Run the product on your own machine instead. <code className="rounded bg-zinc-100 px-1">dsa ui</code>{" "}
+              {t(locale, "settings.runLocal")} <code className="rounded bg-zinc-100 px-1">dsa ui</code>{" "}
               keeps its settings in the data directory you chose, reads them from disk on every run, and sends
               nothing anywhere you did not point it at.
             </p>
             <p className="text-xs text-zinc-500">
-              Right now this process resolves its plans with: mode <strong>{view.effective.mode}</strong>,
+              {t(locale, "settings.resolvesWith")} <strong>{view.effective.mode}</strong>,
               provider <strong>{view.effective.provider}</strong>, decided by{" "}
               <strong>{view.effective.source}</strong>.
             </p>
@@ -176,14 +177,14 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <PageHeader
-        eyebrow="This instance"
-        title="Model settings"
-        description="What produces the plan, and where the credential lives."
+        eyebrow={t(locale, "shell.instanceEyebrow")}
+        title={t(locale, "nav.settings")}
+        description={t(locale, "settings.provenanceSub")}
       />
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Currently in effect</CardTitle>
+            <CardTitle className="text-sm">{t(locale, "settings.inEffect")}</CardTitle>
             <CardDescription className="text-xs">
               Read from the process that will run your next analysis, not from a label.
             </CardDescription>
@@ -250,11 +251,11 @@ export default function SettingsPage() {
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block text-xs font-medium text-zinc-600">Model name</span>
+              <span className="mb-1 block text-xs font-medium text-zinc-600">{t(locale, "settings.modelName")}</span>
               <Input
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder={provider === "ollama" ? "qwen3:8b" : "as the endpoint names it"}
+                placeholder={provider === "ollama" ? "qwen3:8b" : t(locale, "settings.modelNamePh")}
               />
             </label>
 
@@ -279,7 +280,7 @@ export default function SettingsPage() {
                 onChange={(e) => setCredential(e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
-                placeholder={hasCredential ? "leave blank to keep the stored one" : "paste the key for this endpoint"}
+                placeholder={hasCredential ? t(locale, "settings.keyKeepPh") : t(locale, "settings.keyPastePh")}
               />
               <span className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
                 <input
@@ -288,16 +289,16 @@ export default function SettingsPage() {
                   checked={clearCredential}
                   onChange={(e) => setClearCredential(e.target.checked)}
                 />
-                <label htmlFor="clear-credential">Remove the stored credential</label>
+                <label htmlFor="clear-credential">{t(locale, "settings.removeCredential")}</label>
               </span>
             </label>
 
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={() => void save()} disabled={saving === "sending"}>
-                {saving === "sending" ? "Saving" : "Save settings"}
+                {saving === "sending" ? t(locale, "settings.saving") : t(locale, "settings.save")}
               </Button>
               <Button variant="secondary" onClick={() => void forget()}>
-                <Trash2 className="size-4" aria-hidden /> Delete settings file
+                <Trash2 className="size-4" aria-hidden /> {t(locale, "settings.deleteFile")}
               </Button>
               {saving === "saved" && <span className="text-xs text-emerald-700">Saved.</span>}
             </div>

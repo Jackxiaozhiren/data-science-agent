@@ -107,7 +107,7 @@ function CompareWorkspace() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 3 · Compare runs"
+        eyebrow={t(locale, "cmp.eyebrow")}
         title={t(locale, "cmp.title")}
         description={t(locale, "cmp.subtitle")}
         actions={
