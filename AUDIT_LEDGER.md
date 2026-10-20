@@ -14028,3 +14028,65 @@ run is not a result, and the retry ran the full route list.
 `INSPECTOR_A11Y_PASS` (18 disclosure toggles across both locales); tour `73/73`; `tests/contract` 269 passed with
 the subset-order artifact §229 already records; `ruff format --check` green over the gate list, with `dsa_agent`
 re-synced *after* the formatter ran -- formatting after a sync is exactly how the vendored twin drifts.
+
+## 231. A CI red that was mine, and the production defect it led to: the system proxy was eating every loopback model call
+
+2026-10-20, continuing §230. `471310a` went red in CI on `ruff check` -- four `E402`s in the new
+`tests/contract/test_report_language_pair.py`, where a repo-path anchor sat between `from pathlib import Path`
+and the imports after it. The mechanism is the interesting part, and it is mine rather than the tooling's: the
+17-gate mirror that certified that batch green **launched at 2026-10-19T15:24:03Z**, and the commit was written
+at **2026-10-19T16:24:54Z**. The file that broke the gate was written inside that hour. The mirror measured the
+tree it was given; citing it as evidence for a commit made an hour later was the error. A gate run measures the
+tree at its own launch time, never the tree that gets committed after it.
+
+Chasing that red meant running the suite over the committed tree, and it carried exactly one failure:
+`tests/contract/test_provider_settings.py`'s real-mode case. **§229 and §230 recorded that failure as a
+subset-order artifact, and that classification was wrong.** It fails in isolation and in a full run alike; the
+traceback shows the provider raising `HTTP 502` with an empty body against the test's *own* scripted server on
+`127.0.0.1:<ephemeral>`, and it passes in isolation once loopback is excluded from proxy resolution. Nothing
+about test order is involved.
+
+The real mechanism: `httpx` 0.28 builds its mounts from `get_environment_proxies()`, which calls
+`urllib.request.getproxies()` -- and on macOS and Windows that call falls back to the **operating system's**
+proxy configuration, so no `*_proxy` variable has to exist. `scutil --proxy` on this machine reports
+`HTTPEnable: 1` pointed at `127.0.0.1:7890` while the shell environment holds no proxy variable at all. A proxy
+cannot answer for loopback, so it returns 502. Measured twice on the same URL seconds apart: `trust_env=True`
+(the default, and what the provider used) → **502 with an empty body**; `trust_env=False` → **200**.
+
+That makes this a product defect, not a test defect. The provider's documented default base URL is
+`http://localhost:11434/v1`, `docs/getting-started.md` recommends Ollama as the free path that keeps the data on
+the machine, and `providers.py` deliberately does not require a key when the host is localhost. The app
+therefore invites precisely the endpoint a system proxy intercepts: on any machine with a proxy turned on, the
+zero-cost local model was unreachable, and the failure surfaced as a model error the user could not attribute.
+`NO_PROXY` was already known here as a *workaround* for these red suites; applying the workaround as the fix
+would have left the product broken and quietly re-defined the defect as an environment problem.
+
+The fix is one owner for the decision. `_honours_configured_proxy(base_url)` returns False when the URL's host
+is `localhost`, `::1`, or anything in `127.0.0.0/8`, and both `httpx.AsyncClient` construction sites in
+`dsa_llm/providers.py` pass `trust_env=` from it. A remote host -- including a LAN host like
+`http://ollama.internal:11434` -- keeps the configured proxy, because a corporate network may genuinely need one
+and only loopback is provably unreachable through a proxy. The vendored twin was re-synced after formatting, in
+that order.
+
+Three tests, written red first. The behavioural one starts a live scripted OpenAI-compatible server on
+`127.0.0.1` and forces `HTTP_PROXY` to a port nothing listens on, so the premise is *made* true rather than
+inherited from a Mac: pre-fix the provider raised `ConnectError`, post-fix it returns the plan. Its own negative
+control rides inside the test -- a bare `httpx` call to the same URL must fail the same way -- so if the forcing
+ever stops working the test cannot silently turn vacuous. The second test asserts the shape in **both**
+directions by recording the client kwargs for a loopback and a remote base URL; the one-sided version would
+pass by disabling proxy handling everywhere. The third pins the host spellings, including `LOCALHOST` and
+`[::1]`, because a missed spelling re-creates the 502. The endpoint is scripted for a reason: a paid model would
+prove the same mechanism at a cost, and the demos and this lane stay free (§226, §227).
+
+**Verification.** The three new cases were run red first and their red was the right one: the behavioural case
+failed with `httpx.ConnectError` raised from `providers.py:345` -- the provider itself, not the fixture -- and its
+negative control (a bare `httpx` call to the same forced-proxy URL) fired in the same run, so the premise cannot
+be vacuous. `tests/contract/test_provider_settings.py`, the file §229 mis-classified, now passes **with no proxy
+variable set in the shell at all** (`env | grep -icE "^(http|https|all)_proxy|no_proxy"` prints `0` in that run):
+33 cases pass across it (16) and `tests/test_llm_provider.py` (17). The whole 17-gate mirror over this tree: 16 green, and the one red is
+`sync_vendor.py --check` naming `dsa_evaluation: external_validation.py` -- another session's uncommitted source,
+which the gate refuses to repair with `--all`; `dsa_llm` is not in its list, so the twin re-synced here is clean.
+`uv lock --check` 0, `ruff check` and `ruff format --check` green over the CI corpus, `mypy` Success over 129
+files, pytest with coverage 84% (9,310 statements), tour `73/73` (26 route/viewport + 3 interaction + 3
+backend-probe + 15 accessibility + 26 locale), mkdocs strict 0. The CI witness for `5b3604a` -- the `E402` fix --
+is **CI success**, and that run executed the pytest gate, so the suite is green in CI as well as locally.

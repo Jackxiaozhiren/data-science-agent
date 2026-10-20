@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -277,3 +278,112 @@ def test_env_ollama_temperature_default(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv("DSA_LLM_PROVIDER", "ollama")
     monkeypatch.delenv("DSA_OLLAMA_TEMPERATURE", raising=False)
     assert EnvLLMProvider().inner.temperature == pytest.approx(0.1)
+
+
+@pytest.mark.asyncio
+async def test_a_local_model_is_reached_even_when_a_proxy_is_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The free path -- Ollama on this machine -- must not be routed out through a proxy.
+
+    Measured on a Mac with the system proxy enabled: `httpx` with its default `trust_env=True` asks
+    `urllib.request.getproxies()`, which falls back to the operating system's proxy configuration, and every
+    request to `http://127.0.0.1:<port>` comes back as **HTTP 502 with an empty body** -- the same URL answered
+    `200` the instant `trust_env=False` was set. The provider's documented default base URL is
+    `http://localhost:11434/v1`, so a configured proxy silently makes the no-cost local model unreachable, and
+    the settings screen reports it as a model failure.
+
+    The premise is forced rather than inherited from the machine: `HTTP_PROXY` is set to a port nothing listens
+    on, so this is red for the same reason on any host, including CI. The direct `httpx.post` two lines below is
+    the negative control -- if it ever succeeds, the premise has gone vacuous and this test proves nothing.
+    """
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    body = json.dumps(_chat_payload("planned on this machine")).encode()
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - the http.server method name is fixed
+            self.rfile.read(int(self.headers.get("content-length", "0")))
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_args: Any) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/v1"
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:1")
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:1")
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    try:
+        with pytest.raises(httpx.ConnectError):
+            await httpx.AsyncClient(timeout=3).post(f"{url}/chat/completions", json={})
+
+        provider = OpenAIChatProvider(model="m", base_url=url, local=True, timeout_s=5)
+        assert await provider.generate("hi") == "planned on this machine"
+    finally:
+        server.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_proxy_settings_still_apply_to_a_remote_model_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bypass is scoped to this machine -- a corporate host must keep the proxy it requires.
+
+    One-sided would be the easy test: it would pass by disabling proxy handling everywhere. So the same fake
+    client records the kwargs for both shapes and this asserts them in both directions.
+    """
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    recorded: list[dict[str, Any]] = []
+
+    def _spy(**kwargs: Any) -> _FakeChatClient:
+        recorded.append(kwargs)
+        return _FakeChatClient(_chat_payload("ok"), [])
+
+    monkeypatch.setattr(httpx, "AsyncClient", _spy)
+
+    await OpenAIChatProvider(model="m", base_url="http://127.0.0.1:11434/v1", local=True).generate(
+        "hi"
+    )
+    await OpenAIChatProvider(
+        model="m", base_url="https://api.example.invalid/v1", api_key="k"
+    ).generate("hi")
+
+    assert recorded[0].get("trust_env") is False, recorded[0]
+    assert recorded[1].get("trust_env", True) is not False, recorded[1]
+
+
+def test_the_loopback_rule_names_the_forms_a_local_model_actually_uses() -> None:
+    """`localhost`, `127.0.0.1` and `::1` are all written in real settings; a miss re-creates the 502."""
+    from dsa_llm.providers import _honours_configured_proxy
+
+    for local in (
+        "http://localhost:11434/v1",
+        "http://127.0.0.1:11434/v1",
+        "http://LOCALHOST:11434/v1",
+        "http://[::1]:11434/v1",
+        "http://localhost",
+    ):
+        assert not _honours_configured_proxy(local), local
+    for remote in (
+        "https://api.openai.com/v1",
+        "https://generativelanguage.googleapis.com/v1beta",
+        "http://x/v1",
+        "http://ollama.internal:11434/v1",
+        "",
+    ):
+        assert _honours_configured_proxy(remote), remote

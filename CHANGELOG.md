@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — a configured proxy made the free local model unreachable (and faked a red test)
+
+- The provider's documented default endpoint is `http://localhost:11434/v1`, and Ollama on this machine is the
+  path the project recommends because it costs nothing and keeps the data local. It was unreachable for anyone
+  whose operating system has a proxy turned on: `httpx` consults `urllib.request.getproxies()` whenever
+  `trust_env` is left at its default, and on macOS and Windows that call falls back to the *system* proxy
+  configuration -- no environment variable involved. A proxy cannot answer for loopback, so the request came
+  back as **HTTP 502 with an empty body**. Measured on one Mac, seconds apart, same URL: `trust_env=True` →
+  502, `trust_env=False` → 200.
+- The same interception had already been misread here once: `tests/contract/test_provider_settings.py`'s
+  real-mode case spins up its own scripted OpenAI-compatible server on `127.0.0.1:<ephemeral>` and was recorded
+  as an "ordering artifact" because it went red in a subset run and green in the whole-suite run. It is neither.
+  It fails in isolation with the proxy enabled and passes in isolation with it bypassed, and it now passes with
+  no proxy variable set at all -- the fix, not the environment, is what cleared it. §231 corrects §229 and §230.
+- Loopback endpoints are now contacted directly: one helper decides `trust_env` from the base URL's host
+  (`localhost`, `::1`, anything in `127.0.0.0/8`) and both HTTP sites in `dsa_llm/providers.py` use it. A remote
+  host keeps the configured proxy, because a corporate network may genuinely need one, and so does a
+  LAN address -- only loopback is provably unreachable through a proxy.
+
 ### Fixed (post-4.6.0) — a client can open a report the product already has (R-14)
 
 - `/mcp-app/report/{run_id}` has always gone through the product's one report renderer, and that was the half

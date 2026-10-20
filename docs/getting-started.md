@@ -147,7 +147,9 @@ provider is contacted. To run a model instead, open **Model settings** in the si
 
 - The suggested first option is **Ollama**: free, local, and it keeps your data on the machine. Start it with
   `ollama serve`, pull a model (`ollama pull qwen3:8b`), then set the mode to `real` and the endpoint to
-  `http://localhost:11434/v1`.
+  `http://localhost:11434/v1`. An endpoint on this machine is contacted directly, so an operating-system proxy
+  (the kind that turns every local request into an HTTP 502) does not get in the way; a remote endpoint still
+  uses the proxy your environment configures.
 - Any OpenAI-compatible endpoint works the same way (endpoint, model name, credential). A hosted endpoint means
   your question and your data go to it; the mode selector on that page says which of the two you are choosing.
 - The credential is stored in `provider.json` **inside the `--data-dir` you chose, with mode 0600**, and is
