@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the repo-wide secret scan was reading installed third-party packages
+
+- `test_secret_protection_no_hardcoded_secrets_in_repo` walked `Path(".").rglob("*.py")`, so its corpus was the
+  working tree rather than the repository. A 2.8 GB git-ignored `benchmarks/external/datascibench/.workspace/venv`
+  left by an external-benchmark run contains joblib's `test_func_inspect_special_encoding.py`, whose bytes are
+  deliberately not UTF-8; the guard fails closed on an unreadable file, so one scratch directory held the
+  security test red -- and CI, whose checkout has no such tree, could never have shown it. The skip list
+  (`.venv`, `.git`, `node_modules`) already conceded that installed packages do not belong in the scan; the
+  problem is a list of names, which any new scratch directory defeats.
+- The corpus is now anything committable -- `git ls-files` plus the untracked-but-not-ignored set -- which is the
+  boundary the Secret Scan job already draws. 441 files today, against thousands of `site-packages` sources before.
+- Verified in both directions: a credential-shaped literal in an untracked, committable file is still caught by
+  path (`Potential secret sk-[A-Za-z0-9]{20} in tests/_r13t_plant_probe.py`), and the guard's three existing
+  negative controls are untouched. A floor, a positive scope check (the corpus must contain `packages/`) and a
+  negative one (no `site-packages`, no `.workspace`) keep a quiet `git` from passing on an empty scan.
+
+### Fixed (post-4.6.0) — the notify button could promise a notification the browser had already refused
+
+- Reading the run report in a live browser (the pass that found the raw status token) turned up a second silent
+  failure on the same panel: `toggleNotify` requested permission and then discarded the answer, flipping its own
+  state regardless. The send at the other end requires `Notification.permission === "granted"`, so the control
+  could read `aria-pressed="true"` with the label "Notifying" (通知已开启) on a bell that could never ring. Worse,
+  the old code only asked when permission was `default`, so a visitor who had already clicked **Block** never saw
+  a prompt at all -- the click simply turned the claim on.
+- Measured both ways on the same page: with the pre-fix bundle the click reported `pressed=true, Notifying` while
+  the page's own `Notification.permission` read `denied`; with the fix the same click leaves it off and renames the
+  control 通知已被阻止 / "Notifications blocked", with the reason in its tooltip (`此浏览器不会向该站点投递通知，因此这项保持关闭。`).
+  The granted path was exercised too -- under a stubbed `Notification`, because headless Chromium keeps the
+  permission `denied` even for a granted context -- so the label is stated, not implied.
+- `tests/contract/test_web_notification_capability.py` is the CI half: the handler must branch on the permission
+  result, must not contain the unconditional flip, and the refusal must be rendered from the dictionary in both
+  languages. It was falsified by putting the old handler back -- red on the branch assertion, then restored and
+  verified byte-identical.
+
 ### Fixed (post-4.6.0) — the run report showed a raw status token, and three sentences lived where no check could read them
 
 - Booting the seeded pair and reading the dynamic routes in a browser (the check §232 named as owed) found the

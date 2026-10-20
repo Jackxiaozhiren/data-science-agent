@@ -14257,3 +14257,71 @@ corrected here rather than quietly reworded:
 
 Nothing new was found to fix -- the census, the key-resolution check and this render pass now agree, which is the
 point of holding all three. No money was involved: local processes against a temporary database, deleted afterwards.
+
+## 236. A button that claimed a delivery the browser had refused, found by the same live read as the status token
+
+2026-10-20, continuing §235. The browser pass that verified the review panel looked at one control next to it and
+found the second silent failure of the session. `toggleNotify` did this: if permission was `default`, request it,
+then -- unconditionally -- `setNotify((v) => !v)`. The code that sends requires
+`Notification.permission === "granted"`, so the state the button reported and the capability the browser would
+honor were two different things. A visitor who had previously chosen **Block** never even saw a prompt, because
+`default` was no longer the value; their click simply produced `aria-pressed="true"` and the word "Notifying".
+
+Measured rather than inferred, on both bundles, same page, same script:
+
+* pre-fix: `perm=denied`, click → `pressed=true`, text `Notifying` -- a claim the browser will not keep;
+* post-fix: `perm=denied`, click → `pressed=false`, text `Notifications blocked`, tooltip naming the reason;
+  in 中文 `通知已被阻止` with `此浏览器不会向该站点投递通知，因此这项保持关闭。`;
+* granted path: turns on (`pressed=true`, `Notifying`). Reported honestly -- this one ran against a stubbed
+  `Notification`, because headless Chromium keeps `Notification.permission === "denied"` even in a context where
+  Playwright granted the permission. A stub proving the branch is not the same evidence as a real browser proving
+  the feature, so the difference is written here rather than smoothed over.
+
+The fix moves the decision to the permission result and makes a refusal visible; `insp.notifyBlocked` and
+`insp.notifyBlockedWhy` are new keys in both locales. `tests/contract/test_web_notification_capability.py` is the
+CI half, because the tour never reaches a run-report control on a live run and the acceptance script reads regions,
+not capability claims. It was falsified by restoring the old handler verbatim -- red on
+`test_the_permission_result_decides_whether_the_control_is_on`, which is the assertion that must fire -- then
+restored and hash-compared (`restored_ok=yes`) with the guard green again.
+
+**Instrument note, because it nearly produced a false finding.** The first probe run reported the granted path
+broken. The product was fine: the script created a context, granted notifications on it, closed it unused, and
+then tested a *different* context with no permission. A red from an instrument is read as a red until the
+instrument is audited -- the same rule as §231's proxy 502 and §234's phantom `T`s. The corrected script prints
+which path it used and what permission the page itself reported, so this class of mistake cannot hide again.
+
+**Verification.** `tsc` 0, `next build` 0 on the final source, guard 3 passed (red on the planted handler),
+parity guard green, inventory `prose=0 duplicates=0 assembled=0 keys referenced=630 unknown=0`. The seeded pair
+was booted from a temporary `/tmp` database with one row flipped to `HUMAN_REVIEW`, and that fixture plus both
+listeners were removed afterwards (`lsof` reports nothing on `:3221` or `:8000`). No cost: local processes, local
+bundle, one scripted browser.
+
+## 237. The secret scan was reading the whole disk, and an ignored 2.8 GB venv could have reddened it forever
+
+2026-10-20, continuing §236. The 17-gate mirror run for the notify fix went red on the pytest gate, and the
+failure was not in this lane: `test_secret_protection_no_hardcoded_secrets_in_repo` -- hardened in another
+session's merged `6c82ba0` -- walks `Path(".").rglob("*.py")`, so its corpus is the working tree. This machine has
+a 2.8 GB git-ignored `benchmarks/external/datascibench/.workspace/venv` left by an external-benchmark run, and
+inside it sits joblib's `test_func_inspect_special_encoding.py`, a fixture whose bytes are deliberately not
+UTF-8. The guard fails closed on an unreadable source, so one local scratch directory turned a security test red
+indefinitely -- while CI, whose checkout has no such tree, could never have shown it. That is the
+green-in-CI/red-locally shape whose cause is the file corpus rather than the code.
+
+The guard already skipped `.venv`, `.git` and `node_modules`, which is the author's own evidence that installed
+packages do not belong in the scan; a list of names is the part that cannot work, because whatever a run decides
+to call its scratch directory is a new exception. The corpus is now *anything committable* -- `git ls-files`
+plus `git ls-files --others --exclude-standard` -- which is the same boundary the Secret Scan job and
+`run_secret_scanning` draw: ignored scratch cannot be committed and therefore cannot ship a credential, and
+everything that can be committed is covered. Measured 441 files today, with the previous shape walking thousands
+of `site-packages` sources.
+
+Three assertions keep it from passing on absence: a floor with headroom, a positive scope check (the corpus must
+contain `packages/`), and a negative one (no `site-packages`, no `.workspace`) written as the flip condition
+rather than a count, so widening the git invocation back to a bare `--others` reddens it. Falsified in both
+directions: a credential-shaped literal dropped into an untracked, non-ignored file produced
+`Potential secret sk-[A-Za-z0-9]{20} in tests/_r13t_plant_probe.py`, and removing it returned the file to green --
+so the narrowing did not cost the guard its power to catch the thing it exists for. Its three existing negative
+controls (a secret past 5 KB, a planted literal, an unreadable file) still pass unchanged.
+
+The venv was left in place: it belongs to another session's run, it is ignored, and deleting it would only cost
+a peer a reinstall. It is named here so nobody re-diagnoses the red from scratch. Nothing was paid for.
