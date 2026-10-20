@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { apiUrl } from "@/lib/api";
+import { t, type Locale } from "@/lib/locale";
 
 /**
  * Build provenance: which artifact answers, and what would produce the next plan.
@@ -113,15 +114,13 @@ export type StorageDescription = { short: string; detail: string };
  * API's own role names, because the alternative -- a generic "data may be lost" -- leaves a reviewer
  * wondering whether the application is broken or the instance is free.
  */
-export function describeStorage(state: StorageState): StorageDescription | null {
+export function describeStorage(state: StorageState, locale: Locale): StorageDescription | null {
   if (state.durable) return null;
-  const named = state.ephemeralRoots.length > 0 ? state.ephemeralRoots.join(", ") : "one or more stores";
+  const named =
+    state.ephemeralRoots.length > 0 ? state.ephemeralRoots.join(", ") : t(locale, "prov.ephemeralFallback");
   return {
-    short: "not kept",
-    detail:
-      `This instance keeps its ${named} on storage the host may clear when the service restarts, idles, ` +
-      "or redeploys. Runs and uploads can therefore disappear without this application losing anything it " +
-      "was holding in memory.",
+    short: t(locale, "prov.storageNotKept"),
+    detail: t(locale, "prov.storageDetail").replace("{roots}", named),
   };
 }
 
@@ -133,31 +132,28 @@ export function describeStorage(state: StorageState): StorageDescription | null 
  * `modelPlanned` is true only when a configured model provider does the planning; the report page
  * states what a run excludes whenever it is false.
  */
-export function describeReasoningMode(mode: ReasoningMode): ModeDescription {
+export function describeReasoningMode(mode: ReasoningMode, locale: Locale): ModeDescription {
   if (mode.error) {
     return {
-      label: `Reasoning mode: ${mode.mode} — not runnable`,
-      short: `${mode.mode} (unavailable)`,
+      label: t(locale, "prov.modeNotRunnable").replace("{mode}", mode.mode),
+      short: t(locale, "prov.modeUnavailableShort").replace("{mode}", mode.mode),
       detail: mode.error,
       modelPlanned: false,
     };
   }
   if (mode.stub) {
     return {
-      label: `Reasoning mode: ${mode.mode}`,
+      label: t(locale, "prov.modeLabel").replace("{mode}", mode.mode),
       short: mode.mode,
-      detail:
-        `This API instance plans with deterministic rules (DSA_LLM_MODE=${mode.mode}): no language ` +
-        "model is called when a run starts here, so nothing about a question is interpreted beyond " +
-        "keyword matching. The tool calls, evidence, statistics and validation in a report are " +
-        "computed from the data either way.",
+      detail: t(locale, "prov.heuristicDetail").replace("{mode}", mode.mode),
       modelPlanned: false,
     };
   }
+  const plan = `${mode.provider}${mode.model ? ` · ${mode.model}` : ""}`;
   return {
-    label: `Reasoning mode: ${mode.provider}${mode.model ? ` · ${mode.model}` : ""}`,
-    short: `${mode.provider}${mode.model ? ` · ${mode.model}` : ""}`,
-    detail: `This API instance plans with ${mode.provider}${mode.model ? ` (${mode.model})` : ""}; evidence and validation are computed from the data.`,
+    label: t(locale, "prov.modeLabel").replace("{mode}", plan),
+    short: plan,
+    detail: t(locale, "prov.modelDetail").replace("{plan}", plan),
     modelPlanned: true,
   };
 }

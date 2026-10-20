@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Added (post-4.6.0) — the language check can now read a conditional, and it found the last page-owned English (R-13, adjudication)
+
+- The closure claim rested on an AST inventory that read only *attribute* positions and only dictionary values
+  written on the same line as their key. Three holes: a literal inside a JSX expression container was never read
+  (`{notify ? "Notifying" : "Notify me"}`, `tc.error ?? "Unknown error"`), a literal passed by position to a page's
+  own helper was never read (`metric(a, b, "Tool calls", …)` -- all seven row labels of `/runs/compare` were
+  page-owned copies), and 15 dictionary keys whose long values the formatter wrapped onto the next line were
+  missing from the comparison set, so the duplicate check could not recognise the sentences it most needed to.
+- Widening it found 8 multi-word candidates and 7 second-owner duplicates. All 15 now come from the dictionary: the
+  run report's failed-call fallback, its live-progress line (`{pct}% · {evidence} evidence · {insights} insights`),
+  its notify button, its call counter and its confidence chip; the settings page's `Saved.`; the footer's
+  `build <version>` (which also fixed its `aria-label`, previously `Build unknown` in either language); the failure
+  page's `{n} error{s} · {n} run{s}`, whose English plural suffix has no 中文 counterpart; and the compare page's
+  seven row names. The compare page also stopped identifying its status row by comparing a rendered label -- that
+  comparison silently breaks the moment the label is translated, so the row now carries an explicit flag.
+- The inventory now classifies rather than counts: of 125 candidate literals, 53 are punctuation, 25 declared
+  identifiers, 15 aria/protocol tokens, 12 API vocabulary (`SAFE_READ`), 2 endpoints or data, 2 state tokens, 16
+  monospace, and **0 prose**, with 0 duplicates. It also resolves all 624 dictionary keys the pages and modules
+  reference, so a
+  mistyped key on a page the tour never visits (`⟨insp.notify⟩` on screen) fails a static check instead of waiting
+  for a live stack. It exits non-zero while any of prose, duplicates or unknown keys is non-empty, and each of the
+  three was proven able to fail by planting it.
+- Why the page check could not have found these: it reads `th`/`option`/`summary`/`label`/`h1`–`h3`/`button` and the
+  shell's links, so a plain `<span>` is outside it -- and it only sees states the harness enters, while the failure
+  panel, the live-progress line and the notify button render only in a failed run, a running one, and a
+  notification-capable browser respectively.
+- The instrument's corpus grew to match what it had found: it now walks `apps/web/lib` beside `apps/web/app`, and
+  `short:`/`detail:` joined the reader-slot names. That is what surfaced the last four English strings in the shell
+  -- `buildProvenance.ts` words the persistent provenance chip and the run page's mode badge, and its two long
+  `detail` sentences were English in both languages. They are dictionary-owned now, threaded through a `locale`
+  argument at the two components that render them. The throwaway-storage warning a visitor to the free demo reads
+  is the case that made this worth finishing rather than leaving as a named gap.
+
 ### Fixed (post-4.6.0) — a configured proxy made the free local model unreachable (and faked a red test)
 
 - The provider's documented default endpoint is `http://localhost:11434/v1`, and Ollama on this machine is the

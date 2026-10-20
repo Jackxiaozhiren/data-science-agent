@@ -14090,3 +14090,90 @@ which the gate refuses to repair with `--all`; `dsa_llm` is not in its list, so 
 files, pytest with coverage 84% (9,310 statements), tour `73/73` (26 route/viewport + 3 interaction + 3
 backend-probe + 15 accessibility + 26 locale), mkdocs strict 0. The CI witness for `5b3604a` -- the `E402` fix --
 is **CI success**, and that run executed the pytest gate, so the suite is green in CI as well as locally.
+
+## 232. The closure instrument had three holes, and adjudicating its own residue was how they surfaced
+
+2026-10-20, continuing §231. §224 closed the language layer with a number: the AST inventory went from 57 multi-word
+candidates to 2. The work left was to *enumerate* the bucket no one had read -- `single-token=118` -- and decide,
+entry by entry, whether each was copy. Doing that turned out to indict the instrument rather than the pages.
+
+Reading the 118 grouped by text led directly to `Saved.`, `of`, `calls` and `conf`, and each of those was in the
+source but invisible to the **region** check. Two reasons, both structural. A plain `<span>` is not one of the
+regions the interface claims (`th`, `option`, `summary`, `label`, `h1`–`h3`, `button`, the shell's links). And the
+region check only sees states the harness enters: the failed-call panel renders only for a run with a failed tool
+call, the live-progress line only while a run is running, and the notify button only where the browser offers
+notifications. This is §230's tab lesson one level up -- not mounted is not measured -- and the same remedy
+applies: the page check measures what is on screen, the AST check measures what the source can put on screen.
+
+Widening the AST check to JSX expression containers and to positional arguments whose *parameter name* is a reader
+slot (`metric(a, b, "Tool calls", …)`) is what produced the real residue: **8 multi-word candidates and 7
+second-owner duplicates**, including all seven row labels of `/runs/compare`, which had been page-owned English
+the entire time. Every one is now dictionary-owned. Two of the widened rules had to be reined in after they
+over-fired: an argument to a builtin string method is an operand, not a sentence (`.replace("T", " ")` produced
+four phantom English `T`s), and that rule has to apply only to *direct* arguments -- `stripHtml(String(x ??
+"Unknown error")).slice(0, 500)` ends in a method call and still holds the reader's word.
+
+The third hole was in the instrument's own parser, and it was caught by a contradiction rather than by inspection:
+the new key-resolution check reported 16 dictionary keys as unknown on pages whose rendered tour showed no `⟨…⟩`
+marker anywhere. Those two facts cannot both be true, and the parser was the false one -- `"key":` followed by a
+value on the *next* line is what the formatter writes for every long sentence, so `dictKeys` and `dictValues` were
+each 15 entries short. Fixing it made the duplicate check able to see the sentences it most needed to see, and the
+key count went from 614 parsed to 629.
+
+Two more judgement calls are worth writing down because they are the kind that get quietly re-litigated. The
+compare page used to find its status row by comparing a rendered label (`m.label === "Status"`); that comparison
+breaks the moment the label is translated, so the row now carries an explicit flag and the labels are keys. And a
+page can evade the reader-slot rule by renaming a parameter -- `label` to `key` is exactly what happened here -- so
+the invariant that actually matters moved to the dictionary: every key a page references must resolve, which is
+what `keys referenced=602 unknown=0` asserts, statically, without a live stack.
+
+**Falsification.** A throwaway plant page with three probes -- a ternary literal in children, a positional label
+argument, an attribute value -- was reported as four prose literals and exited 1; the file was then deleted. A
+mistyped key (`insp.notifyTYPO`) was reported as `unknown=1` and exited 1, then restored with the file's sha256
+verified unchanged. The sweep guard went red on two of *my own* new sentences while their inline copies were still
+in the page, before I removed them. `prose`, `duplicates` and `unknown` are each therefore demonstrably able to
+fail; the zero that follows is not a vacuous pass.
+
+**Verification.** `npx tsc --noEmit` 0; `next build` 0 (16 routes generated); the inventory exits 0 over 125
+candidate literals -- punctuation 53, declared-identifier 25, protocol-token 15, api-vocabulary 12, endpoint-or-data
+2, state-token 2, monospace 16, prose 0, duplicates 0, keys referenced 602, unknown 0; the CI tour `73/73`
+including its 26 locale region checks with 0 leaks; `tests/contract` 270 passed in a shell with no proxy variable
+(§231's fix, not a workaround). The seeded region acceptance -- the runner that reaches the dynamic routes on a
+live instance -- was **not** re-run in this batch, because the claim it would add is about rendered states and the
+static key check now covers the failure mode that matters most; it is listed as owed in the handoff. Nothing here
+costs money: every check ran locally on the scripted-free page source.
+
+## 233. The boundary §232 wrote down was measured rather than kept, and the shell's last English went with it
+
+2026-10-20, continuing §232. §232 ended by naming what its instruments do not cover: the walk started at
+`apps/web/app`, and the reader-slot rule recognised `label`/`title`/`description` but not the `short:`/`detail:`
+fields through which `buildProvenance.ts` words the persistent status chip, the footer and the run page's mode
+badge. A boundary stated in one session and re-drawn in the next is how a claim quietly stops being true, so the
+boundary was tested instead of trusted.
+
+Running the repaired classifier over `apps/web/lib` out of band found four prose literals -- the
+`Reasoning mode: …` label forms and `— not runnable` -- and, on inspection, the "four" was itself a floor: with
+`short` and `detail` absent from the slot list, the two long `detail` sentences were invisible to the instrument
+even in principle. One of them is the throwaway-storage warning, which is exactly the string a visitor to the free
+demo needs in their own language, because that instance's disk is the ephemeral kind the sentence describes. Both
+sentences were English in 中文 as well as in English -- the module never consulted the dictionary at all.
+
+The fix went in the order that keeps the claim honest: `short` and `detail` joined the reader-slot names, the walk
+grew to a second root over `apps/web/lib` with the dictionary itself excluded (it is the owner, not a page), and
+only then did `describeStorage` and `describeReasoningMode` take a `locale` and hand their wording to `t()`. Nine
+`prov.*` keys, two components threading the argument (`ProvenanceStatus` already had a locale; `ReasoningModeBadge`
+gets one inside its own hook). `detail: mode.error` stays raw on purpose -- a backend's own message is data the
+product must not rewrite, the same rule the run report follows.
+
+The existing guards were read before touching this module rather than after: `test_storage_disclosure.py` requires
+the wording to *stay* in `buildProvenance.ts`, requires the renderer to ask rather than hardcode, and its negative
+control plants the literal string `>not kept<` into the JSX -- so localizing it into a dictionary lookup is the
+direction that guard wants, and its planted string is now also what the widened slot list would catch on its own.
+
+**Correction to §232, same day.** Its `keys referenced=602` was measured over the single root. With the second root
+the same run reports 624; §232's other numbers are unchanged because `lib` contributed no candidate literals once
+its wording moved into the dictionary. Nothing was deleted from §232.
+
+**Falsification.** Re-hardcoding `short: "not kept"` into the module was reported at `lib/buildProvenance.ts:122`
+and exited 1 -- as a second-owner duplicate, since the dictionary now owns the phrase, which is the correct
+verdict for a page re-adding a string the owner already carries. The file was restored and its sha256 re-checked.

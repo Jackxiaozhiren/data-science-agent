@@ -26,6 +26,14 @@ export const IDENTIFIERS = new Set([
   "tools/list", "tools/call", "session #", "v1", "v2", "ok", "—", "·", "×", "→", "%", "english",
   // Provider names arrive from the API's own list, so an option that says `ollama` is showing data.
   "ollama", "openai", "openai-compat",
+  // Units and pane letters, written identically in both languages: a duration is `230ms` or `12s` on a 中文
+  // page too, and the compare panes are named A and B there as they are here.
+  "ms", "s", "kb", "mb", "vs", "a ·", "b ·", "a:", "b:", "a", "b",
+  // The model name the settings field shows as its own example, and the risk classes the MCP tool list carries
+  // as API vocabulary (`SAFE_READ` etc. are matched by shape, not listed here).
+  "qwen3:8b",
+  // The evaluation ladder is named L0-L5 in both languages, and a digest is labelled `sha256` either way.
+  "l", "sha256",
 ]);
 
 // Data that a chrome region can legitimately carry: an uploaded file name in an <option> or a heading, an
@@ -34,6 +42,19 @@ export const DATA_IN_CHROME =
   /(^|\s)[\w.-]+\.(csv|xlsx|xls|parquet|json|md|tsv)(\s|$)|\([0-9a-f]{6,}\)|\/(mcp|api|health|version|metrics|evidence|analysis|datasets)\b|^\s*(GET|POST|PUT|DELETE)\s|20\d\d-\d\d-\d\d/;
 
 export const LOOKS_LIKE_CODE = /[{};=]|\$\(|=>|__|\/api\/|\.py|\.json|\.md|localhost|https?:/;
+
+// Attribute *values* that a browser or a component library defined, not words the product wrote. `aria-live`
+// says `polite` in 中文 just as it does in English, and translating it would break the announcement rather than
+// translate it. The inventory needs this list because an `aria-*` attribute is otherwise a reader attribute by
+// this file's own rule, and every `aria-live="polite"` on every page would then read as an English leak.
+export const PROTOCOL_TOKENS = new Set([
+  "polite", "assertive", "off", "horizontal", "vertical", "true", "false", "dialog", "alertdialog", "status",
+  "separator", "button", "submit", "reset", "none", "presentation", "ltr", "rtl", "grid", "list", "listbox",
+  "option", "tab", "tabpanel", "region", "form", "search", "navigation", "contentinfo", "banner", "timer",
+  "log", "marquee", "tooltip", "complementary", "main", "article", "img", "text", "password", "email", "tel",
+  // aria-current's vocabulary -- which kind of thing is current, not a sentence about it.
+  "page", "step", "location", "date", "time", "page-scroll",
+]);
 
 /**
  * Partition rendered chrome regions into leaks and exemptions for a 中文 page.
