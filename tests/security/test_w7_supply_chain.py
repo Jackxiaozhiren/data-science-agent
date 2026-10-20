@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 
@@ -42,9 +43,7 @@ def test_dependabot_exists() -> None:
     p = Path(".github/dependabot.yml")
     assert p.exists()
     txt = p.read_text()
-    configured = set(
-        re.findall(r"(?m)^\s*-\s*package-ecosystem:\s*['\"]?([a-z-]+)['\"]?\s*$", txt)
-    )
+    configured = set(re.findall(r"(?m)^\s*-\s*package-ecosystem:\s*['\"]?([a-z-]+)['\"]?\s*$", txt))
     assert {"uv", "npm", "docker"} <= configured
     assert Path("uv.lock").is_file(), "uv Dependabot updates require the lockfile"
 
@@ -250,22 +249,52 @@ def test_plugin_hash_is_deterministic_and_moves_with_content(tmp_path: Path) -> 
     assert m.compute_hash(root) != before
 
 
-def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
-    # Simple grep for obvious secrets in tracked files (not .venv)
+def _assert_no_credential_patterns(paths: Iterable[Path]) -> None:
+    """Fail closed on unreadable Python sources or detected credential patterns."""
     patterns = [
         r"sk-[A-Za-z0-9]{20}",
         r"ghp_[A-Za-z0-9]{30}",
         r"api_key\s*=\s*['\"][A-Za-z0-9]{20}",
     ]
-    for pat in patterns:
-        for p in Path(".").rglob("*.py"):
-            if ".venv" in str(p) or ".git" in str(p) or "node_modules" in str(p):
-                continue
-            try:
-                txt = p.read_text()[:5000]
-                assert not re.search(pat, txt), f"Potential secret {pat} in {p}"
-            except Exception:  # noqa: S112
-                continue
+    for p in paths:
+        if any(part in {".venv", ".git", "node_modules"} for part in p.parts):
+            continue
+        try:
+            txt = p.read_text(encoding="utf-8")[:5000]
+        except (OSError, UnicodeError) as exc:
+            raise AssertionError(f"Cannot inspect credential patterns in {p}") from exc
+        for pattern in patterns:
+            assert not re.search(pattern, txt), f"Potential secret {pattern} in {p}"
+
+
+def test_secret_scanner_rejects_credentials(tmp_path: Path) -> None:
+    import pytest
+
+    fixture = tmp_path / "suspect.py"
+    fixture.write_text("token = " + "sk-" + "A" * 20, encoding="utf-8")
+    with pytest.raises(AssertionError, match="Potential secret"):
+        _assert_no_credential_patterns([fixture])
+
+
+def test_secret_scanner_fails_closed_when_unreadable(tmp_path: Path, monkeypatch) -> None:
+    import pytest
+
+    fixture = tmp_path / "unreadable.py"
+    fixture.write_text("harmless = 1", encoding="utf-8")
+    original = Path.read_text
+
+    def fail_read(self: Path, *args, **kwargs) -> str:
+        if self == fixture:
+            raise OSError("permission denied")
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", fail_read)
+    with pytest.raises(AssertionError, match="Cannot inspect"):
+        _assert_no_credential_patterns([fixture])
+
+
+def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
+    _assert_no_credential_patterns(Path(".").rglob("*.py"))
     # Also check that SECURITY.md mentions secret scanning
     assert (
         "Secret Scanning" in Path("SECURITY.md").read_text()
