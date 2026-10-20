@@ -225,8 +225,9 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   `summary`, `label`, `h1`–`h3`, `button` and the shell's links -- so a plain `<span>` is outside it, and three of
   the last leaks sat in spans (`Saved.`, `{a} of {b} calls`, `conf 0.92`). More consequentially, the region check
   only sees **states the harness enters**: the failure-diagnostics panel renders only when a run has a failed tool
-  call, the live-progress line only while a run is running, and the notify button only when the browser offers
-  notifications. Each held English, and none could be reached from a seeded cold page. That is the same failure as
+  call, the live-progress line only while a run is running, and the notify button only on the run page -- headless
+  Chromium renders it, so it was the route's absence rather than any browser capability that hid it (§235 measured
+  this). Each held English, and none could be reached from a seeded cold page. That is the same failure as
   the inactive-tab hole -- not mounted is not measured -- and the answer is the same division of labour: the page
   check measures what is on screen, the AST check measures what the source *can* put on screen, because in source
   a conditional is not a state. The AST instrument's own two new rules are falsifiable: a planted ternary literal,

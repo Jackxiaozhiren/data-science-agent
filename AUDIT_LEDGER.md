@@ -14228,3 +14228,32 @@ chips, `5／5 次调用`, `置信 0.80` and the seven Chinese compare row names 
 rebuilt bundle. Both ports were verified free afterwards (`lsof -sTCP:LISTEN` returns nothing for `:3221` and
 `:8000`) and the seed left no new files in the tree. `tsc` 0, `next build` 0, inventory `prose=0 duplicates=0
 assembled=0 keys referenced=628 unknown=0`.
+
+## 235. The review panel was rendered, and three claims about why things were invisible were corrected
+
+2026-10-20, continuing §234. §234 ended with one thing explicitly unverified: `insp.approvalNote`, because the
+approval panel only mounts for a run in the review state and the seeded run is `COMPLETED`. Producing that state
+cost four commands and nothing: boot the API against the throwaway `/tmp` sqlite file the previous run had left,
+`UPDATE analysis_runs SET status='HUMAN_REVIEW'` (and the same field inside `state_json`, so whichever half the API
+reads agrees), start `next start`, open the page in a browser with `dsa_locale=zh`. The fixture was then deleted and
+both ports were verified free.
+
+The panel arrived entirely in 中文: the pause banner `已暂停，等待人工确认`, `已请求人工复核` with the sentence that
+says a run stops at the review gate and becomes `COMPLETED` on approval, the field label `批准说明`, the button
+`批准此次运行`, the note input whose value is `人工审核通过`, and the follow-up textarea's placeholder. No `⟨` marker
+anywhere. Three claims in §232-§234 were wrong in the process of being right about something else, and they are
+corrected here rather than quietly reworded:
+
+* the status is `HUMAN_REVIEW` in `AnalysisStatus`; §234's handoff addendum called it `REVIEW_PENDING`, a name no
+  code carries, so a reader searching for it would have found nothing;
+* §232 attributed the notify button's invisibility to capability gating -- "rendered only where the browser offers
+  notifications". Headless Chromium renders it, and it read `开启完成通知` here. The real reason the region check never
+  saw it is the one that applies to every string in this batch: the static routes the tour walks simply do not
+  contain that control;
+* `insp.liveProgress` and `prov.heuristicDetail`, both written this session and each verified only statically until
+  now, rendered for real: `100% · 5 条证据 · 1 条洞察` and `推理模式：stub` followed by the whole deterministic-planner
+  sentence. The trace tab counted `轨迹（7）` and `证据（5）`, so §230's tab fix and this batch's keys are now both
+  witnessed on a live run rather than in a source parse.
+
+Nothing new was found to fix -- the census, the key-resolution check and this render pass now agree, which is the
+point of holding all three. No money was involved: local processes against a temporary database, deleted afterwards.
