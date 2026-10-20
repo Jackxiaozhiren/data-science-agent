@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
 import { clientFetch, apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
-import { t } from "@/lib/locale";
+import { callStatusLabel, t } from "@/lib/locale";
 import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
@@ -173,7 +173,7 @@ function ValidationRing({ passed, total }: { passed: number; total: number }) {
 function ApprovalCard({ runId }: { runId: string }) {
   const locale = useLocale();
   const router = useRouter();
-  const [note, setNote] = React.useState("Approved by human");
+  const [note, setNote] = React.useState(t(locale, "insp.approvalNote"));
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
 
@@ -757,7 +757,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                           >
                             <TableCell><code className="font-mono text-xs">{tc.tool}</code></TableCell>
                             <TableCell>
-                              <Badge variant={tc.status === "ok" ? "success" : "destructive"}>{tc.status}</Badge>
+                              <Badge variant={tc.status === "ok" ? "success" : "destructive"}>{callStatusLabel(locale, tc.status)}</Badge>
                             </TableCell>
                             <TableCell>
                               <span className="flex items-center gap-2">

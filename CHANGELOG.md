@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the run report showed a raw status token, and three sentences lived where no check could read them
+
+- Booting the seeded pair and reading the dynamic routes in a browser (the check §232 named as owed) found the
+  run report's Trace tab rendering `ok` five times on a 中文 page. `ToolCallRecord.status` is
+  `Literal["ok", "error"]` -- the engine's own word, not a value from the visitor's data -- so this is the defect
+  class the status layer already retired for run statuses, surviving in a second place. `callStatusLabel()` now
+  supplies it, with the same deliberate fallback to the raw token for a status the producer does not declare, and
+  the guard parses the `Literal` out of `state.py` so adding a member upstream reddens a test instead of shipping
+  English on a translated page.
+- Three sentences reached the reader from a variable, not a JSX position, which neither the region check nor the
+  AST check could see: `Could not reach the DSA API at …` (written out twice, once per compare page) and
+  `The settings could not be cleared: …` -- one line below a sibling that already asked the dictionary. They read
+  from the dictionary now, one key shared by both pages, with the transport error's own text appended verbatim
+  because that part is data. `useState("Approved by human")` became `insp.approvalNote`; its rendering is
+  unverified, since the approval panel only mounts for a run awaiting review.
+- The inventory reports a census for the class: multi-word literals outside any reader position, with
+  developer-facing `throw` messages, copyable command lines and Tailwind class lists counted rather than mixed in.
+  The first drafts of that bucket held 720 and 205 entries -- a list nobody would read -- until the exclusions were
+  structural. It prints `assembled=0 excluded: developer-throw=2 command=3 class-list=2` today, and a planted
+  sentence was reported at its file and line before being removed.
+
 ### Added (post-4.6.0) — the language check can now read a conditional, and it found the last page-owned English (R-13, adjudication)
 
 - The closure claim rested on an AST inventory that read only *attribute* positions and only dictionary values

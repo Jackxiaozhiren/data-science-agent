@@ -263,6 +263,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.approvalLabel": "Approval note",
     "insp.approving": "Approving…",
     "insp.approve": "Approve run",
+    "insp.approvalNote": "Approved by human",
     "insp.colReason": "Reason",
     "insp.copied": "Copied",
     "insp.copyDiagnostics": "Copy diagnostics",
@@ -420,6 +421,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "settings.saving": "Saving",
     "settings.deleteFile": "Delete settings file",
     "settings.deletedNotice": "Stored settings deleted. The key stays only if your shell exported one.",
+    "settings.clearFailed": "The settings could not be cleared: {status}.",
     "failures.title": "Failure Analysis",
     "failures.errorOne": "{n} error",
     "failures.errorMany": "{n} errors",
@@ -528,6 +530,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.tabEvidence": "Evidence ({n})",
     "insp.tabInsights": "Insights ({n})",
     "common.backToAnalysis": "Back to Analysis →",
+    "common.apiUnreachable": "Could not reach the DSA API at {url}.",
     "mcp.eyebrow": "Reference · Step 3",
     "mcp.summary": "Stateless core · {n} tools · No Mcp-Session-Id · cacheHints via cache_hint · Explicit handles: run_id / dataset_id.",
     "mcp.summaryNoTools":
@@ -626,6 +629,8 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "status.VALIDATION": "Validation",
     "status.SYNTHESIS": "Synthesis",
     "status.REPORTING": "Reporting",
+    "call.ok": "OK",
+    "call.error": "Error",
     "status.COMPLETED": "Completed",
     "status.FAILED": "Failed",
     "status.HUMAN_REVIEW": "Human review",
@@ -922,6 +927,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.approvalLabel": "批准说明",
     "insp.approving": "正在批准……",
     "insp.approve": "批准此次运行",
+    "insp.approvalNote": "人工审核通过",
     "insp.colReason": "原因",
     "insp.copied": "已复制",
     "insp.copyDiagnostics": "复制诊断信息",
@@ -1077,6 +1083,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "settings.saving": "正在保存",
     "settings.deleteFile": "删除设置文件",
     "settings.deletedNotice": "已删除存储的设置。只有你在自己的 shell 里 export 过密钥，它才会保留。",
+    "settings.clearFailed": "设置未能清除：HTTP {status}。",
     "failures.title": "失败分析",
     "failures.errorOne": "{n} 个错误",
     "failures.errorMany": "{n} 个错误",
@@ -1185,6 +1192,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.tabEvidence": "证据（{n}）",
     "insp.tabInsights": "洞察（{n}）",
     "common.backToAnalysis": "返回分析页 →",
+    "common.apiUnreachable": "无法连接到 {url} 的 DSA API。",
     "mcp.eyebrow": "参考 · 第 3 步",
     "mcp.summary": "无状态核心 · {n} 个工具 · 不使用 Mcp-Session-Id · 通过 cache_hint 传递 cacheHints · 显式句柄：run_id / dataset_id。",
     "mcp.summaryNoTools":
@@ -1282,6 +1290,8 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "status.VALIDATION": "校验中",
     "status.SYNTHESIS": "归纳中",
     "status.REPORTING": "生成报告",
+    "call.ok": "正常",
+    "call.error": "出错",
     "status.COMPLETED": "已完成",
     "status.FAILED": "失败",
     "status.HUMAN_REVIEW": "待人工确认",
@@ -1412,6 +1422,18 @@ export function t(locale: Locale, key: string): string {
  */
 export function statusLabel(locale: Locale, status: string): string {
   const value = UI_STRINGS[locale]?.[`status.${normalizeStatus(status)}`];
+  return value ?? status;
+}
+
+/**
+ * The badge for one tool call, whose status is the engine's own closed pair (`Literal["ok", "error"]` in
+ * `dsa_agent/state.py`), not a value that came out of the visitor's data.
+ *
+ * Same shape as `statusLabel`: anything the producer does not declare is passed through rather than invented --
+ * a token the web has never seen is worth reading exactly as it arrived, and translating it would be guessing.
+ */
+export function callStatusLabel(locale: Locale, status: string): string {
+  const value = UI_STRINGS[locale]?.[`call.${status}`];
   return value ?? status;
 }
 

@@ -63,6 +63,8 @@ for (const m of src.matchAll(/"([^"]+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g)) { dictValu
 
 const findings = [];
 const keyRefs = [];
+const assembledRefs = [];
+const census = { developerThrow: 0, command: 0, classList: 0 };
 for (const file of APP_ROOTS.flatMap((root) => [...walk(root)])) {
   const text = readFileSync(file, "utf8");
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -97,13 +99,18 @@ for (const file of APP_ROOTS.flatMap((root) => [...walk(root)])) {
       if (raw) push(line, "jsx", raw, mono);
     } else if (ts.isStringLiteral(node)) {
       const slot = keySlotOf(stack, sf, fnParams);
+      const ctx = slot ? null : contextOf(stack, sf, fnParams);
       if (slot) {
         keyRefs.push({ file: relative(join(repoRoot, "apps/web"), file), line, text: node.text, via: slot });
-      } else if (["reader", "text"].includes(contextOf(stack, sf, fnParams))) {
+      } else if (ctx === "reader" || ctx === "text") {
         // `text` as well as `reader`: a literal in a JSX expression container -- `{notify ? "Notifying" :
         // "Notify me"}`, `{tc.error ?? "Unknown error"}` -- is handed to the reader exactly like an attribute
         // value is, and reading only attributes is how three strings on the run report went unreported.
         push(line, "attr", node.text, mono);
+      } else if (ctx === "other") {
+        // Only `other`: `skip` is how className and module specifiers arrive, and a bucket holding 720 Tailwind
+        // strings is a bucket nobody reads.
+        assembled(line, node.text);
       }
     } else if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
       const kind = contextOf(stack, sf, fnParams);
@@ -111,9 +118,40 @@ for (const file of APP_ROOTS.flatMap((root) => [...walk(root)])) {
       // A template chunk in a `cn(...)` call or a className attribute is styling, not copy; the previous
       // version of this scan counted those as reader-facing text and reported 89 when the real number was lower.
       if (raw && (kind === "reader" || kind === "text")) push(line, kind === "text" ? "tpl-jsx" : "tpl", raw, mono);
+      else if (raw && kind === "other") assembled(line, raw);
     }
     ts.forEachChild(node, visit);
     stack.pop();
+  }
+  // A sentence built somewhere the reader-slot rules cannot see -- assigned to a variable, thrown, passed to
+  // setState -- still reaches the page (`setErr(\`Could not reach the DSA API at ${url}\`)` is rendered as the
+  // failure notice), and three such sentences went unnoticed until a hand-written regex found them. So they are
+  // reported, never silently dropped: this bucket is a census to adjudicate, not a verdict, and it prints its own
+  // size so an empty list can be told apart from a broken predicate.
+  function assembled(line, value) {
+    const cleaned = value.replace(/\s+/g, " ").trim();
+    // Three space-separated words carrying letters. A slash test would count `@/app/components/ui/button` as
+    // three words and the census would be imports again.
+    const words = cleaned.split(" ").filter((w) => /[A-Za-z]{2,}/.test(w));
+    if (words.length < 3) return;
+    if (dictValues.has(cleaned) || dictKeys.has(cleaned)) return;
+    const rel = relative(join(repoRoot, "apps/web"), file);
+    // Three shapes reach this bucket and none of them is copy: a command line a reviewer copies out (a command
+    // is not a sentence), a utility class list, and a developer-facing error thrown by a component primitive.
+    // They are counted, not dropped, so the census line still names what it excluded.
+    if (stack.some((n) => ts.isThrowStatement(n))) {
+      census.developerThrow += 1;
+      return;
+    }
+    if (/(^|\s)(uv|npx|npm|pnpm|git|python3?|docker|curl|node)(\s|$)/.test(cleaned) || cleaned.includes(" --")) {
+      census.command += 1;
+      return;
+    }
+    if (words.every((w) => /^[a-z0-9\-.:/[\]%#()_&]+$/.test(w)) && words.filter((w) => w.includes("-")).length >= 3) {
+      census.classList += 1;
+      return;
+    }
+    assembledRefs.push({ file: rel, line, text: cleaned });
   }
   function push(line, kind, value, mono) {
     const cleaned = value.replace(/\s+/g, " ");
@@ -264,6 +302,9 @@ if (process.env.R13J_SINGLE) {
 }
 
 const unknownKeys = keyRefs.filter((k) => !dictKeys.has(k.text));
+console.log(`\n=== sentences assembled outside any reader position (report only: adjudicate) ===`);
+for (const a of assembledRefs) console.log(`   ${a.file}:${a.line} ${JSON.stringify(a.text.slice(0, 110))}`);
+console.log(`assembled=${assembledRefs.length} excluded: developer-throw=${census.developerThrow} command=${census.command} class-list=${census.classList}`);
 console.log(`\n=== dictionary keys the pages ask for ===`);
 console.log(`keys referenced=${keyRefs.length} unknown=${unknownKeys.length}`);
 for (const k of unknownKeys) console.log(`   ${k.file}:${k.line} ${JSON.stringify(k.text)} via ${k.via}`);

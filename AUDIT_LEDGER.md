@@ -14177,3 +14177,54 @@ its wording moved into the dictionary. Nothing was deleted from §232.
 **Falsification.** Re-hardcoding `short: "not kept"` into the module was reported at `lib/buildProvenance.ts:122`
 and exited 1 -- as a second-owner duplicate, since the dictionary now owns the phrase, which is the correct
 verdict for a page re-adding a string the owner already carries. The file was restored and its sha256 re-checked.
+
+## 234. Reading the rendered dynamic routes found a raw enum token and three sentences no instrument could see
+
+2026-10-20, continuing §233. §232 left a debt note: the seeded acceptance had not been re-run, so nothing had
+looked at the dynamic routes since the compare rows moved. Booting the pair by hand (`uvicorn` on `:8000` with a
+temp sqlite file and `DSA_CORS_ORIGINS` naming the web port, `next start` on `:3221` -- the traps are recorded in
+project memory) and clicking into the tabs produced the kind of finding no static pass can make: the run report's
+Trace tab showed `ok` five times on a 中文 page.
+
+That is the defect §13 already retired for run statuses -- a closed product enum printed as its token -- surviving
+in a second place. `ToolCallRecord.status` is `Literal["ok", "error"]` in `dsa_agent/state.py`: a word the product
+chose, not a value that came out of the visitor's data, so it belongs to the interface and must be sayable in the
+reader's language. `callStatusLabel()` mirrors `statusLabel()` exactly, including the deliberate fallback to the
+raw token for anything the producer does not declare. The new guard in
+`test_web_analysis_status_vocabulary.py` parses the `Literal` out of `ToolCallRecord` rather than listing the two
+words, floors the extraction so a blind regex cannot pass, and states why `validation_status` is excluded: the
+interface never renders it, and a vocabulary test that demands labels for invisible words becomes a dictionary of
+unused strings.
+
+The same read turned up a class neither instrument can see at all, because the string never appears in a JSX
+position: `setErr(\`Could not reach the DSA API at ${url}. ${err}\`)` -- written twice, once per compare page, which
+is second-owner drift in a place the duplicate check was never looking -- and
+`setNotice(\`The settings could not be cleared: ${status}.\`)`, sitting one line below a sibling that already asked
+the dictionary. Both now read from `common.apiUnreachable` and `settings.clearFailed`, with the error's own text
+appended verbatim because a transport failure's detail is data. `useState("Approved by human")` became
+`insp.approvalNote`; its rendering stays **unverified** here, because the seeded run is `COMPLETED` and the approval
+panel only mounts for a pending one -- the key exists in both locales and its reference resolves, which is what the
+static check can prove. The API's own default at `routers/analysis.py:314` was left alone on purpose: it fires only
+for a caller that sends no note at all, and the note is the reviewer's assertion, so the language it arrives in is
+the reviewer's client's business.
+
+The instrument grew a bucket for the class, because finding it twice by hand is how a blind spot becomes permanent:
+multi-word literals whose context is neither a reader slot nor a JSX position are now printed as a census to
+adjudicate, with three counted exclusions -- developer-facing `throw` messages, copyable command lines, and
+Tailwind class lists. Its first three drafts reported 720, then 205, then 1 entries, which is the story of a census
+nobody would read: module specifiers and `[&_svg]:size-4` needed to be excluded by *structure* (a `skip` context is
+className, a space-separated word count is not a slash-separated one) before the list meant anything. Now it prints
+`assembled=0 excluded: developer-throw=2 command=3 class-list=2`.
+
+**Falsification.** A planted `setErr("Planted english failure notice outside JSX")` was reported at
+`app/runs/compare/page.tsx:75` and removed. Two of my own plants broke in the process and both were caught by
+reading the tree rather than by a gate: a shell-quoted perl substitution mangled an import line in
+`apps/web/app/research/page.tsx` (`git diff` showed exactly that and nothing else, so it was repaired by editing
+the line back, not by restoring the file), and a second plant asserted an anchor that did not exist, which is why
+the insert is now done against a line read from the file first.
+
+**Verification.** The seeded pair rendered `正常` on all five tool-call badges and `全部 / 正常 / 出错` on the filter
+chips, `5／5 次调用`, `置信 0.80` and the seven Chinese compare row names -- read from a live browser against the
+rebuilt bundle. Both ports were verified free afterwards (`lsof -sTCP:LISTEN` returns nothing for `:3221` and
+`:8000`) and the seed left no new files in the tree. `tsc` 0, `next build` 0, inventory `prose=0 duplicates=0
+assembled=0 keys referenced=628 unknown=0`.

@@ -235,8 +235,14 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   chip, the footer and the run badge are as reader-facing as a `.tsx` -- with the dictionary itself excluded
   because it is the owner rather than a page. `short:` and `detail:` were added to the reader-slot list for the
   same reason: `describeStorage()` hands its `detail` sentence straight to the footer's tooltip, and a slot rule
-  that named only `label`/`title`/`description` could not see it. Both were gaps in the instrument, not in the
-  product, and §232-§233 of the ledger carry the measurements that found them.
+  that named only `label`/`title`/`description` could not see it. Both were gaps in the instrument -- and each one
+  hid a real defect in the product, which is the reason a gap is worth measuring rather than noting. A third class
+  still cannot be decided statically, because the string is not in any position the reader-slot rules reach:
+  `setErr(\`Could not reach the DSA API at ${url}\`)` builds a sentence in a variable, and it renders later. The
+  inventory prints those as a **census to adjudicate** (multi-word literals outside every reader slot), counting
+  developer `throw` messages, copyable command lines and Tailwind class lists separately so the list stays short
+  enough to read; three such sentences came out of the first non-empty census. §232-§234 of the ledger carry the
+  measurements.
 - **Two English strings changed visible text, on purpose.** The status chip used to render the raw enum token, so
   `COMPLETED` appeared in capitals and the in-flight filter option said `Data_profiling`; both now come from
   `statusLabel()`, so the chip says "Completed" and the option says "Data profiling". The settings readout lines
