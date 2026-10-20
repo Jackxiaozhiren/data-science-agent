@@ -260,7 +260,7 @@ def _assert_no_credential_patterns(paths: Iterable[Path]) -> None:
         if any(part in {".venv", ".git", "node_modules"} for part in p.parts):
             continue
         try:
-            txt = p.read_text(encoding="utf-8")[:5000]
+            txt = p.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:
             raise AssertionError(f"Cannot inspect credential patterns in {p}") from exc
         for pattern in patterns:
@@ -272,6 +272,11 @@ def test_secret_scanner_rejects_credentials(tmp_path: Path) -> None:
 
     fixture = tmp_path / "suspect.py"
     fixture.write_text("token = " + "sk-" + "A" * 20, encoding="utf-8")
+    with pytest.raises(AssertionError, match="Potential secret"):
+        _assert_no_credential_patterns([fixture])
+
+    # Secrets beyond the first 5 KB must not silently bypass this check.
+    fixture.write_text("x" * 6000 + "token = " + "sk-" + "B" * 20, encoding="utf-8")
     with pytest.raises(AssertionError, match="Potential secret"):
         _assert_no_credential_patterns([fixture])
 
