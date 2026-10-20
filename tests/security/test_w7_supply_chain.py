@@ -34,10 +34,19 @@ def test_secret_scan_workflow() -> None:
 
 
 def test_dependabot_exists() -> None:
+    """Check declared ecosystems rather than incidental mentions in comments.
+
+    This repository uses uv.lock; Dependabot's supported ecosystem for it
+    is uv (rather than the old pip requirement).
+    """
     p = Path(".github/dependabot.yml")
     assert p.exists()
     txt = p.read_text()
-    assert "pip" in txt and "npm" in txt and "docker" in txt
+    configured = set(
+        re.findall(r"(?m)^\s*-\s*package-ecosystem:\s*['\"]?([a-z-]+)['\"]?\s*$", txt)
+    )
+    assert {"uv", "npm", "docker"} <= configured
+    assert Path("uv.lock").is_file(), "uv Dependabot updates require the lockfile"
 
 
 def test_sbom_exists_and_has_required_fields() -> None:
