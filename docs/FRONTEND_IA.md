@@ -184,12 +184,22 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   filter and empty-line text, the plan timeline's empty line, the whole run inspector (67 strings) and the rest of
   the loop -- the runs list, the reports list, the run-detail header and stats, the dataset comparison screen,
   the settings and failures screens, the MCP reference, the six evaluation levels, the replay page, the benchmarks
-  page and its copy button -- read `apps/web/lib/locale.ts` (603 keys per locale, the two blocks key-identical).
+  page and its copy button -- read `apps/web/lib/locale.ts` (the two blocks are held key-identical by
+  `tests/contract/test_web_locale_parity.py`, and the inventory prints how many references resolve).
   The last tier was the one the first counters could not see: **every table column head and caption, the eleven
   run-status labels, and the short labels of the secondary pages.** Two measures are quoted because they answer
-  different questions. In the source, `apps/web/scripts/locale-chrome-inventory.mjs` walks the TypeScript AST and reports
-  reader-position string literals; it went from **57 multi-word candidates in 19 files to 2**, and both survivors
-  are declared identifiers (`dataset_id ·`, the Ollama endpoint placeholder). On the rendered page,
+  different questions. In the source, `apps/web/scripts/locale-chrome-inventory.mjs` walks the TypeScript AST and
+  classifies every literal a page could hand to a reader. Its first published number -- 57 multi-word candidates
+  down to 2 -- was produced by an instrument with three holes of its own, and closing them found more work rather
+  than less: a literal inside a JSX expression container (`{notify ? "Notifying" : "Notify me"}`,
+  `tc.error ?? "Unknown error"`) was not read at all, neither was one passed by position to a page's own helper
+  (`metric(a, b, "Tool calls", …)`, which is how all seven row labels of `/runs/compare` were page-owned), and a
+  dictionary value written on the line after its key -- the formatter does that to every long sentence -- was
+  missing from the comparison set, 15 keys' worth. With those closed the residue was 8 multi-word candidates and
+  7 second-owner duplicates; all 15 are now dictionary-owned, and the run that matters is the one the script
+  reports itself: `prose=0 duplicates=0`, with every one of the 624 key references the pages and modules make
+  resolving in both locales. The same run exits non-zero while any of the three is non-empty, so the closure is a check, not a
+  sentence in this document. On the rendered page,
   `apps/web/scripts/locale-chrome-acceptance.mjs` reads only the regions the interface owns -- `th`, `option`, `summary`,
   `label`, `h1`–`h3`, `button`, nav/header/footer -- on every route a seeded instance can answer, in 中文 and in
   English (the runner prints its own route and region counts with the verdict, so the coverage is reported rather
@@ -211,6 +221,22 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   required space**, with whole-line comments stripped so a comment quoting a dictionary line is not a second
   owner; both that sweep and the new `test_every_declared_status_has_a_label_in_both_locales` were falsified by
   planting the failure and restoring by hash.
+- **Two more blind spots, and the boundary this claim stops at.** The region selector reads `th`, `option`,
+  `summary`, `label`, `h1`–`h3`, `button` and the shell's links -- so a plain `<span>` is outside it, and three of
+  the last leaks sat in spans (`Saved.`, `{a} of {b} calls`, `conf 0.92`). More consequentially, the region check
+  only sees **states the harness enters**: the failure-diagnostics panel renders only when a run has a failed tool
+  call, the live-progress line only while a run is running, and the notify button only when the browser offers
+  notifications. Each held English, and none could be reached from a seeded cold page. That is the same failure as
+  the inactive-tab hole -- not mounted is not measured -- and the answer is the same division of labour: the page
+  check measures what is on screen, the AST check measures what the source *can* put on screen, because in source
+  a conditional is not a state. The AST instrument's own two new rules are falsifiable: a planted ternary literal,
+  a planted positional label and a planted mistyped key each turn it red, and the plant is then deleted.
+  Finally, the boundary. The walk covers `apps/web/app` **and** `apps/web/lib` -- the modules that word the status
+  chip, the footer and the run badge are as reader-facing as a `.tsx` -- with the dictionary itself excluded
+  because it is the owner rather than a page. `short:` and `detail:` were added to the reader-slot list for the
+  same reason: `describeStorage()` hands its `detail` sentence straight to the footer's tooltip, and a slot rule
+  that named only `label`/`title`/`description` could not see it. Both were gaps in the instrument, not in the
+  product, and §232-§233 of the ledger carry the measurements that found them.
 - **Two English strings changed visible text, on purpose.** The status chip used to render the raw enum token, so
   `COMPLETED` appeared in capitals and the in-flight filter option said `Data_profiling`; both now come from
   `statusLabel()`, so the chip says "Completed" and the option says "Data profiling". The settings readout lines

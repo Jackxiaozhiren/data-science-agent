@@ -273,7 +273,7 @@ function FailureCard({ run }: { run: RunDetail }) {
           <div key={tc.call_id} className="rounded-lg border border-red-200 bg-white p-2.5 text-xs leading-5">
             <code className="font-mono font-semibold">{tc.tool}</code>
             <code className="ml-2 font-mono text-zinc-400">{tc.call_id.slice(0, 12)}</code>
-            <p className="mt-1 break-words text-red-700">{stripHtml(String(tc.error ?? "Unknown error")).slice(0, 500)}</p>
+            <p className="mt-1 break-words text-red-700">{stripHtml(String(tc.error ?? t(locale, "insp.unknownError"))).slice(0, 500)}</p>
           </div>
         ))}
         <div className="flex flex-wrap gap-2 pt-1">
@@ -593,7 +593,12 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
               </p>
               <div className="flex items-center gap-3">
                 <span className="text-xs tabular-nums text-zinc-500">
-                  {prog ? `${prog.progress_pct}% · ${prog.evidence} evidence · ${prog.insights} insights` : "Connecting to live progress…"}
+                  {prog
+                    ? t(locale, "insp.liveProgress")
+                        .replace("{pct}", String(prog.progress_pct))
+                        .replace("{evidence}", String(prog.evidence))
+                        .replace("{insights}", String(prog.insights))
+                    : t(locale, "insp.liveConnecting")}
                 </span>
                 <button
                   type="button"
@@ -603,7 +608,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                   className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
                 >
                   {notify ? <Bell className="size-3.5" aria-hidden /> : <BellOff className="size-3.5" aria-hidden />}
-                  {notify ? "Notifying" : "Notify me"}
+                  {notify ? t(locale, "insp.notifying") : t(locale, "insp.notify")}
                 </button>
               </div>
             </div>
@@ -730,7 +735,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                   placeholder={t(locale, "insp.searchPh")}
                   className="h-8 w-44"
                 />
-                <span className="text-xs text-zinc-400" aria-live="polite">{toolCalls.length} of {st?.tool_calls.length ?? 0} calls</span>
+                <span className="text-xs text-zinc-400" aria-live="polite">{t(locale, "insp.callsProgress").replace("{shown}", String(toolCalls.length)).replace("{total}", String(st?.tool_calls.length ?? 0))}</span>
               </div>
               {(st?.tool_calls.length ?? 0) === 0 ? (
                 <EmptyState title={t(locale, "insp.noToolsTitle")} description={t(locale, "insp.noToolsBody")} />
@@ -822,7 +827,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <code className="font-mono text-xs text-zinc-500">{ev.id} · {ev.source_type} → {ev.source_id}</code>
                         <span className="flex items-center gap-2">
-                          <span className="text-xs font-medium tabular-nums text-emerald-700">conf {ev.confidence.toFixed(2)}</span>
+                          <span className="text-xs font-medium tabular-nums text-emerald-700">{t(locale, "insp.confidence").replace("{value}", ev.confidence.toFixed(2))}</span>
                           {(callToEvidence.has(ev.source_id) || (st?.tool_calls ?? []).some((tc) => tc.call_id === ev.source_id)) && (
                             <button
                               type="button"

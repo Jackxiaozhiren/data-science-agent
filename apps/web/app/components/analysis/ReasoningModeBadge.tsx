@@ -2,6 +2,7 @@
 
 import { Badge } from "@/app/components/ui/badge";
 import { describeReasoningMode, useBuildProvenance, type ModeDescription } from "@/lib/buildProvenance";
+import { useLocale } from "@/app/lib/LocaleProvider";
 
 /**
  * What did the thinking, beside a run's status badge, plus the plain statement of what that excludes.
@@ -41,6 +42,7 @@ export function ReasoningModeNotice() {
 
 function useReportedMode(): ModeDescription | null {
   const provenance = useBuildProvenance();
+  const locale = useLocale();
   if (provenance.state !== "ready" || !provenance.reasoningMode) return null;
-  return describeReasoningMode(provenance.reasoningMode);
+  return describeReasoningMode(provenance.reasoningMode, locale);
 }

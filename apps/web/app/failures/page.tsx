@@ -118,14 +118,14 @@ export default async function FailuresPage() {
             )
           ) : (
             <ul className="divide-y divide-zinc-100">
-              {stats.byTool.map((t, i) => (
-                <li key={t.tool} className="flex items-start gap-3 py-2.5">
+              {stats.byTool.map((row, i) => (
+                <li key={row.tool} className="flex items-start gap-3 py-2.5">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-red-50 font-mono text-[11px] text-red-700">{i + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm"><code className="font-mono text-xs font-semibold">{t.tool}</code>
-                      <span className="ml-2 text-xs tabular-nums text-zinc-500">{t.count} error{t.count === 1 ? "" : "s"} · {t.runs} run{t.runs === 1 ? "" : "s"}</span>
+                    <p className="text-sm"><code className="font-mono text-xs font-semibold">{row.tool}</code>
+                      <span className="ml-2 text-xs tabular-nums text-zinc-500">{t(locale, row.count === 1 ? "failures.errorOne" : "failures.errorMany").replace("{n}", String(row.count))} · {t(locale, row.runs === 1 ? "failures.runOne" : "failures.runMany").replace("{n}", String(row.runs))}</span>
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-zinc-500" title={t.sample}>{t.sample}</p>
+                    <p className="mt-0.5 truncate text-xs text-zinc-500" title={row.sample}>{row.sample}</p>
                   </div>
                 </li>
               ))}

@@ -292,7 +292,7 @@ export default function SettingsPage() {
               <Button variant="secondary" onClick={() => void forget()}>
                 <Trash2 className="size-4" aria-hidden /> {t(locale, "settings.deleteFile")}
               </Button>
-              {saving === "saved" && <span className="text-xs text-emerald-700">Saved.</span>}
+              {saving === "saved" && <span className="text-xs text-emerald-700">{t(locale, "settings.saved")}</span>}
             </div>
 
             {notice && (
