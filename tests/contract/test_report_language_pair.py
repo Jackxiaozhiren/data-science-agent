@@ -23,7 +23,6 @@ import html as html_module
 import re
 from pathlib import Path
 
-_REPO = Path(__file__).resolve().parents[2]
 from typing import Any
 
 import pytest
@@ -34,6 +33,8 @@ from dsa_agent.report_export import (
     export_markdown,
     report_language,
 )
+
+_REPO = Path(__file__).resolve().parents[2]
 
 SHA256 = "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044"
 
