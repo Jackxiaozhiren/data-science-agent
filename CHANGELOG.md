@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the App page delivered its resources through a modal that hid part of them
+
+- `openResource()` answered `alert(uri + text.slice(0, 2000))`. Two defects in one line, measured on a stored run of
+  the local instance: that run's `report://` resource is 2,354 characters, so the dialog showed 2,000 of them and
+  hid 354 with no indication that anything was missing -- on the surface whose whole argument is that the evidence is
+  complete and checkable; and a modal blocks the page's own script thread for as long as it is open, which is the
+  opposite of a page a reviewer reads while the analysis runs. The `Enter question` validation used the same channel.
+- Card 6, "Resource read", now holds the text in a scrolling `<pre>` filled through `textContent` (so the resource's
+  own bytes are never a markup source), and the line under it states the size and whether the read succeeded:
+  `evidence://<run> — 607 characters, shown in full.` or `… — the server refused this read; what follows is its
+  error, not the resource.` Nothing is cut, so the completeness claim is the length itself. The empty-question case
+  writes to the progress line the page already owns instead of interrupting.
+- The page now raises no dialog at all, and the instrument counts them: a `page.on("dialog")` counter makes
+  `noNativeDialogWasRaised` part of the verdict, so bringing `alert()` back anywhere on this page is a red gate
+  rather than a review finding.
+- `mcp-app-page.mjs` also clicks `Open evidence:// resource` and reads the region back, asserting it is visible, that
+  it holds the resource, and that its note says `shown in full`. Falsified by leaving the region hidden: the check
+  failed with the payload in its own diagnostic (`{"hidden":true,"length":607,…}`), and the restored file's hash
+  matched. Passing, it prints `evidence resource: 607 chars, no dialog` in the gate log -- an assertion whose success
+  is silence is not distinguishable from one that never ran, so the number is in the line now.
+- Unrelated to the fix but measured on the way: `POST /mcp` answers `307` and redirects to `/mcp/`. Browsers follow
+  it with the method and body intact, which is why the page works; a hand-written client that does not follow
+  redirects sees an empty 307. Recorded in `AUDIT_LEDGER.md` §249.
+
 ### Fixed (post-4.6.0) — the API's own hardening header blanked the pages the API serves
 
 - `SecurityHeadersMiddleware` answered every request with `Content-Security-Policy: default-src 'none'`, which is the

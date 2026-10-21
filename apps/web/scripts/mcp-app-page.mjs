@@ -50,6 +50,8 @@ const browser = await chromium.launch();
 let failures = 0;
 let readFrame = null;
 let flowRun = null;
+let resourceRead = null;
+let dialogs = 0;
 const fail = (claim, detail) => {
   failures += 1;
   console.error(`FAIL ${claim}${detail ? ` -- ${detail}` : ""}`);
@@ -63,6 +65,7 @@ try {
     if (m.type() === "error") errors.push(m.text());
   });
   page.on("dialog", (d) => {
+    dialogs += 1;
     void d.dismiss();
   });
   const response = await page.goto(`${API}/mcp-app/`, { waitUntil: "domcontentloaded" });
@@ -177,6 +180,27 @@ try {
       } else if (!/\/mcp-app\/report\//.test(revealed.src)) {
         fail("reportCardPointsAtTheRenderEndpoint", revealed.src);
       }
+      const read = await page.evaluate(async () => {
+        document.getElementById("openEvidenceBtn").click();
+        await new Promise((r) => setTimeout(r, 1500));
+        const view = document.getElementById("resourceView");
+        const note = document.getElementById("resourceNote");
+        return {
+          hidden: view.hidden,
+          length: (view.textContent || "").length,
+          head: (view.textContent || "").slice(0, 40),
+          note: (note.textContent || "").trim(),
+        };
+      });
+      if (read.hidden || read.length < 20) {
+        fail("resourceButtonFillsThePage", JSON.stringify(read).slice(0, 200));
+      } else if (!/shown in full/.test(read.note)) {
+        fail("resourceReadStatesItsOwnCompleteness", read.note.slice(0, 160));
+      } else if (/the server refused/.test(read.note)) {
+        fail("evidenceResourceReadsCleanly", read.note.slice(0, 160));
+      } else {
+        resourceRead = `${read.length} chars, no dialog`;
+      }
       flowRun = progressText.slice("COMPLETED ".length).split(" ")[0];
     }
 
@@ -194,6 +218,7 @@ try {
   await browser.close();
 }
 
+if (dialogs) fail("noNativeDialogWasRaised", `${dialogs} dialog(s) -- a modal blocks the page's own script for the rest of the run`);
 if (failures) {
   console.error(`MCP_APP_PAGE_FAIL (${failures} check(s))`);
   process.exit(1);
@@ -201,5 +226,6 @@ if (failures) {
 console.log(
   `MCP_APP_PAGE_PASS (${ds.length} dataset(s) offered by the live page, values and labels matched)` +
     (flowRun ? `; button-driven run ${flowRun}` : "") +
+    (resourceRead ? `; evidence resource: ${resourceRead}` : "") +
     (readFrame ? `; report frame read in place: ${readFrame}` : "; no stored run, report frame not read"),
 );

@@ -49,8 +49,10 @@ instruments against that one stack: `inspector-a11y.mjs` (every disclosure in a 
 focus stop shows a ring), `locale-chrome-acceptance.mjs` (every interface-owned region on the routes it loads speaks
 the reader's language, including the run page's validation card, whose labels sit in `main li strong` and so are
 outside the selector the offline routes are examined with), and `mcp-app-page.mjs` (the page an MCP client opens
-actually runs its own script: the dataset list it renders is the list its server publishes, and the report it embeds
-arrives styled and with its drill-downs). The static tour has no backend on purpose, so on `/analysis` it
+actually runs its own script: the dataset list it renders is the list its server publishes, the run button drives a
+real analysis to completion, the resource read fills card 6 without raising a dialog, and the report it embeds
+arrives styled -- `h1` computed at 24px, the value the report's own CSS gives -- with its drill-downs). The static
+tour has no backend on purpose, so on `/analysis` it
 finds nothing to open and no card to read. The runner refuses, rather than skipping, when port 8000 is taken: the
 web bundle resolves the API origin at build time, so a different port would measure a page that cannot reach its
 own backend. Every instrument needs

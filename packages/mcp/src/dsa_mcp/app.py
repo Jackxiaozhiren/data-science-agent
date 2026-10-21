@@ -99,6 +99,13 @@ th,td{border:1px solid #ddd; padding:6px; text-align:left; font-size:13px;}
 <button id="openReportBtn" disabled>Open report:// resource</button>
 </div>
 
+<div class="card"><h2>6. Resource read <span class="small">resources/read</span></h2>
+<p class="small">The raw resource the buttons above ask for, shown here rather than in a dialog: an alert blocks
+the page's own script and a 2,000-character cut would hide the rest of the bundle without saying so.</p>
+<pre id="resourceView" hidden></pre>
+<p id="resourceNote" class="small" hidden></p>
+</div>
+
 <div class="card small">Handles: <code>run_id</code> / <code>analysis_id</code> / <code>dataset</code> — explicit in URL (?run_id=...) and resource URIs (§38). Stateless MCP 2026-07-28 — no session.</div>
 
 <script>
@@ -146,7 +153,7 @@ async function fetchProfile(){
 }
 async function runAnalysis(){
   const q = document.getElementById('question').value.trim();
-  if(!q){ alert('Enter question'); return; }
+  if(!q){ document.getElementById('progress').textContent = 'Write a question first — the box above is the task.'; return; }
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   document.getElementById('progress').textContent = 'Planner→Scientist→Critic→Report …';
@@ -187,9 +194,21 @@ async function runAnalysis(){
   btn.disabled=false;
 }
 async function openResource(uri){
+  const view = document.getElementById('resourceView');
+  const note = document.getElementById('resourceNote');
+  view.hidden = false; note.hidden = false;
+  view.textContent = 'reading ' + uri + ' …';
+  note.textContent = '';
   const r = await jrpc('resources/read', {uri});
-  if(r.result) alert(uri+'\\n\\n'+ (r.result.text||JSON.stringify(r.result)).slice(0,2000));
-  else alert('Error: '+JSON.stringify(r.error).slice(0,1000));
+  if(r.result){
+    const text = r.result.text || JSON.stringify(r.result, null, 2);
+    view.textContent = text;
+    note.textContent = uri + ' — ' + text.length + ' characters, shown in full.';
+  } else {
+    const text = JSON.stringify(r.error, null, 2);
+    view.textContent = text;
+    note.textContent = uri + ' — the server refused this read; what follows is its error, not the resource.';
+  }
 }
 document.getElementById('analyzeBtn').onclick=runAnalysis;
 document.getElementById('openEvidenceBtn').onclick=()=> openResource('evidence://'+lastRunId);
