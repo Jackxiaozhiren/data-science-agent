@@ -37,6 +37,30 @@ export const SEVERE_LIMITATIONS = [
   "伪相关",
 ];
 
+/**
+ * Sentences the product itself writes into a run, in the other language it offers.
+ *
+ * The graph attaches a fixed caveat to every insight derived from a correlation or a test, and the run page
+ * reads that stored value rather than the rendered report -- so without this map a 中文 run shows an English
+ * warning in its own panel while its downloaded report says the same thing in Chinese. Matching is on the whole
+ * value, never a substring: nothing an analyst or a model wrote is ever rewritten here.
+ *
+ * `packages/agent/src/dsa_agent/report_export.py` carries the same table for the renderer, and
+ * `test_the_limitation_prose_maps_agree` compares the two, because a mapping maintained in two languages and
+ * written twice is exactly how the two surfaces start disagreeing.
+ */
+export const PRODUCT_LIMITATION_TEXT: Record<string, string> = {
+  "Association does not imply causation.": "关联不等于因果。",
+  "Correlation does not imply causation.": "相关不等于因果。",
+  "Check assumptions; association does not imply causation.": "请核对假设；关联不等于因果。",
+};
+
+/** The stored caveat, in the language this reader chose. Anything not in the map is already theirs. */
+export function limitationText(value: string, locale: "en" | "zh"): string {
+  if (locale !== "zh") return value;
+  return PRODUCT_LIMITATION_TEXT[value.trim()] ?? value;
+}
+
 export type LimitationSeverity = "error" | "warning";
 
 export function limitationSeverity(text: string): LimitationSeverity {

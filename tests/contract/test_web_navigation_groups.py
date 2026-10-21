@@ -82,19 +82,42 @@ def test_every_nav_entry_resolves_to_a_route_that_exists() -> None:
     assert not dangling, f"nav entries with no page behind them: {dangling}"
 
 
+def _dictionary_value(locale: str, key: str) -> str:
+    """One sentence out of the locale owner. R-13 moved the nav labels there: a declaration that names a key
+    is only honest if the guard follows the key, and both languages have to carry the disclosure -- an English
+    hint with a Chinese blank behind it is the half-translation this whole layer refuses."""
+    folded = re.sub(r":\s+", ": ", (ROOT / "apps/web/lib/locale.ts").read_text(encoding="utf-8"))
+    parts = folded.split(f"{locale}: {{", 1)
+    assert len(parts) == 2, (
+        f"the dictionary has no {locale} block written the way this guard parses it"
+    )
+    body = parts[1].split("\n  },", 1)[0]
+    found = re.search(rf'"{re.escape(key)}": "((?:[^"\\]|\\.)*)"', body)
+    assert found, f"{locale} defines no {key!r} -- the sidebar would render ⟨{key}⟩"
+    return found.group(1)
+
+
 def test_the_diagnostic_group_is_labelled_as_being_about_the_system() -> None:
     """De-emphasis that reads as hiding would be worse than the flat row this replaced."""
     source = _source()
-    system_start = source.index('key: "system"')
-    # The group's own label is the one written immediately before its `key`, not the last item label above it.
-    label = re.search(r'label: "([^"]+)",\s*key: "system"', source)
+    # The group's own label is the key written immediately before its `key`, not the last item label above it.
+    label = re.search(r'labelKey: "([^"]+)",\s*key: "system"', source)
     assert label, "the diagnostic group has no label of its own"
-    assert re.search(r"about|system|agent", label.group(1), re.I), (
-        f"the group is labelled {label.group(1)!r}, which does not tell a reader it is not their data"
+    assert re.search(r"about|system|agent", _dictionary_value("en", label.group(1)), re.I), (
+        f"the group is labelled {_dictionary_value('en', label.group(1))!r}, which does not tell a reader it is "
+        "not their data"
     )
-    hint = re.search(r'hint: "([^"]+)"', source[system_start:])
-    assert hint and "not" in hint.group(1).lower(), (
+    assert re.search(r"系统|智能体|本身", _dictionary_value("zh", label.group(1))), (
+        "the 中文 label for the diagnostic group does not say it is about the system"
+    )
+    system_start = source.index('key: "system"')
+    hint = re.search(r'hintKey: "([^"]+)"', source[system_start:])
+    assert hint, "the group has no sentence telling a reader what these surfaces measure"
+    assert "not" in _dictionary_value("en", hint.group(1)).lower(), (
         "the group needs a sentence saying these measure the agent, not the visitor's work"
+    )
+    assert "而不是" in _dictionary_value("zh", hint.group(1)), (
+        "the 中文 hint drops the disclaimer that these are not the visitor's data"
     )
 
 

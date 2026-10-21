@@ -28,6 +28,10 @@ WEB = ROOT / "apps/web"
 LOCALE_TS = WEB / "lib/locale.ts"
 
 #: The first-run strings R-13 names. Each must have exactly one owner: this dictionary.
+#: The last three are shared-chrome sentences shorter than the sweep's 40-character floor in
+#: `test_no_dictionary_sentence_is_also_written_into_a_page`, so they are named here instead -- "Something went
+#: wrong" is the heading a reader meets on every route's failure, and 21 characters is not long enough to be
+#: caught by a sweep that must stay silent on short fragments like `Ask: ` and `sample` to avoid false hits.
 OWNED_ENGLISH = [
     "The AI data scientist that shows its work.",
     "Ask this of the sample data",
@@ -36,6 +40,9 @@ OWNED_ENGLISH = [
     "Start with the business question",
     "Inspect where each claim came from",
     "No analysis runs yet in this environment",
+    "Something went wrong",
+    "Nothing here yet",
+    "Loading table",
 ]
 
 
@@ -121,6 +128,23 @@ def test_a_owned_sentence_has_exactly_one_owner() -> None:
         assert sentence in _source(), f"{sentence!r} is owned by no locale at all"
 
 
+def _code_only(text: str) -> str:
+    """Drop whole-line comments and JSX comment blocks; keep every line that carries code.
+
+    The sweep below compares dictionary text against the corpus, and the five hits it produced at the lowered
+    floor were all comments -- `{/* Recent analyses */}`, `// would leave the visitor staring at "Checking API…"`.
+    Deleting only lines that *start* with a comment marker keeps every code line intact, so the gate cannot be
+    silenced by putting its own needle behind a comment strip wide enough to eat source.
+    """
+    kept = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
+            continue
+        kept.append(re.sub(r"\{/\*.*?\*/\}", " ", line))
+    return "\n".join(kept)
+
+
 def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
     """The list above is hand-curated; this one sweeps every sentence the dictionary owns.
 
@@ -130,14 +154,19 @@ def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
     matching those would flag code that is not a copy of anything. A page that interpolates *inside* a sentence
     is not caught by an exact-value sweep either; that is why this file also refuses a page to own a transport
     line at all (test_web_fetch_outcome_vocabulary.py), so the interpolated ones are the reviewed set.
+
+    R-13f lowered the floor from 40 characters to 12 plus a required space. The old floor had a real blind spot:
+    `/failures` carried its own copy of "Evaluation · Step 3" (19 characters) while the dictionary owned the same
+    sentence under `failures.eyebrow`, and the 中文 route kept rendering the English eyebrow. A sweep that stops
+    at 40 cannot see a short second owner, and short labels are exactly what the table and status tier moved.
     """
-    sentences = [value for value in _keys("en").values() if len(value) >= 40]
-    assert len(sentences) >= 20, (
+    sentences = [value for value in _keys("en").values() if len(value) >= 12 and " " in value]
+    assert len(sentences) >= 120, (
         f"the sweep found only {len(sentences)} sentences -- the dictionary is not the size this guard assumes, "
         "so it is checking less than it claims"
     )
     corpus = {
-        str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
+        str(path.relative_to(ROOT)): _code_only(path.read_text(encoding="utf-8"))
         for path in list(WEB.glob("app/**/*.tsx")) + list(WEB.glob("app/**/*.ts"))
     }
     assert len(corpus) >= 30, f"the sweep walked only {len(corpus)} files -- the glob broke"
@@ -145,6 +174,23 @@ def test_no_dictionary_sentence_is_also_written_into_a_page() -> None:
         {(rel, value[:60]) for rel, text in corpus.items() for value in sentences if value in text}
     )
     assert not duplicated, f"{duplicated} are in a page as well as in the dictionary"
+
+
+def test_the_provider_wraps_the_shell_not_just_the_route() -> None:
+    """A client component outside the provider silently renders the default language.
+
+    Measured: with `LocaleProvider` around `{children}` inside `<main>`, every sidebar label rendered English on
+    a 中文 page -- the header was correct because it takes the locale as a prop, which is exactly what made the
+    screen look half-translated rather than broken. No source-text guard could see it and no single-page browser
+    check walked the sidebar, so the shape itself is pinned here.
+    """
+    layout = (WEB / "app/layout.tsx").read_text(encoding="utf-8")
+    opened = layout.index("<LocaleProvider")
+    closed = layout.index("</LocaleProvider>")
+    for client_part in ("<Sidebar", "<ArrivalBeacon", "<SiteHeader"):
+        assert opened < layout.index(client_part) < closed, (
+            f"{client_part} sits outside the locale provider, so it reads the default language instead of the cookie"
+        )
 
 
 def test_the_document_language_follows_the_choice() -> None:
@@ -159,3 +205,37 @@ def test_the_document_language_follows_the_choice() -> None:
     assert 'role="group"' in toggle and "aria-label" in toggle, (
         "two unlabelled buttons: a screen reader announces the control as nameless"
     )
+
+
+def test_the_two_language_runners_share_one_rule_owner() -> None:
+    """Which words belong to the interface is decided once, by `locale-chrome-rules.mjs`.
+
+    The CI tour and the seeded acceptance both ask the same question -- does this 中文 page show chrome in
+    English -- and if each carries its own identifier list, the two start meaning different things and a green
+    in one stops predicting the other. That is the drift this lane exists to prevent, one level up: the same
+    second-owner problem the dictionary solves for copy, solved here for the rule that measures copy.
+
+    The floor on the owner's list is what keeps this from passing on an emptied file: a rule owner that exports
+    nothing would let both runners go quiet.
+    """
+    scripts = WEB / "scripts"
+    owner = scripts / "locale-chrome-rules.mjs"
+    assert owner.is_file(), f"{owner.relative_to(ROOT)} is missing -- the region rule has no owner"
+    rule_src = owner.read_text(encoding="utf-8")
+    assert "export const CHROME_SELECTOR" in rule_src, "the rule no longer owns the region selector"
+    assert "export function classifyChromeRegions" in rule_src, (
+        "the rule no longer owns the leak decision"
+    )
+    identifiers = re.findall(r'"([^"]+)",', rule_src[rule_src.index("IDENTIFIERS = new Set([") :])
+    assert len(identifiers) >= 25, (
+        f"the identifier list holds {len(identifiers)} entries -- if it were emptied, every English string "
+        "would need exempting by hand and the check would silently stop reporting anything"
+    )
+
+    for name in ("regression.mjs", "locale-chrome-acceptance.mjs"):
+        src = (scripts / name).read_text(encoding="utf-8")
+        assert "./locale-chrome-rules.mjs" in src and "classifyChromeRegions(" in src, (
+            f"{name} no longer asks the shared rule -- it is deciding on its own again"
+        )
+        for private in ("const IDENTIFIERS", "const DATA_IN_CHROME", "const CHROME_SELECTOR"):
+            assert private not in src, f"{name} re-declares {private} beside the import"

@@ -2,6 +2,113 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the repo-wide secret scan was reading installed third-party packages
+
+- `test_secret_protection_no_hardcoded_secrets_in_repo` walked `Path(".").rglob("*.py")`, so its corpus was the
+  working tree rather than the repository. A 2.8 GB git-ignored `benchmarks/external/datascibench/.workspace/venv`
+  left by an external-benchmark run contains joblib's `test_func_inspect_special_encoding.py`, whose bytes are
+  deliberately not UTF-8; the guard fails closed on an unreadable file, so one scratch directory held the
+  security test red -- and CI, whose checkout has no such tree, could never have shown it. The skip list
+  (`.venv`, `.git`, `node_modules`) already conceded that installed packages do not belong in the scan; the
+  problem is a list of names, which any new scratch directory defeats.
+- The corpus is now anything committable -- `git ls-files` plus the untracked-but-not-ignored set -- which is the
+  boundary the Secret Scan job already draws. 441 files today, against thousands of `site-packages` sources before.
+- Verified in both directions: a credential-shaped literal in an untracked, committable file is still caught by
+  path (`Potential secret sk-[A-Za-z0-9]{20} in tests/_r13t_plant_probe.py`), and the guard's three existing
+  negative controls are untouched. A floor, a positive scope check (the corpus must contain `packages/`) and a
+  negative one (no `site-packages`, no `.workspace`) keep a quiet `git` from passing on an empty scan.
+
+### Fixed (post-4.6.0) — the notify button could promise a notification the browser had already refused
+
+- Reading the run report in a live browser (the pass that found the raw status token) turned up a second silent
+  failure on the same panel: `toggleNotify` requested permission and then discarded the answer, flipping its own
+  state regardless. The send at the other end requires `Notification.permission === "granted"`, so the control
+  could read `aria-pressed="true"` with the label "Notifying" (通知已开启) on a bell that could never ring. Worse,
+  the old code only asked when permission was `default`, so a visitor who had already clicked **Block** never saw
+  a prompt at all -- the click simply turned the claim on.
+- Measured both ways on the same page: with the pre-fix bundle the click reported `pressed=true, Notifying` while
+  the page's own `Notification.permission` read `denied`; with the fix the same click leaves it off and renames the
+  control 通知已被阻止 / "Notifications blocked", with the reason in its tooltip (`此浏览器不会向该站点投递通知，因此这项保持关闭。`).
+  The granted path was exercised too -- under a stubbed `Notification`, because headless Chromium keeps the
+  permission `denied` even for a granted context -- so the label is stated, not implied.
+- `tests/contract/test_web_notification_capability.py` is the CI half: the handler must branch on the permission
+  result, must not contain the unconditional flip, and the refusal must be rendered from the dictionary in both
+  languages. It was falsified by putting the old handler back -- red on the branch assertion, then restored and
+  verified byte-identical.
+
+### Fixed (post-4.6.0) — the run report showed a raw status token, and three sentences lived where no check could read them
+
+- Booting the seeded pair and reading the dynamic routes in a browser (the check §232 named as owed) found the
+  run report's Trace tab rendering `ok` five times on a 中文 page. `ToolCallRecord.status` is
+  `Literal["ok", "error"]` -- the engine's own word, not a value from the visitor's data -- so this is the defect
+  class the status layer already retired for run statuses, surviving in a second place. `callStatusLabel()` now
+  supplies it, with the same deliberate fallback to the raw token for a status the producer does not declare, and
+  the guard parses the `Literal` out of `state.py` so adding a member upstream reddens a test instead of shipping
+  English on a translated page.
+- Three sentences reached the reader from a variable, not a JSX position, which neither the region check nor the
+  AST check could see: `Could not reach the DSA API at …` (written out twice, once per compare page) and
+  `The settings could not be cleared: …` -- one line below a sibling that already asked the dictionary. They read
+  from the dictionary now, one key shared by both pages, with the transport error's own text appended verbatim
+  because that part is data. `useState("Approved by human")` became `insp.approvalNote`; its rendering is
+  unverified, since the approval panel only mounts for a run awaiting review.
+- The inventory reports a census for the class: multi-word literals outside any reader position, with
+  developer-facing `throw` messages, copyable command lines and Tailwind class lists counted rather than mixed in.
+  The first drafts of that bucket held 720 and 205 entries -- a list nobody would read -- until the exclusions were
+  structural. It prints `assembled=0 excluded: developer-throw=2 command=3 class-list=2` today, and a planted
+  sentence was reported at its file and line before being removed.
+
+### Added (post-4.6.0) — the language check can now read a conditional, and it found the last page-owned English (R-13, adjudication)
+
+- The closure claim rested on an AST inventory that read only *attribute* positions and only dictionary values
+  written on the same line as their key. Three holes: a literal inside a JSX expression container was never read
+  (`{notify ? "Notifying" : "Notify me"}`, `tc.error ?? "Unknown error"`), a literal passed by position to a page's
+  own helper was never read (`metric(a, b, "Tool calls", …)` -- all seven row labels of `/runs/compare` were
+  page-owned copies), and 15 dictionary keys whose long values the formatter wrapped onto the next line were
+  missing from the comparison set, so the duplicate check could not recognise the sentences it most needed to.
+- Widening it found 8 multi-word candidates and 7 second-owner duplicates. All 15 now come from the dictionary: the
+  run report's failed-call fallback, its live-progress line (`{pct}% · {evidence} evidence · {insights} insights`),
+  its notify button, its call counter and its confidence chip; the settings page's `Saved.`; the footer's
+  `build <version>` (which also fixed its `aria-label`, previously `Build unknown` in either language); the failure
+  page's `{n} error{s} · {n} run{s}`, whose English plural suffix has no 中文 counterpart; and the compare page's
+  seven row names. The compare page also stopped identifying its status row by comparing a rendered label -- that
+  comparison silently breaks the moment the label is translated, so the row now carries an explicit flag.
+- The inventory now classifies rather than counts: of 125 candidate literals, 53 are punctuation, 25 declared
+  identifiers, 15 aria/protocol tokens, 12 API vocabulary (`SAFE_READ`), 2 endpoints or data, 2 state tokens, 16
+  monospace, and **0 prose**, with 0 duplicates. It also resolves all 624 dictionary keys the pages and modules
+  reference, so a
+  mistyped key on a page the tour never visits (`⟨insp.notify⟩` on screen) fails a static check instead of waiting
+  for a live stack. It exits non-zero while any of prose, duplicates or unknown keys is non-empty, and each of the
+  three was proven able to fail by planting it.
+- Why the page check could not have found these: it reads `th`/`option`/`summary`/`label`/`h1`–`h3`/`button` and the
+  shell's links, so a plain `<span>` is outside it -- and it only sees states the harness enters, while the failure
+  panel, the live-progress line and the notify button render only in a failed run, a running one, and a
+  notification-capable browser respectively.
+- The instrument's corpus grew to match what it had found: it now walks `apps/web/lib` beside `apps/web/app`, and
+  `short:`/`detail:` joined the reader-slot names. That is what surfaced the last four English strings in the shell
+  -- `buildProvenance.ts` words the persistent provenance chip and the run page's mode badge, and its two long
+  `detail` sentences were English in both languages. They are dictionary-owned now, threaded through a `locale`
+  argument at the two components that render them. The throwaway-storage warning a visitor to the free demo reads
+  is the case that made this worth finishing rather than leaving as a named gap.
+
+### Fixed (post-4.6.0) — a configured proxy made the free local model unreachable (and faked a red test)
+
+- The provider's documented default endpoint is `http://localhost:11434/v1`, and Ollama on this machine is the
+  path the project recommends because it costs nothing and keeps the data local. It was unreachable for anyone
+  whose operating system has a proxy turned on: `httpx` consults `urllib.request.getproxies()` whenever
+  `trust_env` is left at its default, and on macOS and Windows that call falls back to the *system* proxy
+  configuration -- no environment variable involved. A proxy cannot answer for loopback, so the request came
+  back as **HTTP 502 with an empty body**. Measured on one Mac, seconds apart, same URL: `trust_env=True` →
+  502, `trust_env=False` → 200.
+- The same interception had already been misread here once: `tests/contract/test_provider_settings.py`'s
+  real-mode case spins up its own scripted OpenAI-compatible server on `127.0.0.1:<ephemeral>` and was recorded
+  as an "ordering artifact" because it went red in a subset run and green in the whole-suite run. It is neither.
+  It fails in isolation with the proxy enabled and passes in isolation with it bypassed, and it now passes with
+  no proxy variable set at all -- the fix, not the environment, is what cleared it. §231 corrects §229 and §230.
+- Loopback endpoints are now contacted directly: one helper decides `trust_env` from the base URL's host
+  (`localhost`, `::1`, anything in `127.0.0.0/8`) and both HTTP sites in `dsa_llm/providers.py` use it. A remote
+  host keeps the configured proxy, because a corporate network may genuinely need one, and so does a
+  LAN address -- only loopback is provably unreachable through a proxy.
+
 ### Fixed (post-4.6.0) — a client can open a report the product already has (R-14)
 
 - `/mcp-app/report/{run_id}` has always gone through the product's one report renderer, and that was the half
@@ -14,6 +121,98 @@
   the scope it would be a way around the owner separation R-08 established: a visitor's own completed run is
   200 for them and 404 for the client surface, asserted as parity between the two web-facing renderings rather
   than as two green status codes.
+
+### Added (post-4.6.0) — the report keeps the language the run was asked in (R-13, the deliverable half)
+- **The tabs were the last blind spot, and they held real copy.** Both language and accessibility checks walked
+  the DOM, and an inactive tab is never mounted, so everything behind a tab went unexamined while the closure was
+  being declared. Walking the tabs found the run report's own filter chips rendering `All` / `Errors` in English on
+  a 中文 page; they are dictionary strings now. It also surfaced the distinction the checks had to make: the
+  headings inside an embedded report are the run's document, not chrome, so `Markdown.tsx` declares that subtree
+  with `data-run-document` and the scanner stands outside it -- the document's language is pinned by tests that
+  control the question instead of by a page scan.
+- The caveat sentences the engine writes into a run (`"Association does not imply causation."` and two tool
+  defaults) are now said in the reader's language in the downloaded report *and* in the run page's insight panel.
+  Whole-value maps in two languages, compared by `test_the_limitation_prose_maps_agree`, which derives its key set
+  from the producer sources and also fails a translation that would change how loud the caveat is -- severity is
+  keyword-matched, so a Chinese rendering picking up a defect word would escalate every report that uses it.
+  Stored run state is never rewritten: a run recorded earlier stays byte-for-byte the document it produced.
+
+
+- The rule has been written in `docs/FRONTEND_IA.md` since the language layer began -- *"the deliverable is not
+  translated; a report keeps the language the run was asked in"* -- and the second half of it was not true:
+  `dsa_agent/report_export.py` printed `## Limitations`, `**Objective:**`, `<h2>Tool Calls</h2>` and
+  `<html lang="en">` whatever the question was. A Chinese run therefore produced a document that was Chinese in
+  its findings and English in every word the *product* said about them, and declared itself English to the
+  browser -- which is what a screen reader uses to choose a pronunciation, so the wrongness had a consequence.
+- `report_language()` now decides from the run's own question, counting **words** rather than characters: a
+  Chinese sentence naming an English column stays Chinese, an English sentence pasting a Chinese file name
+  stays English, and an empty question is not guessed into a language. Nothing about a visitor's setting enters
+  the decision, because the artifact a reviewer opens offline is not a page and must not change language between
+  readers.
+- Only the product's words move. `tests/contract/test_report_language_pair.py` asserts the two halves separately
+  -- every heading and field name follows the language, while the finding, the claim, the computed `r`, the
+  p-value and the tool error are reproduced byte-for-byte in both renderings of a Chinese run -- and it walks the
+  whole label table in both languages, so a label nobody renders is named. It was falsified by pinning the
+  decision to `en`: four checks went red on the Chinese assertions while the twenty-three existing English
+  export checks stayed green, which is the other half of the claim (the shipped English document did not move).
+- The three limitation sentences the report *writes* -- the rewritten-claim caveat, the recorded-error line and
+  the standing "correlation is not causation" floor -- follow the run's language too, because a caveat is the one
+  line a reader acts on and an English warning inside a Chinese report is a warning that gets skipped. The
+  critic's own `limitation` text and the recorded error string stay quoted verbatim in both languages, and
+  `STANDING_LIMITATION` is now the English column of the label table rather than a second copy of the sentence.
+  A heuristic-mode run of `dsa analyze --task 哪些地区的收入最高？…` prints `## 局限` and
+  `- 在建立因果证据之前，相关不等于因果。`
+- **Four producer strings are left English on record, not by oversight.** The limitation text a report quotes
+  comes from the analysis side: `dsa_agent/graph.py:304` and `dsa_agent/langgraph_graph.py:131` write
+  `"Association does not imply causation."` onto an insight, while `dsa_tools/tools/correlation.py:32` and
+  `dsa_tools/tools/hypothesis_test.py:37` carry their own defaults (`"Correlation does not imply causation."`,
+  `"Check assumptions; association does not imply causation."`), and `planner.py` adds an assumption sentence it
+  later deduplicates by **string equality** (`planner.py:459`). Localizing any of them changes the bytes a stored
+  run is made of -- and the planner's equality check would silently stop matching -- so this is a decision about
+  run data with a real hazard attached, not a chrome sweep. It is named as an open item rather than
+  half-applied.
+
+
+### Added (post-4.6.0) — the interface's own words, all of them (R-13, closure)
+
+- **The last tier was the short one.** Column heads, table captions, the eleven run-status labels, tab names,
+  form labels, the filter's option text, the empty-result lines and the accessible names that wrap a value
+  (`Sort by {column}`, `Select run {id} for comparison`, `Copy call template for {name}`) now come from
+  `apps/web/lib/locale.ts`, which holds 603 keys per locale with both blocks key-identical. A 中文 visitor's runs
+  table used to read Status / Query / Created above rows of Chinese; the status filter used to offer
+  `Data_profiling` while the page said everything else in Chinese.
+- **What changed in the English too.** A run's status chip rendered the raw enum token, so the badge said
+  `COMPLETED` and the filter said `Data_profiling`; both now read "Completed" and "Data profiling" through
+  `statusLabel()`, which is also what the Chinese page uses. A status the vocabulary does not declare still
+  renders as its own token -- `test_every_declared_status_has_a_label_in_both_locales` pins that every declared
+  one has a label in both languages, and it was falsified by adding a twelfth state and watching it go red.
+  The settings readout lines moved from `word <strong>value</strong> …` into one dictionary sentence with
+  placeholders, which gives up the inline bold: a Chinese sentence needs Chinese punctuation, and fragments
+  around markup cannot carry it.
+- **Two second owners, removed.** "Back to Analysis →" was dictionary key `mcp.back` that three pages had
+  borrowed, so it is `common.backToAnalysis`; and `/failures` had kept its own copy of "Evaluation · Step 3"
+  while the dictionary owned the same sentence, which is why that route still showed an English eyebrow. The
+  sweep that looks for that defect now runs at **12 characters plus a required space** instead of 40, with
+  whole-line comments stripped, and it found seven such pages in total.
+- **`CopyButton`'s accessible name said "Copy runner runner command"** -- it composed `${label} runner command`
+  onto a label that already read "Copy runner". The suffix is gone, the label is the name, and the unused
+  `label = "Copy"` default went with it.
+- **CI now enforces it.** `apps/web/scripts/locale-chrome-rules.mjs` is the single owner of the region rule, and
+  the web job GitHub Actions already runs (`apps/web/scripts/regression.mjs`) gained one check per static route per
+  locale: each route is loaded under a `dsa_locale=zh` and an `=en` cookie, failing on an English chrome region or
+  a `⟨missing-key⟩` marker, and the tour's summary line prints the pass's own count. The seeded runner keeps the coverage CI cannot have --
+  column heads, which need rows, and the routes that need a real run id -- and
+  `test_the_two_language_runners_share_one_rule_owner` refuses either runner re-declaring the rule beside its
+  import, with a floor on the identifier list so an emptied rule cannot pass by exempting everything. Both
+  were falsified: forcing the tour's cookie to `en` reddened all 13 Chinese routes, and a local stub in place
+  of the shared import tripped the owner guard.
+- **The closure claim is measured on the rendered page.** `build/r13i-chrome-acceptance.mjs` reads only the
+  regions the interface owns (`th`, `option`, `summary`, `label`, `h1`–`h3`, `button`, nav, header, footer) on 17
+  routes in each language: zero Latin-only chrome strings outside a printed exemption list, 74–94% of chrome
+  regions carrying CJK, and it fails when a column head is put back (`th:"Status"`), which is how the instrument
+  was shown to be able to fail. The source-level AST count went from 57 multi-word reader-facing literals to 2,
+  both declared identifiers. `docs/FRONTEND_IA.md` names the two detectors' blind spots, including the one that
+  hid the caveat banner until the page-level check found it.
 
 ### Added (post-4.6.0) — what goes wrong is said in both languages (R-13, last half)
 
@@ -33,10 +232,47 @@
   the two strings a running analysis writes outside the page: the tab title's live percentage and the completion
   notification. The probe's guard moved with the words -- it now reads the waking sentence out of the dictionary
   in *both* locales, so a Chinese reader is still promised the attempt count and the wait the budget covers.
+- **The run inspector is read in the visitor's language too.** Its tabs, table headers, empty states, download
+  labels, the five stage names under the status badge and the validation ring's accessible name now come from the
+  dictionary -- 67 strings, on the screen a reviewer actually reads. The run's own question, the tool names, the
+  artifact paths and the status tokens stay as data, because they are what the run produced, not what the product
+  says. Two guards had to be re-pointed rather than relaxed: one pinned the offline-HTML button by its English
+  label, the other pinned the parent-run line by the words in front of the id it displays; both now assert the key
+  call in the component and the sentence in the dictionary, and the retargeted-key plant that reddens the first one
+  is recorded in the ledger.
 - **One duplicate found by the guard that came with this.** The inspector kept its own copy of the product
   title as a fallback for `document.title`. The new sweep in `tests/contract/test_web_locale_parity.py` compares
   every sentence the dictionary owns against the page sources, and this is what it caught on its first run; the
   fallback now asks the dictionary.
+- **The rest of the analyst loop is bilingual too.** The runs list, the reports list, the run-detail header and
+  stats, and the dataset comparison screen -- 51 strings, including the unit labels under each compared number and
+  the "— select —" placeholders -- now read the dictionary, and existing keys were reused rather than duplicated
+  where the sentence was already owned (`nav.runs`, `dsd.rows`, `insp.statEvidence`, `cmp.back`). Verified with a
+  check designed for the failure mode that matters here: it reads the migrated sentences out of the dictionary at
+  run time and refuses any page that still shows one of them as a whole line in the other language, plus any page
+  showing a `⟨missing-key⟩` marker at all -- a positive "is the Chinese there" test can pass while an English
+  sentence stays behind on the same screen. Six route/language combinations pass with zero console errors.
+- **The navigation, header and footer speak the visitor's language -- and fixing them found a scope bug in the
+  language layer itself.** The sidebar's three groups and all thirteen of their links, the header's nav row and
+  its mobile menu, the footer tagline and the two landmark names are dictionary keys now; the nav declaration
+  carries key names rather than sentences, so a label cannot have a second owner. Widening the check to a real
+  page then showed the sidebar still rendering English: `LocaleProvider` wrapped `{children}` inside `<main>`,
+  and the sidebar is a sibling of `<main>`, so it read the context's default rather than the cookie. The provider
+  now wraps the shell, a guard pins that nesting, and the live check reads header, sidebar and footer in both
+  languages with zero cross-language leaks.
+- **One label that was not a sentence.** `SHA-256` briefly had a dictionary key whose Chinese value was the same
+  string, which the "is the Chinese block actually Chinese" guard correctly refused: an algorithm name is a
+  technical identifier, not something the product says, so it went back to the page. `MCP` kept its key and got a
+  Chinese value that says what it is (`MCP 服务`).
+- **Two guards followed the words instead of being loosened.** The navigation guard used to read the group's label
+  out of the sidebar source; it now resolves the key against the dictionary and requires the disclaimer in *both*
+  languages, because a Chinese hint that dropped "not your data" would have passed the old check.
+- **The chrome that appears on every screen, not just the first-run path.** The error heading and its retry
+  button, the loading skeletons, the route-level `loading.tsx` and `error.tsx`, a table's empty state, the
+  dialog's two close labels, the language switch's group name and the hero's caption were hard-coded English in
+  shared components -- so a visitor who chose 中文 read English furniture wherever they navigated. They now come
+  from the same dictionary, measured as 7 strings across 6 files closed, and `States.tsx` became a client module
+  to do it: it renders inside server pages, and the locale reaches it through the provider in the root layout.
 
 ## 4.6.0 — Evidence that survives its own display (CI stall root-caused, storage disclosure, run bundle)
 

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Boxes, Database, FlaskConical, GitCompare, History, FileText, Gauge, ScrollText, ServerCog, SlidersHorizontal, Bug } from "lucide-react";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 // R-10: the analyst's loop first, the author's ledgers behind a label that says what they are.
@@ -16,54 +18,59 @@ import { cn } from "@/lib/utils";
 // So nothing is deleted or hidden here. The five diagnostic routes gain their first links, in a group whose
 // label states that it describes the system rather than the visitor's work, and the analyst group is ordered by
 // the loop the product teaches. `NAV_GROUPS` is the declaration the contract test compares against.
+//
+// The declaration carries *key names*, not sentences (R-13): a group label is rendered both as the landmark's
+// accessible name and as the visible heading, so it would otherwise need two owners, and a hand-transcribed label
+// in a module-level array is exactly the copy that keeps reading English after the switch.
 
 export const NAV_GROUPS = [
   {
-    label: "Your work",
+    labelKey: "nav.yourWork",
     key: "analyst",
     items: [
-      { href: "/analysis", label: "Ask", icon: FlaskConical },
-      { href: "/runs", label: "Runs", icon: History },
-      { href: "/reports", label: "Reports", icon: FileText },
-      { href: "/datasets", label: "Datasets", icon: Database },
+      { href: "/analysis", labelKey: "nav.ask", icon: FlaskConical },
+      { href: "/runs", labelKey: "nav.runs", icon: History },
+      { href: "/reports", labelKey: "nav.reports", icon: FileText },
+      { href: "/datasets", labelKey: "nav.datasets", icon: Database },
     ],
   },
   {
-    label: "About this system",
+    labelKey: "nav.about",
     key: "system",
-    hint: "Benchmarks, evaluations and audit surfaces -- measurements of the agent, not of your data.",
+    hintKey: "nav.aboutHint",
     items: [
-      { href: "/benchmarks", label: "Benchmarks", icon: Gauge },
-      { href: "/evaluations", label: "Evaluations", icon: Boxes },
-      { href: "/failures", label: "Failures", icon: Bug },
-      { href: "/research", label: "Research", icon: ScrollText },
-      { href: "/runs/compare", label: "Compare runs", icon: GitCompare },
-      { href: "/datasets/compare", label: "Compare datasets", icon: GitCompare },
-      { href: "/mcp", label: "MCP", icon: ServerCog },
+      { href: "/benchmarks", labelKey: "nav.benchmarks", icon: Gauge },
+      { href: "/evaluations", labelKey: "nav.evaluations", icon: Boxes },
+      { href: "/failures", labelKey: "nav.failures", icon: Bug },
+      { href: "/research", labelKey: "nav.research", icon: ScrollText },
+      { href: "/runs/compare", labelKey: "nav.compareRuns", icon: GitCompare },
+      { href: "/datasets/compare", labelKey: "nav.compareDatasets", icon: GitCompare },
+      { href: "/mcp", labelKey: "nav.mcp", icon: ServerCog },
     ],
   },
   {
-    label: "On this machine",
+    labelKey: "nav.machine",
     key: "local",
-    hint: "Settings that belong to the instance you are talking to, not to the analysis.",
-    items: [{ href: "/settings", label: "Model settings", icon: SlidersHorizontal }],
+    hintKey: "nav.machineHint",
+    items: [{ href: "/settings", labelKey: "nav.settings", icon: SlidersHorizontal }],
   },
 ] as const;
 
 export function Sidebar() {
+  const locale = useLocale();
   const pathname = usePathname();
   return (
-    <aside aria-label="Workspace" className="w-full shrink-0 lg:w-56">
+    <aside aria-label={t(locale, "nav.workspace")} className="w-full shrink-0 lg:w-56">
       {NAV_GROUPS.map((group, index) => (
         <nav
           key={group.key}
-          aria-label={group.label}
+          aria-label={t(locale, group.labelKey)}
           data-nav-group={group.key}
           className={cn("flex gap-1 overflow-x-auto rounded-xl border bg-white p-1.5 shadow-sm lg:flex-col", index > 0 && "mt-3")}
         >
           {index > 0 && (
             <p className="hidden shrink-0 px-3 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 lg:block">
-              {group.label}
+              {t(locale, group.labelKey)}
             </p>
           )}
           {group.items.map((it) => {
@@ -80,13 +87,13 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="size-4" aria-hidden />
-                {it.label}
+                {t(locale, it.labelKey)}
               </Link>
             );
           })}
-          {"hint" in group && group.hint ? (
+          {"hintKey" in group && group.hintKey ? (
             <p className="hidden px-3 pt-1 text-[11px] leading-4 text-zinc-400 lg:block" aria-hidden>
-              {group.hint}
+              {t(locale, group.hintKey)}
             </p>
           ) : null}
         </nav>

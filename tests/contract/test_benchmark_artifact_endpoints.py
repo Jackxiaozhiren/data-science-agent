@@ -39,6 +39,25 @@ PAGE_TO_ENDPOINT = {
     "apps/web/app/research/page.tsx": "/api/v1/research/experiments",
 }
 
+
+def _locale_sentence(locale: str, key: str) -> str:
+    """One sentence out of the web's string owner.
+
+    The reader-facing copy these guards police lives in `apps/web/lib/locale.ts` since R-13, so a guard that
+    wants to know what a branch *says* has to resolve the key the branch renders -- and the same assertion then
+    covers the 中文 page, which the source-text form could not see at all.
+    """
+    folded = re.sub(r":\s+", ": ", (ROOT / "apps/web/lib/locale.ts").read_text(encoding="utf-8"))
+    parts = folded.split(f"{locale}: {{", 1)
+    assert len(parts) == 2, (
+        f"the dictionary has no {locale} block written the way this guard parses it"
+    )
+    body = parts[1].split("\n  },", 1)[0]
+    found = re.search(rf'"{re.escape(key)}": "((?:[^"\\]|\\.)*)"', body)
+    assert found, f"{locale} defines no {key!r}: a reader of that language would see ⟨{key}⟩"
+    return found.group(1)
+
+
 #: The shapes `dsa_api.core.security.AuthMiddleware` treats as unauthenticated.
 PUBLIC_PROBE_PATHS = frozenset({"/health", "/ready", "/version"})
 
@@ -183,25 +202,42 @@ def _dockerfile_copies(text: str) -> dict[str, list[str]]:
 
 
 def test_the_api_image_copies_exactly_the_artifacts_the_router_reads():
-    """Each path constant in the router must land at the same repository-relative location in the image.
+    """Every path the running process opens must land at the same repository-relative location in the image.
 
-    Derived from the module rather than retyped, so a fourth endpoint added without its ``COPY`` line is
+    Derived from the modules rather than retyped, so a fourth endpoint added without its ``COPY`` line is
     reported here instead of returning 404 in the deployment. The whole-tree form is refused on purpose:
     ``benchmarks/`` is 2.8 GB on disk (9 tracked files under ``benchmarks/external/``) and the artifacts
     these three endpoints read are ~153 KB.
+
+    Two readers, not one. This check was written for the artifact router alone, and it is exactly the rule
+    that has to grow: the boot seeder opens the catalog's dataset twins (audit §222), found it missing from
+    the image, raised inside ``repo_root()`` and left the deployed first screen empty -- while this file's own
+    assertion was the thing that kept the two directories out. So the allowed set is the union of what the
+    *router* serves and what the *seeder* reads at boot, both derived from their constants. The size argument
+    is untouched: a directory-wide ``COPY benchmarks`` is still not in the union, and
+    ``test_the_copy_check_can_fail`` still proves that.
     """
     import dsa_api.routers.artifacts as artifacts
+    from dsa_api.services import demo_seed
 
     copies = _dockerfile_copies(DOCKERFILE_API.read_text(encoding="utf-8"))
-    for relative in (artifacts.BASELINE, artifacts.CATALOG, artifacts.RESULTS_DIR):
+    router_reads = (artifacts.BASELINE, artifacts.CATALOG, artifacts.RESULTS_DIR)
+    seeder_reads = (demo_seed.CATALOG, demo_seed.CATALOG_DATASETS, demo_seed.SAMPLES_REL)
+    for relative in (*router_reads, *seeder_reads):
         dest = f"./{relative}"
         assert copies.get(dest) == [relative], (
-            f"{relative} is read by the router but copied as {copies.get(dest)}"
+            f"{relative} is opened by the running process but copied as {copies.get(dest)}"
         )
 
     benchmark_dests = {dest for dest in copies if dest.startswith("./benchmarks")}
-    assert benchmark_dests == {f"./{artifacts.BASELINE}", f"./{artifacts.CATALOG}"}, (
-        f"the image copies {sorted(benchmark_dests)} under benchmarks/, not just the artifacts it serves"
+    allowed = {
+        f"./{relative}"
+        for relative in (*router_reads, *seeder_reads)
+        if relative.startswith("benchmarks")
+    }
+    assert benchmark_dests == allowed, (
+        f"the image copies {sorted(benchmark_dests)} under benchmarks/, not the artifacts and demo bytes it "
+        f"reads ({sorted(allowed)})"
     )
 
 
@@ -250,12 +286,23 @@ def test_the_research_page_keeps_an_absent_results_dir_apart_from_an_empty_one()
     assert anchor in text, "the page has no dedicated notFound branch"
     start = text.index(anchor)
     branch = text[start : text.index(") :", start)]
-    assert "deployment" in branch, (
+    # R-13 moved these sentences into the locale owner, so the branch names keys and the guard follows them.
+    # Checking the resolved sentences rather than the source text is the stronger form: it still refuses the
+    # wrong remedy and the reused empty-state copy, and it now has to refuse them in 中文 as well.
+    keys = re.findall(r't\(locale, "([^"]+)"\)', branch)
+    assert keys, "the 404 branch no longer renders any sentence through the locale owner"
+    words = " ".join(_locale_sentence("en", key) for key in keys)
+    zh_words = " ".join(_locale_sentence("zh", key) for key in keys)
+    assert "deployment" in words, (
         "the 404 branch does not say the artifact is missing from the deployment"
     )
-    assert "404" in branch
-    assert "ablation runner" not in branch, "the 404 branch tells the reader to do the wrong thing"
-    assert "No results yet" not in branch, "the 404 branch reuses the genuinely-empty copy"
+    assert "404" in words and "404" in zh_words
+    assert "ablation runner" not in words and "运行消融" not in zh_words, (
+        "the 404 branch tells the reader to do the wrong thing"
+    )
+    assert (
+        "No results yet" not in words and _locale_sentence("zh", "rs.noResults") not in zh_words
+    ), "the 404 branch reuses the genuinely-empty copy"
 
 
 def test_the_filesystem_read_check_can_fail():

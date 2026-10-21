@@ -27,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import asyncio
 import json
+import shlex
 import subprocess
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -781,4 +782,72 @@ async def test_the_mcp_app_shows_a_stored_run_with_the_bytes_the_export_hands_ov
     assert via_app.status_code == 404, (
         f"an unidentified client surface read a visitor's completed run ({theirs}): the App loader is not "
         "scoped to what the instance publishes, and R-08 has a hole in it"
+    )
+
+
+#: The image a deployment builds (render.yaml points the API service at this file).
+DOCKERFILE = REPO / "docker" / "Dockerfile.api"
+
+
+def _copy_sources(text: str) -> set[str]:
+    """Every source path a Dockerfile copies from, build flags dropped."""
+    out: set[str] = set()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("COPY "):
+            continue
+        parts = [token for token in shlex.split(stripped)[1:] if not token.startswith("--")]
+        if len(parts) < 2:
+            continue
+        out.update(src.rstrip("/") for src in parts[:-1])
+    return out
+
+
+def _unshipped(required: set[str], sources: set[str]) -> list[str]:
+    """Which required paths no COPY covers -- a source is a cover if it is the path or an ancestor directory."""
+    return sorted(
+        path
+        for path in required
+        if not any(path == src or path.startswith(f"{src}/") for src in sources)
+    )
+
+
+def test_the_api_image_ships_what_the_boot_seeder_opens() -> None:
+    """The image a deployment runs must contain the files the boot hook reads, not only the code that reads them.
+
+    Measured on the live instance after a successful redeploy: `/version` answered 4.6.0 with
+    ``ephemeral_roots: ["artifacts", "database", "datasets"]`` and `/api/v1/datasets/` answered
+    ``{"datasets":[],"total":0}`` -- an empty first screen on a healthy-looking 200. The cause was not the
+    database and not the disk: `docker/Dockerfile.api` copied `benchmarks/v2/catalog.json` but neither
+    `examples/datasets` nor `benchmarks/v2/datasets`, and `demo_seed.repo_root()` locates its tree by searching
+    ancestors for the samples directory, so it raised before seeding a single row. Reproduced by materializing a
+    tree from the Dockerfile's own COPY list and running the shipped module inside it:
+    `RuntimeError: no repository root with examples/datasets above /private/tmp/fakeapp/...`, exit 3; with the two
+    lines added the same probe resolves the root, finds both sample CSVs, and matches their bytes against the
+    catalog twins.
+
+    Asserted against the module's constants rather than a copied list, so renaming `CATALOG_DATASETS` or the
+    samples path moves this check instead of silently narrowing it (§82's rule).
+    """
+    from dsa_api.services import demo_seed
+
+    text = DOCKERFILE.read_text(encoding="utf-8")
+    sources = _copy_sources(text)
+    assert sources, "no COPY instructions parsed -- the reader broke"
+    required = {demo_seed.CATALOG, demo_seed.CATALOG_DATASETS, demo_seed.SAMPLES_REL}
+    gaps = _unshipped(required, sources)
+    assert not gaps, (
+        f"docker/Dockerfile.api does not ship {gaps}: the boot seeder opens them through repo_root(), so the "
+        "deployed instance comes up with an empty first screen while every endpoint answers 200"
+    )
+
+    # The same reader must call the missing directory a gap, or the assertion above certifies nothing.
+    dropped = "\n".join(
+        line
+        for line in text.splitlines()
+        if line.strip() != f"COPY {demo_seed.SAMPLES_REL} ./examples/datasets"
+    )
+    assert dropped != text, "the control edit did not land -- this control proves nothing"
+    assert _unshipped({demo_seed.SAMPLES_REL}, _copy_sources(dropped)) == [demo_seed.SAMPLES_REL], (
+        "removing the samples COPY was not detected by the reader"
     )

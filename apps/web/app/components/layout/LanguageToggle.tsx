@@ -11,7 +11,7 @@
 // switched, and a half-translated screen is worse than a slower whole one.
 
 import { useRouter } from "next/navigation";
-import { LOCALES, LOCALE_LABELS, storeLocale, type Locale } from "@/lib/locale";
+import { LOCALES, LOCALE_LABELS, storeLocale, t, type Locale } from "@/lib/locale";
 
 export function LanguageToggle({ locale, className }: { locale: Locale; className?: string }) {
   const router = useRouter();
@@ -28,7 +28,7 @@ export function LanguageToggle({ locale, className }: { locale: Locale; classNam
   return (
     <div
       role="group"
-      aria-label="Interface language"
+      aria-label={t(locale, "lang.aria")}
       className={`flex items-center gap-1 rounded-lg border border-zinc-200 p-0.5 ${className ?? ""}`}
     >
       {LOCALES.map((code) => (

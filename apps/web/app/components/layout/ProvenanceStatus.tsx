@@ -1,6 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/locale";
+import { useLocale } from "@/app/lib/LocaleProvider";
 import { describeReasoningMode, describeStorage, useBuildProvenance } from "@/lib/buildProvenance";
 
 /**
@@ -19,10 +21,11 @@ export function ProvenanceStatus({
   showVersion?: boolean;
 }) {
   const provenance = useBuildProvenance();
+  const locale = useLocale();
   if (provenance.state !== "ready") return null;
 
-  const mode = provenance.reasoningMode ? describeReasoningMode(provenance.reasoningMode) : null;
-  const storage = provenance.storage ? describeStorage(provenance.storage) : null;
+  const mode = provenance.reasoningMode ? describeReasoningMode(provenance.reasoningMode, locale) : null;
+  const storage = provenance.storage ? describeStorage(provenance.storage, locale) : null;
   if (!mode && !provenance.version && !storage) return null;
 
   // The marker's own word leads the accessible name: `aria-label` replaces the visible text, so a name that
@@ -34,7 +37,7 @@ export function ProvenanceStatus({
   ]
     .filter((part): part is string => part !== null)
     .join(" ");
-  const fallback = `Build ${provenance.version ?? "unknown"}`;
+  const fallback = t(locale, "shell.build").replace("{version}", provenance.version ?? "unknown");
   return (
     <span
       role="status"
@@ -48,7 +51,7 @@ export function ProvenanceStatus({
       {mode ? <span className="truncate">{mode.short}</span> : null}
       {storage ? <span className="shrink-0 text-amber-700">{storage.short}</span> : null}
       {showVersion && provenance.version ? (
-        <span className="shrink-0 font-mono text-zinc-500">build {provenance.version}</span>
+        <span className="shrink-0 font-mono text-zinc-500">{t(locale, "shell.build").replace("{version}", provenance.version)}</span>
       ) : null}
     </span>
   );

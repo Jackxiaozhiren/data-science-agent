@@ -10,7 +10,7 @@ import { StatCard } from "@/app/components/data/StatCard";
 import { EmptyState, ErrorState } from "@/app/components/data/States";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { SchemaTable } from "@/app/datasets/[id]/SchemaTable";
-import { t as tt } from "@/lib/locale";
+import { t } from "@/lib/locale";
 
 type ColumnProfile = {
   name: string;
@@ -74,11 +74,11 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
   if (failure && failure !== "notFound") {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Step 1 · Dataset profile" title="Dataset unavailable" description="The request for this dataset failed." />
+        <PageHeader eyebrow={t(locale, "dsd.eyebrow")} title={t(locale, "dsd.unavailable")} description={t(locale, "dsd.requestFailed")} />
         <ErrorState
           message={shared[failure]}
           diagnostics={
-            <Link href="/datasets"><Button variant="secondary" size="sm">Back to Datasets</Button></Link>
+            <Link href="/datasets"><Button variant="secondary" size="sm">{t(locale, "dsd.back")}</Button></Link>
           }
         />
       </div>
@@ -87,11 +87,11 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
   if (!ds) {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Step 1 · Dataset profile" title="Dataset not found" description="The dataset may have been removed, or the DSA API is unavailable." />
+        <PageHeader eyebrow={t(locale, "dsd.eyebrow")} title={t(locale, "dsd.notFound")} description={t(locale, "dsd.requestFailedBody")} />
         <ErrorState
-          message="Dataset not found or the DSA API is unavailable."
+          message={t(locale, "dsd.notFoundBody")}
           diagnostics={
-            <Link href="/datasets"><Button variant="secondary" size="sm">Back to Datasets</Button></Link>
+            <Link href="/datasets"><Button variant="secondary" size="sm">{t(locale, "dsd.back")}</Button></Link>
           }
         />
       </div>
@@ -105,51 +105,61 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 1 · Dataset profile"
+        eyebrow={t(locale, "dsd.eyebrow")}
         title={ds.filename}
-        description={`Format ${ds.format} · ${ds.rows} rows × ${ds.cols} columns${ds.created_at ? ` · Created ${ds.created_at.slice(0, 19).replace("T", " ")}` : ""}`}
+        description={
+          t(locale, "dsd.summaryLine")
+            .replace("{format}", String(ds.format))
+            .replace("{rows}", String(ds.rows))
+            .replace("{cols}", String(ds.cols)) +
+          (ds.created_at
+            ? t(locale, "dsd.createdSuffix").replace("{ts}", ds.created_at.slice(0, 19).replace("T", " "))
+            : "")
+        }
         actions={
           <Link href={`/analysis?dataset=${ds.id}`}>
-            <Button size="sm">Ask a question about this dataset <ArrowRight className="size-4" aria-hidden /></Button>
+            <Button size="sm">{t(locale, "dsd.askTitle")} <ArrowRight className="size-4" aria-hidden /></Button>
           </Link>
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Rows" value={String(ds.rows ?? "—")} hint="Profiled rows" icon={Table2} />
-        <StatCard label="Columns" value={String(ds.cols ?? "—")} hint="Profiled columns" icon={Database} />
-        <StatCard label="Format" value={ds.format || "—"} hint={ds.size_bytes != null ? `${(ds.size_bytes / 1024).toFixed(1)} KB` : "Upload format"} icon={FileDigit} />
-        <StatCard label="SHA-256" value={shortHash} hint={ds.sha256 ?? "Hash unavailable"} icon={Hash} accent="emerald" />
+        <StatCard label={t(locale, "dsd.rows")} value={String(ds.rows ?? "—")} hint={t(locale, "dsd.hintRows")} icon={Table2} />
+        <StatCard label={t(locale, "dsd.columns")} value={String(ds.cols ?? "—")} hint={t(locale, "dsd.hintColumns")} icon={Database} />
+        <StatCard label={t(locale, "dsd.format")} value={ds.format || "—"} hint={ds.size_bytes != null ? `${(ds.size_bytes / 1024).toFixed(1)} KB` : t(locale, "dsd.uploadFormat")} icon={FileDigit} />
+        <StatCard label={"SHA-256"} value={shortHash} hint={ds.sha256 ?? t(locale, "dsd.hashUnavailable")} icon={Hash} accent="emerald" />
       </div>
 
       <Tabs defaultValue="preview">
         <TabsList>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="schema">Schema</TabsTrigger>
-          <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
-          <TabsTrigger value="lineage">Lineage</TabsTrigger>
+          <TabsTrigger value="preview">{t(locale, "dsd.tabPreview")}</TabsTrigger>
+          <TabsTrigger value="schema">{t(locale, "dsd.tabSchema")}</TabsTrigger>
+          <TabsTrigger value="analyses">{t(locale, "dsd.tabAnalyses").replace("{n}", String(analyses.length))}</TabsTrigger>
+          <TabsTrigger value="lineage">{t(locale, "dsd.lineage")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="preview">
           {!prof ? (
-            <EmptyState title="No profile available" description="This dataset has no computed profile yet." />
+            <EmptyState title={t(locale, "dsd.noProfile")} description={t(locale, "dsd.noProfileBody")} />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Data quality</CardTitle>
-                  <CardDescription className="text-xs">Duplicates and missingness from the profiler.</CardDescription>
+                  <CardTitle className="text-sm">{t(locale, "dsd.qualityTitle")}</CardTitle>
+                  <CardDescription className="text-xs">{t(locale, "dsd.qualitySub")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-zinc-500">Duplicate rows</span><span className="font-medium tabular-nums">{prof.duplicate_rows}</span></div>
-                  <div className="flex justify-between"><span className="text-zinc-500">Missing ratio</span><span className="font-medium tabular-nums">{(prof.missing_ratio * 100).toFixed(1)}%</span></div>
-                  <div className="flex justify-between"><span className="text-zinc-500">Shape</span><span className="font-medium tabular-nums">{prof.rows} × {prof.columns}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">{t(locale, "dsd.dupRows")}</span><span className="font-medium tabular-nums">{prof.duplicate_rows}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">{t(locale, "dsd.missingRatio")}</span><span className="font-medium tabular-nums">{(prof.missing_ratio * 100).toFixed(1)}%</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">{t(locale, "dsd.shapeLabel")}</span><span className="font-medium tabular-nums">{prof.rows} × {prof.columns}</span></div>
                 </CardContent>
               </Card>
               <Card className="min-w-0">
                 <CardHeader>
-                  <CardTitle className="text-sm">Column health</CardTitle>
-                  <CardDescription className="text-xs">Null share per column — over 20% gets flagged. Showing up to 8 of {prof.column_profiles.length}.</CardDescription>
+                  <CardTitle className="text-sm">{t(locale, "dsd.colHealth")}</CardTitle>
+                            <CardDescription className="text-xs">
+            {t(locale, "dsd.nullShareBody").replace("{n}", String(prof.column_profiles.length))}
+          </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2.5 text-sm">
@@ -161,10 +171,13 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
                           <div className="flex items-center justify-between gap-2">
                             <code className="min-w-0 flex-1 truncate font-mono text-xs" title={c.name}>{c.name}</code>
                             <span className={`shrink-0 text-xs tabular-nums ${flagged ? "font-semibold text-amber-700" : "text-zinc-500"}`}>
-                              {flagged ? `⚠ ${nullPct.toFixed(1)}% null` : `${nullPct.toFixed(1)}% null`} · {c.unique_count ?? "—"} uniq
+                              {flagged
+                              ? t(locale, "dsd.nullFlag").replace("{pct}", nullPct.toFixed(1))
+                              : t(locale, "dsd.nullRatio").replace("{pct}", nullPct.toFixed(1))}
+                            {t(locale, "dsd.uniqSuffix").replace("{n}", String(c.unique_count ?? "—"))}
                             </span>
                           </div>
-                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={`${c.name}: ${nullPct.toFixed(1)}% null values`}>
+                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={t(locale, "dsd.barAria").replace("{name}", c.name).replace("{pct}", nullPct.toFixed(1))}>
                             <div
                               className={`h-full rounded-full ${flagged ? "bg-amber-400" : "bg-emerald-500"}`}
                               style={{ width: `${Math.max(2, Math.min(100, nullPct))}%` }}
@@ -182,7 +195,7 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
 
         <TabsContent value="schema">
           {!prof ? (
-            <EmptyState title="No schema available" description="No column profiles were returned for this dataset." />
+            <EmptyState title={t(locale, "dsd.noSchema")} description={t(locale, "dsd.noSchemaBody")} />
           ) : (
             <Card>
               <CardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
@@ -199,13 +212,13 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
                 <ErrorState message={shared[analysesFailure]} />
               ) : analyses.length === 0 ? (
                 <EmptyState
-                  title="No analyses for this dataset yet"
-                  description="Ask the first question — the run will appear here with its evidence chain."
-                  action={<Link href={`/analysis?dataset=${ds.id}`}><Button size="sm">Ask a question →</Button></Link>}
+                  title={t(locale, "dsd.noAnalyses")}
+                  description={t(locale, "dsd.noAnalysesBody")}
+                  action={<Link href={`/analysis?dataset=${ds.id}`}><Button size="sm">{t(locale, "dsd.askCta")}</Button></Link>}
                 />
               ) : (
                 <>
-                  <p className="mb-2 text-xs text-zinc-500">Session chain, newest first — open any run to ask a follow-up from its trace page.</p>
+                  <p className="mb-2 text-xs text-zinc-500">{t(locale, "dsd.chainSub")}</p>
                   <ul className="divide-y divide-zinc-100">
                     {analyses.map((a, i) => (
                       <li key={a.id} className="flex items-center gap-3 py-2.5">
@@ -228,14 +241,14 @@ export default async function DatasetDetailPage({ params }: { params: Promise<{ 
         <TabsContent value="lineage">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm"><Fingerprint className="size-4 text-zinc-500" aria-hidden /> Lineage</CardTitle>
-              <CardDescription className="text-xs">Identity and provenance pinned at upload time.</CardDescription>
+              <CardTitle className="flex items-center gap-2 text-sm"><Fingerprint className="size-4 text-zinc-500" aria-hidden /> {t(locale, "dsd.lineage")}</CardTitle>
+              <CardDescription className="text-xs">{t(locale, "dsd.provenanceSub")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 font-mono text-xs">
               <p className="break-all"><span className="font-sans text-zinc-500">dataset_id · </span>{ds.id}</p>
               <p className="break-all"><span className="font-sans text-zinc-500">sha256 · </span>{ds.sha256 ?? "—"}</p>
-              <p><span className="font-sans text-zinc-500">source · </span>upload via POST /api/v1/datasets/</p>
-              <p><span className="font-sans text-zinc-500">downstream · </span>{analyses.length} linked analysis run{analyses.length === 1 ? "" : "s"}</p>
+              <p><span className="font-sans text-zinc-500">{t(locale, "dsd.sourceLabel")} · </span>{t(locale, "dsd.uploadedVia")}</p>
+              <p><span className="font-sans text-zinc-500">{t(locale, "dsd.downstreamLabel")} · </span>{t(locale, analyses.length === 1 ? "dsd.linkedRunOne" : "dsd.linkedRunMany").replace("{n}", String(analyses.length))}</p>
             </CardContent>
           </Card>
         </TabsContent>

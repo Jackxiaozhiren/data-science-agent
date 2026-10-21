@@ -329,20 +329,20 @@ export default function DatasetsPage() {
             <div role="status" aria-live="polite" className="text-sm text-zinc-600">{copy}</div>
           ) : items.length > 0 ? (
             <DataTable<Dataset & Record<string, unknown>>
-              caption="Datasets"
+              caption={t(locale, "nav.datasets")}
               keyOf={(d) => d.id}
               rows={items as (Dataset & Record<string, unknown>)[]}
               columns={[
-                { key: "filename", header: "File", sortable: true, render: (d) => <span className="block max-w-[220px] truncate font-medium" title={d.filename}>{d.filename}</span> },
-                { key: "format", header: "Format", sortable: true, render: (d) => <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs">{d.format || "—"}</code> },
-                { key: "rows", header: "Rows", sortable: true, render: (d) => <span className="tabular-nums">{d.rows ?? "—"}</span> },
-                { key: "cols", header: "Cols", sortable: true, render: (d) => <span className="tabular-nums">{d.cols ?? "—"}</span> },
-                { key: "created_at", header: "Created", sortable: true, className: "hidden sm:table-cell", render: (d) => <span className="whitespace-nowrap text-xs text-zinc-500">{d.created_at?.slice(0, 19).replace("T", " ") || "—"}</span> },
+                { key: "filename", header: t(locale, "col.file"), sortable: true, render: (d) => <span className="block max-w-[220px] truncate font-medium" title={d.filename}>{d.filename}</span> },
+                { key: "format", header: t(locale, "col.format"), sortable: true, render: (d) => <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs">{d.format || "—"}</code> },
+                { key: "rows", header: t(locale, "col.rows"), sortable: true, render: (d) => <span className="tabular-nums">{d.rows ?? "—"}</span> },
+                { key: "cols", header: t(locale, "col.cols"), sortable: true, render: (d) => <span className="tabular-nums">{d.cols ?? "—"}</span> },
+                { key: "created_at", header: t(locale, "col.created"), sortable: true, className: "hidden sm:table-cell", render: (d) => <span className="whitespace-nowrap text-xs text-zinc-500">{d.created_at?.slice(0, 19).replace("T", " ") || "—"}</span> },
                 {
                   key: "__actions", header: "", render: (d) => (
                     <span className="flex shrink-0 items-center gap-3 whitespace-nowrap">
-                      <Link href={`/datasets/${d.id}`} className="text-xs font-medium text-zinc-600 underline hover:text-zinc-900">View</Link>
-                      <Link href={`/analysis?dataset=${d.id}`} className="text-xs font-semibold text-zinc-900 underline">Analyze →</Link>
+                      <Link href={`/datasets/${d.id}`} className="text-xs font-medium text-zinc-600 underline hover:text-zinc-900">{t(locale, "ds.view")}</Link>
+                      <Link href={`/analysis?dataset=${d.id}`} className="text-xs font-semibold text-zinc-900 underline">{t(locale, "ds.analyze")}</Link>
                     </span>
                   ),
                 },
@@ -354,9 +354,9 @@ export default function DatasetsPage() {
 
       {/* API diagnostics */}
       <details className="rounded-xl border bg-white px-4 py-3 text-sm shadow-sm">
-        <summary className="cursor-pointer text-xs font-medium text-zinc-500">API diagnostics</summary>
+        <summary className="cursor-pointer text-xs font-medium text-zinc-500">{t(locale, "ds.apiDiagnostics")}</summary>
         <p className="mt-2 text-xs leading-5 text-zinc-500">
-          Base URL: <code className="font-mono">{API_BASE_URL}</code>
+          {t(locale, "ds.baseUrlLabel")} <code className="font-mono">{API_BASE_URL}</code>
           {" · "}
           <a href={apiUrl("/health")} className="underline" target="_blank" rel="noreferrer">/health</a>
           {" · "}

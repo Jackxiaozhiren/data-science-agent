@@ -26,6 +26,7 @@ from dsa_agent.state import AnalysisStatus
 ROOT = Path(__file__).resolve().parents[2]
 STATUS_MODULE = ROOT / "apps/web/app/lib/analysisStatus.ts"
 WEB_APP = ROOT / "apps/web/app"
+LOCALE_TS = ROOT / "apps/web/lib/locale.ts"
 
 
 def _ts_array(source: str, name: str) -> set[str] | None:
@@ -52,6 +53,20 @@ def _module_source() -> str:
 
 def _enum_values() -> set[str]:
     return {member.value for member in AnalysisStatus}
+
+
+def _dictionary_keys(locale: str) -> set[str]:
+    """The key names one locale block of the shared dictionary defines.
+
+    Read here rather than imported from test_web_locale_parity.py so this file's claim -- the status
+    vocabulary is sayable -- stands on its own when that file changes shape.
+    """
+    source = LOCALE_TS.read_text(encoding="utf-8")
+    start = source.index(f"  {locale}: {{")
+    body = source[start : source.index("\n  },", start)]
+    keys = set(re.findall(r'"([^"]+)":', body))
+    assert len(keys) > 100, f"the {locale} block parsed only {len(keys)} keys -- the slice broke"
+    return keys
 
 
 def test_enum_itself_is_the_measured_shape() -> None:
@@ -342,12 +357,86 @@ def test_every_badge_renders_text_and_only_decorates_with_colour() -> None:
 
 
 def test_status_badge_branches_all_carry_the_state_word() -> None:
-    """The narrower claim for the run-status owner: the text child is the status itself."""
+    """The narrower claim for the run-status owner: the text child is the status itself.
+
+    R-13f moved that text behind `statusLabel(locale, status)`, so what the JSX renders is a local named
+    `label`. The invariant was never the spelling of the identifier -- it is that the badge says the state in
+    words and that those words come from the status through the locale owner, so both halves are pinned.
+    """
     source = BADGE_OWNER.read_text(encoding="utf-8")
+    assert "const label = statusLabel(locale, status);" in source, (
+        "StatusBadge no longer derives its text from the status argument through the locale owner, so a "
+        "declared state could be rendered in the wrong language or not at all"
+    )
     branches = [(opening, children) for opening, children in _iter_badges(source)]
     assert len(branches) == 4, f"expected StatusBadge's four branches, parsed {len(branches)}"
     for opening, children in branches:
-        assert children is not None and "status" in children, (
+        assert children is not None and "{label}" in children, (
             f"a run-status badge branch no longer renders the state text: {opening[:60]} -> "
             f"{(children or '').strip()[:60]!r}"
         )
+
+
+def test_every_declared_status_has_a_label_in_both_locales() -> None:
+    """A status the interface knows about must be sayable in the language the visitor chose.
+
+    `statusLabel` deliberately falls back to the raw token for a value outside the enum -- inventing a
+    translation for an undeclared state is worse. That fallback is exactly why this needs a pin: without it,
+    adding a state to `ANALYSIS_STATUSES` would ship an English chip on a 中文 page and nothing would notice.
+    """
+    statuses = _ts_array(_module_source(), "ANALYSIS_STATUSES")
+    assert statuses is not None and len(statuses) >= 8, (
+        f"the vocabulary parsed as {statuses} -- the extraction has gone blind, so this check proves nothing"
+    )
+    for locale in ("en", "zh"):
+        keys = _dictionary_keys(locale)
+        missing = sorted(f"status.{s}" for s in statuses if f"status.{s}" not in keys)
+        assert not missing, (
+            f"{locale} carries no label for {missing}; the badge would silently fall back to the raw token "
+            "and a 中文 visitor would read an English status chip"
+        )
+
+
+def test_a_tool_call_status_is_sayable_in_the_readers_language() -> None:
+    """The run report's per-call badge shows the engine's own two-word vocabulary, so it needs two labels.
+
+    `ToolCallRecord.status` is `Literal["ok", "error"]` in `dsa_agent/state.py` -- a word the product chose,
+    not a value that came out of the visitor's data -- and until now the badge printed the token, so a 中文
+    run report read `ok` five times. The list is parsed from the producer rather than typed here for the same
+    reason the run-status test parses it: adding a member upstream must turn this red instead of shipping an
+    untranslated chip, and a hand-copied list would keep passing.
+
+    `validation_status` is deliberately not required here. The interface never renders that field, and a
+    vocabulary test that demands a label for a word no reader can see turns into a dictionary of unused
+    strings -- which is the failure mode §13's status layer was built to avoid.
+    """
+    state_src = (ROOT / "packages/agent/src/dsa_agent/state.py").read_text(encoding="utf-8")
+    record = state_src[state_src.index("class ToolCallRecord") :]
+    declared = re.search(r"\bstatus: Literal\[([^\]]+)\]", record)
+    assert declared is not None, (
+        "`ToolCallRecord.status` is no longer a declared Literal -- the extraction went blind, so this check "
+        "would pass on an empty set"
+    )
+    members = re.findall(r'"([^"]+)"', declared.group(1))
+    assert len(members) >= 2, f"the Literal parsed as {members!r} -- too thin to certify"
+
+    for locale in ("en", "zh"):
+        keys = _dictionary_keys(locale)
+        missing = sorted(f"call.{m}" for m in members if f"call.{m}" not in keys)
+        assert not missing, (
+            f"{locale} carries no label for {missing}; the badge falls back to the raw token and a 中文 "
+            "visitor reads English where the product's own word belongs"
+        )
+
+    inspector = (WEB_APP / "analysis/[runId]/RunInspector.tsx").read_text(encoding="utf-8")
+    assert "{callStatusLabel(locale, tc.status)}" in inspector, (
+        "the tool-call badge stopped asking the dictionary -- a raw `{tc.status}` renders the engine's token "
+        "in whatever language the run happens to have been asked in"
+    )
+    locale_src = LOCALE_TS.read_text(encoding="utf-8")
+    assert "export function callStatusLabel" in locale_src, "the label lost its owner"
+    body = re.search(r"export function callStatusLabel.*?\n\}", locale_src, re.S)
+    assert body is not None and "?? status" in body.group(0), (
+        "`callStatusLabel` no longer falls back to the raw token; an undeclared status would be translated "
+        "by guessing"
+    )

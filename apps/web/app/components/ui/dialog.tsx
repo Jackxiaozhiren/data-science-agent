@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { X } from "lucide-react";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 // shadcn/ui Dialog (minimal, dependency-free port) — https://ui.shadcn.com/docs/components/dialog
@@ -32,13 +34,14 @@ export function Dialog({
 }
 
 export function DialogContent({ className, onClose, children }: { className?: string; onClose: () => void; children: React.ReactNode }) {
+  const locale = useLocale();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <button aria-label="Close dialog" onClick={onClose} className="absolute inset-0 bg-zinc-950/40" />
+      <button aria-label={t(locale, "dialog.close")} onClick={onClose} className="absolute inset-0 bg-zinc-950/40" />
       <div className={cn("relative w-full max-w-lg rounded-xl border bg-white p-5 shadow-sm", className)}>
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t(locale, "dialog.closeShort")}
           className="absolute right-3 top-3 rounded-lg p-1 text-zinc-500 hover:bg-zinc-100"
         >
           <X className="size-4" />

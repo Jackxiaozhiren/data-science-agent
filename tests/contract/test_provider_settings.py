@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import stat
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -393,11 +394,27 @@ def test_dsa_ui_gives_the_settings_a_place_to_live(tmp_path: Path) -> None:
 
 SETTINGS_PAGE = Path(__file__).resolve().parents[2] / "apps/web/app/settings/page.tsx"
 SIDEBAR = Path(__file__).resolve().parents[2] / "apps/web/app/components/layout/Sidebar.tsx"
+LOCALE = Path(__file__).resolve().parents[2] / "apps/web/lib/locale.ts"
 TOUR = Path(__file__).resolve().parents[2] / "apps/web/scripts/regression.mjs"
 
 
 def _page() -> str:
     return SETTINGS_PAGE.read_text(encoding="utf-8")
+
+
+def _locale_en(key: str) -> str:
+    """The English value behind one locale key, folded so a wrapped entry still parses.
+
+    `lib/locale.ts` is where page copy lives since R-13, and the fold is the same one
+    `tests/contract/test_benchmark_artifact_endpoints.py` uses -- without it an entry whose string sits on its
+    own line reads as missing, which is how a guard starts asserting on nothing.
+    """
+    folded = re.sub(r":\s+", ": ", LOCALE.read_text(encoding="utf-8"))
+    match = re.search(rf'"{re.escape(key)}": "([^"]*)"', folded)
+    assert match, (
+        f"{key} is not an entry in apps/web/lib/locale.ts -- the copy moved, so this check must move"
+    )
+    return match.group(1)
 
 
 def test_the_settings_page_can_write_the_credential_but_never_read_it() -> None:
@@ -427,7 +444,14 @@ def test_the_page_says_no_and_names_the_command_that_says_yes() -> None:
     assert "!view.local_settings" in source, (
         "the page no longer branches on the instance's answer, so a hosted demo would show a form that fails"
     )
-    assert "does not accept a model credential" in source, "the refusal lost its headline"
+    assert 't(locale, "settings.noCredentialTitle")' in source, (
+        "the refusal branch no longer renders the locale entry that carries its headline"
+    )
+    # R-13 moved this sentence out of the component and into the locale owner, so the claim is checked where
+    # the reader actually sees it. The requirement is unchanged: a refusal still has to state its headline.
+    assert "does not accept a model credential" in _locale_en("settings.noCredentialTitle"), (
+        "the refusal lost its headline"
+    )
     assert "dsa ui" in source, "the refusal does not tell the reader how to get the feature"
 
 

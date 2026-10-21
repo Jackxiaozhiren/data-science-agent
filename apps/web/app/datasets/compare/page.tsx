@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { GitCompareArrows } from "lucide-react";
 import { clientFetch, API_BASE_URL, apiUrl } from "@/lib/api";
 import { Button } from "@/app/components/ui/button";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Select } from "@/app/components/ui/input";
 import { Badge } from "@/app/components/ui/badge";
@@ -50,6 +52,7 @@ function CompareColumn({ label, a, b, higherBetter }: { label: string; a: string
 }
 
 export default function ComparePage() {
+  const locale = useLocale();
   const [items, setItems] = useState<DsItem[]>([]);
   const [leftId, setLeftId] = useState("");
   const [rightId, setRightId] = useState("");
@@ -74,7 +77,7 @@ export default function ComparePage() {
           setLeftId(d.datasets[0].id);
         }
       })
-      .catch((e) => setErr(`Could not reach the DSA API at ${API_BASE_URL}. ${String(e)}`))
+      .catch((e) => setErr(`${t(locale, "common.apiUnreachable").replace("{url}", API_BASE_URL)} ${String(e)}`))
       .finally(() => setLoadingList(false));
   }, []);
 
@@ -114,7 +117,7 @@ export default function ComparePage() {
     <div className="min-w-0 flex-1">
       <label className="sr-only">{label}</label>
       <Select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
-        <option value="">— select —</option>
+        <option value="">{t(locale, "cmpds.selectPlaceholder")}</option>
         {items.map((d) => (
           <option key={d.id} value={d.id}>{d.filename}</option>
         ))}
@@ -125,11 +128,11 @@ export default function ComparePage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 1 · Compare datasets"
-        title="Compare datasets"
-        description="Side-by-side shape, quality, and column overlap — computed in the browser from dataset profiles."
+        eyebrow={t(locale, "cmpds.eyebrow")}
+        title={t(locale, "nav.compareDatasets")}
+        description={t(locale, "cmpds.subtitle")}
         actions={
-          <Link href="/datasets"><Button variant="secondary" size="sm">Back to Datasets</Button></Link>
+          <Link href="/datasets"><Button variant="secondary" size="sm">{t(locale, "dsd.back")}</Button></Link>
         }
       />
       {err && <ErrorState message={err} />}
@@ -138,16 +141,16 @@ export default function ComparePage() {
       ) : items.length < 2 ? (
         <EmptyState
           icon={<GitCompareArrows className="size-5 text-zinc-400" aria-hidden />}
-          title="Need at least two datasets"
-          description="Upload two or more files to unlock side-by-side comparison."
-          action={<Link href="/datasets"><Button size="sm">Upload datasets →</Button></Link>}
+          title={t(locale, "cmpds.needTwoTitle")}
+          description={t(locale, "cmpds.uploadTwo")}
+          action={<Link href="/datasets"><Button size="sm">{t(locale, "cmpds.uploadCta")}</Button></Link>}
         />
       ) : (
         <>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {picker(leftId, setLeftId, "Left dataset")}
+            {picker(leftId, setLeftId, t(locale, "cmpds.left"))}
             <span aria-hidden className="text-center text-sm font-semibold text-zinc-400">vs</span>
-            {picker(rightId, setRightId, "Right dataset")}
+            {picker(rightId, setRightId, t(locale, "cmpds.right"))}
           </div>
           {loadingDetail ? (
             <CardsSkeleton count={2} />
@@ -161,29 +164,29 @@ export default function ComparePage() {
                       <CardDescription className="font-mono text-[11px]">sha256 {d.sha256?.slice(0, 12) ?? "—"}…</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-2">
-                      <StatCard label="Rows" value={String(d.rows ?? "—")} />
-                      <StatCard label="Columns" value={String(d.cols ?? "—")} />
+                      <StatCard label={t(locale, "dsd.rows")} value={String(d.rows ?? "—")} />
+                      <StatCard label={t(locale, "dsd.columns")} value={String(d.cols ?? "—")} />
                     </CardContent>
                   </Card>
                 ))}
               </div>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Head-to-head</CardTitle>
-                  <CardDescription className="text-xs">Emerald marks the larger value (ties unmarked).</CardDescription>
+                  <CardTitle className="text-sm">{t(locale, "cmpds.headToHead")}</CardTitle>
+                  <CardDescription className="text-xs">{t(locale, "cmpds.emeraldNote")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <CompareColumn label="rows" a={String(left.rows ?? "—")} b={String(right.rows ?? "—")} />
-                  <CompareColumn label="columns" a={String(left.cols ?? "—")} b={String(right.cols ?? "—")} />
+                  <CompareColumn label={t(locale, "cmpds.unitRows")} a={String(left.rows ?? "—")} b={String(right.rows ?? "—")} />
+                  <CompareColumn label={t(locale, "cmpds.unitColumns")} a={String(left.cols ?? "—")} b={String(right.cols ?? "—")} />
                   <CompareColumn
-                    label="missing %"
+                    label={t(locale, "cmpds.unitMissing")}
                     a={left.profile ? `${(left.profile.missing_ratio * 100).toFixed(1)}%` : "—"}
                     b={right.profile ? `${(right.profile.missing_ratio * 100).toFixed(1)}%` : "—"}
                     higherBetter={false}
                   />
-                  <CompareColumn label="duplicates" a={String(left.profile?.duplicate_rows ?? "—")} b={String(right.profile?.duplicate_rows ?? "—")} higherBetter={false} />
+                  <CompareColumn label={t(locale, "cmpds.unitDuplicates")} a={String(left.profile?.duplicate_rows ?? "—")} b={String(right.profile?.duplicate_rows ?? "—")} higherBetter={false} />
                   <CompareColumn
-                    label="size"
+                    label={t(locale, "cmpds.unitSize")}
                     a={left.size_bytes != null ? `${(left.size_bytes / 1024).toFixed(1)} KB` : "—"}
                     b={right.size_bytes != null ? `${(right.size_bytes / 1024).toFixed(1)} KB` : "—"}
                   />
@@ -191,21 +194,26 @@ export default function ComparePage() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Column overlap</CardTitle>
-                  <CardDescription className="text-xs">{common.length} shared · {onlyLeft.length} only in A · {onlyRight.length} only in B (matched by name).</CardDescription>
+                  <CardTitle className="text-sm">{t(locale, "cmpds.overlapTitle")}</CardTitle>
+                            <CardDescription className="text-xs">
+            {t(locale, "cmpds.sharedLine")
+              .replace("{shared}", String(common.length))
+              .replace("{left}", String(onlyLeft.length))
+              .replace("{right}", String(onlyRight.length))}
+          </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-1.5">
                   {common.map((c) => <Badge key={c.name} variant="success">{c.name}</Badge>)}
                   {onlyLeft.map((c) => <Badge key={c.name} variant="secondary">A: {c.name}</Badge>)}
                   {onlyRight.map((c) => <Badge key={c.name} variant="outline">B: {c.name}</Badge>)}
                   {common.length + onlyLeft.length + onlyRight.length === 0 && (
-                    <p className="text-xs text-zinc-500">No column profiles to compare.</p>
+                    <p className="text-xs text-zinc-500">{t(locale, "cmpds.noProfiles")}</p>
                   )}
                 </CardContent>
               </Card>
             </>
           ) : (
-            <EmptyState title="Select two datasets" description="Pick a file on each side to compare." />
+            <EmptyState title={t(locale, "cmpds.selectTwo")} description={t(locale, "cmpds.pickOneEach")} />
           )}
         </>
       )}

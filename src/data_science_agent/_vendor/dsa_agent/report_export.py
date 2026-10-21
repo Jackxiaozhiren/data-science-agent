@@ -44,7 +44,8 @@ EXPORT_MODES: tuple[str, ...] = ("findings", "audited")
 CAUSAL_REWRITE_MARKER = "(Causal inference is not established.)"
 
 #: The floor: a property of the method, true of every observational run, so it stays when nothing else does.
-STANDING_LIMITATION = "Correlation does not imply causation unless causal evidence is established."
+#: Its text lives in ``REPORT_LABELS`` below, because a Chinese run's report should say it in Chinese; the
+#: constant stays as the English form so importers and the export tests keep one name to compare against.
 
 #: Identifier shapes that mean "go and look at the trace". Each is named so a violation says which rule it
 #: broke rather than only that one did.
@@ -79,6 +80,118 @@ _CHECK_LABELS = {
     "evidence_traceability": "Evidence traceability",
     "statistical_power": "Statistical power",
 }
+
+#: The same seven checks, in the language the run was asked in.
+_CHECK_LABELS_ZH = {
+    "evidence_coverage": "证据覆盖率",
+    "unsupported_claim": "因果表述",
+    "tool_errors": "工具执行",
+    "budget": "运行预算",
+    "insight_evidence": "洞察的依据",
+    "evidence_traceability": "证据可追溯性",
+    "statistical_power": "统计功效",
+}
+
+#: Every word this file says *about* a run. A report keeps the language the run was asked in
+#: (`docs/FRONTEND_IA.md`), and the headings, field names and fallback sentences are the product's own words,
+#: not the analyst's -- so they are chosen here by ``report_language`` from the run's question. The run's
+#: findings, claims, messages and evidence text are never translated: a machine translation of a statistician's
+#: sentence is how a number gets lost.
+REPORT_LABELS: dict[str, dict[str, str]] = {
+    "reportTitle": {"en": "Analysis Report", "zh": "分析报告"},
+    "documentTitle": {"en": "Analysis report", "zh": "分析报告"},
+    "objective": {"en": "Objective:", "zh": "目标："},
+    "status": {"en": "Status:", "zh": "状态："},
+    "generated": {"en": "Generated:", "zh": "生成时间："},
+    "dataset": {"en": "Dataset:", "zh": "数据集："},
+    "datasetSha256": {"en": "Dataset sha256:", "zh": "数据集 sha256："},
+    "plan": {"en": "Plan", "zh": "计划"},
+    "toolCalls": {"en": "Tool Calls", "zh": "工具调用"},
+    "evidence": {"en": "Evidence", "zh": "证据"},
+    "evidenceInline": {"en": "Evidence:", "zh": "证据："},
+    "insights": {"en": "Insights", "zh": "洞察"},
+    "validation": {"en": "Validation", "zh": "校验"},
+    "limitations": {"en": "Limitations", "zh": "局限"},
+    "limitationsLead": {"en": "Limitations.", "zh": "局限："},
+    "charts": {"en": "Charts", "zh": "图表"},
+    "noInsights": {
+        "en": "_No insights yet — analysis may be incomplete or blocked by validation._",
+        "zh": "暂无洞察——分析可能尚未完成，或被校验阻断。",
+    },
+    "noInsightsPlain": {
+        "en": "No insights yet — analysis may be incomplete or blocked by validation.",
+        "zh": "暂无洞察——分析可能尚未完成，或被校验阻断。",
+    },
+    "didNotPass": {"en": "the check did not pass", "zh": "该校验未通过"},
+    "error": {"en": "error:", "zh": "错误："},
+    "artifact": {"en": "artifact:", "zh": "产物："},
+    "result": {"en": "result:", "zh": "结果："},
+    "confidence": {"en": "confidence", "zh": "置信度"},
+    "limitation": {"en": "limitation:", "zh": "局限："},
+    # Separators belong to the sentence, so these carry their own trailing space in English and their own
+    # full-width colon in Chinese; a template that added " " for both would put a space after 「：」.
+    "causalRewritten": {
+        "en": "One claim was rewritten because causal evidence is absent: ",
+        "zh": "一条结论被改写了，因为缺少因果证据：",
+    },
+    "recordedError": {"en": "The run recorded an error: ", "zh": "本次运行记录了错误："},
+    "standingLimitation": {
+        "en": "Correlation does not imply causation unless causal evidence is established.",
+        "zh": "在建立因果证据之前，相关不等于因果。",
+    },
+}
+
+#: A report is Chinese when the question that produced it is mostly Chinese. Counting *words* rather than
+#: characters is what keeps that honest in both directions: an English column reference inside a Chinese
+#: question must not flip the document, and one Chinese file name inside an English sentence must not either.
+_CJK_RE = re.compile(r"[\u3400-\u9fff]")
+_LATIN_WORD_RE = re.compile(r"[A-Za-z0-9_.\-/]+")
+
+
+def report_language(source: Any) -> str:
+    """The language the run was asked in, which is the language its report keeps.
+
+    The decision reads the run's own objective/question, never a visitor setting: the artifact a reviewer opens
+    offline ten minutes later is not a page, and it must not change language between readers.
+    """
+    text = str(_field(source, "objective") or _field(source, "user_query") or "")
+    cjk = len(_CJK_RE.findall(text))
+    tokens = cjk + len(_LATIN_WORD_RE.findall(text))
+    if not tokens:
+        return "en"
+    return "zh" if cjk * 2 > tokens else "en"
+
+
+STANDING_LIMITATION = REPORT_LABELS["standingLimitation"]["en"]
+
+#: Sentences the product itself writes *into a run*, listed here so a Chinese run's report can say them in
+#: Chinese. Whole-value matching only: an analyst's or the model's own wording is never touched, however close
+#: it looks, because rewriting a sentence somebody else wrote is how a number leaves a document. The stored run
+#: state is not modified either -- this is a rendering decision, so a run recorded earlier stays byte-for-byte
+#: the document it produced.
+#:
+#: `apps/web/app/lib/limitations.ts` carries the same map for the inspector panel, which reads stored state
+#: rather than this renderer; `test_the_limitation_prose_maps_agree` fails if the two drift.
+PRODUCT_PROSE_ZH: dict[str, str] = {
+    "Association does not imply causation.": "关联不等于因果。",
+    "Correlation does not imply causation.": "相关不等于因果。",
+    "Check assumptions; association does not imply causation.": "请核对假设；关联不等于因果。",
+}
+
+
+def _prose(value: str, lang: str) -> str:
+    """The Chinese form of a sentence the product wrote, or the value unchanged.
+
+    Deliberately an exact-match table rather than a substring rewrite: nothing which is not one of these
+    constants may be altered, so an analyst sentence that merely contains the same words stays as written.
+    """
+    if lang != "zh":
+        return value
+    return PRODUCT_PROSE_ZH.get(value.strip(), value)
+
+
+def _lbl(lang: str, key: str) -> str:
+    return REPORT_LABELS[key][lang]
 
 
 def final_report_status(status: Any) -> str:
@@ -122,37 +235,47 @@ def strip_identifiers(text: str) -> str:
     return re.sub(r"\s{2,}", " ", cleaned).replace(" )", ")").strip()
 
 
-def _label(check: Any) -> str:
+def _label(check: Any, lang: str = "en") -> str:
     key = str(check or "")
+    if lang == "zh":
+        return _CHECK_LABELS_ZH.get(key, key.replace("_", " ").strip() or "校验项")
     return _CHECK_LABELS.get(key, key.replace("_", " ").strip() or "Check")
 
 
-def derived_limitations(source: Any) -> list[str]:
-    """What this run says is weak about itself, assembled only from records that already exist."""
+def derived_limitations(source: Any, lang: str | None = None) -> list[str]:
+    """What this run says is weak about itself, assembled only from records that already exist.
+
+    The wording of the three sentences this function writes is the product's, so it follows the language
+    the run was asked in -- decided from the run itself when a caller does not pass one, which is what lets
+    an API or CLI caller get the right document without learning about languages at all. The insights'
+    own `limitation` text and the recorded error are copied verbatim: they are the run's bytes.
+    """
     summary = run_summary(source)
+    if lang is None:
+        lang = report_language(source)
     collected: list[str] = []
 
     for result in summary.get("validation_results") or []:
         if result.get("passed"):
             continue
-        message = str(result.get("message") or "").strip() or "the check did not pass"
-        collected.append(f"{_label(result.get('check'))}: {message}")
+        message = str(result.get("message") or "").strip() or _lbl(lang, "didNotPass")
+        collected.append(f"{_label(result.get('check'), lang)}: {message}")
 
     for insight in summary.get("insights") or []:
         limitation = str(insight.get("limitation") or "").strip()
         if limitation:
-            collected.append(limitation)
+            collected.append(_prose(limitation, lang))
 
     for record in summary.get("evidence") or []:
         claim = str(record.get("claim") or "")
         if CAUSAL_REWRITE_MARKER in claim:
-            collected.append(f"One claim was rewritten because causal evidence is absent: {claim}")
+            collected.append(f"{_lbl(lang, 'causalRewritten')}{claim}")
 
     error = str(summary.get("error") or "").strip()
     if error:
-        collected.append(f"The run recorded an error: {error}")
+        collected.append(f"{_lbl(lang, 'recordedError')}{error}")
 
-    collected.append(STANDING_LIMITATION)
+    collected.append(_lbl(lang, "standingLimitation"))
 
     seen: set[str] = set()
     unique: list[str] = []
@@ -189,7 +312,7 @@ def _step_text(step: Any) -> str:
     return f"- **{get('name', '')}** (`{get('tool', '')}`): {get('description', '')}"
 
 
-def _insight_lines(insights: list[dict[str, Any]], *, plain: bool) -> list[str]:
+def _insight_lines(insights: list[dict[str, Any]], *, plain: bool, lang: str = "en") -> list[str]:
     lines: list[str] = []
     for insight in insights:
         raw = str(insight.get("finding") or "").strip()
@@ -200,7 +323,8 @@ def _insight_lines(insights: list[dict[str, Any]], *, plain: bool) -> list[str]:
         for key in ("magnitude", "significance", "limitation"):
             value = insight.get(key)
             if value:
-                detail = strip_identifiers(f"{value}") if plain else f"{value}"
+                rendered = _prose(f"{value}", lang)
+                detail = strip_identifiers(rendered) if plain else rendered
                 lines.append(f"  - {key}: {detail}")
         refs = insight.get("evidence_ids") or []
         if refs and not plain:
@@ -208,7 +332,7 @@ def _insight_lines(insights: list[dict[str, Any]], *, plain: bool) -> list[str]:
     return lines
 
 
-def _evidence_lines(records: list[dict[str, Any]]) -> list[str]:
+def _evidence_lines(records: list[dict[str, Any]], lang: str = "en") -> list[str]:
     lines: list[str] = []
     for record in records:
         confidence = record.get("confidence")
@@ -217,18 +341,18 @@ def _evidence_lines(records: list[dict[str, Any]]) -> list[str]:
         )
         lines.append(
             f"- **{record.get('id')}** ({record.get('source_type')} → {record.get('source_id')}) "
-            f"— {record.get('claim')} — confidence {confidence_text} "
+            f"— {record.get('claim')} — {_lbl(lang, 'confidence')} {confidence_text} "
             f"— {record.get('validation_status')}"
         )
         if record.get("result"):
             snippet = json.dumps(record["result"], ensure_ascii=False, default=str, sort_keys=True)[
                 :600
             ]
-            lines.append(f"  - result: `{snippet}`")
+            lines.append(f"  - {_lbl(lang, 'result')} `{snippet}`")
     return lines
 
 
-def _tool_call_lines(calls: list[dict[str, Any]]) -> list[str]:
+def _tool_call_lines(calls: list[dict[str, Any]], lang: str = "en") -> list[str]:
     lines: list[str] = []
     for call in calls:
         mark = "✓" if call.get("status") == "ok" else "✗"
@@ -236,12 +360,12 @@ def _tool_call_lines(calls: list[dict[str, Any]]) -> list[str]:
             f"- {mark} **{call.get('tool')}** ({call.get('call_id')}) — {call.get('duration_ms')}ms"
         )
         if call.get("error"):
-            lines.append(f"  - error: {call['error']}")
+            lines.append(f"  - {_lbl(lang, 'error')} {call['error']}")
         output = call.get("output") or {}
         artifact = output.get("artifact_path") if isinstance(output, Mapping) else None
         if call.get("tool") == "create_chart" and artifact:
             lines.append(f"  - ![chart]({str(artifact).rsplit('/', 1)[-1]})")
-            lines.append(f"  - artifact: `{artifact}`")
+            lines.append(f"  - {_lbl(lang, 'artifact')} `{artifact}`")
     return lines
 
 
@@ -259,55 +383,58 @@ def build_sections(source: Any, *, plain: bool) -> list[tuple[str, list[str]]]:
     figure -- that asymmetry is what lets the two documents be compared at all.
     """
     summary = run_summary(source)
+    lang = report_language(source)
     raw_objective = str(_field(source, "objective") or _field(source, "user_query") or "").strip()
     # The objective is the user's own sentence, and people paste the file they mean into it.
     objective = strip_identifiers(raw_objective) if plain else raw_objective
     status = final_report_status(summary.get("status"))
 
-    title = "# Analysis Report" if plain else f"# Analysis Report — {summary.get('run_id')}"
-    front = [title, f"**Objective:** {objective}"]
+    report_title = _lbl(lang, "reportTitle")
+    title = f"# {report_title}" if plain else f"# {report_title} — {summary.get('run_id')}"
+    front = [title, f"**{_lbl(lang, 'objective')}** {objective}"]
     if plain:
-        front.append(f"**Status:** {status}  |  **Generated:** {_generated(source)}")
+        front.append(
+            f"**{_lbl(lang, 'status')}** {status}  |  **{_lbl(lang, 'generated')}** {_generated(source)}"
+        )
     else:
         front.append(
-            f"**Dataset:** `{_field(source, 'dataset_id', '')}`  |  **Status:** {status}"
-            f"  |  **Generated:** {_generated(source)}"
+            f"**{_lbl(lang, 'dataset')}** `{_field(source, 'dataset_id', '')}`  |  **{_lbl(lang, 'status')}** {status}"
+            f"  |  **{_lbl(lang, 'generated')}** {_generated(source)}"
         )
 
     blocks: list[tuple[str, list[str]]] = [("", front)]
 
     plan = list(_field(source, "plan", []) or [])
     if plan and not plain:
-        blocks.append(("Plan", [_step_text(step) for step in plan]))
+        blocks.append((_lbl(lang, "plan"), [_step_text(step) for step in plan]))
 
     if not plain:
-        calls = _tool_call_lines(summary.get("tool_calls") or [])
+        calls = _tool_call_lines(summary.get("tool_calls") or [], lang)
         if calls:
-            blocks.append(("Tool Calls", calls))
-        evidence = _evidence_lines(summary.get("evidence") or [])
+            blocks.append((_lbl(lang, "toolCalls"), calls))
+        evidence = _evidence_lines(summary.get("evidence") or [], lang)
         if evidence:
-            blocks.append(("Evidence", evidence))
+            blocks.append((_lbl(lang, "evidence"), evidence))
 
-    insights = _insight_lines(summary.get("insights") or [], plain=plain)
+    insights = _insight_lines(summary.get("insights") or [], plain=plain, lang=lang)
     blocks.append(
         (
-            "Insights",
-            insights
-            or ["_No insights yet — analysis may be incomplete or blocked by validation._"],
+            _lbl(lang, "insights"),
+            insights or [_lbl(lang, "noInsights")],
         )
     )
 
     if not plain:
         validation = _validation_lines(summary.get("validation_results") or [])
         if validation:
-            blocks.append(("Validation", validation))
+            blocks.append((_lbl(lang, "validation"), validation))
 
     blocks.append(
         (
-            "Limitations",
+            _lbl(lang, "limitations"),
             [
                 f"- {strip_identifiers(line) if plain else line}"
-                for line in derived_limitations(source)
+                for line in derived_limitations(source, lang)
             ],
         )
     )
@@ -398,7 +525,7 @@ def _travelling_charts(source: Any) -> list[tuple[str, str]]:
     return charts
 
 
-def _named_chart_lines(source: Any) -> list[str]:
+def _named_chart_lines(source: Any, lang: str = "en") -> list[str]:
     """The charts that did *not* travel, named the way the markdown view names them."""
     lines: list[str] = []
     for call in _field(source, "tool_calls", []) or []:
@@ -453,52 +580,55 @@ def export_html(source: Any) -> str:
     read differently.
     """
     summary = run_summary(source)
+    lang = report_language(source)
     objective = str(_field(source, "objective") or _field(source, "user_query") or "").strip()
     status = final_report_status(summary.get("status"))
     sha256 = _dataset_sha256(source)
 
     parts: list[str] = [
         "<!DOCTYPE html>",
-        '<html lang="en">',
+        f'<html lang="{lang}">',
         "<head>",
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
-        "<title>Analysis report</title>",
+        f"<title>{_lbl(lang, 'documentTitle')}</title>",
         f"<style>{_CSS}</style>",
         "</head>",
         "<body>",
-        f"<h1>Analysis Report — {_esc(summary.get('run_id'))}</h1>",
-        f'<p class="meta"><strong>Objective:</strong> {_inline(objective)}</p>',
-        f'<p class="meta"><strong>Dataset:</strong> <code>{_esc(_field(source, "dataset_id", ""))}</code>'
-        f"  |  <strong>Status:</strong> {_esc(status)}"
-        f"  |  <strong>Generated:</strong> {_esc(_generated(source))}</p>",
+        f"<h1>{_lbl(lang, 'reportTitle')} — {_esc(summary.get('run_id'))}</h1>",
+        f'<p class="meta"><strong>{_lbl(lang, "objective")}</strong> {_inline(objective)}</p>',
+        f'<p class="meta"><strong>{_lbl(lang, "dataset")}</strong> <code>{_esc(_field(source, "dataset_id", ""))}</code>'
+        f"  |  <strong>{_lbl(lang, 'status')}</strong> {_esc(status)}"
+        f"  |  <strong>{_lbl(lang, 'generated')}</strong> {_esc(_generated(source))}</p>",
     ]
     if sha256:
         parts.append(
-            f'<p class="meta"><strong>Dataset sha256:</strong> <code>{_esc(sha256)}</code></p>'
+            f'<p class="meta"><strong>{_lbl(lang, "datasetSha256")}</strong> <code>{_esc(sha256)}</code></p>'
         )
 
-    limitations = derived_limitations(source)
+    limitations = derived_limitations(source, lang)
     if limitations:
-        parts.append('<div class="limitations" role="note"><strong>Limitations.</strong> <ul>')
+        parts.append(
+            f'<div class="limitations" role="note"><strong>{_lbl(lang, "limitationsLead")}</strong> <ul>'
+        )
         parts.extend(f"<li>{_inline(line)}</li>" for line in limitations)
         parts.append("</ul></div>")
 
     charts = _travelling_charts(source)
-    named = _named_chart_lines(source)
+    named = _named_chart_lines(source, lang)
     if charts or named:
-        parts.append("<h2>Charts</h2>")
+        parts.append(f"<h2>{_lbl(lang, 'charts')}</h2>")
         parts.extend(f'<img class="chart" alt="{_esc(alt)}" src="{src}">' for alt, src in charts)
         parts.extend(f'<p class="meta">{_esc(line)}</p>' for line in named)
 
     plan = list(_field(source, "plan", []) or [])
     if plan:
-        parts.append("<h2>Plan</h2>")
+        parts.append(f"<h2>{_lbl(lang, 'plan')}</h2>")
         parts.append("<ul>")
         parts.extend(f"<li>{_inline(line.lstrip('- '))}</li>" for line in map(_step_text, plan))
         parts.append("</ul>")
 
-    parts.append("<h2>Tool Calls</h2>")
+    parts.append(f"<h2>{_lbl(lang, 'toolCalls')}</h2>")
     parts.append("<ul>")
     for call in summary.get("tool_calls") or []:
         mark = "✓" if call.get("status") == "ok" else "✗"
@@ -508,10 +638,10 @@ def export_html(source: Any) -> str:
             f" — {_esc(call.get('duration_ms'))}ms</li>"
         )
         if call.get("error"):
-            parts.append(f'<li class="fail">error: {_esc(call["error"])}</li>')
+            parts.append(f'<li class="fail">{_lbl(lang, "error")} {_esc(call["error"])}</li>')
     parts.append("</ul>")
 
-    parts.append("<h2>Evidence</h2>")
+    parts.append(f"<h2>{_lbl(lang, 'evidence')}</h2>")
     parts.append("<ul>")
     for record in summary.get("evidence") or []:
         confidence = record.get("confidence")
@@ -527,26 +657,27 @@ def export_html(source: Any) -> str:
             f'<li id="{_esc(record.get("id"))}"><strong>{_esc(record.get("id"))}</strong>'
             f' ({_esc(record.get("source_type"))} → <a href="#{_esc(record.get("source_id"))}">'
             f"{_esc(record.get('source_id'))}</a>) — {_inline(record.get('claim'))}"
-            f" — confidence {confidence_text} — {_esc(record.get('validation_status'))}{result}</li>"
+            f" — {_lbl(lang, 'confidence')} {confidence_text} — {_esc(record.get('validation_status'))}{result}</li>"
         )
     parts.append("</ul>")
 
-    parts.append("<h2>Insights</h2>")
+    parts.append(f"<h2>{_lbl(lang, 'insights')}</h2>")
     insights = summary.get("insights") or []
     if not insights:
-        parts.append(
-            '<p class="meta">No insights yet — analysis may be incomplete or blocked by validation.</p>'
-        )
+        parts.append(f'<p class="meta">{_lbl(lang, "noInsightsPlain")}</p>')
     for insight in insights:
         parts.append("<details>")
         parts.append(f"<summary>{_inline(insight.get('finding'))}</summary>")
         if insight.get("limitation"):
-            parts.append(f'<p class="meta">limitation: {_inline(insight["limitation"])}</p>')
+            parts.append(
+                f'<p class="meta">{_lbl(lang, "limitation")} '
+                f"{_inline(_prose(str(insight['limitation']), lang))}</p>"
+            )
         links = " ".join(
             f'<a href="#{_esc(eid)}">{_esc(eid)}</a>' for eid in insight.get("evidence_ids") or []
         )
         if links:
-            parts.append(f'<p class="meta">Evidence: {links}</p>')
+            parts.append(f'<p class="meta">{_lbl(lang, "evidenceInline")} {links}</p>')
         parts.append("</details>")
 
     parts.append("<h2>Validation</h2>")

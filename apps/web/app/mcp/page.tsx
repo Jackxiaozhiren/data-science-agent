@@ -12,9 +12,9 @@ import { ErrorState } from "@/app/components/data/States";
 import { McpTable, type McpTool } from "@/app/mcp/McpTable";
 
 const endpoints = [
-  { m: "GET", p: "/mcp/tools", b: "List the stateless tools." },
-  { m: "POST", p: "/mcp/call", b: "Call one tool with explicit handles." },
-  { m: "POST", p: "/mcp", b: "JSON-RPC tools/list and tools/call." },
+  { m: "GET", p: "/mcp/tools", bKey: "mcp.epTools" },
+  { m: "POST", p: "/mcp/call", bKey: "mcp.epCall" },
+  { m: "POST", p: "/mcp", bKey: "mcp.epRpc" },
 ];
 
 // Inherits the shared wording, and keeps this page's own line for the transport case: the static
@@ -45,11 +45,15 @@ export default async function MCPPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Reference · Step 3"
+        eyebrow={t(locale, "mcp.eyebrow")}
         title="MCP 2026-07-28"
-        description={`Stateless core · ${tools.length ? `${tools.length} tools` : "tool list unavailable"} · No Mcp-Session-Id · cacheHints via cache_hint · Explicit handles: run_id / dataset_id.`}
+        description={
+          tools.length
+            ? t(locale, "mcp.summary").replace("{n}", String(tools.length))
+            : t(locale, "mcp.summaryNoTools")
+        }
         actions={
-          <Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>
+          <Link href="/analysis"><Button size="sm">{t(locale, "common.backToAnalysis")}</Button></Link>
         }
       />
       {failure && <ErrorState message={messages[failure]} />}
@@ -57,7 +61,7 @@ export default async function MCPPage() {
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[...byClass.entries()].map(([cls, n]) => (
-              <StatCard key={cls} label={cls} value={String(n)} hint="tools" icon={Plug2} />
+              <StatCard key={cls} label={cls} value={String(n)} hint={t(locale, "mcp.toolsHint")} icon={Plug2} />
             ))}
           </div>
           <Card>
@@ -69,7 +73,7 @@ export default async function MCPPage() {
       ) : (
         failure === null && (
           <Card>
-            <CardContent className="p-4 pt-4 text-sm text-zinc-500">The MCP endpoint returned no tools.</CardContent>
+            <CardContent className="p-4 pt-4 text-sm text-zinc-500">{t(locale, "mcp.noTools")}</CardContent>
           </Card>
         )
       )}
@@ -84,7 +88,7 @@ export default async function MCPPage() {
             <CardHeader>
               <CardTitle className="font-mono text-sm"><Badge variant="outline">{e.m}</Badge> <span className="ml-1">{e.p}</span></CardTitle>
             </CardHeader>
-            <CardContent className="-mt-2 text-xs leading-5 text-zinc-500">{e.b}</CardContent>
+            <CardContent className="-mt-2 text-xs leading-5 text-zinc-500">{t(locale, e.bKey)}</CardContent>
           </Card>
         ))}
       </div>

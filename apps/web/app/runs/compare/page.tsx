@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GitCompareArrows } from "lucide-react";
 import { clientFetch, API_BASE_URL, apiUrl } from "@/lib/api";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { PageHeader } from "@/app/components/data/PageHeader";
@@ -28,7 +30,7 @@ type Full = {
   } | null;
 };
 
-function metric(a: Full | null, b: Full | null, label: string, pick: (r: Full) => string, num?: (r: Full) => number | null) {
+function metric(a: Full | null, b: Full | null, key: string, pick: (r: Full) => string, num?: (r: Full) => number | null, badge?: boolean) {
   const av = a ? pick(a) : "—";
   const bv = b ? pick(b) : "—";
   let win: 0 | 1 | 2 = 0;
@@ -37,10 +39,11 @@ function metric(a: Full | null, b: Full | null, label: string, pick: (r: Full) =
     const bn = num(b);
     if (an != null && bn != null && an !== bn) win = an > bn ? 1 : 2;
   }
-  return { label, av, bv, win };
+  return { key, av, bv, win, badge: badge ?? false };
 }
 
 function CompareWorkspace() {
+  const locale = useLocale();
   const sp = useSearchParams();
   const aId = sp.get("a") || "";
   const bId = sp.get("b") || "";
@@ -63,12 +66,12 @@ function CompareWorkspace() {
     )
       .then(([ra, rb]) => {
         if (cancelled) return;
-        if (!ra || !rb) setErr("One of the runs could not be loaded — it may have been removed.");
+        if (!ra || !rb) setErr(t(locale, "cmp.loadFailed"));
         setA(ra);
         setB(rb);
       })
       .catch((e) => {
-        if (!cancelled) setErr(`Could not reach the DSA API at ${API_BASE_URL}. ${String(e)}`);
+        if (!cancelled) setErr(`${t(locale, "common.apiUnreachable").replace("{url}", API_BASE_URL)} ${String(e)}`);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -91,24 +94,24 @@ function CompareWorkspace() {
   const rows =
     a && b
       ? [
-          metric(a, b, "Status", (r) => r.status),
-          metric(a, b, "Validation", valRate, valPct),
-          metric(a, b, "Evidence", (r) => String(r.state?.evidence.length ?? 0), (r) => r.state?.evidence.length ?? null),
-          metric(a, b, "Tool calls", (r) => String(r.state?.tool_calls.length ?? 0), (r) => r.state?.tool_calls.length ?? null),
-          metric(a, b, "Tool time", (r) => `${totalMs(r)}ms`, totalMs),
-          metric(a, b, "Insights", (r) => String(r.state?.insights.length ?? 0), (r) => r.state?.insights.length ?? null),
-          metric(a, b, "Artifacts", (r) => String(r.state?.artifacts.length ?? 0), (r) => r.state?.artifacts.length ?? null),
+          metric(a, b, "cmp.metricStatus", (r) => r.status, undefined, true),
+          metric(a, b, "cmp.metricValidation", valRate, valPct),
+          metric(a, b, "cmp.metricEvidence", (r) => String(r.state?.evidence.length ?? 0), (r) => r.state?.evidence.length ?? null),
+          metric(a, b, "cmp.metricToolCalls", (r) => String(r.state?.tool_calls.length ?? 0), (r) => r.state?.tool_calls.length ?? null),
+          metric(a, b, "cmp.metricToolTime", (r) => `${totalMs(r)}ms`, totalMs),
+          metric(a, b, "cmp.metricInsights", (r) => String(r.state?.insights.length ?? 0), (r) => r.state?.insights.length ?? null),
+          metric(a, b, "cmp.metricArtifacts", (r) => String(r.state?.artifacts.length ?? 0), (r) => r.state?.artifacts.length ?? null),
         ]
       : [];
 
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 3 · Compare runs"
-        title="Compare runs"
-        description="Side-by-side evidence output for two runs. Emerald marks the larger value."
+        eyebrow={t(locale, "cmp.eyebrow")}
+        title={t(locale, "cmp.title")}
+        description={t(locale, "cmp.subtitle")}
         actions={
-          <Link href="/runs"><Button variant="secondary" size="sm">Back to Runs</Button></Link>
+          <Link href="/runs"><Button variant="secondary" size="sm">{t(locale, "cmp.back")}</Button></Link>
         }
       />
       {err && <ErrorState message={err} />}
@@ -117,9 +120,9 @@ function CompareWorkspace() {
       ) : !aId || !bId ? (
         <EmptyState
           icon={<GitCompareArrows className="size-5 text-zinc-400" aria-hidden />}
-          title="Pick two runs to compare"
-          description="Select exactly two runs on the Runs page, then come back here."
-          action={<Link href="/runs"><Button size="sm">Go to Runs →</Button></Link>}
+          title={t(locale, "cmp.pickTwo")}
+          description={t(locale, "cmp.pickTwoBody")}
+          action={<Link href="/runs"><Button size="sm">{t(locale, "cmp.goToRuns")}</Button></Link>}
         />
       ) : a && b ? (
         <>
@@ -132,7 +135,7 @@ function CompareWorkspace() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={r.status} />
-                  <Link href={`/analysis/${r.id}`} className="text-xs font-medium underline">Inspect →</Link>
+                  <Link href={`/analysis/${r.id}`} className="text-xs font-medium underline">{t(locale, "runs.inspect")}</Link>
                 </CardContent>
               </Card>
             ))}
@@ -140,13 +143,13 @@ function CompareWorkspace() {
           <Card>
             <CardContent className="space-y-2 p-3 pt-3 sm:p-4 sm:pt-4">
               {rows.map((m) => (
-                <div key={m.label} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-3 py-2 text-sm">
+                <div key={m.key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-3 py-2 text-sm">
                   <span className={`min-w-0 truncate text-right tabular-nums ${m.win === 1 ? "font-semibold text-emerald-700" : ""}`} title={m.av}>
-                    {m.label === "Status" && a ? <StatusBadge status={a.status} /> : m.av}
+                    {m.badge && a ? <StatusBadge status={a.status} /> : m.av}
                   </span>
-                  <span className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wider text-zinc-400">{m.label}</span>
+                  <span className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wider text-zinc-400">{t(locale, m.key)}</span>
                   <span className={`min-w-0 truncate tabular-nums ${m.win === 2 ? "font-semibold text-emerald-700" : ""}`} title={m.bv}>
-                    {m.label === "Status" && b ? <StatusBadge status={b.status} /> : m.bv}
+                    {m.badge && b ? <StatusBadge status={b.status} /> : m.bv}
                   </span>
                 </div>
               ))}
@@ -154,7 +157,7 @@ function CompareWorkspace() {
           </Card>
         </>
       ) : (
-        !err && <EmptyState title="Runs unavailable" description="Both runs must exist to compare." />
+        !err && <EmptyState title={t(locale, "cmp.unavailable")} description={t(locale, "cmp.mustExist")} />
       )}
     </div>
   );

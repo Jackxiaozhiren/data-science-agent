@@ -72,7 +72,10 @@ def test_the_lineage_line_shows_the_parent_id_verbatim() -> None:
     assert INSPECTOR.is_file(), "apps/web/app/analysis/[runId]/RunInspector.tsx is gone"
     source = INSPECTOR.read_text(encoding="utf-8")
 
-    lineage = re.search(r"Follow-up of <Link[^>]*>\{([^}]+)\}</Link>", source)
+    # R-13c moved the label into the locale owner, so the anchor is the key call and the thing under test stays
+    # what it always was: the interpolated value inside the link, not the English words in front of it.
+    anchor = '{t(locale, "insp.followupOf")} <Link'
+    lineage = re.search(rf"{re.escape(anchor)}[^>]*>\{{([^}}]+)\}}</Link>", source)
     assert lineage, (
         "the lineage line no longer renders an interpolated value -- check what it shows instead"
     )
@@ -80,9 +83,14 @@ def test_the_lineage_line_shows_the_parent_id_verbatim() -> None:
         f"the parent is displayed as {{{lineage.group(1)}}}, which is not the stored id rendered verbatim"
     )
 
-    truncated = _planted(source, r"Follow-up of <Link", r"Follow-up-of <Link")
-    assert not re.search(r"Follow-up of <Link[^>]*>\{([^}]+)\}</Link>", truncated), (
+    # Gluing the label to the link is the shape this refuses: a reader who copies it gets `Follow-up ofrun-…`,
+    # an identifier the API never issued.
+    glued = _planted(source, anchor, '{t(locale, "insp.followupOf")}<Link')
+    assert not re.search(rf"{re.escape(anchor)}[^>]*>\{{([^}}]+)\}}</Link>", glued), (
         "the assertion is not anchored to the lineage line"
+    )
+    assert re.search(r"insp\.followupOf", glued), (
+        "the plant removed the lineage line entirely, so it proves nothing about spacing"
     )
 
 

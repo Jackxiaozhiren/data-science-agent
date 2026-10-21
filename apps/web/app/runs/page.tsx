@@ -37,11 +37,11 @@ export default async function RunsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Step 3 · Trace runs"
-        title="Runs"
-        description="Analysis inspector: Overview, Timeline, Agent Graph, Tool Calls, Evidence, Artifacts, Failures, Validation, Reproduction."
+        eyebrow={t(locale, "runsPage.eyebrow")}
+        title={t(locale, "nav.runs")}
+        description={t(locale, "runsPage.inspectorHint")}
         actions={
-          <Link href="/analysis"><Button size="sm">New run →</Button></Link>
+          <Link href="/analysis"><Button size="sm">{t(locale, "runsPage.newRun")}</Button></Link>
         }
       />
       {failure && <ErrorState message={messages[failure]} />}
@@ -51,9 +51,9 @@ export default async function RunsPage() {
             failure === null && (
               <EmptyState
                 icon={<History className="size-5 text-zinc-400" aria-hidden />}
-                title="No runs yet"
-                description="Start an analysis to produce the first inspectable trace."
-                action={<Link href="/analysis"><Button size="sm">Back to Analysis →</Button></Link>}
+                title={t(locale, "runsPage.emptyTitle")}
+                description={t(locale, "runsPage.emptyBody")}
+                action={<Link href="/analysis"><Button size="sm">{t(locale, "common.backToAnalysis")}</Button></Link>}
               />
             )
           ) : (
@@ -63,7 +63,7 @@ export default async function RunsPage() {
       </Card>
       <Card>
         <CardContent className="p-4 pt-4 text-xs leading-5 text-zinc-500">
-          Trace from <code className="font-mono">GET /api/v1/analysis/{"{id}"}</code> · SSE: <code className="font-mono">/events</code> · Evidence graph at <code className="font-mono">/evidence/{"{evidence_id}"}</code>
+          {t(locale, "runsPage.traceFrom")} <code className="font-mono">GET /api/v1/analysis/{"{id}"}</code> · SSE: <code className="font-mono">/events</code> · {t(locale, "runsPage.evidenceGraphAt")} <code className="font-mono">/evidence/{"{evidence_id}"}</code>
         </CardContent>
       </Card>
     </div>

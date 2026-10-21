@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 
 
@@ -34,10 +36,17 @@ def test_secret_scan_workflow() -> None:
 
 
 def test_dependabot_exists() -> None:
+    """Check declared ecosystems rather than incidental mentions in comments.
+
+    This repository uses uv.lock; Dependabot's supported ecosystem for it
+    is uv (rather than the old pip requirement).
+    """
     p = Path(".github/dependabot.yml")
     assert p.exists()
     txt = p.read_text()
-    assert "pip" in txt and "npm" in txt and "docker" in txt
+    configured = set(re.findall(r"(?m)^\s*-\s*package-ecosystem:\s*['\"]?([a-z-]+)['\"]?\s*$", txt))
+    assert {"uv", "npm", "docker"} <= configured
+    assert Path("uv.lock").is_file(), "uv Dependabot updates require the lockfile"
 
 
 def test_sbom_exists_and_has_required_fields() -> None:
@@ -241,22 +250,98 @@ def test_plugin_hash_is_deterministic_and_moves_with_content(tmp_path: Path) -> 
     assert m.compute_hash(root) != before
 
 
-def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
-    # Simple grep for obvious secrets in tracked files (not .venv)
+def _committable_python_files() -> list[Path]:
+    """The sources a secret could actually reach the world through -- not everything on my disk.
+
+    This walked `Path(".").rglob("*.py")`, so its corpus was the working tree, and it broke the moment a local
+    run left an installed package tree behind: a 2.8 GB git-ignored `benchmarks/external/.../.workspace/venv`
+    made it abort on joblib's `test_func_inspect_special_encoding.py`, a fixture whose bytes are *deliberately*
+    not UTF-8. The skip list (`.venv`, `.git`, `node_modules`) shows the author knew installed packages did not
+    belong in the scan, but a list of names has to be guessed right every time, and a scratch directory is
+    free to be called anything.
+
+    `git ls-files` plus the untracked-but-not-ignored set is right by construction, and it is the same boundary
+    the Secret Scan job and `run_secret_scanning` draw: content that cannot be committed cannot ship a
+    credential, and content that can is all covered. Ignored scratch is not weaker -- it is out of scope.
+    """
+    args = ["git", "ls-files", "-z"]
+    tracked = subprocess.run([*args, "--", "*.py"], capture_output=True, text=True, check=True)  # noqa: S603 - fixed argv, no shell
+    untracked = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [*args, "--others", "--exclude-standard", "--", "*.py"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    files = [
+        Path(p) for chunk in (tracked.stdout, untracked.stdout) for p in chunk.split("\0") if p
+    ]
+    # A scan that inspects nothing must not read as clean, so the floor carries headroom (441 today) and the
+    # scope is asserted both ways: the corpus must contain the packages this guard exists to protect, and must
+    # not contain the installed tree that broke the previous version.
+    assert len(files) > 300, (
+        f"the credential scan resolved only {len(files)} Python files; it is about to pass on an empty corpus"
+    )
+    assert any(str(f).startswith("packages/") for f in files), (
+        "the scan no longer reads the packages it guards"
+    )
+    assert not [f for f in files if "site-packages" in str(f) or ".workspace" in str(f)], (
+        "installed third-party source is back in the corpus -- the shape that made this abort on joblib's "
+        "encoding fixture, whose bytes are deliberately not UTF-8"
+    )
+    return files
+
+
+def _assert_no_credential_patterns(paths: Iterable[Path]) -> None:
+    """Fail closed on unreadable Python sources or detected credential patterns."""
     patterns = [
         r"sk-[A-Za-z0-9]{20}",
         r"ghp_[A-Za-z0-9]{30}",
         r"api_key\s*=\s*['\"][A-Za-z0-9]{20}",
     ]
-    for pat in patterns:
-        for p in Path(".").rglob("*.py"):
-            if ".venv" in str(p) or ".git" in str(p) or "node_modules" in str(p):
-                continue
-            try:
-                txt = p.read_text()[:5000]
-                assert not re.search(pat, txt), f"Potential secret {pat} in {p}"
-            except Exception:  # noqa: S112
-                continue
+    for p in paths:
+        if any(part in {".venv", ".git", "node_modules"} for part in p.parts):
+            continue
+        try:
+            txt = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise AssertionError(f"Cannot inspect credential patterns in {p}") from exc
+        for pattern in patterns:
+            assert not re.search(pattern, txt), f"Potential secret {pattern} in {p}"
+
+
+def test_secret_scanner_rejects_credentials(tmp_path: Path) -> None:
+    import pytest
+
+    fixture = tmp_path / "suspect.py"
+    fixture.write_text("token = " + "sk-" + "A" * 20, encoding="utf-8")
+    with pytest.raises(AssertionError, match="Potential secret"):
+        _assert_no_credential_patterns([fixture])
+
+    # Secrets beyond the first 5 KB must not silently bypass this check.
+    fixture.write_text("x" * 6000 + "token = " + "sk-" + "B" * 20, encoding="utf-8")
+    with pytest.raises(AssertionError, match="Potential secret"):
+        _assert_no_credential_patterns([fixture])
+
+
+def test_secret_scanner_fails_closed_when_unreadable(tmp_path: Path, monkeypatch) -> None:
+    import pytest
+
+    fixture = tmp_path / "unreadable.py"
+    fixture.write_text("harmless = 1", encoding="utf-8")
+    original = Path.read_text
+
+    def fail_read(self: Path, *args, **kwargs) -> str:
+        if self == fixture:
+            raise OSError("permission denied")
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", fail_read)
+    with pytest.raises(AssertionError, match="Cannot inspect"):
+        _assert_no_credential_patterns([fixture])
+
+
+def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
+    _assert_no_credential_patterns(_committable_python_files())
     # Also check that SECURITY.md mentions secret scanning
     assert (
         "Secret Scanning" in Path("SECURITY.md").read_text()

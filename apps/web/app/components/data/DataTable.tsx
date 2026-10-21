@@ -4,6 +4,8 @@ import * as React from "react";
 import { ArrowUpDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from "@/app/components/ui/table";
 import { EmptyState } from "@/app/components/data/States";
+import { useLocale } from "@/app/lib/LocaleProvider";
+import { t } from "@/lib/locale";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -29,6 +31,7 @@ export function DataTable<T extends Record<string, unknown>>({
 }) {
   const [sortKey, setSortKey] = React.useState<string | null>(null);
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
+  const locale = useLocale();
 
   const sorted = React.useMemo(() => {
     if (!sortKey) return rows;
@@ -46,7 +49,7 @@ export function DataTable<T extends Record<string, unknown>>({
   }, [rows, sortKey, sortDir]);
 
   if (rows.length === 0) {
-    return <>{empty ?? <EmptyState title="Nothing here yet" description="No rows to display." />}</>;
+    return <>{empty ?? <EmptyState title={t(locale, "state.nothingHere")} description={t(locale, "state.noRows")} />}</>;
   }
 
   return (
@@ -67,7 +70,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         setSortDir("asc");
                       }
                     }}
-                    aria-label={`Sort by ${c.header}`}
+                    aria-label={t(locale, "table.sortBy").replace("{column}", c.header)}
                     className="inline-flex items-center gap-1 hover:text-zinc-900"
                   >
                     {c.header}

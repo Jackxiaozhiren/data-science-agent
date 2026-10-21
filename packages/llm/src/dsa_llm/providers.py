@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import ipaddress
 import json
 import os
 import time
@@ -8,6 +9,7 @@ import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -30,6 +32,27 @@ from dsa_llm.cost import reset_call_log as reset_call_log
 DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
 _REAL_MODES = {"real", "openai"}
 _STUB_MODES = {"stub", "offline", "heuristic"}
+
+
+def _honours_configured_proxy(base_url: str) -> bool:
+    """Whether a request to this endpoint should be resolved through proxy settings at all.
+
+    False for an address on this machine, because no proxy can answer for it. `httpx` asks
+    `urllib.request.getproxies()` whenever `trust_env` is left on, and on macOS and Windows that call falls back
+    to the *operating system's* proxy configuration -- no environment variable required. Measured on a Mac with
+    a proxy at `127.0.0.1:7890` enabled: the same loopback URL returned **HTTP 502 with an empty body** under
+    `trust_env=True` and **200** under `trust_env=False`, seconds apart. The default model endpoint is Ollama at
+    `http://localhost:11434/v1`, so honouring the proxy there makes the project's zero-cost local path
+    unreachable and reports it as a model failure.
+
+    A host that is merely on the LAN keeps the configured proxy: only loopback is provably unreachable
+    through one.
+    """
+    with contextlib.suppress(ValueError):
+        host = (urlsplit(base_url).hostname or "").rstrip(".").lower()
+        if host in ("localhost", "::1") or ipaddress.ip_address(host).is_loopback:
+            return False
+    return True
 
 
 def configured_llm_mode() -> str:
@@ -195,7 +218,9 @@ class OpenAIResponsesProvider(LLMProvider):
             "Content-Type": "application/json",
         }
         started = time.perf_counter()
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
+        async with httpx.AsyncClient(
+            timeout=self.timeout_s, trust_env=_honours_configured_proxy(self.base_url)
+        ) as client:
             response = await client.post(
                 f"{self.base_url}/responses", headers=headers, json=request
             )
@@ -341,7 +366,9 @@ class OpenAIChatProvider(LLMProvider):
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         started = time.perf_counter()
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
+        async with httpx.AsyncClient(
+            timeout=self.timeout_s, trust_env=_honours_configured_proxy(self.base_url)
+        ) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions", headers=headers, json=body
             )

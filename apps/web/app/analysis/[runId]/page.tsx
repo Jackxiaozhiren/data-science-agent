@@ -6,7 +6,7 @@ import { PageHeader } from "@/app/components/data/PageHeader";
 import { ErrorState } from "@/app/components/data/States";
 import { Button } from "@/app/components/ui/button";
 import { RunInspector, type RunDetail } from "@/app/analysis/[runId]/RunInspector";
-import { t as tt } from "@/lib/locale";
+import { t } from "@/lib/locale";
 
 async function fetchRun(id: string): Promise<{ record: RunDetail | null; failure: ApiFailure | null }> {
   try {
@@ -32,18 +32,18 @@ export default async function TracePage({ params, searchParams }: { params: Prom
     return (
       <div className="space-y-4">
         <PageHeader
-          eyebrow="Step 3 · Inspect the evidence"
-          title={missing ? "Run not found" : "Run could not be loaded"}
+          eyebrow={t(locale, "analysis.eyebrow")}
+          title={missing ? t(locale, "analysis.notFoundTitle") : t(locale, "analysis.couldNotLoadTitle")}
           description={
             missing
-              ? `No trace for ${runId} — this API says the run does not exist.`
-              : `No trace for ${runId} could be read, so nothing below is a statement about the run.`
+              ? t(locale, "analysis.noTraceMissing").replace("{id}", runId)
+              : t(locale, "analysis.noTraceUnreadable").replace("{id}", runId)
           }
         />
         <ErrorState
-          message={failure ? shared[failure] : tt(locale, "run.noSuchRun").replace("{id}", runId)}
+          message={failure ? shared[failure] : t(locale, "run.noSuchRun").replace("{id}", runId)}
           diagnostics={
-            <Link href="/analysis"><Button variant="secondary" size="sm">Back to Analysis</Button></Link>
+            <Link href="/analysis"><Button variant="secondary" size="sm">{t(locale, "analysis.back")}</Button></Link>
           }
         />
       </div>

@@ -123,7 +123,16 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   locale from these keys, and each page's transport override names a key rather than a sentence), the backend
   probe's four phases, and the upload queue's per-file notes. `tests/contract/test_web_locale_parity.py` sweeps
   every sentence the dictionary owns against the page sources, so a moved string that stayed behind in a page
-  cannot ship. The deliverable is not translated -- a report keeps the language the run was asked in.
+  cannot ship. The deliverable is not translated -- a report keeps the language the run was asked in, and
+  `dsa_agent.report_export.report_language()` is what honors that: the run's question decides, by counting
+  words (a Chinese sentence naming an English column stays Chinese; an English sentence pasting a Chinese
+  file name stays English), and only the product's own words -- headings, field names, the document `lang`
+  -- follow it. Findings, claims, messages and numbers are reproduced verbatim, and
+  `tests/contract/test_report_language_pair.py` holds the two halves apart.
+  The three limitation sentences the report composes are part of that table too -- the caveat a reader acts
+  on must not arrive in a language nobody chose -- while the critic's own `limitation` text, stored on the
+  insight at analysis time, stays the run's byte: changing it would edit what the run said, which is a
+  decision about data and is left open rather than half-taken.
 - The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
   routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
   outline is not one) and every `<details>` drill-down to open on Enter.
@@ -167,21 +176,120 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   completion notification a live run writes. The English-only constant that used to own them is gone; a page may
   no longer keep its own copy, which `tests/contract/test_web_locale_parity.py` sweeps and
   `tests/contract/test_web_fetch_outcome_vocabulary.py` pins per locale.
-- **Page chrome past the first-run path.** The same sweep now finds ~89 reader-facing English literals in 25
-  files under `apps/web/app` (measured 2026-10-18 by a line scan that strips comments, so a rationale in a comment
-  is not counted and an interpolated template is; it is an inventory, not a proof). The largest is the run
-  inspector. The shared presentational components in `app/components/data/States.tsx` are a special case rather
-  than more of the same work: they have no locale of their own because they are not client components, so
-  translating "Something went wrong" first needs a decision about putting those three components behind the
-  locale context or threading a `locale` prop through every call site. That is a rendering-boundary change, and
-  doing it halfway would leave the Chinese visitor reading English chrome -- the outcome this whole layer exists
-  to prevent.
-- **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on seven English
-  strings (measured 2026-10-18: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
-  `nothing answered`, `Checking API`) and every one of them is now a dictionary value -- which is why this
-  requirement kept the `en` values byte-for-byte while moving them. The parity sweep walks `apps/web/app/**` and
-  does not see `scripts/`, so the coupling is real and unstated by any gate: rewording one of those seven is a
-  change to the tour as well as to the dictionary.
+- **Page chrome past the first-run path: closed, and measured twice.** The shell is bilingual. `States.tsx` (the
+  error heading, its Retry, the two skeleton labels), the route-level `loading.tsx` and `error.tsx`,
+  `DataTable.tsx`'s empty state and every sortable column's accessible name, the dialog's close labels, the
+  language switch's group name, the hero caption and node labels, the sidebar's groups and every one of its links,
+  the header nav and mobile menu button, the footer tagline and landmark names, both run/report tables' search,
+  filter and empty-line text, the plan timeline's empty line, the whole run inspector (67 strings) and the rest of
+  the loop -- the runs list, the reports list, the run-detail header and stats, the dataset comparison screen,
+  the settings and failures screens, the MCP reference, the six evaluation levels, the replay page, the benchmarks
+  page and its copy button -- read `apps/web/lib/locale.ts` (the two blocks are held key-identical by
+  `tests/contract/test_web_locale_parity.py`, and the inventory prints how many references resolve).
+  The last tier was the one the first counters could not see: **every table column head and caption, the eleven
+  run-status labels, and the short labels of the secondary pages.** Two measures are quoted because they answer
+  different questions. In the source, `apps/web/scripts/locale-chrome-inventory.mjs` walks the TypeScript AST and
+  classifies every literal a page could hand to a reader. Its first published number -- 57 multi-word candidates
+  down to 2 -- was produced by an instrument with three holes of its own, and closing them found more work rather
+  than less: a literal inside a JSX expression container (`{notify ? "Notifying" : "Notify me"}`,
+  `tc.error ?? "Unknown error"`) was not read at all, neither was one passed by position to a page's own helper
+  (`metric(a, b, "Tool calls", …)`, which is how all seven row labels of `/runs/compare` were page-owned), and a
+  dictionary value written on the line after its key -- the formatter does that to every long sentence -- was
+  missing from the comparison set, 15 keys' worth. With those closed the residue was 8 multi-word candidates and
+  7 second-owner duplicates; all 15 are now dictionary-owned, and the run that matters is the one the script
+  reports itself: `prose=0 duplicates=0`, with every one of the 624 key references the pages and modules make
+  resolving in both locales. The same run exits non-zero while any of the three is non-empty, so the closure is a check, not a
+  sentence in this document. On the rendered page,
+  `apps/web/scripts/locale-chrome-acceptance.mjs` reads only the regions the interface owns -- `th`, `option`, `summary`,
+  `label`, `h1`–`h3`, `button`, nav/header/footer -- on every route a seeded instance can answer, in 中文 and in
+  English (the runner prints its own route and region counts with the verdict, so the coverage is reported rather
+  than retyped here): **zero chrome regions show a Latin-only string outside the declared identifier set, and
+  74–94% of the chrome regions carry CJK.** Its
+  exemption list is printed with every run (4–10 regions per route, and they are GitHub, the language switch's
+  endonym "English", endpoint paths, provider ids from the API, and uploaded file names), because an instrument
+  that exempts everything would also report a clean page.
+- **Three detectors, each blind in a way the next one had to fix.** The first R-13 counter was a line-matching
+  scan: it could not see a JSX text node wrapped over three lines ("No runs match — adjust the search or status
+  filter." in `RunsTable`) and it could not see a string attribute at all. The AST pass fixed that, and its own
+  exemption -- "this value already exists in the dictionary, so it is not an orphan" -- hid the actual defect
+  class: `/failures` kept its own copy of "Evaluation · Step 3" while the dictionary owned the sentence, and seven
+  pages were doing that. Reporting duplicates instead of skipping them found all seven. Then the page-wide text
+  comparison had to go, because it cannot tell chrome from data: a seeded run's own English report is not a leak.
+  The region selector is what made the claim decidable, and it caught one more leak none of the others could
+  (`RunInspector`'s caveat banner, `{n} caveat{s} (m critical) — review limitations…`), which is now four keys.
+  `test_no_dictionary_sentence_is_also_written_into_a_page` was widened from a 40-character floor to **12 plus a
+  required space**, with whole-line comments stripped so a comment quoting a dictionary line is not a second
+  owner; both that sweep and the new `test_every_declared_status_has_a_label_in_both_locales` were falsified by
+  planting the failure and restoring by hash.
+- **Two more blind spots, and the boundary this claim stops at.** The region selector reads `th`, `option`,
+  `summary`, `label`, `h1`–`h3`, `button` and the shell's links -- so a plain `<span>` is outside it, and three of
+  the last leaks sat in spans (`Saved.`, `{a} of {b} calls`, `conf 0.92`). More consequentially, the region check
+  only sees **states the harness enters**: the failure-diagnostics panel renders only when a run has a failed tool
+  call, the live-progress line only while a run is running, and the notify button only on the run page -- headless
+  Chromium renders it, so it was the route's absence rather than any browser capability that hid it (§235 measured
+  this). Each held English, and none could be reached from a seeded cold page. That is the same failure as
+  the inactive-tab hole -- not mounted is not measured -- and the answer is the same division of labour: the page
+  check measures what is on screen, the AST check measures what the source *can* put on screen, because in source
+  a conditional is not a state. The AST instrument's own two new rules are falsifiable: a planted ternary literal,
+  a planted positional label and a planted mistyped key each turn it red, and the plant is then deleted.
+  Finally, the boundary. The walk covers `apps/web/app` **and** `apps/web/lib` -- the modules that word the status
+  chip, the footer and the run badge are as reader-facing as a `.tsx` -- with the dictionary itself excluded
+  because it is the owner rather than a page. `short:` and `detail:` were added to the reader-slot list for the
+  same reason: `describeStorage()` hands its `detail` sentence straight to the footer's tooltip, and a slot rule
+  that named only `label`/`title`/`description` could not see it. Both were gaps in the instrument -- and each one
+  hid a real defect in the product, which is the reason a gap is worth measuring rather than noting. A third class
+  still cannot be decided statically, because the string is not in any position the reader-slot rules reach:
+  `setErr(\`Could not reach the DSA API at ${url}\`)` builds a sentence in a variable, and it renders later. The
+  inventory prints those as a **census to adjudicate** (multi-word literals outside every reader slot), counting
+  developer `throw` messages, copyable command lines and Tailwind class lists separately so the list stays short
+  enough to read; three such sentences came out of the first non-empty census. §232-§234 of the ledger carry the
+  measurements.
+- **Two English strings changed visible text, on purpose.** The status chip used to render the raw enum token, so
+  `COMPLETED` appeared in capitals and the in-flight filter option said `Data_profiling`; both now come from
+  `statusLabel()`, so the chip says "Completed" and the option says "Data profiling". The settings readout lines
+  moved from `word <strong>value</strong> word <strong>value</strong>` into one dictionary sentence with
+  placeholders, which drops the inline bold -- punctuation belongs to the sentence, and a Chinese sentence needs
+  Chinese punctuation, so fragments around markup could not carry both. A status the enum does not declare is
+  still rendered as the token it arrived with: labelling a state nobody declared would invent one.
+- **The locale provider wraps the whole shell, and that was a bug.** `LocaleProvider` used to sit around
+  `{children}` inside `<main>`, while the sidebar is a sibling of `<main>` and a client component reading that
+  context -- so on a 中文 page the sidebar, and anything else outside the provider, rendered the dictionary's
+  default language. The header looked translated because it takes `locale` as a prop, which is what made the
+  screen read as half-done rather than broken. No source guard and no single-page browser check could see it:
+  the parity guards read the dictionary and the page files, and the tour asserts layout rather than language.
+  `test_the_provider_wraps_the_shell_not_just_the_route` now pins the nesting, and the live navigation check
+  (`build/r13f-nav-acceptance.mjs`) reads header, sidebar and footer text in both languages.
+- **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on nine English
+  strings (measured 2026-10-19: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
+  `nothing answered`, `Checking API`, `Loading table`, `Loading page`) and every one of them is a dictionary
+  value -- which is why these requirements kept the `en` values byte-for-byte while moving them. The parity sweep
+  walks `apps/web/app/**` and does not see `scripts/`, so the coupling is real and unstated by any gate: rewording
+  one of those nine is a change to the tour as well as to the dictionary.
+- **The language rule is decided once, and CI runs it.** `apps/web/scripts/locale-chrome-rules.mjs` owns the
+  answer to "which regions of a page does the interface speak through": the region selector, the identifier list,
+  the data-in-chrome pattern and the leak decision. Two runners ask it rather than each deciding. `regression.mjs`,
+  the web job GitHub Actions already runs, adds one check per static route per locale -- each route is loaded under
+  a `dsa_locale=zh` and an `=en` cookie and fails on an English chrome region or a `⟨missing-key⟩` marker, and the
+  tour's own summary line prints that pass's count. `locale-chrome-acceptance.mjs` needs a seeded backend and so
+  runs by hand, covering what the tour cannot see: the column heads that only exist once a table has rows, and the
+  three routes that need a real run or dataset id. `test_the_two_language_runners_share_one_rule_owner` is what
+  keeps them the same test -- it refuses a runner that re-declares `IDENTIFIERS` or `CHROME_SELECTOR` beside its
+  import, and it floors the identifier list at 25 entries, because a rule owner emptied of entries would let both
+  runners report a clean tree. The wiring was falsified from both sides: forcing the tour's cookie to `en` reddened
+  every 中文 route naming `a:"Ask" | a:"Try DSA" | ...`, and replacing the acceptance's import with a local stub
+  tripped the owner guard.
+- **A region scan only sees what is mounted.** An inactive tab renders nothing, so the first version of
+  `locale-chrome-acceptance.mjs` examined the default tab and declared the page clean; walking the tabs (focus,
+  `Enter`, re-read) is what made the claim true, and it found English filter chips on the run report's Trace tab
+  the moment it started -- now dictionary strings. The same walk needed a boundary in the other direction: the
+  headings inside an embedded report belong to the run, not the interface, so `Markdown.tsx` marks that subtree
+  with `data-run-document` and the scanner stays out of it. A check that cannot tell the two apart will either
+  flag a correct document or stop looking. §230 records both halves, including a falsification that first
+  *passed* because the runner's route filter had quietly excluded the page under test.
 - **A third-party accessibility scanner.** The web lane's a11y checks are implemented in
   `apps/web/scripts/regression.mjs` against real DOM and name the axe rule each reproduces. Running axe itself
-  would add a devDependency, and dependency changes are the user's call, not the agent's.
+  would add a devDependency, and dependency changes are the user's call, not the agent's. What the in-house
+  suite cannot do is reach the run report's drill-downs, because the tour refuses a live backend and an
+  inactive tab is never mounted: `apps/web/scripts/inspector-a11y.mjs` does that instead, against a seeded
+  instance, tab by tab, and refuses to pass when nothing was toggled (its first version did exactly that,
+  reporting PASS over zero disclosures -- see §228).
