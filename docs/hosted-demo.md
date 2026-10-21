@@ -156,7 +156,7 @@ no credentials and no deploy: compare the two OpenAPI path sets.
 
 ```bash
 curl -s https://data-science-agent-api-h43i.onrender.com/openapi.json > /tmp/hosted.json
-uv run python -c "
+uv run --frozen python -c "
 import json
 from fastapi.testclient import TestClient
 from dsa_api.main import app
