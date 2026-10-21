@@ -2,7 +2,22 @@
 
 ## Unreleased
 
-## Unreleased
+### Fixed (post-4.6.0) — the Jupyter magic put a CSV's own header into the notebook as live HTML
+
+- `%dsa profile` had fifteen `display(HTML(f"..."))` sinks and escaped none of them, and a notebook frontend inserts
+  `text/html` without sanitising it. The reachable input is the analysed file itself: `pl.read_csv` keeps the header
+  row verbatim, the SDK exposes it as `columns`, and the profile block interpolated the joined list -- a CSV whose
+  header is `<img src=x onerror=alert(1)>` reached the notebook as a live tag. A typed dataset path and an exception
+  message quoting a bad file reached the same class of sink. `dsa_jupyter/display.py` escaped every field it renders;
+  `magic.py` escaped none, and the package's own tests asserted on returned objects and substring presence, never on
+  markup -- so CI's lint-and-typecheck of it proved nothing about this.
+- One escaper with one contract: `display.escape_html` coerces before escaping (`html.escape` is `str`-only, and a
+  path, a column name or an error is not reliably a string) and all fifteen sinks call it. The plugin table renders
+  through `Markdown`, which frontends sanitise, so it is left alone rather than escaped on speculation.
+- `tests/jupyter/test_magic_html_escaping.py` drives the real magic through IPython and reads only the captured HTML,
+  asserting first that the payload is live markup when interpolated raw so a green cannot come from an inert
+  fixture. Falsified by unescaping one sink ("a CSV header reached the notebook document verbatim"), restored
+  byte-exact: 21 jupyter tests green, ruff and mypy clean, no `_vendor` drift. See `AUDIT_LEDGER.md` §245.
 
 ### Fixed (post-4.6.0) — the VS Code result panel interpolated run-derived text into a scripted webview
 
