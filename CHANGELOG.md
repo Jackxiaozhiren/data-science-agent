@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## Unreleased
+
+### Fixed (post-4.6.0) — the VS Code result panel interpolated run-derived text into a scripted webview
+
+- `apps/vscode/src/views.ts` built the result HTML by string interpolation and created the panel with
+  `enableScripts: true`, while five values went in raw: an evidence row's `id`, `claim` and `source_type`, plus the
+  run id and status in the heading. An evidence claim is derived from the analysed file and the model's text, so a
+  claim carrying `<img src=x onerror=...>` executed a script inside a panel whose `postMessage` bridge reaches the
+  extension host. Only the report body was escaped at all, and only its `<`.
+- One `esc()` now covers every interpolation -- including the fields nobody would call attacker-controlled (a path the
+  user picked, a closed status enum), because asking "is this value safe to interpolate?" is how this class survives.
+- `test_result_webview_escapes_run_derived_text` proves it at runtime: compile the package, call `getHtml` with
+  `vscode` stubbed, feed the payload into every field, and assert no raw `<img ` and no `onerror="` in the document --
+  after first asserting that the same payload through the previous interpolation *is* live markup, so a green cannot
+  come from an inert fixture. Reverting one site reddens it (`rawInHtml: 1, rawOnerrorAttr: True`). See
+  `AUDIT_LEDGER.md` §243.
+
 ### Added (post-4.6.0) — the two R-13 web instruments became gates, in six places at once
 
 - `node apps/web/scripts/locale-chrome-inventory.mjs` (what the pages say, parsed from the TypeScript AST) and

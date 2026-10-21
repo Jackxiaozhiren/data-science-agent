@@ -2,6 +2,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+/**
+ * Escape a value before it enters the result webview, which is created with `enableScripts: true`.
+ *
+ * The evidence claim, its id and source type come out of the analysed file and the model's text, so an
+ * unescaped `<img src=x onerror=...>` is not a rendering glitch but code running with whatever the extension
+ * host can reach. Everything interpolated below goes through here, including the run id and status, so the
+ * rule is one function rather than a per-field judgement.
+ */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export class DatasetTreeProvider implements vscode.TreeDataProvider<DatasetItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<DatasetItem | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -143,7 +160,7 @@ export class ResultPanel {
     const evidences = result.evidence || [];
     const evRows = evidences
       .slice(0, 10)
-      .map((e: any) => `<tr><td>${e.id || ''}</td><td>${(e.claim || '').slice(0, 120)}</td><td>${e.source_type || ''}</td></tr>`)
+      .map((e: any) => `<tr><td>${esc(e.id)}</td><td>${esc((e.claim || '').slice(0, 120))}</td><td>${esc(e.source_type)}</td></tr>`)
       .join('');
     return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
@@ -155,9 +172,9 @@ th,td{border:1px solid var(--vscode-panel-border); padding:6px; text-align:left;
 pre{white-space:pre-wrap; background:var(--vscode-textCodeBlock-background); padding:12px; border-radius:6px;}
 a{color:var(--vscode-textLink-foreground)}
 </style></head><body>
-<h2>🔬 Analysis ${runId} <span class="badge">${status}</span></h2>
-<p><b>Dataset:</b> ${dataset} | <b>Evidence:</b> ${evCount}</p>
-<h3>📄 Report</h3><pre>${report.slice(0, 3000).replace(/</g, '&lt;')}</pre>
+<h2>🔬 Analysis ${esc(runId)} <span class="badge">${esc(status)}</span></h2>
+<p><b>Dataset:</b> ${esc(dataset)} | <b>Evidence:</b> ${esc(String(evCount))}</p>
+<h3>📄 Report</h3><pre>${esc(report.slice(0, 3000))}</pre>
 <h3>🔗 Evidence</h3><table><tr><th>id</th><th>claim</th><th>source</th></tr>${evRows || '<tr><td colspan=3>No evidence</td></tr>'}</table>
 <p><button onclick="vscode.postMessage({command:'openReport'})">Open Report</button> <button onclick="vscode.postMessage({command:'viewEvidence'})">View Evidence</button></p>
 <script>const vscode=acquireVsCodeApi(); window.addEventListener('message', e=>{});</script>
