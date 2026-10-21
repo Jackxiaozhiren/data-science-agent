@@ -92,12 +92,20 @@ fi
 
 command -v uv >/dev/null 2>&1 || fail "uv is not on PATH -- the gate mirror's setup step needs it"
 
-# Ask Playwright where its browser is rather than guessing a cache path: the directory is per-OS, per-version and
-# overridable, so a hardcoded probe would be wrong on the machines this is meant to help. Without this the gate
-# dies inside a launch call with a stack trace about a missing executable, which reads like a product defect.
-node -e 'const {chromium}=require("playwright");const fs=require("fs");const p=chromium.executablePath();
-if(!fs.existsSync(p)){console.error("NOT_INSTALLED "+p);process.exit(1)}' >/dev/null 2>&1 ||
-  fail "Playwright's chromium is not installed (run \`cd apps/web && npx playwright install --with-deps chromium\`) -- see CONTRIBUTING.md"
+# Ask Playwright where its browser is rather than guessing a cache path -- but ask the way the instruments will
+# answer: `node apps/web/scripts/*.mjs` resolves `playwright` from `apps/web/node_modules`, and a CI job can easily
+# have that and no root install at all. Resolving from the repository root asked a different package (or none), and
+# its failure was reported as "chromium is not installed" -- a gate refusing for a reason that was not true. The two
+# causes are now distinguished, because a wrong reason is how a broken gate gets "fixed" by deleting it.
+BROWSER_STATE=$(cd apps/web && node -e 'let pw;
+try { pw = require("playwright"); } catch (e) { console.log("UNRESOLVABLE"); process.exit(0) }
+const fs=require("fs");console.log(fs.existsSync(pw.chromium.executablePath())?"INSTALLED":"MISSING")' 2>/dev/null)
+if [[ "$BROWSER_STATE" == "UNRESOLVABLE" ]]; then
+  fail "playwright is not installed in apps/web (run \`npm --prefix apps/web ci --legacy-peer-deps\`)"
+fi
+if [[ "$BROWSER_STATE" != "INSTALLED" ]]; then
+  fail "Playwright's chromium browser is missing (run \`cd apps/web && npx playwright install --with-deps chromium\`)"
+fi
 
 # Installed before the first process: a failure on the way up must still tear the stack down, or this script
 # becomes the thing that leaves a listener on port 8000 for the next run to blame.
