@@ -149,7 +149,9 @@ async function fetchProfile(){
       const p = r.result.output.profile || r.result.output;
       document.getElementById('profile').textContent = `Profile: ${JSON.stringify(p).slice(0,300)}`;
     }
-  }catch(e){}
+  }catch(e){
+    document.getElementById('profile').textContent = 'No profile for ' + dsId + ': ' + String(e && e.message || e);
+  }
 }
 async function runAnalysis(){
   const q = document.getElementById('question').value.trim();
@@ -199,7 +201,14 @@ async function openResource(uri){
   view.hidden = false; note.hidden = false;
   view.textContent = 'reading ' + uri + ' …';
   note.textContent = '';
-  const r = await jrpc('resources/read', {uri});
+  let r;
+  try{
+    r = await jrpc('resources/read', {uri});
+  }catch(e){
+    view.textContent = String(e && e.message || e);
+    note.textContent = uri + ' — the read never completed: the request itself failed, so nothing below the line is resource content.';
+    return;
+  }
   if(r.result){
     const text = r.result.text || JSON.stringify(r.result, null, 2);
     view.textContent = text;

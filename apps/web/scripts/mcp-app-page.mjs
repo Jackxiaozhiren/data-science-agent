@@ -210,6 +210,36 @@ try {
       els.reduce((n, el) => n + el.querySelectorAll("img,script,svg,iframe,onerror").length, 0),
     );
     if (injected !== 0) fail("optionListCarriesNoElements", `${injected} element(s) inside #dataset`);
+    // Two failure paths the page has, injected rather than hoped for. The refused read is the server's own answer
+    // for a run it never stored; the transport failure has to be forced, because nothing in a passing gate ever
+    // made the request fail -- and until this round that branch left the region reading "reading …" forever with
+    // the note empty, which is a stuck state that looks like a slow load.
+    const refused = await page.evaluate(async () => {
+      await openResource("evidence://run-the-server-never-stored");
+      const n = document.getElementById("resourceNote");
+      return (n.textContent || "").trim();
+    });
+    if (!/the server refused/.test(refused)) {
+      fail("refusedReadSaysSo", refused.slice(0, 160));
+    }
+    const broken = await browser.newPage();
+    try {
+      await broken.route(
+        (u) => u.pathname === "/mcp" || u.pathname === "/mcp/",
+        (r) => r.abort("failed"),
+      );
+      await broken.goto(`${API}/mcp-app/`, { waitUntil: "domcontentloaded" });
+      const stated = await broken.evaluate(async () => {
+        await openResource("evidence://whatever");
+        const n = document.getElementById("resourceNote");
+        return (n.textContent || "").trim();
+      });
+      if (!/never completed/.test(stated)) {
+        fail("transportFailureSaysSo", stated.slice(0, 160) || "(empty note -- the page stayed in the reading state)");
+      }
+    } finally {
+      await broken.close();
+    }
     if (errors.length) fail("pageScriptThrewNoErrors", errors.slice(0, 3).join(" | "));
   }
 } catch (e) {

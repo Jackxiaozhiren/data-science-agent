@@ -22,6 +22,16 @@
   failed with the payload in its own diagnostic (`{"hidden":true,"length":607,…}`), and the restored file's hash
   matched. Passing, it prints `evidence resource: 607 chars, no dialog` in the gate log -- an assertion whose success
   is silence is not distinguishable from one that never ran, so the number is in the line now.
+- The failure paths were then injected rather than hoped for, and one of them was a bug. `openResource` had no
+  `try`/`catch` and no caller awaited it, so a request that never landed left card 6 showing `reading …` with an
+  empty note forever -- a stuck state that reads as a slow load, not a failure. It now says so:
+  `… — the read never completed: the request itself failed, …`. `fetchProfile`'s `catch(e){}` swallowed every
+  profile error into silence; it now writes what failed into the line the user is reading. Both branches are covered
+  by the instrument: the refused read through the server's own answer for a run it never stored, the transport
+  failure through `route()` aborting `/mcp` on a separate page. The transport check was falsified by emptying the
+  note -- `FAIL transportFailureSaysSo -- (empty note -- the page stayed in the reading state)` -- restored
+  byte-exact. Writing that block the first time as `route("**/mcp**")` aborted the page navigation too, and the gate
+  caught it as `mcpAppPageLoaded`; the pattern is now a predicate on the pathname.
 - Unrelated to the fix but measured on the way: `POST /mcp` answers `307` and redirects to `/mcp/`. Browsers follow
   it with the method and body intact, which is why the page works; a hand-written client that does not follow
   redirects sees an empty 307. Recorded in `AUDIT_LEDGER.md` §249.
