@@ -14381,3 +14381,71 @@ throwaway database and then reading the stored report manufactures a "the langua
 document was correct for the question it was written under, and the mutation, not the product, was the defect. And
 a fresh browser context mints its own `dsa_owner`, so it honestly cannot see a row stamped with another id -- the
 first two probe runs failed on that, not on the page.
+
+## 239. A green Secret Scan never meant the repository was clean: the range comes from the push payload, and a merge commit widens it to 139 commits
+
+2026-10-21, after PR 77 landed. The owner merged Dependabot's Node 22 -> 26 bump with `gh pr merge 77 --merge
+--auto`; it landed as merge commit `32e24055` at 12:49:58Z. Two verdicts came off that one push, and they point in
+opposite directions:
+
+- `ci` (the only required context, `strict: true`) -- run `39602781284`, **success**, and the step named
+  `Run docker build -f docker/Dockerfile.web -t dsa-web:ci .` was read out of the job individually rather than
+  inferred from the job's colour, because a green job is not evidence that a particular step ran. That step is the
+  production-path witness that `node:26-alpine` builds.
+- `Secret Scan` -- run `39602781315`, **failure**, `leaks found: 2`. Not a required context, so nothing was blocked.
+
+The two matches are `8535e148` at `tests/contract/test_provider_settings.py:38` and `d883c7df` at
+`docs/hosted-demo.md:125`. Both are ancestors of the tip that was green the day before, and neither is a
+credential: the first is `CREDENTIAL_CANARY`, whose own preceding comment declares it "A credential shaped like a
+real one. Not a placeholder", and the second is prose naming `DSA_TELEMETRY` and `DSA_EVENT_LOG`, verified by
+printing the line with runs of 13+ characters masked. So the question was not "what leaked" but "why is a
+long-quiet gate suddenly reading old commits".
+
+**The mechanism is in the action, not in gitleaks.** Read at the pinned ref `e0c47f4f` (v3.0.0):
+`src/index.js:161-162` sets `baseRef = eventJSON.commits[0].id` and `headRef = commits[last].id`, and
+`src/gitleaks.js:105-110` then runs either `--log-opts=-1` when those two are equal, or
+`--log-opts=--no-merges --first-parent ${baseRef}^..${headRef}` when they are not. The webhook's `before..after` is
+never used. Both arms were observed, not deduced: today's log printed `--log-opts=--no-merges --first-parent
+0d5f3de0...^..32e24055...`, while the successful run on `e548d87` printed `--log-opts=-1`. A squash merge pushes one
+commit, so `commits[0] == commits[-1]` and the gate reads a single commit; a `--merge` push lists the branch's own
+commits first, and `0d5f3de0` -- Dependabot's bump, cut on 2026-10-12 -- made the walk start nine days back.
+
+The arithmetic closes it. The log said `139 commits scanned`, and
+`git rev-list --count --first-parent --no-merges 0d5f3de0^..e548d87` = **139** on this clone. One link here is
+argued rather than measured: the merge commit's objects are not local, because `git fetch` died on the
+github.com:443 flap, so the count was taken against the *pre-merge* tip as a proxy. The equality is expected --
+`--first-parent` prunes the branch side and `--no-merges` drops both merge commits -- but it is a proxy, and the
+same command against `32e24055` should be run by whoever next has the object.
+
+The consequence is a statement about the gate, not about this PR: **a green Secret Scan on main means "the range
+this push walked is clean", and that range is chosen by how the PR was merged.** The same two strings were caught
+at their own arrivals -- runs `38893715137` (10-16) and `39018232999` (10-17), both `failure`, one leak each -- and
+neither was fixed or recorded, after which single-commit pushes stopped looking at them. Squash-merging is not a
+fix; it only narrows what the gate can see.
+
+One change was made, and it is a strengthening: `GITLEAKS_VERSION: "8.24.3"` is now set on the step, with a comment
+naming the reason. Unset, `src/index.js:138-140` calls `repos.getLatestRelease` on the gitleaks repository and
+installs whatever that returns, so the rule set -- and therefore the verdict -- can move under a commit that
+changed nothing else. 8.24.3 is the version every run examined here printed, and it is upstream's current release
+(tag `v8.24.3`, published 2025-04-11), so pinning it changes no behaviour today; that is precisely why it is safe,
+and also why its effect is latent -- no run here can show the pin firing, because upstream has not released since.
+
+Deliberately not changed, with the measurement that decided it: the guide-line mirror in
+`tests/test_ci_gate_integrity.py` already pins ten `uv lock --check` occurrences across five surfaces
+(`CONTRIBUTING.md`, `docs/contributing.md`, `docs/gate-reference.md`, `docs/gate-reference-cn.md`,
+`docs-standalone.md`), those files are being rewritten by a concurrent session in this shared worktree right now,
+and `test_secret_scan_workflow` in `tests/security/test_w7_supply_chain.py` asserts only that the file exists and
+mentions gitleaks. Extending that mirror to a non-gate environment variable would police ten lines of prose for one
+constant and fight the other session while doing it. And the two findings themselves were left unresolved on
+purpose: removing the canary would delete the fixture's reason for existing, and a `.gitleaksignore` entry is a
+change to what the gate forgives, which is the owner's call rather than a way to arrive at green.
+
+Reproduce with:
+`gh run view 39602781315 --repo Jackxiaozhiren/data-science-agent --log | grep "gitleaks cmd"`,
+`gh run view 39440661611 --log | grep "gitleaks cmd"` for the single-commit arm, and
+`git rev-list --count --first-parent --no-merges 0d5f3de0^..e548d87`.
+
+Three instrument errors in this pass, all of them the known shape: `timeout` does not exist on this Mac, so a
+bounded fetch exited 127 and printed nothing; `?recursive=1` unquoted was glob-expanded by zsh into "no matches
+found"; and `echo rc=$?` measured the `tail` at the end of a pipe rather than the `git fetch` in front of it. The
+first and third were caught by reading the output, not by the exit status.
