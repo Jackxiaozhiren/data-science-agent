@@ -165,9 +165,23 @@ l=set(TestClient(app).get('/openapi.json').json()['paths'])
 print('hosted', len(h), 'local', len(l), '| hosted-only', sorted(h-l), '| local-only', sorted(l-h))"
 ```
 
-Both sides answered 25 paths with no difference when measured on 2026-10-21, so the deployed API is not behind
-the repository at the route level. It can still be behind at the *content* level: a path that exists in both may
-render differently, which is what `/version`'s `distribution` version and a read of the artifact itself are for.
+Both sides answered the same path set when measured on 2026-10-21, so the deployed API is not behind the
+repository at the route level. It can still be behind at the *content* level, and that is the half a path census
+cannot see: a route that exists in both may render differently. The content check needs no credentials either --
+ask a published run for its report and look at what the product itself says:
+
+```bash
+RID=$(curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/ \
+  | python3 -c "import json,sys; a=json.load(sys.stdin)['analyses']; print(a[0]['id'])")
+curl -s "https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/$RID/report?format=html" \
+  | python3 -c "import re,sys; h=sys.stdin.read(); print(re.findall(r'<h2>(.*?)</h2>', h)); print(bool(re.search(r'<strong>[a-z]+_[a-z_]+</strong>', h)))"
+```
+
+The second line prints whether any validation check is being named by the engine's identifier instead of by the
+word the report owns (`Evidence coverage`, 证据覆盖率). Measured on 2026-10-21 the answer was `True`: the running
+container predates that change, which is the evidence a redeploy is owed -- and the reason `identical: True` above
+is a route claim, not a currency claim. Run the same probe again after a deploy; when it prints `False`, the
+artifact the visitors download matches the repository.
 
 ### Verify a deploy from the outside
 

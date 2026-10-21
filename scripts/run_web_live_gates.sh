@@ -92,6 +92,19 @@ fi
 
 command -v uv >/dev/null 2>&1 || fail "uv is not on PATH -- the gate mirror's setup step needs it"
 
+# Three causes, three answers. `apps/web/scripts/browser-state.mjs` resolves Playwright from its own directory --
+# the same directory the instruments resolve from -- so this cannot disagree with them the way a cwd-dependent probe
+# did: in CI's `ci` job, which installs apps/web and apps/vscode but never a root node_modules, a root-context probe
+# could not resolve the package and refused for a reason that was not true. A gate that refuses for the wrong reason
+# gets deleted instead of fixed, so the remedy each state names is different.
+BROWSER_STATE=$(node apps/web/scripts/browser-state.mjs 2>/dev/null)
+if [[ "$BROWSER_STATE" == "UNRESOLVABLE" ]]; then
+  fail "playwright is not installed in apps/web (run \`npm --prefix apps/web ci --legacy-peer-deps\`)"
+fi
+if [[ "$BROWSER_STATE" != "INSTALLED" ]]; then
+  fail "Playwright's chromium browser is missing (run \`cd apps/web && npx playwright install --with-deps chromium\`)"
+fi
+
 # Installed before the first process: a failure on the way up must still tear the stack down, or this script
 # becomes the thing that leaves a listener on port 8000 for the next run to blame.
 trap cleanup EXIT

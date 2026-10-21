@@ -2,6 +2,62 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the MCP App page put wire text into `innerHTML` unescaped
+
+- `/mcp-app` built two HTML fragments by string interpolation and assigned them to `innerHTML`: the dataset
+  `<option>` list, from a resource's own `name` and `description`, and the evidence table, from `id`, `claim` and
+  `source_type`. An evidence claim quotes the question the client typed and the header row of the analysed file, and
+  `pl.read_csv` keeps a header verbatim, so both fragments are assembled from text the product never authored. The
+  page's `<script>` is the executor here; no `enableScripts` flag is involved. The report embedded below them was
+  already safe -- it comes from `export_html`, the single renderer (R-14) -- which is why this survived every check
+  the repo had: nothing visited `/mcp-app`, and no test sent markup through the two templates.
+- Found by asking which surface had no instrument, the same question that surfaced the VS Code panel: which surface
+  renders data it did not author, and who looks at it.
+- One escaper, `esc()`, and the two fragments hoisted into named renders (`renderOptions`, `renderEvidence`) so a
+  probe can call them. `renderOptions` also stops throwing on a resource with no `description` -- the old
+  `x.description.slice(0,60)` aborted the whole `try` and left the dropdown on its fallback option, so one sparse
+  resource silently hid every dataset.
+- `tests/mcp/test_app_page_escaping.py` loads the script out of `dsa_mcp.app.HTML` -- the bytes the route returns --
+  stubs the four browser globals it touches at load time, and calls both renderers on an `<img onerror>` payload.
+  Two guards, both falsified: dropping `esc()` from the claim cell alone puts a live `<img ` in the fragment, and
+  adding a fourth `innerHTML` assignment trips the census, which is pinned to three sinks on purpose so any new one
+  has to be adjudicated. 35 tests green across `tests/mcp` and `tests/vscode`; `_vendor` re-synced byte-exact.
+- The claims gate went red on the previous batch for the reason this repository exists to police: `apps/vscode/README.md`
+  counted the VS Code suite as seven tests, and the escaping guard made it eight. The count is the gate's business,
+  so it is now correct rather than removed.
+
+### Fixed (post-4.6.0) — the Jupyter magic put a CSV's own header into the notebook as live HTML
+
+- `%dsa profile` had fifteen `display(HTML(f"..."))` sinks and escaped none of them, and a notebook frontend inserts
+  `text/html` without sanitising it. The reachable input is the analysed file itself: `pl.read_csv` keeps the header
+  row verbatim, the SDK exposes it as `columns`, and the profile block interpolated the joined list -- a CSV whose
+  header is `<img src=x onerror=alert(1)>` reached the notebook as a live tag. A typed dataset path and an exception
+  message quoting a bad file reached the same class of sink. `dsa_jupyter/display.py` escaped every field it renders;
+  `magic.py` escaped none, and the package's own tests asserted on returned objects and substring presence, never on
+  markup -- so CI's lint-and-typecheck of it proved nothing about this.
+- One escaper with one contract: `display.escape_html` coerces before escaping (`html.escape` is `str`-only, and a
+  path, a column name or an error is not reliably a string) and all fifteen sinks call it. The plugin table renders
+  through `Markdown`, which frontends sanitise, so it is left alone rather than escaped on speculation.
+- `tests/jupyter/test_magic_html_escaping.py` drives the real magic through IPython and reads only the captured HTML,
+  asserting first that the payload is live markup when interpolated raw so a green cannot come from an inert
+  fixture. Falsified by unescaping one sink ("a CSV header reached the notebook document verbatim"), restored
+  byte-exact: 21 jupyter tests green, ruff and mypy clean, no `_vendor` drift. See `AUDIT_LEDGER.md` §245.
+
+### Fixed (post-4.6.0) — the VS Code result panel interpolated run-derived text into a scripted webview
+
+- `apps/vscode/src/views.ts` built the result HTML by string interpolation and created the panel with
+  `enableScripts: true`, while five values went in raw: an evidence row's `id`, `claim` and `source_type`, plus the
+  run id and status in the heading. An evidence claim is derived from the analysed file and the model's text, so a
+  claim carrying `<img src=x onerror=...>` executed a script inside a panel whose `postMessage` bridge reaches the
+  extension host. Only the report body was escaped at all, and only its `<`.
+- One `esc()` now covers every interpolation -- including the fields nobody would call attacker-controlled (a path the
+  user picked, a closed status enum), because asking "is this value safe to interpolate?" is how this class survives.
+- `test_result_webview_escapes_run_derived_text` proves it at runtime: compile the package, call `getHtml` with
+  `vscode` stubbed, feed the payload into every field, and assert no raw `<img ` and no `onerror="` in the document --
+  after first asserting that the same payload through the previous interpolation *is* live markup, so a green cannot
+  come from an inert fixture. Reverting one site reddens it (`rawInHtml: 1, rawOnerrorAttr: True`). See
+  `AUDIT_LEDGER.md` §243.
+
 ### Added (post-4.6.0) — the two R-13 web instruments became gates, in six places at once
 
 - `node apps/web/scripts/locale-chrome-inventory.mjs` (what the pages say, parsed from the TypeScript AST) and
@@ -38,6 +94,18 @@
   both scratch ports free afterwards by `lsof`).
 
 
+- The runner refuses before booting anything when the browser is not there, and names the reason it observed:
+  `apps/web/scripts/browser-state.mjs` prints `INSTALLED`, `MISSING` or `UNRESOLVABLE`, and the gate maps them to
+  two different remedies. The first version asked from the repository root inside the shell script, which is a
+  different package context from the instruments' -- CI installs `apps/web` and `apps/vscode` and never a root
+  `node_modules`, so the module was simply unresolvable there and the gate reddened its own job claiming the
+  *browser* was missing, one commit after the same job passed without the check. Living beside the instruments makes
+  Node resolve the probe the way it resolves them, so a caller cannot get the context wrong by forgetting a `cd`.
+
+- `tests/contract/test_web_live_gate_probe.py` pins that separation without depending on this machine having a
+  browser: one of three words, `MISSING` when `PLAYWRIGHT_BROWSERS_PATH` is emptied (skipped, not passed, where no
+  browser exists at all), and `UNRESOLVABLE` for a copy of the probe outside `apps/web` -- the assertion that fails
+  if the check ever becomes cwd-dependent again.
 - Measured: both instruments pass locally (`INSPECTOR_A11Y_PASS` -- 18 disclosure toggles across both locales, 16
   stops with a visible ring, 0 console errors, screenshots in `output/inspector-a11y/`; and
   `R13I_CHROME_ACCEPTANCE_PASS (34 route/locale checks)`), `tests/test_command_surface.py`
