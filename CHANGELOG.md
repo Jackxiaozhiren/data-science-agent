@@ -55,13 +55,18 @@
   both scratch ports free afterwards by `lsof`).
 
 
-- The runner now asks Playwright where its browser is (`chromium.executablePath()`, checked for existence) before
-  booting anything, and refuses with the exact install command. Guessed cache paths would be wrong on some platform,
-  and without the preflight a missing browser died inside a launch call with a stack trace that reads like a product
-  defect. Proven both ways: with `PLAYWRIGHT_BROWSERS_PATH` pointed at an empty directory the gate exits 1 with
-  `LIVE_GATES_REFUSED: Playwright's chromium is not installed (run \`cd apps/web && npx playwright install
-  --with-deps chromium\`)` and leaves both ports untouched; with the real install it proceeds and the run is green.
+- The runner refuses before booting anything when the browser is not there, and names the reason it observed:
+  `apps/web/scripts/browser-state.mjs` prints `INSTALLED`, `MISSING` or `UNRESOLVABLE`, and the gate maps them to
+  two different remedies. The first version asked from the repository root inside the shell script, which is a
+  different package context from the instruments' -- CI installs `apps/web` and `apps/vscode` and never a root
+  `node_modules`, so the module was simply unresolvable there and the gate reddened its own job claiming the
+  *browser* was missing, one commit after the same job passed without the check. Living beside the instruments makes
+  Node resolve the probe the way it resolves them, so a caller cannot get the context wrong by forgetting a `cd`.
 
+- `tests/contract/test_web_live_gate_probe.py` pins that separation without depending on this machine having a
+  browser: one of three words, `MISSING` when `PLAYWRIGHT_BROWSERS_PATH` is emptied (skipped, not passed, where no
+  browser exists at all), and `UNRESOLVABLE` for a copy of the probe outside `apps/web` -- the assertion that fails
+  if the check ever becomes cwd-dependent again.
 - Measured: both instruments pass locally (`INSPECTOR_A11Y_PASS` -- 18 disclosure toggles across both locales, 16
   stops with a visible ring, 0 console errors, screenshots in `output/inspector-a11y/`; and
   `R13I_CHROME_ACCEPTANCE_PASS (34 route/locale checks)`), `tests/test_command_surface.py`

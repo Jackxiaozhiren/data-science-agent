@@ -92,14 +92,12 @@ fi
 
 command -v uv >/dev/null 2>&1 || fail "uv is not on PATH -- the gate mirror's setup step needs it"
 
-# Ask Playwright where its browser is rather than guessing a cache path -- but ask the way the instruments will
-# answer: `node apps/web/scripts/*.mjs` resolves `playwright` from `apps/web/node_modules`, and a CI job can easily
-# have that and no root install at all. Resolving from the repository root asked a different package (or none), and
-# its failure was reported as "chromium is not installed" -- a gate refusing for a reason that was not true. The two
-# causes are now distinguished, because a wrong reason is how a broken gate gets "fixed" by deleting it.
-BROWSER_STATE=$(cd apps/web && node -e 'let pw;
-try { pw = require("playwright"); } catch (e) { console.log("UNRESOLVABLE"); process.exit(0) }
-const fs=require("fs");console.log(fs.existsSync(pw.chromium.executablePath())?"INSTALLED":"MISSING")' 2>/dev/null)
+# Three causes, three answers. `apps/web/scripts/browser-state.mjs` resolves Playwright from its own directory --
+# the same directory the instruments resolve from -- so this cannot disagree with them the way a cwd-dependent probe
+# did: in CI's `ci` job, which installs apps/web and apps/vscode but never a root node_modules, a root-context probe
+# could not resolve the package and refused for a reason that was not true. A gate that refuses for the wrong reason
+# gets deleted instead of fixed, so the remedy each state names is different.
+BROWSER_STATE=$(node apps/web/scripts/browser-state.mjs 2>/dev/null)
 if [[ "$BROWSER_STATE" == "UNRESOLVABLE" ]]; then
   fail "playwright is not installed in apps/web (run \`npm --prefix apps/web ci --legacy-peer-deps\`)"
 fi
