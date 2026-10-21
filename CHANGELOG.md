@@ -38,6 +38,13 @@
   both scratch ports free afterwards by `lsof`).
 
 
+- The runner now asks Playwright where its browser is (`chromium.executablePath()`, checked for existence) before
+  booting anything, and refuses with the exact install command. Guessed cache paths would be wrong on some platform,
+  and without the preflight a missing browser died inside a launch call with a stack trace that reads like a product
+  defect. Proven both ways: with `PLAYWRIGHT_BROWSERS_PATH` pointed at an empty directory the gate exits 1 with
+  `LIVE_GATES_REFUSED: Playwright's chromium is not installed (run \`cd apps/web && npx playwright install
+  --with-deps chromium\`)` and leaves both ports untouched; with the real install it proceeds and the run is green.
+
 - Measured: both instruments pass locally (`INSPECTOR_A11Y_PASS` -- 18 disclosure toggles across both locales, 16
   stops with a visible ring, 0 console errors, screenshots in `output/inspector-a11y/`; and
   `R13I_CHROME_ACCEPTANCE_PASS (34 route/locale checks)`), `tests/test_command_surface.py`
