@@ -35,6 +35,13 @@
   what the report's own `1.5rem` rule produces and not the `32px` a blocked stylesheet leaves. That half was
   falsified as well: with `allow_self_frame` removed the frame assertion fails, so the green is not an assertion that
   cannot miss.
+- The same instrument now also drives the flow a client drives: select a dataset, type the question, click
+  ▶ Run Analysis, wait for the page's own progress line. Measured on a booted stack the run completed, the evidence
+  table arrived with rows and not one element inside it, and the report card revealed itself pointing at
+  `/mcp-app/report/`. Falsified by making the button call a tool that does not exist -- the page reported
+  `Error: Unknown MCP tool: analyse_typo` and the instrument exited 1 -- then restored byte-exact. Until this no test
+  had ever pressed that button: every `analyze` test called the tool directly, so the page's own path from click to
+  evidence table was unmeasured, on the surface whose whole claim is that flow.
 - Not the same claim, and worth keeping separate: the hosted demo still runs the older artifact (#44), so what a
   visitor sees there carries neither the escaping nor this policy. The census in `docs/hosted-demo.md` reads the
   deployed bytes rather than assuming.

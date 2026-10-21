@@ -49,6 +49,7 @@ if (ds.length === 0) {
 const browser = await chromium.launch();
 let failures = 0;
 let readFrame = null;
+let flowRun = null;
 const fail = (claim, detail) => {
   failures += 1;
   console.error(`FAIL ${claim}${detail ? ` -- ${detail}` : ""}`);
@@ -148,6 +149,37 @@ try {
     } else {
       console.log("note: no stored run on this instance, so the report frame was not read");
     }
+    // The flow itself, driven the way a client drives it: pick, type, click. Every earlier test of `analyze` called
+    // the tool through `TestClient`, so nothing had exercised the page's own path from the button to the evidence
+    // table -- the same path whose two innerHTML sinks this round had to be sealed. A green here means the click
+    // reached `/mcp`, the run completed, and the claims came back as rows of text.
+    await page.click("#analyzeBtn");
+    const progressText = await page
+      .waitForFunction(() => /^(COMPLETED|Error|Failed)/.test(document.getElementById("progress").textContent), null, {
+        timeout: 180_000,
+      })
+      .then(() => page.textContent("#progress"))
+      .catch(() => "never answered");
+    if (!progressText.startsWith("COMPLETED ")) {
+      fail("analyzeButtonDrivesACompletedRun", `"${progressText.slice(0, 160)}"`);
+    } else {
+      const cells = await page.$$eval("#evidence td", (els) => els.map((el) => el.textContent.trim()));
+      if (cells.length < 3) {
+        fail("evidenceTableHasRows", `${cells.length} cell(s) under #evidence`);
+      }
+      const live = await page.$$eval("#evidence", (els) =>
+        els.reduce((n, el) => n + el.querySelectorAll("img,script,svg,iframe").length, 0),
+      );
+      if (live !== 0) fail("evidenceTableCarriesOnlyText", `${live} element(s) inside #evidence`);
+      const revealed = await page.$eval("#reportFrame", (el) => ({ hidden: el.hidden, src: el.src })).catch(() => null);
+      if (!revealed || revealed.hidden) {
+        fail("reportCardIsRevealedAfterARun", JSON.stringify(revealed));
+      } else if (!/\/mcp-app\/report\//.test(revealed.src)) {
+        fail("reportCardPointsAtTheRenderEndpoint", revealed.src);
+      }
+      flowRun = progressText.slice("COMPLETED ".length).split(" ")[0];
+    }
+
     // The escaping boundary, read as DOM rather than as a string: nothing inside the option list may be an
     // element, because every field in it came from a file's own header row or name.
     const injected = await page.$$eval("#dataset", (els) =>
@@ -168,5 +200,6 @@ if (failures) {
 }
 console.log(
   `MCP_APP_PAGE_PASS (${ds.length} dataset(s) offered by the live page, values and labels matched)` +
+    (flowRun ? `; button-driven run ${flowRun}` : "") +
     (readFrame ? `; report frame read in place: ${readFrame}` : "; no stored run, report frame not read"),
 );
