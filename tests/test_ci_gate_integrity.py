@@ -140,6 +140,8 @@ _LOG_PLUMBING = frozenset({"set", "-o", "pipefail;", "2>&1"})
 # `docker compose config` and the Web regression tour -- seven gates the guides do not mirror.
 CI_ONLY_STEPS = {
     "npm --prefix apps/web ci": "installs node_modules for the build and tour steps below",
+    "npx playwright install": "provisions the browser the tour and the keyboard gate drive; it is not a "
+    "repository verdict, and both gates that need it are classified separately",
     "npm --prefix apps/vscode ci": "installs node_modules for `npm run compile` in tests/vscode",
     'pip install "uv==': "provisions the runner's package manager, not a repository verdict",
     "uv sync --dev": "creates the environment the gates then run in",
@@ -185,6 +187,10 @@ def _classify(tokens: set[str]) -> str | None:
         return "compose"
     if any(tok.endswith("regression.mjs") for tok in tokens):
         return "web-tour"
+    if any(tok.endswith("locale-chrome-inventory.mjs") for tok in tokens):
+        return "web-chrome"
+    if any(tok.endswith("run_inspector_a11y.sh") for tok in tokens):
+        return "web-a11y"
     if "dsa" in tokens and "--limit" in tokens:
         return "bench-smoke"
     if "npm" in tokens and "build" in tokens and "apps/web" in tokens:
@@ -332,6 +338,7 @@ def test_the_control_an_unknown_step_is_reported_and_a_declared_one_is_not(tmp_p
     ), "a classified gate was still reported as unaccounted"
     declared = {
         "npm --prefix apps/web ci",
+        "npx playwright install",
         "npm --prefix apps/vscode ci",
         'pip install "uv==',
         "uv sync --dev",

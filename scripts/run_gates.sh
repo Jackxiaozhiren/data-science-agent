@@ -42,6 +42,8 @@ GATES=(
   "uv run dsa --limit 5 --out /tmp/ci-bench --catalog benchmarks/ds-agent-benchmark/catalog.json --datasets benchmarks/ds-agent-benchmark/datasets"
   "npm --prefix apps/web run build"
   "node apps/web/scripts/regression.mjs"
+  "node apps/web/scripts/locale-chrome-inventory.mjs"
+  "bash scripts/run_inspector_a11y.sh"
   "uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json"
   "uv run python scripts/generate_sbom.py --check"
   "docker compose config"
