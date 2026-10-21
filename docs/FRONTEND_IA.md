@@ -278,9 +278,15 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   the data-in-chrome pattern and the leak decision. Two runners ask it rather than each deciding. `regression.mjs`,
   the web job GitHub Actions already runs, adds one check per static route per locale -- each route is loaded under
   a `dsa_locale=zh` and an `=en` cookie and fails on an English chrome region or a `⟨missing-key⟩` marker, and the
-  tour's own summary line prints that pass's count. `locale-chrome-acceptance.mjs` needs a seeded backend and so
-  runs by hand, covering what the tour cannot see: the column heads that only exist once a table has rows, and the
-  three routes that need a real run or dataset id. `test_the_two_language_runners_share_one_rule_owner` is what
+  tour's own summary line prints that pass's count. `locale-chrome-acceptance.mjs` needs a seeded backend, so it
+  used to run by hand; `scripts/run_web_live_gates.sh` now boots a throwaway stack (API on a temporary SQLite file
+  in heuristic mode, the built web app on a scratch port) and runs it beside `inspector-a11y.mjs` on that one boot,
+  as a gate in CI and in `run_gates.sh`. It covers what the tour cannot see: the column heads that only exist once a
+  table has rows, the three routes that need a real run or dataset id, and the run page's validation card, whose
+  labels sit in `main li strong` -- outside `CHROME_SELECTOR`, so a region scan visits the page and never reads
+  them. Those labels are examined against the dictionary instead: a label the dictionary has a key for is a defect,
+  and the run's own rendered report is excluded by the `data-run-document` boundary, so the card's absence cannot be
+  papered over by the report body's bold text. `test_the_two_language_runners_share_one_rule_owner` is what
   keeps them the same test -- it refuses a runner that re-declares `IDENTIFIERS` or `CHROME_SELECTOR` beside its
   import, and it floors the identifier list at 25 entries, because a rule owner emptied of entries would let both
   runners report a clean tree. The wiring was falsified from both sides: forcing the tour's cookie to `en` reddened
