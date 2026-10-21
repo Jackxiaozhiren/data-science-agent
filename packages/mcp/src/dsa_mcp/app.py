@@ -86,6 +86,13 @@ th,td{border:1px solid #ddd; padding:6px; text-align:left; font-size:13px;}
 <div class="card small">Handles: <code>run_id</code> / <code>analysis_id</code> / <code>dataset</code> — explicit in URL (?run_id=...) and resource URIs (§38). Stateless MCP 2026-07-28 — no session.</div>
 
 <script>
+// Everything these touch arrives over the wire -- a dataset's own name/description, and an evidence
+// claim that quotes the user's question and the CSV's header row -- so none of it is markup until esc() says so.
+const esc = (v) => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+const renderOptions = (ds) => ds.map(x=>`<option value="${esc(x.uri)}">${esc(x.name)} — ${esc((x.description ?? '').slice(0,60))}</option>`).join('');
+const renderEvidence = (ev) => '<table><tr><th>id</th><th>claim</th><th>source</th></tr>'
+  + ev.slice(0,5).map(e=>`<tr><td>${esc(e.id)}</td><td>${esc((e.claim ?? '').slice(0,80))}</td><td>${esc(e.source_type)}</td></tr>`).join('') + '</table>';
+
 let lastRunId = new URLSearchParams(location.search).get('run_id') || '';
 let lastDataset = '';
 
@@ -99,7 +106,7 @@ async function loadDatasets(){
     const res = await jrpc('resources/list', {});
     const resources = (res.result && res.result.resources) || [];
     const ds = resources.filter(x=>x.uri.startsWith('dataset://'));
-    sel.innerHTML = ds.map(x=>`<option value="${x.uri}">${x.name} — ${x.description.slice(0,60)}</option>`).join('') || '<option value="dataset://sales">dataset://sales (fallback)</option>';
+    sel.innerHTML = renderOptions(ds) || '<option value="dataset://sales">dataset://sales (fallback)</option>';
     if(ds[0]) { lastDataset = ds[0].uri; document.getElementById('profile').textContent = ds[0].description; }
     sel.onchange = ()=>{ lastDataset = sel.value; fetchProfile(); };
     fetchProfile();
@@ -144,7 +151,7 @@ async function runAnalysis(){
     // Evidence
     const evDiv = document.getElementById('evidence');
     const ev = out.evidence || [];
-    evDiv.innerHTML = ev.length ? '<table><tr><th>id</th><th>claim</th><th>source</th></tr>'+ev.slice(0,5).map(e=>`<tr><td>${e.id}</td><td>${(e.claim||'').slice(0,80)}</td><td>${e.source_type||''}</td></tr>`).join('')+'</table>' : 'No evidence';
+    evDiv.innerHTML = ev.length ? renderEvidence(ev) : 'No evidence';
     document.getElementById('openEvidenceBtn').disabled=false;
     document.getElementById('openEvidenceBtn').onclick=()=> openResource('evidence://'+lastRunId);
     // Report — rendered by the single owner (R-14), embedded rather than re-implemented

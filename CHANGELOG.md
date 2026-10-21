@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the MCP App page put wire text into `innerHTML` unescaped
+
+- `/mcp-app` built two HTML fragments by string interpolation and assigned them to `innerHTML`: the dataset
+  `<option>` list, from a resource's own `name` and `description`, and the evidence table, from `id`, `claim` and
+  `source_type`. An evidence claim quotes the question the client typed and the header row of the analysed file, and
+  `pl.read_csv` keeps a header verbatim, so both fragments are assembled from text the product never authored. The
+  page's `<script>` is the executor here; no `enableScripts` flag is involved. The report embedded below them was
+  already safe -- it comes from `export_html`, the single renderer (R-14) -- which is why this survived every check
+  the repo had: nothing visited `/mcp-app`, and no test sent markup through the two templates.
+- Found by asking which surface had no instrument, the same question that surfaced the VS Code panel: which surface
+  renders data it did not author, and who looks at it.
+- One escaper, `esc()`, and the two fragments hoisted into named renders (`renderOptions`, `renderEvidence`) so a
+  probe can call them. `renderOptions` also stops throwing on a resource with no `description` -- the old
+  `x.description.slice(0,60)` aborted the whole `try` and left the dropdown on its fallback option, so one sparse
+  resource silently hid every dataset.
+- `tests/mcp/test_app_page_escaping.py` loads the script out of `dsa_mcp.app.HTML` -- the bytes the route returns --
+  stubs the four browser globals it touches at load time, and calls both renderers on an `<img onerror>` payload.
+  Two guards, both falsified: dropping `esc()` from the claim cell alone puts a live `<img ` in the fragment, and
+  adding a fourth `innerHTML` assignment trips the census, which is pinned to three sinks on purpose so any new one
+  has to be adjudicated. 35 tests green across `tests/mcp` and `tests/vscode`; `_vendor` re-synced byte-exact.
+- The claims gate went red on the previous batch for the reason this repository exists to police: `apps/vscode/README.md`
+  counted the VS Code suite as seven tests, and the escaping guard made it eight. The count is the gate's business,
+  so it is now correct rather than removed.
+
 ### Fixed (post-4.6.0) — the Jupyter magic put a CSV's own header into the notebook as live HTML
 
 - `%dsa profile` had fifteen `display(HTML(f"..."))` sinks and escaped none of them, and a notebook frontend inserts
