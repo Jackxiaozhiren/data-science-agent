@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the run's report called its checks by their engine names, and one heading broke the language rule
+
+- Reading the MCP App page for a Chinese run (`/mcp-app/report/{id}`) showed the deliverable's own inconsistency:
+  the document declared `lang="zh"` and titled five sections in Chinese -- 图表, 计划, 工具调用, 证据, 洞察 -- and
+  then printed `Validation`. `export_html` hardcoded that `<h2>` while the Markdown serialisation of the same
+  assembly called `_lbl(lang, "validation")` and said `## 校验`. The heading guard missed it because it enumerated
+  the Markdown headings and read one HTML heading (`AUDIT_LEDGER.md` §238).
+- The wider half: the check *name* was the engine's identifier. `✓ **evidence_coverage**: Evidence coverage ok` in
+  both exports, and `<strong>evidence_coverage:</strong>` in the inspector's validation list, in either language --
+  while the same Chinese report's limitations block already said 证据覆盖率. `_label()` has owned that vocabulary
+  and only limitations used it; its two maps named 7 keys where the producers emit more.
+- The vocabulary is now enumerated, not counted. A `check="..."` text sweep returns 14 keys and two of them
+  (`levene`, `normality`) are a tool's per-column assumption records -- data, not chrome -- so the shape decides:
+  an `ValidationResult(check=...)` construction or a dict carrying `check`+`passed`+`message`, which yields 11 and
+  also finds `reporting.py`, the fifth producer a hand-listed module set would have missed. Both maps, and a new
+  `chk.*` block pair in `apps/web/lib/locale.ts` behind `checkLabel()`, now name all of them; `_validation_lines`,
+  `export_html` and `RunInspector.tsx` go through those owners. Validation *messages* stay verbatim -- the rule
+  `test_the_runs_own_bytes_are_never_translated` protects.
+- Kept honest by `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it`: producers against the
+  Python columns, the two columns against each other, the web blocks against them by key and value, then the
+  renderings (`**证据覆盖率**` in, `evidence_coverage` out) and the component wiring. Falsified six ways -- literal
+  heading restored, key dropped from both maps, dropped from one, web value reworded, component unwired, and two
+  forged empty inputs for the parsers -- each red, then the tree back byte-identical under `shasum -c`.
+- Live, on a run created through the API rather than a mutated fixture: its stored report reads `# 分析报告 /
+  ## 校验 / ## 局限` with items `**证据覆盖率**, **因果表述**, **工具执行**, **运行预算**`; in the browser as that
+  run's owner the validation card showed the seven Chinese names and the seven English ones with no identifier and
+  no `⟨` (`R13W_CHECKLABEL_PASS (12)`, 5 tabs); the App page on a published row renders `校验` with `⟨` count 0.
+  Three lookalikes were adjudicated as correct and are recorded rather than changed: the tool names in the audited
+  trace, the App's 404 on a visitor-owned run (R-08 scoping -- an unidentified surface must not read private rows),
+  and the page's 验证 against the report's 校验 for the same section.
+
+
 ### Fixed (post-4.6.0) — the repo-wide secret scan was reading installed third-party packages
 
 - `test_secret_protection_no_hardcoded_secrets_in_repo` walked `Path(".").rglob("*.py")`, so its corpus was the

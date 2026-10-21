@@ -70,7 +70,11 @@ _IDENTIFIER_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
 )
 
-#: Validation check keys, in the words a person who did not write them would use.
+#: Validation check keys, in the words a person who did not write them would use. Every key the engine can
+#: put in ``validation_results[].check`` has to be listed here: the two exports and the web inspector all say
+#: this word to the reviewer, so an unmapped key would show ``prompt_injection`` where the document says
+#: everything else in plain language. ``test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it``
+#: enumerates the producers and fails if one of them has no words here.
 _CHECK_LABELS = {
     "evidence_coverage": "Evidence coverage",
     "unsupported_claim": "Causal language",
@@ -79,9 +83,14 @@ _CHECK_LABELS = {
     "insight_evidence": "Insight grounding",
     "evidence_traceability": "Evidence traceability",
     "statistical_power": "Statistical power",
+    "prompt_injection": "Prompt injection",
+    "resource_limits": "Resource limits",
+    "dataset_hash": "Dataset hash",
+    "evidence_bundle": "Evidence bundle",
+    "langgraph_fallback": "Graph fallback",
 }
 
-#: The same seven checks, in the language the run was asked in.
+#: The same checks, in the language the run was asked in.
 _CHECK_LABELS_ZH = {
     "evidence_coverage": "证据覆盖率",
     "unsupported_claim": "因果表述",
@@ -90,6 +99,11 @@ _CHECK_LABELS_ZH = {
     "insight_evidence": "洞察的依据",
     "evidence_traceability": "证据可追溯性",
     "statistical_power": "统计功效",
+    "prompt_injection": "提示注入",
+    "resource_limits": "资源限制",
+    "dataset_hash": "数据集哈希",
+    "evidence_bundle": "证据打包",
+    "langgraph_fallback": "编排回退",
 }
 
 #: Every word this file says *about* a run. A report keeps the language the run was asked in
@@ -369,9 +383,11 @@ def _tool_call_lines(calls: list[dict[str, Any]], lang: str = "en") -> list[str]
     return lines
 
 
-def _validation_lines(results: list[dict[str, Any]]) -> list[str]:
+def _validation_lines(results: list[dict[str, Any]], lang: str = "en") -> list[str]:
+    # The check is named by `_label`, the message is the run's own bytes. That split is the whole rule: the
+    # key is the engine's identifier shown to a reviewer, the sentence is what the engine actually observed.
     return [
-        f"- {'✓' if result.get('passed') else '✗'} **{result.get('check')}**: {result.get('message')}"
+        f"- {'✓' if result.get('passed') else '✗'} **{_label(result.get('check'), lang)}**: {result.get('message')}"
         for result in results
     ]
 
@@ -425,7 +441,7 @@ def build_sections(source: Any, *, plain: bool) -> list[tuple[str, list[str]]]:
     )
 
     if not plain:
-        validation = _validation_lines(summary.get("validation_results") or [])
+        validation = _validation_lines(summary.get("validation_results") or [], lang)
         if validation:
             blocks.append((_lbl(lang, "validation"), validation))
 
@@ -680,13 +696,14 @@ def export_html(source: Any) -> str:
             parts.append(f'<p class="meta">{_lbl(lang, "evidenceInline")} {links}</p>')
         parts.append("</details>")
 
-    parts.append("<h2>Validation</h2>")
+    parts.append(f"<h2>{_lbl(lang, 'validation')}</h2>")
     parts.append("<ul>")
     for check in summary.get("validation_results") or []:
         mark = "✓" if check.get("passed") else "✗"
         klass = ' class="pass"' if check.get("passed") else ' class="fail"'
         parts.append(
-            f"<li{klass}>{mark} <strong>{_esc(check.get('check'))}</strong> — {_esc(check.get('message'))}</li>"
+            f"<li{klass}>{mark} <strong>{_esc(_label(check.get('check'), lang))}</strong> — "
+            f"{_esc(check.get('message'))}</li>"
         )
     parts.append("</ul>")
 

@@ -133,6 +133,14 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   on must not arrive in a language nobody chose -- while the critic's own `limitation` text, stored on the
   insight at analysis time, stays the run's byte: changing it would edit what the run said, which is a
   decision about data and is left open rather than half-taken.
+  A validation check's *name* is on the product's side of that line and its *sentence* is on the run's:
+  `report_export._label()` says `evidence_coverage` as 证据覆盖率 / "Evidence coverage" in the report's list, in the
+  limitations block, and -- through `lib/locale.ts`'s `chk.*` keys and `checkLabel()` -- in the inspector's card,
+  while `Evidence coverage ok` stays exactly as recorded. The vocabulary is enumerated from the producers by an AST
+  shape rule (a `ValidationResult(check=...)`, or a dict carrying `check`+`passed`+`message`), so a check the
+  engine can emit but nobody named reddens `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it`
+  rather than showing a reader an identifier. A tool's per-column assumption records (`levene`, `normality`) are
+  deliberately outside that set: they are a tool's output rendered as data, not a label the product chose.
 - The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
   routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
   outline is not one) and every `<details>` drill-down to open on Enter.

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
 import { clientFetch, apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
-import { callStatusLabel, t } from "@/lib/locale";
+import { callStatusLabel, checkLabel, t } from "@/lib/locale";
 import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
@@ -716,7 +716,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                     {validations.map((v, i) => (
                       <li key={i} className={`flex items-start gap-2 text-xs leading-5 ${v.passed ? "text-emerald-700" : "text-red-600"}`}>
                         {v.passed ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" aria-hidden /> : <XCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />}
-                        <span><strong>{v.check}:</strong> {v.message}</span>
+                        <span><strong>{checkLabel(locale, v.check)}:</strong> {v.message}</span>
                       </li>
                     ))}
                   </ul>

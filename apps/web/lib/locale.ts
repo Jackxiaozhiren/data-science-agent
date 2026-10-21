@@ -633,6 +633,18 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "status.REPORTING": "Reporting",
     "call.ok": "OK",
     "call.error": "Error",
+    "chk.evidence_coverage": "Evidence coverage",
+    "chk.unsupported_claim": "Causal language",
+    "chk.tool_errors": "Tool execution",
+    "chk.budget": "Run budget",
+    "chk.insight_evidence": "Insight grounding",
+    "chk.evidence_traceability": "Evidence traceability",
+    "chk.statistical_power": "Statistical power",
+    "chk.prompt_injection": "Prompt injection",
+    "chk.resource_limits": "Resource limits",
+    "chk.dataset_hash": "Dataset hash",
+    "chk.evidence_bundle": "Evidence bundle",
+    "chk.langgraph_fallback": "Graph fallback",
     "status.COMPLETED": "Completed",
     "status.FAILED": "Failed",
     "status.HUMAN_REVIEW": "Human review",
@@ -1296,6 +1308,18 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "status.REPORTING": "生成报告",
     "call.ok": "正常",
     "call.error": "出错",
+    "chk.evidence_coverage": "证据覆盖率",
+    "chk.unsupported_claim": "因果表述",
+    "chk.tool_errors": "工具执行",
+    "chk.budget": "运行预算",
+    "chk.insight_evidence": "洞察的依据",
+    "chk.evidence_traceability": "证据可追溯性",
+    "chk.statistical_power": "统计功效",
+    "chk.prompt_injection": "提示注入",
+    "chk.resource_limits": "资源限制",
+    "chk.dataset_hash": "数据集哈希",
+    "chk.evidence_bundle": "证据打包",
+    "chk.langgraph_fallback": "编排回退",
     "status.COMPLETED": "已完成",
     "status.FAILED": "失败",
     "status.HUMAN_REVIEW": "待人工确认",
@@ -1439,6 +1463,22 @@ export function statusLabel(locale: Locale, status: string): string {
 export function callStatusLabel(locale: Locale, status: string): string {
   const value = UI_STRINGS[locale]?.[`call.${status}`];
   return value ?? status;
+}
+
+/**
+ * The name of one validation check, in the visitor's language.
+ *
+ * `check` is the engine's identifier (`evidence_coverage`), and the inspector list is chrome the reviewer reads,
+ * so the identifier is not the word to show. `packages/agent/src/dsa_agent/report_export.py` owns the same
+ * vocabulary for the exported report;
+ * `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it` fails if the two drift, because a run's
+ * report and its page must not call the same check by two names.
+ *
+ * An undeclared key passes through unchanged -- same rule as `callStatusLabel`.
+ */
+export function checkLabel(locale: Locale, check: string): string {
+  const value = UI_STRINGS[locale]?.[`chk.${check}`];
+  return value ?? check;
 }
 
 /** The id the browser is already using, or the default when the cookie is absent or malformed. */
