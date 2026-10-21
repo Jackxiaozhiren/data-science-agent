@@ -189,8 +189,8 @@ def _classify(tokens: set[str]) -> str | None:
         return "web-tour"
     if any(tok.endswith("locale-chrome-inventory.mjs") for tok in tokens):
         return "web-chrome"
-    if any(tok.endswith("run_inspector_a11y.sh") for tok in tokens):
-        return "web-a11y"
+    if any(tok.endswith("run_web_live_gates.sh") for tok in tokens):
+        return "web-live-gates"
     if "dsa" in tokens and "--limit" in tokens:
         return "bench-smoke"
     if "npm" in tokens and "build" in tokens and "apps/web" in tokens:

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# The inspector keyboard gate, runnable as one command anywhere -- including inside the gate mirror.
+# The two live web gates, runnable as one command anywhere -- including inside the gate mirror.
 #
-# Why this file exists: `apps/web/scripts/inspector-a11y.mjs` measures a claim that only exists on a live,
-# seeded run -- a disclosure opening on Enter, and every focus stop showing a ring. The static tour
-# (`regression.mjs`) runs with no backend on purpose, so on `/analysis` it finds nothing to open and reports
-# zero truthfully. That makes the instrument useless as a gate unless something brings the stack up.
+# Why this file exists: two instruments measure things that only exist on a live, seeded run --
+# `inspector-a11y.mjs` needs a disclosure to open on Enter and focus stops to show a ring; the run-page half of
+# `locale-chrome-acceptance.mjs` needs the validation card to be mounted, and its labels live in `main li strong`,
+# outside the selector the offline routes are checked with. The static tour (`regression.mjs`) runs with no backend
+# on purpose, so on `/analysis` it finds nothing to open and no card to read, and reports zero truthfully. An
+# instrument that needs a stack and is invoked without one either fails forever or gets skipped, and
+# skipped-without-a-stack is a gate that passes by doing nothing.
 # `scripts/run_gates.sh` and CI must run the *same* command (audit §113.5: a locally-green claim built from a
 # narrower list than CI runs is the failure this repo keeps paying for), so the lifecycle lives here rather
 # than being duplicated between a workflow and a contributor's shell.
@@ -65,7 +68,7 @@ listening() {
 }
 
 fail() {
-  echo "R13I_A11Y_REFUSED: $*" >&2
+  echo "LIVE_GATES_REFUSED: $*" >&2
   exit 1
 }
 
@@ -157,6 +160,19 @@ done
   fail "no page from ${WEB} after 60s"
 }
 
-echo "seeded run ${SEEN}; gate: ${WEB} against ${API}"
-R13I_WEB="$WEB" R13I_API="$API" node apps/web/scripts/inspector-a11y.mjs
-exit $?
+echo "seeded run ${SEEN}; stack up: ${WEB} against ${API}"
+# Two instruments, one stack. Both need a live seeded run and both were manual until now: the keyboard gate owns
+# "a disclosure opens on Enter", the chrome acceptance owns "every region the interface speaks is in the reader's
+# language" -- including the validation card, whose labels sit in `main li strong` and are therefore outside the
+# static selector the offline routes are checked with.
+STATUS=0
+for instrument in inspector-a11y.mjs locale-chrome-acceptance.mjs; do
+  printf '\n=== %s\n' "$instrument"
+  R13I_WEB="$WEB" R13I_API="$API" node "apps/web/scripts/${instrument}" || STATUS=1
+done
+if [[ "$STATUS" -eq 0 ]]; then
+  echo "WEB_LIVE_GATES_PASS -- both instruments green on one booted stack"
+else
+  echo "WEB_LIVE_GATES_FAIL -- at least one instrument failed (see its section above)" >&2
+fi
+exit "$STATUS"

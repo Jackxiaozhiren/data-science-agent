@@ -10,7 +10,7 @@
 //
 // The identifier list is explicit. An unlisted Latin-only string in chrome is a failure, which is what makes
 // "closed" a measurement rather than a claim.
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { CHROME_SELECTOR, classifyChromeRegions } from "./locale-chrome-rules.mjs";
 import { dirname, join } from "node:path";
@@ -44,6 +44,34 @@ const runId = ONLY ? "planted" : await firstId("/api/v1/analysis/");
 const ROUTES = [...(ONLY ? STATIC.filter((r) => ONLY.includes(r)) : STATIC), `/runs/${runId}`, `/runs/${runId}/replay`, ONLY ? null : `/datasets/${datasetId}`, ONLY ? null : `/analysis/${runId}`].filter(Boolean);
 
 const browser = await chromium.launch();
+
+/**
+ * The `chk.*` vocabulary, read from `lib/locale.ts` per locale.
+ *
+ * Why the dictionary and not a list: `<strong>` inside a list item is data-adjacent markup, so it is deliberately
+ * outside CHROME_SELECTOR -- a report body's bold text is the run's, not the interface's. That leaves the
+ * validation card's check names unexamined on the page that shows them, which is the same blind spot as the
+ * inactive tab (§238 found the identifiers there). The narrow question this answers instead: *the product already
+ * has a word for this check -- is the page showing the word, or the engine's key?* A label with no dictionary
+ * entry (a tool name, `correlation_analysis`) is exempt by construction rather than by an allowlist, which is the
+ * adjudication written down as code.
+ */
+function chkVocabulary(locale) {
+  const folded = readFileSync(join(repoRoot, "apps/web/lib/locale.ts"), "utf8").replace(/:\s+/g, ": ");
+  const parts = folded.split(`${locale}: {`, 2);
+  if (parts.length !== 2) throw new Error(`UI_STRINGS has no ${locale} block the reader understands`);
+  const body = parts[1].split("\n  },", 1)[0];
+  const keys = new Set();
+  const values = new Set();
+  for (const [, key, value] of body.matchAll(/"chk\.([a-z_]+)": "([^"]*)",/g)) {
+    keys.add(key);
+    values.add(value);
+  }
+  if (keys.size < 8) throw new Error(`parsed only ${keys.size} chk.* keys for ${locale} -- the reader broke`);
+  return { keys, values };
+}
+const CHK = { zh: chkVocabulary("zh"), en: chkVocabulary("en") };
+
 let failures = 0;
 for (const locale of ["zh", "en"]) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1400 } });
@@ -75,7 +103,24 @@ for (const locale of ["zh", "en"]) {
     const collect = (list) => {
       for (const r of list) seenRegions.set(`${r.tag}|${r.text}`, r);
     };
+    // The validation card's labels, collected the same way -- union across tabs, because an inactive tab is not
+    // mounted and a page-wide `li strong` scan would also read the report body's bold text, which is the run's.
+    const readLabels = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll("main li strong")]
+          // Same boundary as the chrome read: the rendered report is the run's own bytes (Markdown.tsx marks them
+          // `data-run-document`), so its bold text must not stand in for the card's labels -- without this filter
+          // the "was the card read at all" floor was satisfied by the report body and proved nothing.
+          .filter((el) => !el.closest("[data-run-document]"))
+          .map((el) => (el.textContent || "").replace(/\s+/g, " ").trim().replace(/:$/, ""))
+          .filter(Boolean)
+      );
+    const labelSet = new Set();
+    const collectLabels = (list) => {
+      for (const l of list) labelSet.add(l);
+    };
     collect(await readChrome());
+    collectLabels(await readLabels());
     const tabCount = await page.locator('[role="tab"]').count();
     for (let i = 0; i < tabCount; i += 1) {
       const tab = page.locator('[role="tab"]').nth(i);
@@ -84,6 +129,7 @@ for (const locale of ["zh", "en"]) {
         await page.keyboard.press("Enter");
         await page.waitForTimeout(400);
         collect(await readChrome());
+        collectLabels(await readLabels());
       } catch {
         // A tab that cannot be reached is reported by inspector-a11y.mjs, which owns that claim.
       }
@@ -111,6 +157,20 @@ for (const locale of ["zh", "en"]) {
       );
     }
     if (text.includes("⟨")) problems.push("missingKeyMarker");
+    // On a run page, the validation card is the surface `<strong>`-in-a-list-item and therefore outside
+    // CHROME_SELECTOR. Assert only what is unambiguous there: a label the dictionary has a word for must not be
+    // shown as the engine's key, and the card must have been reached at all -- an empty label set would make the
+    // first half vacuously true, which is how §238's heading check kept passing.
+    if (/^\/analysis\/.+/.test(route)) {
+      const shownAsKey = [...labelSet].filter((l) => CHK[locale].keys.has(l));
+      if (shownAsKey.length) {
+        problems.push(`checkKeysShownAsLabels[${shownAsKey.length}]: ${shownAsKey.slice(0, 5).join(", ")}`);
+      }
+      const named = [...labelSet].filter((l) => CHK[locale].values.has(l));
+      if (named.length === 0) {
+        problems.push(`validationCardNotRead labels=${labelSet.size} (no label the dictionary owns was on the page)`);
+      }
+    }
     if ((resp?.status() ?? 0) !== 200) problems.push(`http=${resp.status()}`);
     if (errors.length) problems.push(`consoleErrors=${errors.length} ${JSON.stringify(errors.slice(0, 2))}`);
     const ok = problems.length === 0;

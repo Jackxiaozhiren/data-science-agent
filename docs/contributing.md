@@ -36,19 +36,22 @@ uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
 node apps/web/scripts/regression.mjs
 node apps/web/scripts/locale-chrome-inventory.mjs
-bash scripts/run_inspector_a11y.sh
+bash scripts/run_web_live_gates.sh
 uv run python scripts/generate_sbom.py --check   # §47 SBOM, §139: compares, writes nothing
 docker compose config
 uv run python -m mkdocs build --strict
 ```
 
 `node apps/web/scripts/regression.mjs` boots `next start` itself and needs the build above plus
-Playwright's browsers. `bash scripts/run_inspector_a11y.sh` boots its own throwaway stack -- an API on a
-temporary SQLite file in heuristic mode, then the built web app on a scratch port -- because the claim it
-measures (every disclosure in a run's report opens on Enter, and every focus stop shows a ring) only exists on
-a live seeded run; the static tour has no backend on purpose, so it finds nothing to open there. It refuses,
-rather than skipping, when port 8000 is taken: the web bundle resolves the API origin at build time, so a
-different port would measure a page that cannot reach its own backend. Both need
+Playwright's browsers. `bash scripts/run_web_live_gates.sh` boots its own throwaway stack -- an API on a
+temporary SQLite file in heuristic mode, then the built web app on a scratch port -- and runs two instruments
+against that one stack: `inspector-a11y.mjs` (every disclosure in a run's report opens on Enter, every focus stop
+shows a ring) and `locale-chrome-acceptance.mjs` (every interface-owned region on 14 routes speaks the reader's
+language, including the run page's validation card, whose labels sit in `main li strong` and so are outside the
+selector the offline routes are examined with). The static tour has no backend on purpose, so on `/analysis` it
+finds nothing to open and no card to read. The runner refuses, rather than skipping, when port 8000 is taken: the
+web bundle resolves the API origin at build time, so a different port would measure a page that cannot reach its
+own backend. Both instruments need
 `npx playwright install --with-deps chromium` in `apps/web`. CI also builds the API/Web Docker images and
 verifies the packaged `dsa` CLI inside the API image; those are the only gated checks a contributor is not
 asked to reproduce, and `tests/test_ci_gate_integrity.py` names each one with its reason rather than leaving

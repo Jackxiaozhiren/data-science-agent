@@ -5,14 +5,15 @@
 ### Added (post-4.6.0) — the two R-13 web instruments became gates, in six places at once
 
 - `node apps/web/scripts/locale-chrome-inventory.mjs` (what the pages say, parsed from the TypeScript AST) and
-  `bash scripts/run_inspector_a11y.sh` (the keyboard gate) are now CI steps, `GATES` entries in
+  `bash scripts/run_web_live_gates.sh` (the keyboard gate and the live chrome acceptance, on one stack) are now CI
+  steps, `GATES` entries in
   `scripts/run_gates.sh`, and lines in both contributor guides. Adding the workflow steps alone would have made
   things worse: `_classify()` does not know either command, `_ci_gates()` drops what it cannot classify, so the
   gates would have run in CI while being invisible to the mirror test and absent from the guides -- one truth in
   one place, which is the failure `docs/FRONTEND_IA.md` and §113.5 keep recording. Wiring is six edits: two
   classifier keys (`web-chrome`, `web-a11y`), the `GATES` array, both guide fences, `CI_ONLY_STEPS` for the
   browser install, and that declaration's own enumeration inside the control test -- friction that is deliberate.
-- New `scripts/run_inspector_a11y.sh`, because the instrument needs a live seeded run and a gate that needs a
+- New `scripts/run_web_live_gates.sh`, because the instrument needs a live seeded run and a gate that needs a
   stack and is invoked without one gets skipped, which is a gate that passes by doing nothing. It boots an API on
   a temporary SQLite file in heuristic mode (no provider, nothing paid for), waits for `/health` and for a
   `COMPLETED` seeded run, builds the web app only if `apps/web/.next/BUILD_ID` is absent, serves it on a scratch
@@ -23,11 +24,26 @@
   (`apps/web/lib/api.ts`), so on another port the page could not reach its own backend and the gate would measure
   a fiction. The keyboard gate therefore lives in the `ci` job rather than `web-regression`, whose static tour
   claims port 8000 and refuses a live API there.
-- Measured: the gate passes locally (`INSPECTOR_A11Y_PASS` -- 18 disclosure toggles across both locales, 16 focus
-  stops with a visible ring, 0 console errors, screenshots in `output/inspector-a11y/`), `tests/test_command_surface.py`
+- `apps/web/scripts/locale-chrome-acceptance.mjs` now reads the validation card. It had visited `/analysis/<id>`
+  and reported PASS while never examining those labels, because `main li strong` is outside `CHROME_SELECTOR`; and
+  the first version of the new check collected labels page-wide, so the run's own rendered report -- whose bold
+  text is `Evidence coverage` for an English run -- satisfied the "was the card read at all" floor. Labels now
+  share the boundary the chrome read uses (`Markdown.tsx:16` marks the document `data-run-document`), and a label
+  is a defect only when the dictionary has a key for it, so the audited trace's tool names stay legal without an
+  allowlist. Proven red on the real bundle: unwire the component, rebuild, run --
+  `checkKeysShownAsLabels[7] ... validationCardNotRead labels=7` in both locales, and the collected count drops
+  from 26 to the card's 7.
+- The two live instruments now share one booted stack: `scripts/run_inspector_a11y.sh` became
+  `scripts/run_web_live_gates.sh`, and CI plus `run_gates.sh` call the same command for both (`WEB_LIVE_GATES_PASS`,
+  both scratch ports free afterwards by `lsof`).
+
+
+- Measured: both instruments pass locally (`INSPECTOR_A11Y_PASS` -- 18 disclosure toggles across both locales, 16
+  stops with a visible ring, 0 console errors, screenshots in `output/inspector-a11y/`; and
+  `R13I_CHROME_ACCEPTANCE_PASS (34 route/locale checks)`), `tests/test_command_surface.py`
   and `tests/test_ci_gate_integrity.py` pass (21), the derived gate sets agree on both sides with zero
   unclassified commands, and `docs/contributing.md` plus `CONTRIBUTING.md` mirror the full set. See
-  `AUDIT_LEDGER.md` §240.
+  `AUDIT_LEDGER.md` §240 to §242.
 
 
 ### Fixed (post-4.6.0) — the run's report called its checks by their engine names, and one heading broke the language rule
