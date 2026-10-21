@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the API's own hardening header blanked the pages the API serves
+
+- `SecurityHeadersMiddleware` answered every request with `Content-Security-Policy: default-src 'none'`, which is the
+  right posture for a JSON API and fatal for the HTML this API also serves. Measured on a live instance: the browser
+  logged `Executing inline script violates the following Content Security Policy directive 'default-src 'none''`, and
+  `Applying inline style violates…` alongside it; `/mcp-app/` answered 200 and then offered **zero** dataset options
+  while the same process answered `resources/list` with its whole catalogue. `connect-src` falls back to
+  `default-src`, so the page could not have called `/mcp` even if its script had run, and
+  `X-Frame-Options: DENY` plus `frame-ancestors 'none'` meant the report it embeds could not have appeared either.
+  Nothing noticed because every test of that page drove it with `TestClient`, which executes no JavaScript: an HTML
+  surface had been recorded as accepted without ever being rendered. The escaping work below is what put a browser on
+  that page at all, and the first thing the browser found was this.
+- The policy is now derived from the document being served: `report_export.document_security_headers` reads the bytes,
+  names every `<script>` and `<style>` block by `sha256-` hash, pins the rest to `'none'`/`'self'`, allows `data:` for
+  images because the charts travel inside the file, and adds `frame-src 'self'` only when the document embeds a frame.
+  `'unsafe-inline'` appears nowhere, a block added later has to be re-admitted by name, and the middleware leaves a
+  header a route already set alone. The App page's one inline `style="…"` attribute on its iframe moved into its
+  stylesheet -- a style *attribute* cannot be admitted by hash, so keeping it would have cost a wildcard.
+- Guards: `tests/contract/test_served_html_security.py` counts blocks with `html.parser` rather than a line scan,
+  refuses a policy whose hash count does not match the document's own block count, proves the hash list moves when
+  one byte inside the page's script moves, and reads the headers the host app actually returns -- `script-src
+  'sha256-` on the page, the strict default still on a JSON 404. That 404 is also where
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` and `X-Frame-Options: DENY` are pinned now:
+  `docs/api.md` promises all four on every response and, measured by grep over `tests/`, nothing read any of them
+  before this file existed -- a middleware that stopped setting them would have left the docs green. Falsified by
+  putting the clobbering assignment back:
+  the middleware guard went red, then restored byte-exact.
+- Live: `apps/web/scripts/mcp-app-page.mjs` is the third instrument on the booted stack. It compares the option list
+  the page built against the `resources/list` the same server returns, then opens the page for a stored run and reads
+  the embedded report *inside the frame* -- heading text, disclosure count, and the h1's computed `24px`, which is
+  what the report's own `1.5rem` rule produces and not the `32px` a blocked stylesheet leaves. That half was
+  falsified as well: with `allow_self_frame` removed the frame assertion fails, so the green is not an assertion that
+  cannot miss.
+- Not the same claim, and worth keeping separate: the hosted demo still runs the older artifact (#44), so what a
+  visitor sees there carries neither the escaping nor this policy. The census in `docs/hosted-demo.md` reads the
+  deployed bytes rather than assuming.
+
 ### Fixed (post-4.6.0) — the MCP App page put wire text into `innerHTML` unescaped
 
 - `/mcp-app` built two HTML fragments by string interpolation and assigned them to `innerHTML`: the dataset

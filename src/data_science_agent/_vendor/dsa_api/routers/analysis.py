@@ -11,7 +11,12 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dsa_agent.report_export import EXPORT_MODES, export_html, export_markdown
+from dsa_agent.report_export import (
+    EXPORT_MODES,
+    document_security_headers,
+    export_html,
+    export_markdown,
+)
 from dsa_agent.run_summary import run_summary
 from dsa_api.core.database import get_session
 from dsa_api.core.ownership import resolve_owner
@@ -240,7 +245,12 @@ async def get_analysis_report(
                     "the plain document is meant to be pasted into a submission, not opened offline"
                 ),
             )
-        return HTMLResponse(content=export_html(state), media_type="text/html; charset=utf-8")
+        document = export_html(state)
+        return HTMLResponse(
+            content=document,
+            media_type="text/html; charset=utf-8",
+            headers=document_security_headers(document),
+        )
     summary = run_summary(state)
     return {
         "run_id": run_id,

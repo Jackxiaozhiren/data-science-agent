@@ -44,14 +44,16 @@ uv run python -m mkdocs build --strict
 
 `node apps/web/scripts/regression.mjs` boots `next start` itself and needs the build above plus
 Playwright's browsers. `bash scripts/run_web_live_gates.sh` boots its own throwaway stack -- an API on a
-temporary SQLite file in heuristic mode, then the built web app on a scratch port -- and runs two instruments
-against that one stack: `inspector-a11y.mjs` (every disclosure in a run's report opens on Enter, every focus stop
-shows a ring) and `locale-chrome-acceptance.mjs` (every interface-owned region on the routes it loads speaks the
-reader's language, including the run page's validation card, whose labels sit in `main li strong` and so are outside
-the selector the offline routes are examined with). The static tour has no backend on purpose, so on `/analysis` it
+temporary SQLite file in heuristic mode, then the built web app on a scratch port -- and runs each of its
+instruments against that one stack: `inspector-a11y.mjs` (every disclosure in a run's report opens on Enter, every
+focus stop shows a ring), `locale-chrome-acceptance.mjs` (every interface-owned region on the routes it loads speaks
+the reader's language, including the run page's validation card, whose labels sit in `main li strong` and so are
+outside the selector the offline routes are examined with), and `mcp-app-page.mjs` (the page an MCP client opens
+actually runs its own script: the dataset list it renders is the list its server publishes, and the report it embeds
+arrives styled and with its drill-downs). The static tour has no backend on purpose, so on `/analysis` it
 finds nothing to open and no card to read. The runner refuses, rather than skipping, when port 8000 is taken: the
 web bundle resolves the API origin at build time, so a different port would measure a page that cannot reach its
-own backend. Both instruments need
+own backend. Every instrument needs
 `npx playwright install --with-deps chromium` in `apps/web`. CI also builds the API/Web Docker images and
 verifies the packaged `dsa` CLI inside the API image; those are the only gated checks a contributor is not
 asked to reproduce, and `tests/test_ci_gate_integrity.py` names each one with its reason rather than leaving
