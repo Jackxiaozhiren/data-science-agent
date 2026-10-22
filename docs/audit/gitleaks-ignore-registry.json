@@ -1,0 +1,32 @@
+{
+  "_purpose": "Findings that `.gitleaksignore` tells gitleaks to forgive, and the reason each one deserves forgiving. This is not a mute button: `tests/security/test_gitleaks_ignore_registry.py` refuses a fingerprint with no entry here, an entry whose marker has left the file it describes, an entry past its review date, and any descriptive field that carries a credential of its own.",
+  "_format": "A gitleaks fingerprint is `<40-hex commit>:<path>:<rule-id>:<line>`, the shape upstream documents and the shape the gate prints into its own log -- `gh run view <id> --log | grep Fingerprint`. Copy the fingerprint from that log; do not construct one, because the commit is part of the key and a made-up sha matches nothing.",
+  "_how_to_add": "Only when the matched text is provably not a credential: a fixture deliberately shaped like one, or prose the rule reads as an assignment. Say what it is, name the test or paragraph that makes it non-secret, and give it a review date. If the line moves or the text is renamed, the fingerprint stops matching, the finding returns on its own, and this list says why -- that is the point of keying to a fingerprint rather than to a path.",
+  "_verified_by": "The two entries were verified by reading, not assumed: the first is `CREDENTIAL_CANARY`, whose own preceding comment declares it \"A credential shaped like a real one. Not a placeholder\", and the second is a sentence naming two environment variables, read with every run of 13+ characters masked. `sk-or-v1-` is an OpenRouter-style prefix; the value after it is invented and matches no account. Neither was ever issued, and neither was reported to a provider.",
+  "entries": [
+    {
+      "fingerprint": "8535e14812ec338ab67718d4daad42a7c4164b35:tests/contract/test_provider_settings.py:generic-api-key:38",
+      "rule_id": "generic-api-key",
+      "file": "tests/contract/test_provider_settings.py",
+      "line_at_commit": "38",
+      "found_in_commit": "8535e14812ec338ab67718d4daad42a7c4164b35",
+      "head_marker": "CREDENTIAL_CANARY",
+      "why_not_a_secret": "A canary, not a key. The suite's whole method is to set this value, drive the provider-settings endpoints, and then assert that the value never appears in a response body, a log line, or a stored setting. A placeholder would prove nothing: a test cannot detect the leakage of a string it never planted, and the shape is what makes the detection real.",
+      "exposure": "Test corpus only. It is a fixture in `tests/`, never a default, never read from the environment, and the module docstring says so before the literal appears.",
+      "added_on": "2026-10-21",
+      "review_by": "2027-01-15"
+    },
+    {
+      "fingerprint": "d883c7df432d3f722f37baab2a3f2f98fada70c5:docs/hosted-demo.md:generic-api-key:125",
+      "rule_id": "generic-api-key",
+      "file": "docs/hosted-demo.md",
+      "line_at_commit": "125",
+      "found_in_commit": "d883c7df432d3f722f37baab2a3f2f98fada70c5",
+      "head_marker": "DSA_TELEMETRY",
+      "why_not_a_secret": "Prose describing two environment variables -- one set to the literal word for the on state, one naming a log path. The rule matched the assignment shape, not a secret: the line contains no credential, which was checked by printing it with every run of 13+ alphanumeric characters masked and reading what remained.",
+      "exposure": "Documentation. Rewriting a sentence to dodge a scanner would teach the reader less, so the finding is registered instead of silenced.",
+      "added_on": "2026-10-21",
+      "review_by": "2027-01-15"
+    }
+  ]
+}

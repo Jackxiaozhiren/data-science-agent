@@ -19,6 +19,7 @@ mapping through `state_json`), not guessed from what the renderer reads.
 
 from __future__ import annotations
 
+import ast
 import html as html_module
 import re
 from pathlib import Path
@@ -374,3 +375,120 @@ def test_the_limitation_prose_maps_agree() -> None:
             f"(english severe={loud_en}, chinese severe={loud_zh}); severity is keyword-matched, so the "
             "translation must not pick up or drop a defect word"
         )
+
+
+def _produced_check_keys() -> set[str]:
+    """Every check name the engine can put into a run's `validation_results`, read from the producers.
+
+    The *shape* decides, not the file or the word. A key counts when it is the `check=` of a
+    `ValidationResult(...)` construction or one member of a dict literal carrying all of `check`, `passed` and
+    `message` -- the stored record. `assumption_check.py` also writes `{"check": "levene", "passed": ...}`, but
+    that is a per-column record inside a tool's *output*, which the report prints as data, so a sweep keyed on
+    the bare word `check` demanded a translation for the name of a statistic. The sweep is what found
+    `reporting.py` as a fifth producer; hand-listing the modules would have kept it out.
+    """
+    keys: set[str] = set()
+    scanned = 0
+    for path in sorted((_REPO / "packages").rglob("*.py")):
+        if "_vendor" in path.parts:
+            continue
+        scanned += 1
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "ValidationResult":
+                for keyword in node.keywords:
+                    if keyword.arg == "check" and isinstance(keyword.value, ast.Constant):
+                        if isinstance(keyword.value.value, str):
+                            keys.add(keyword.value.value)
+            elif isinstance(node, ast.Dict):
+                fields = {
+                    key.value: value
+                    for key, value in zip(node.keys, node.values, strict=False)
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str)
+                }
+                if {"check", "passed", "message"} <= set(fields):
+                    value = fields["check"]
+                    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                        keys.add(value.value)
+    assert scanned > 80, (
+        f"only {scanned} package modules parsed -- the walk broke, so the set below is a guess"
+    )
+    return keys
+
+
+def _ts_check_labels(locale: str) -> dict[str, str]:
+    """The `chk.*` entries of one `UI_STRINGS` block, values included.
+
+    The line break a long value may wrap onto is folded first, for the reason recorded in
+    `test_web_locale_parity.py`: without it an entry can be silently invisible and every comparison below
+    becomes vacuously true.
+    """
+    folded = re.sub(r":\s+", ": ", _web_file("lib/locale.ts"))
+    parts = folded.split(f"{locale}: {{", 1)
+    assert len(parts) == 2, f"UI_STRINGS has no {locale} block written the way this guard parses it"
+    body = parts[1].split("\n  },", 1)[0]
+    found = dict(re.findall(r'"chk\.([a-z_]+)": "([^"]*)",', body))
+    assert found, f"no chk.* key parsed from the {locale} block -- the pattern went blind"
+    return found
+
+
+def test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it() -> None:
+    """A check is named by the product, on three surfaces, in the reader's language.
+
+    What this found: `export_html` printed `<h2>Validation</h2>` straight from a literal while the markdown it
+    is supposed to mirror said `## 校验`, and both listed the engine's identifier (`evidence_coverage`) where
+    the same document's limitations block already said 证据覆盖率. The run page showed the identifier too. The
+    heading test missed it because it enumerated the markdown headings only -- which is the same hole as every
+    earlier R-13 miss: a guard that lists one rendering certifies the other by wish.
+    """
+    produced = _produced_check_keys()
+    assert len(produced) >= 8, (
+        f"the producers declare only {sorted(produced)} -- the shape rule has gone blind"
+    )
+
+    english_map = _module._CHECK_LABELS
+    chinese_map = _module._CHECK_LABELS_ZH
+    unnamed = sorted(produced - set(english_map))
+    assert not unnamed, f"a run can report {unnamed} and the document has no words for it"
+    assert set(english_map) == set(chinese_map), (
+        f"the two columns disagree on which checks exist: {sorted(set(english_map) ^ set(chinese_map))}"
+    )
+    for key in english_map:
+        assert any("\u3400" <= ch <= "\u9fff" for ch in chinese_map[key]), (
+            f"{key} was 'translated' into English"
+        )
+        assert chinese_map[key] != english_map[key], f"{key} says the same thing in Chinese"
+
+    # The page and the document must not call the same check by two names, in either language.
+    for locale, table in (("en", english_map), ("zh", chinese_map)):
+        web = _ts_check_labels(locale)
+        assert set(web) == set(table), (
+            f"the run page and the report name different checks in {locale}: "
+            f"page-only {sorted(set(web) - set(table))}, report-only {sorted(set(table) - set(web))}"
+        )
+        differ = sorted(k for k in table if web[k] != table[k])
+        assert not differ, (
+            f"{differ} are worded differently on the page than in the downloaded report ({locale})"
+        )
+
+    # Wired, not merely available: an unmapped key would still render as the identifier.
+    zh_md, en_md = export_markdown(_run(ZH_QUERY)), export_markdown(_run(EN_QUERY))
+    assert "**证据覆盖率**" in zh_md and "**Evidence coverage**" not in zh_md
+    assert "**Evidence coverage**" in en_md
+    zh_html, en_html = export_html(_run(ZH_QUERY)), export_html(_run(EN_QUERY))
+    assert "<h2>校验</h2>" in zh_html and "<h2>Validation</h2>" not in zh_html
+    assert "<h2>Validation</h2>" in en_html
+    assert (
+        "<strong>证据覆盖率</strong>" in zh_html and "<strong>Evidence coverage</strong>" in en_html
+    )
+    for document in (zh_md, en_md, zh_html, en_html):
+        assert "evidence_coverage" not in document, (
+            "the internal identifier is still on the page as a label"
+        )
+    # and the sentence the engine wrote about the check is untouched, in either language
+    assert "Insight I-c9de6a2f ok" in zh_md and "Insight I-c9de6a2f ok" in zh_html
+
+    inspector = _web_file("app/analysis/[runId]/RunInspector.tsx")
+    assert "checkLabel(locale, v.check)" in inspector, (
+        "the validation list stopped naming the check in the visitor's language"
+    )
+    assert "<strong>{v.check}" not in inspector

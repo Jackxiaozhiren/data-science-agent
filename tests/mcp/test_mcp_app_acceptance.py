@@ -118,7 +118,7 @@ def test_mcp_app_acceptance_via_server() -> None:
         },
     )
     assert rc.status_code == 200 and "result" in rc.json()
-    assert rc.json()["result"]["output"]["run_id"] == "run-accept-1"
+    assert rc.json()["result"]["structuredContent"]["run_id"] == "run-accept-1"
     # 3. Receive Result already done
     # 4. Open Resource (evidence, report)
     for uri in ["evidence://run-accept-1", "report://run-accept-1", "analysis://run-accept-1"]:
@@ -186,7 +186,7 @@ def test_mcp_resources_read_dataset_and_analysis() -> None:
         },
     )
     assert r.status_code == 200 and "result" in r.json()
-    assert r.json()["result"]["mimeType"] == "text/csv"
+    assert r.json()["result"]["contents"][0]["mimeType"] == "text/csv"
     # analysis:// after creating one
     import asyncio
 

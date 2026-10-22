@@ -24,13 +24,19 @@ npm --prefix apps/web audit --json > /tmp/npm-audit-web.json
 uv run python scripts/check_npm_advisories.py /tmp/npm-audit-web.json
 npm --prefix apps/web run build
 node apps/web/scripts/regression.mjs             # boots `next start`, tours every static route
+node apps/web/scripts/locale-chrome-inventory.mjs  # R-13: what the pages say, parsed from the AST (reports; exits 1 on unadjudicated prose)
+bash scripts/run_web_live_gates.sh               # two live gates, one booted throwaway stack: keyboard disclosures + live chrome acceptance
 uv run python scripts/generate_sbom.py --check   # §47 SBOM: compares, writes nothing
 docker compose config
 uv run python -m mkdocs build --strict
 ```
 
-`node apps/web/scripts/regression.mjs` needs the build above and Playwright's browsers; CI hosts
-the Docker image builds and the packaged-CLI smoke inside them, which are not on this list.
+`node apps/web/scripts/regression.mjs` needs the build above and Playwright's browsers, and so do the two gates
+after it: `locale-chrome-inventory.mjs` is a static AST scan of what the pages say, and
+`bash scripts/run_web_live_gates.sh` boots its own throwaway seeded stack to drive every disclosure on a real
+run's report from the keyboard (it refuses rather than skipping when port 8000 is busy, because the built page
+resolves the API origin at build time). CI hosts the Docker image builds and the packaged-CLI smoke inside them,
+which are not on this list.
 
 One command for the whole list: `scripts/run_gates.sh` (add `--list` to print the gate commands
 without running them). `tests/test_command_surface.py` fails if that runner and `ci.yml` ever
