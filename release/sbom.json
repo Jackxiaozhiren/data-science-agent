@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-10-19T03:12:31.303389+00:00",
+  "generated": "2026-10-22T03:36:43.294962+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -928,10 +928,10 @@
     },
     {
       "package": "pyarrow",
-      "version": "25.0.1",
+      "version": "26.0.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pyarrow@25.0.1"
+      "purl": "pkg:pypi/pyarrow@26.0.0"
     },
     {
       "package": "pycparser",
@@ -1124,10 +1124,10 @@
     },
     {
       "package": "scipy",
-      "version": "1.18.0",
+      "version": "1.18.1",
       "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.\n All rights rese...",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/scipy@1.18.0"
+      "purl": "pkg:pypi/scipy@1.18.1"
     },
     {
       "package": "send2trash",

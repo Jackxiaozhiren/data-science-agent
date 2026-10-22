@@ -44,7 +44,7 @@ Extension (TypeScript, src/extension.ts)
 ```
 
 - `src/extension.ts`: `activate` registers providers/commands, handles progress `vscode.window.withProgress`, updates `EvidenceTreeProvider` via `setContext`.
-- `src/dsa.ts`: Wrapper over **Public CLI** `uv run dsa analyze/profile/doctor/plugin` via `child_process.exec` (§34 — no Agent logic duplicated). All calls via `exec` with JSON parse.
+- `src/dsa.ts`: Wrapper over **Public CLI** `uv run dsa analyze/profile/doctor/plugin` via `child_process` (§34 — no Agent logic duplicated). Every call is `execFile`/`execFileSync` with an argv array and a JSON parse. Not `exec`: that one hands a string to `/bin/sh`, and the string contained the dataset filename, the typed question and the workspace-settable `dsa.pythonPath` — a file named `a$(touch /tmp/x).csv` inside a cloned folder would run the substitution, and reach the CLI mangled to `a.csv`. `JSON.stringify` does not prevent it: its quotes are shell double quotes, which still expand `$(…)` and backticks.
 - `src/views.ts`: `DatasetTreeProvider`, `EvidenceTreeProvider`, `ResultPanel` (Webview HTML with report + evidence table + buttons).
 
 No `dsa_agent` import in extension — only CLI.
@@ -80,5 +80,5 @@ Dev: `F5` launches Extension Development Host with `DSA` view.
 
 ```bash
 npm --prefix apps/vscode run compile  # tsc strict pass
-uv run pytest tests/vscode -v  # 8 tests: manifest/commands/views, arch guard, failure handling, 6-step flow, tsc compile, webview escaping, contributes, no-stub
+uv run pytest tests/vscode -v  # 10 tests: manifest/commands/views, arch guard, failure handling, 6-step flow, tsc compile, webview escaping, contributes, no-stub, no-shell-splicing (repo-wide over apps/ and packages/), exec-vs-argv mechanism
 ```
