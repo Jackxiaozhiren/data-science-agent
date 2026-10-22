@@ -57,9 +57,9 @@
 - All six call sites now use `execFile`/`execFileSync` with an argv array; `extension.ts`'s `execSync` came with
   them. The arch guard in `tests/vscode/test_vscode_extension.py` that asserted the literal `"uv run dsa"` was
   reading the old string shape and now matches the argv call, so no assertion was loosened to accommodate the fix.
-- Guards: a shape check over `src/*.ts` for `exec(`/`execSync(`/`promisify(cp.exec)` that also proves *itself*
-  -- the pre-fix line must be caught by the predicate and the safe line must not be, so the guard cannot pass by
-  being blind -- plus a node probe that runs the pair and asserts `shellSubstituted: True, argvIntact: True`. A
+- Guards: a shape check for `execSync(`, `<receiver>.exec(` and `promisify(x.exec)` over **every** `.ts`, `.tsx`, `.mjs` and `.js` file under `apps/` and `packages/` (measured: the extension was the only offender, so the guard now locks the class rather than one directory), and it proves *itself*
+  -- `cp.exec(cmd, …)` must be caught, `execFile('uv', argv)` and a regular expression's own `.exec()` must not
+  be, because a predicate with false positives gets loosened away within a week -- plus a node probe that runs the pair and asserts `shellSubstituted: True, argvIntact: True`. A
   test that showed only the argv half would still pass in a world where the string half was safe.
 - Residual, named rather than fixed: `dsa.pythonPath` still names a program the workspace can choose, which is a
   trust decision VS Code mediates with workspace trust; removing the shell means a value there is no longer

@@ -80,5 +80,5 @@ Dev: `F5` launches Extension Development Host with `DSA` view.
 
 ```bash
 npm --prefix apps/vscode run compile  # tsc strict pass
-uv run pytest tests/vscode -v  # 10 tests: manifest/commands/views, arch guard, failure handling, 6-step flow, tsc compile, webview escaping, contributes, no-stub, no-shell-splicing, exec-vs-argv mechanism
+uv run pytest tests/vscode -v  # 10 tests: manifest/commands/views, arch guard, failure handling, 6-step flow, tsc compile, webview escaping, contributes, no-stub, no-shell-splicing (repo-wide over apps/ and packages/), exec-vs-argv mechanism
 ```
