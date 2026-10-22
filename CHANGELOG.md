@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the upload guard read the filename, not the file
+
+- `docs/api.md` advertises `upload (multipart, 100MB, MIME sniff, archive bomb guard)`. The archive half of that
+  sentence was carried by a parameter nothing read: the route captured the file's first 4 KiB, `save_dataset`
+  threaded it along, and `validate_file` accepted `head=` and never looked at it. Measured before the fix: a zip
+  body named `evil.csv` returned `DatasetFormat.csv`, was stored, and was profiled as one enormous text column
+  (201). What actually ran was an extension blocklist -- `.zip`, `.gz`, `.tar` -- which any caller can leave
+  behind by renaming the file.
+- `validate_file` now tests the leading bytes against four container signatures plus the tar header at its own
+  offset 257, and keeps the one exception the format specification forces: an `.xlsx` *is* a zip container, so a
+  `PK` opening is expected there and accepted nowhere else. A caller that supplies no bytes -- a CLI path reading
+  its own file -- still gets the name-only check, which is now stated rather than implied. What the guard does is
+  reject containers; it does not open them, so there is no decompression to bomb, and the doc says "archive guard"
+  rather than "archive bomb guard".
+- Two more defects were sitting in the same three lines. The capture was `tmp_path.read_bytes()[:4096]`: to keep
+  4 KiB the server loaded the whole upload into memory a second time, beside a comment saying the temp file
+  existed to avoid exactly that, and on the 512 MB free-tier instance a 100 MB upload was a 100 MB allocation.
+  And `MAX_SIZE_BYTES` was enforced only after the body had been fully written to disk, so "the limit is 100 MB"
+  described the row that gets rejected, not the work a request costs. The route now takes the head off the same
+  chunks that reach the disk, refuses at the limit while streaming, and removes the temp file on that path --
+  which it also now does when a client disconnects mid-body, something the old shape leaked.
+- Guard: `tests/security/test_upload_guard.py`, 17 tests, every rejection paired with an acceptance so the guard
+  cannot pass by rejecting everything. Falsified four ways: deleting the leading-byte block reddened the six
+  signature tests and left the acceptances green; emptying the `.xlsx` exception reddened exactly the two tests
+  that protect Excel uploads; moving the size check after the loop reddened the refusal test, which counts the
+  reads the stream saw; reintroducing the whole-file pass reddened a structural test that walks both functions'
+  ASTs for `read_bytes`/`read_text`, because every other assertion in the file is satisfied by that buggy shape.
+- `docs/api.md` names the mechanism now, and one test pins the advertised `100MB` to the constant the code
+  enforces, so the two cannot drift apart silently.
+
 ### Fixed (post-4.6.0) — the `/mcp` page copied a call that could not succeed
 
 - `copyTemplate` built `{ params: { name, arguments: {} } }` for every tool. Half the surface rejects an empty
