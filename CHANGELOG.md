@@ -17,7 +17,12 @@
 - Falsified by inserting one line into `save_provider_settings` that dials `127.0.0.1:4` before validating: all
   three tests went red, and `tests/contract/test_provider_settings.py` stayed green beside them, which is the
   point -- the existing sixteen tests cover merge semantics, file mode and refusal paths, and none of them could
-  see a verification call. Restored by digest; no production line changed.
+  see a verification call. Restored by digest; no production line changed. One caveat this round earned its own line: the
+  credential literal first shipped was copied from the sibling suite, whose identical string is listed in
+  `.gitleaksignore`, and an ignore entry is keyed `commit:file:rule:line` so it does not travel with a copy; and
+  removing the vendor prefix was not enough, because `generic-api-key` matches the long random tail behind it.
+  The committed value is now a short dictionary string, chosen so there is nothing for the detector to match
+  rather than so that a rule is asked to forgive it.
 
 ### Fixed (post-4.6.0) — the dataset package dragged polars onto the API's import path
 
