@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the `/mcp` page copied a call that could not succeed
+
+- `copyTemplate` built `{ params: { name, arguments: {} } }` for every tool. Half the surface rejects an empty
+  argument object -- `run_sql` needs `sql`, `analyze` needs `task`, `causal_check` needs `dataset_path`,
+  `treatment` and `outcome` -- so the button that exists to hand someone a working call handed out a guaranteed
+  error, and the failure surfaced later in whatever they pasted it into.
+- It now derives the arguments from the tool's own `inputSchema`, which is the field the server only started
+  publishing correctly this round (§250): required properties get a type-appropriate placeholder (`"<required>"`,
+  `0`, `true`, `[]`, `{}`), optional ones are left out, so the copy is a call the server accepts and the placeholder
+  is impossible to mistake for a finished value.
+- Guard: `tests/contract/test_mcp_page_template.py` parses the component with the TypeScript compiler the web
+  package already ships and asserts the `arguments` property is a `requiredArguments(...)` call -- not `{}` -- that
+  the template still names the tool, and that the helper reads both `required` and `properties` and keeps the
+  `<required>` string placeholder. Falsified by putting `arguments: {}` back: the first test failed as intended.
+- One mistake during that falsification, recorded because the rule already existed and was broken anyway: the
+  restore step used `git checkout HEAD -- apps/web/app/mcp/McpTable.tsx` on a file whose only committed state was
+  the *unfixed* one, which discarded the fix along with the mutation. The three edits were re-applied and the
+  recovery proved by hash -- the file now matches its pre-mutation digest byte for byte, guard and `tsc --noEmit`
+  green. The lesson the repository already documents is to restore from a saved copy, never from `HEAD`, in a dirty
+  tree.
+
 ### Changed (post-4.6.0) — the MCP docs promised a token gate that no code reads
 
 - `docs/MCP_DESIGN.md` said "Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only", and
