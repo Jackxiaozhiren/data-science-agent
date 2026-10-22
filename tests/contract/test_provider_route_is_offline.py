@@ -19,9 +19,10 @@ from typing import Any
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-#: Distinctive rather than shaped like a vendor key: the assertion needs a string whose appearance in a
-#: response would be a leak, and gitleaks is right to stop a real-shaped one from being committed.
-PROBE_KEY = "probe-key-4f9c2a71be3d085fa6c17e0b2d94k73f"
+#: Short, dictionary, and unguessable-by-construction -- the assertions need a string whose reappearance in a
+#: response would be a leak, not a string that could authenticate. gitleaks' generic-api-key rule matches a
+#: long random tail behind a key-shaped prefix however benign the prefix is, which twice stopped this file.
+PROBE_MARKER = "probe-not-a-key"
 #: Port 4 is unreachable by design; if the route ever tried to use it, the blocked socket records the attempt.
 COMPAT_URL = "http://127.0.0.1:4/v1"
 
@@ -30,7 +31,7 @@ _PAYLOAD = {
     "provider": "openai-compat",
     "base_url": COMPAT_URL,
     "model": "some-free-tier-model",
-    "api_key": PROBE_KEY,
+    "api_key": PROBE_MARKER,
 }
 
 
@@ -81,9 +82,11 @@ async def test_the_settings_write_answers_with_no_route_out(ac, no_sockets, priv
     assert saved.status_code == 200, saved.text
     assert saved.json()["stored"]["has_credential"] is True
     assert no_sockets == [], f"the write reached the network: {no_sockets}"
-    assert PROBE_KEY not in saved.text, "the save response repeated the credential back"
+    assert PROBE_MARKER not in saved.text, "the save response repeated the credential back"
     stored = json.loads(private_env["file"].read_text(encoding="utf-8"))
-    assert stored["api_key"] == PROBE_KEY, "the shape-only write did not persist what it was given"
+    assert stored["api_key"] == PROBE_MARKER, (
+        "the shape-only write did not persist what it was given"
+    )
 
 
 @pytest.mark.asyncio
