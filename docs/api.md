@@ -7,11 +7,16 @@ Conventions:
 - Creates return **201 + `Location`** (`/api/v1/<resource>/<id>`). The one exception is an analysis run:
   it answers **202** once the row exists and is executing, because the graph is not finished by then (see
   `POST /api/v1/analysis/` below).
-- Lists accept `?limit=` (1–1000, default 100) + `?offset=` (default 0) and
-  return `{..., "total": n}` alongside the array (additive; old clients keep working).
+- The three paginated lists -- `/api/v1/datasets/`, `/api/v1/analysis/`, `/api/v1/experiments/` -- accept
+  `?limit=` (1–1000, default 100) + `?offset=` (default 0) and return `{..., "total": n}` alongside the array
+  (additive; old clients keep working). Any other route ignores `?limit=` rather than honouring it: the research
+  list further down is capped by a constant, not by a query parameter.
 - Errors keep the `{detail: string}` envelope (the web UI renders `detail`).
-- Expensive `POST`s are IP rate-limited (analysis 60/min, upload 30/min, events 120/min;
-  429 + `Retry-After`; disable with `DSA_RATE_LIMIT_ENABLED=false`).
+- Expensive `POST`s are IP rate-limited on a sliding 60-second window, `429` + `Retry-After` on breach:
+  `/api/v1/analysis` 60/min (`DSA_RATE_LIMIT_ANALYSIS_PER_MIN`), `/api/v1/datasets` 30/min
+  (`DSA_RATE_LIMIT_UPLOAD_PER_MIN`), `/api/v1/events` 120/min (`DSA_RATE_LIMIT_EVENTS_PER_MIN`), and
+  `/api/v1/experiments` 60/min, which owns no knob of its own and follows
+  `DSA_RATE_LIMIT_ANALYSIS_PER_MIN`. Reads stay unlimited; `DSA_RATE_LIMIT_ENABLED=false` turns the whole thing off.
 - Opt-in auth: set `DSA_AUTH_TOKEN` to require
   `Authorization: Bearer <token>` on all `/api/*` routes
   (`/health`, `/ready`, `/version` stay public). Empty = public demo mode.
@@ -59,7 +64,7 @@ Conventions:
 | POST | `/api/v1/events` | `{event, payload}` → **202**. The relay for the one funnel link only a browser can observe (`arrival`); see `apps/api/src/dsa_api/services/product_events.json` for the vocabulary. It is a transport, not a second authority: the payload passes the same checks the in-process emitter applies — declared keys only, the prohibited classes (query text, dataset content, user-identifying values), the identifier-shaped value rule, and the choice list the vocabulary declares for each field — and an event the vocabulary says the **api** emits is refused with a 400, so a client cannot write `run_started`, `run_completed`, `export_taken` or `starter_question_used`. An invalid payload is a 400 whose `detail` is the vocabulary's own sentence. When this instance runs without `DSA_TELEMETRY=on` the answer is the same 202 and **nothing is written**, so the route is not a way to ask whether an operator is counting. The client half is gated at build time by `NEXT_PUBLIC_TELEMETRY=on`: a bundle that was not built with it sends no request at all, so the default deployment reports nothing about whoever opens it |
 | GET | `/api/v1/benchmarks/baseline` | the frozen aggregate, verbatim from `benchmarks/baseline/summary.json` (read-only) |
 | GET | `/api/v1/benchmarks/catalog` | `{tasks, by_category, datasets, source}` computed from `benchmarks/v2/catalog.json` |
-| GET | `/api/v1/research/experiments` | `{experiments, total}` -- `ablation_*` files under `research/results`, first 10 by name |
+| GET | `/api/v1/research/experiments` | `{experiments, total}` -- `ablation_*` files under `research/results`, first 10 by name. **Not paginated**: `?limit=` and `?offset=` are ignored here, and `total` counts every file the directory holds, not the ten returned |
 | GET | `/health` | `{status, details:{process}, version}` — liveness only: no database I/O and no optional scientific/LLM imports, so a small instance can answer probes immediately |
 | GET | `/ready` | `{status, details:{process,db}, version}` — database readiness; `status` degrades to `degraded` when the DB check fails |
 | GET | `/health/dependencies` | `{status, details:{duckdb,polars,llm}, version}` — deeper optional-dependency diagnostic |

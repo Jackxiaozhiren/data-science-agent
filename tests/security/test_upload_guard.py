@@ -196,12 +196,21 @@ def test_nobody_opens_the_finished_upload_to_look_at_it() -> None:
 
 
 def test_the_limit_the_docs_promise_is_the_limit_the_code_enforces() -> None:
-    row = next(
+    """Keyed on the table row's shape, not on the path.
+
+    A later round added a prose bullet that cites the same route to say something else about it, and the
+    first-match search this test used to run picked the bullet up and read "100MB" as missing. The row is the
+    claim's owner; the path string is not.
+    """
+    rows = [
         line
         for line in (REPO / "docs/api.md").read_text(encoding="utf-8").splitlines()
-        if "`/api/v1/datasets/`" in line
+        if line.startswith("| POST | `/api/v1/datasets/`")
+    ]
+    assert len(rows) == 1, f"the upload row must appear exactly once in the route table: {rows}"
+    assert "100MB" in rows[0], (
+        f"the advertised ceiling no longer matches the enforced one: {rows[0]}"
     )
-    assert "100MB" in row, f"the advertised ceiling no longer matches the enforced one: {row}"
     assert MAX_SIZE_BYTES == 100 * 1024 * 1024
 
 

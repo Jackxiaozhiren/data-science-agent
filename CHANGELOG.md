@@ -2,6 +2,81 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the advisory gate blamed npm's documentation for npm's outage
+
+- `main` went red at the advisory step on the upload-guard commit, and nothing in this repository had changed:
+  the registry's audit endpoint returned `503` / `socket hang up` for about seven minutes, `npm audit --json`
+  wrote its *error* document to the report path, the CI step's `|| true` let that step pass, and the reader was
+  handed `{message: "request to ... failed, reason: socket hang up", error: {...}}` with no
+  `auditReportVersion`.
+- Refusing that input is right, and it is the only reason the outage was visible at all. The message was wrong:
+  "npm changed format; re-read its docs before trusting counts" sends whoever is paged to npm's documentation
+  when the true answer is "the registry did not answer, and the gate did not run." The reader now separates the
+  two -- a document that carries npm's own failure `message` and no report version is named as an endpoint
+  failure -- and both cases still exit 2. An absent scan is never a clean scan.
+- Guards: `tests/test_npm_advisory_gate.py` gained a pair, tested against the verbatim failure capture
+  (`tests/fixtures/npm_audit_endpoint_failure_2026-10-22.json`) and against a real report whose version has been
+  moved to 3. Each asserts the other's wording is absent, so the discrimination is the claim: the failure case
+  must not say "changed format", the schema case must not say "failed request". Removing the new branch reddens
+  exactly the first of the pair; the second stays green, which is what shows the branch did not swallow it.
+- Measured after the fact: the endpoint recovered minutes later, and the same reader against a live clean report
+  prints `no high/critical findings` and exits 0 with `vulnerabilities: {}`. The change re-attributed the failure;
+  it did not loosen the gate.
+
+### Fixed (post-4.6.0) — "lists accept ?limit=" is a promise three routes make and a fourth does not
+
+- The pagination bullet opened "Lists accept `?limit=` (1–1000, default 100)". Three routes do -- datasets,
+  analysis, experiments. A fourth returns the same shape, `{experiments, total}`, and accepts no query parameter
+  at all: `/api/v1/research/experiments` truncates to `RESULTS_LIMIT = 10` and reports `total` as the *uncapped*
+  count. A client that trusted the bullet asked for 500, received ten, saw no error, and got a `total` that
+  looked like a page it could not reach.
+- The bullet now names the three routes by path, and the research row says what it means in the table: not
+  paginated, `?limit=` and `?offset=` ignored, `total` counts every file the directory holds.
+- Guard: `tests/contract/test_pagination_surface.py`, 5 tests, built on `app.openapi()` because that is the
+  contract a client can discover rather than a shape the test assumed. Containment runs both ways between the
+  routes the schema paginates and the routes the doc names; `(1–1000, default 100)` and `?offset=` `(default 0)`
+  are read out of the published schema and required in the sentence, so a changed ceiling cannot leave the prose
+  behind; each route must refuse `limit=0`, `limit=1001` and `offset=-1` with 422 *and* answer a 200 with both a
+  `total` and an array for a request inside its own bounds, so a route that refused everything cannot pass the
+  guard either.
+- Falsified five ways: restoring the old generalisation (the extractor now requires exactly one bullet that
+  promises both parameters, so a doc that stops making the claim goes red instead of quietly having nothing to
+  check); deleting "Not paginated" from the row; raising `RESULTS_LIMIT` to 12 (the row reddens, the cap witness
+  stays green -- it pins the relation between array and total, not the number); relaxing `ge=1` to `ge=0` on one
+  route (both the bounds pin and the refusal test fire).
+- Two mistakes inside the guard's own construction, recorded because they are the reason it was run before it was
+  trusted: an in-bounds request was assumed to short-circuit at validation and instead reached the service layer
+  with a stubbed session, and the first search keyed on the bullet's opening words, which this round's rewording
+  had moved.
+
+### Fixed (post-4.6.0) — a rate limit nobody told the operator about
+
+- `dsa_api.core.security` limits four `POST` routes: `/api/v1/analysis` 60/min, `/api/v1/datasets` 30/min,
+  `/api/v1/events` 120/min, `/api/v1/experiments` 60/min. `docs/api.md` named three of them, so the fourth was an
+  undocumented control on a route the demo's own comparison feature uses.
+- The size of each rule was resolved by a dict literal built inside `dispatch` and looked up as `{...}[prefix]`,
+  keyed on the same prefixes as `_DEFAULT_RULES`. Two lists describing one control, checked by nothing: a rule
+  added to one and not the other raises `KeyError` inside the request path, and the client gets a 500 on the
+  route the new rule was meant to protect. The map is now the module constant `_RULE_KNOBS`, which is also what
+  made the relation testable -- a local literal cannot be inspected.
+- `experiments` owns no knob: it reads `rate_limit_analysis_per_min`, so `DSA_RATE_LIMIT_ANALYSIS_PER_MIN` moves
+  two routes at once. That is now said in the docs, because an operator sizing a 512 MB free-tier instance reads
+  the docs and not the source.
+- Guards: `tests/contract/test_rate_limit_surface.py`, 6 tests. Three pin the relation -- the two lists and the
+  documentation paragraph must name the same routes, at the numbers `settings` actually enforces (derived per
+  test, not transcribed, so a changed default cannot leave the doc behind), and every knob's environment
+  variable must appear. Two are behavioural, because a documentation pin cannot show that a limit is real: post
+  three times at a monkeypatched ceiling of 2 and `/api/v1/experiments` must answer `429` + `Retry-After`, and
+  with `DSA_RATE_LIMIT_ENABLED=false` it must not.
+- Falsified four ways, each reddening only its own guard: deleting the experiments clause from the doc paragraph
+  (1 red); deleting the experiments entry from `_RULE_KNOBS` (3 red -- the set equality, the doc pin, and the
+  behavioural test, which is the `KeyError` surfacing as a request failure); removing the `rate_limit_enabled`
+  early return (2 red, including the check that the switch is even read); appending a fifth rule with no knob and
+  no doc line (2 red, which is the case the old shape punished only at runtime).
+- The one limitation this round documents rather than fixes: the borrowed knob stays borrowed. Giving
+  `experiments` its own `DSA_RATE_LIMIT_EXPERIMENTS_PER_MIN` would be a third setting nobody has asked for, and
+  the doc now says plainly which variable moves it.
+
 ### Fixed (post-4.6.0) — the upload guard read the filename, not the file
 
 - `docs/api.md` advertises `upload (multipart, 100MB, MIME sniff, archive bomb guard)`. The archive half of that
