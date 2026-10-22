@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+### Verified (post-4.6.0) — the settings route's promise to stay offline is now enforced
+
+- `docs/api.md` says `PUT /api/v1/provider` is "Shape-validated only -- the route never contacts the provider,
+  because a verification call would spend the operator's credit or ship their data unsolicited." It holds, and
+  nothing tested it: the claim was carried by prose and by the absence of an HTTP client in the module's
+  imports, which is not the same thing as the route not dialling out three calls deeper.
+- Witness: `tests/contract/test_provider_route_is_offline.py` blocks `socket.socket`,
+  `socket.create_connection` and `socket.getaddrinfo` for the duration of the request, records every attempt,
+  and asserts both that the route answers 200 and that the attempt list is empty -- a raise nobody counted
+  would be a test passing for the wrong reason. Three routes are covered: the write, the two reads that report
+  what `resolve_llm_mode()` decided (`GET /api/v1/provider` and `/version`), and the erase. The payload carries
+  a realistically shaped key, so a call that shipped it would also be a leak the test can see.
+- Falsified by inserting one line into `save_provider_settings` that dials `127.0.0.1:4` before validating: all
+  three tests went red, and `tests/contract/test_provider_settings.py` stayed green beside them, which is the
+  point -- the existing sixteen tests cover merge semantics, file mode and refusal paths, and none of them could
+  see a verification call. Restored by digest; no production line changed.
+
+### Fixed (post-4.6.0) — the dataset package dragged polars onto the API's import path
+
+- `dsa_datasets/__init__.py` re-exported the whole layer eagerly, `load_dataframe` from `dsa_datasets.loader`
+  and `build_profile` from the profiler included. Importing *any* submodule runs the package initialiser first,
+  so the upload route's own `from dsa_datasets.errors import ValidationError` pulled polars into the process.
+  `apps/api/src/dsa_api/services/dataset_service.py` defers its dataframe imports with a comment saying it
+  keeps the scientific stack off the API import path "so lightweight health checks can start reliably on
+  memory-constrained demo instances" -- while the initialiser made that deferral decorative.
+- Measured: importing `dsa_api.routers.datasets` in a clean interpreter cost 87.8 MiB with the eager chain and
+  64.3 MiB without it; `import polars` on its own is 0.15 s of a boot. The names now resolve on first use
+  (PEP 562) with `__all__` unchanged, so `from dsa_datasets import load_dataframe` still works, caches its
+  resolution, and an unknown attribute is still an `AttributeError` -- the surface did not shrink, only the
+  moment it costs.
+- What is still true, and is now written down rather than inferred: the *process* loads polars at boot, through
+  `packages/agent/src/dsa_agent/graph.py:30`. The `/health` sentence was about the route, so the row says that
+  explicitly and points at the subprocess `sys.modules` census as the way to test any such claim, instead of
+  carrying today's numbers into a doc where they would rot.
+- Guards: `tests/contract/test_probe_promises.py`, 8 tests. The probe claims themselves held -- `/health` answers
+  `ok` against an unopenable database, its handler names no session, engine or `_database_status` (checked on the
+  AST, because a database that happens to be reachable during a test run would hide a newly added dependency
+  from the behavioural check), and `/ready` returns `degraded` with the sqlite error carried in `details.db`
+  instead of raising or claiming readiness. Neither promise had any check before this round, so the deliverable
+  is the witness.
+- Falsified six ways: liveness reading the database (2 red -- behavioural and AST); readiness always answering
+  `degraded` (the positive control red); readiness ignoring a failed check (the degrade test red); a
+  module-scope `import polars` in the health route (the subprocess census red); the docs dropping the word
+  `degraded` (the prose pin red); the eager re-export restored (the upload-route census red).
+
 ### Changed (post-4.6.0) — the token's boundary had twelve public sides and the docs named three
 
 - `docs/api.md` said `DSA_AUTH_TOKEN` gates all `/api/*` routes and that `/health`, `/ready`, `/version` "stay
