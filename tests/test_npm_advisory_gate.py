@@ -7,7 +7,10 @@ security exemption mechanism that cannot fail is the same as muting the gate.
 
 `tests/fixtures/npm_audit_web_2026-10-03.json` is a verbatim `npm --prefix apps/web audit
 --json` capture (5 high, all reachable from one `braces` advisory), so the shape under test is
-npm's, not a guess at npm's.
+npm's, not a guess at npm's. It is kept after that advisory left the tree, because a gate whose
+only input is a clean audit can no longer be shown to tell "no fix exists" from "we stopped
+looking". `tests/fixtures/npm_audit_web_2026-10-21.json` is the post-Tailwind-4 capture, and it
+is the one the committed list is accountable to now.
 """
 
 from __future__ import annotations
@@ -22,9 +25,17 @@ REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts/check_npm_advisories.py"
 REAL_LIST = REPO / "docs/audit/npm-advisory-exceptions.json"
 CAPTURE = REPO / "tests/fixtures/npm_audit_web_2026-10-03.json"
+CURRENT_CAPTURE = REPO / "tests/fixtures/npm_audit_web_2026-10-21.json"
+WEB_LOCK = REPO / "apps/web/package-lock.json"
+ROOT_LOCK = REPO / "package-lock.json"
+
+#: The chain that carried the only advisory this list ever exempted. Named so a re-introduction is
+#: reported by package rather than as a missing exemption.
+BRACES_CHAIN = ("braces", "micromatch", "chokidar", "fast-glob")
 
 #: The date the capture was taken, so no test depends on the day it runs.
 TODAY = date(2026, 10, 3)
+CURRENT_TODAY = date(2026, 10, 21)
 
 _spec = importlib.util.spec_from_file_location("check_npm_advisories", SCRIPT)
 assert _spec and _spec.loader
@@ -68,16 +79,55 @@ def _run(audit: Path, exceptions: Path) -> int:
     return gate.main([str(audit), "--exceptions", str(exceptions)], today=TODAY)
 
 
-def test_the_real_capture_is_clean_only_because_the_list_is_carrying_it(capsys) -> None:
-    """Green-on-arrival by construction: this is the state §91 was written to produce.
+def _run_current(audit: Path, exceptions: Path) -> int:
+    return gate.main([str(audit), "--exceptions", str(exceptions)], today=CURRENT_TODAY)
 
-    It is falsified by ``test_emptying_the_list_turns_the_gate_red``, which flips only the
-    list and must go red on the same audit document.
+
+def _chain_present(lock: dict) -> set[str]:
+    """Which of the braces chain a resolved npm lock actually installs.
+
+    Read from `packages` keys rather than from `dependencies`, because the advisory lived in the
+    installed tree, not in a manifest anyone chose.
     """
-    assert _run(CAPTURE, REAL_LIST) == gate.EXIT_CLEAN
+    found = set()
+    for key in lock.get("packages", {}):
+        tail = key.rsplit("node_modules/", 1)[-1]
+        if tail in BRACES_CHAIN:
+            found.add(tail)
+    return found
+
+
+def _advisory_ids(audit: dict) -> set[str]:
+    return {
+        via["url"].rsplit("/", 1)[1]
+        for entry in audit["vulnerabilities"].values()
+        for via in entry["via"]
+        if isinstance(via, dict) and "advisories/" in via.get("url", "")
+    }
+
+
+def test_a_list_carrying_the_entry_forgives_the_historical_capture(tmp_path: Path, capsys) -> None:
+    """The exemption path itself is still exercisable, with a planted list rather than the real one.
+
+    Before the Tailwind 4 migration this ran against the committed list; keeping it alive after the
+    list went empty is what stops "the gate is green" from meaning "the gate has nothing to say".
+    """
+    assert _run(CAPTURE, _write_list(tmp_path, [_entry()])) == gate.EXIT_CLEAN
     out = capsys.readouterr().out
     assert "EXEMPT GHSA-vfj7-8cjw-p6xm" in out
     assert "tolerated until 2026-11-07" in out
+
+
+def test_the_committed_empty_list_does_not_forgive_the_historical_capture(capsys) -> None:
+    """An empty list must be read as "nothing is exempt", never as "the check is off".
+
+    This is the failure the migration could have hidden: delete the entry, and a gate that reports
+    nothing looks identical to a gate that found nothing.
+    """
+    assert _run(CAPTURE, REAL_LIST) == gate.EXIT_VIOLATION
+    out = capsys.readouterr().out
+    assert "GHSA-vfj7-8cjw-p6xm" in out
+    assert "has no exemption" in out
 
 
 def test_emptying_the_list_turns_the_gate_red(tmp_path: Path, capsys) -> None:
@@ -221,7 +271,6 @@ def test_an_exemption_without_a_reason_or_a_date_is_refused(tmp_path: Path) -> N
 def test_the_committed_list_is_bounded_and_carries_every_required_field() -> None:
     doc = json.loads(REAL_LIST.read_text(encoding="utf-8"))
     entries = doc["advisories"]
-    assert entries, "the committed list went empty while the capture still reports 5 high"
     assert len(entries) <= 1, (
         f"{len(entries)} exemptions is above the ceiling this section opens with. Adding a "
         "second one is a human decision: name the advisory, the reason it is unactionable, "
@@ -233,17 +282,45 @@ def test_the_committed_list_is_bounded_and_carries_every_required_field() -> Non
         assert date.fromisoformat(entry["review_by"]) > date.fromisoformat(entry["advised"])
 
 
-def test_the_committed_list_has_no_entry_this_capture_does_not_need() -> None:
-    """A stale exemption is a lie about the tree; catch it in-repo, not in CI."""
-    ids_in_capture = {
-        via["url"].rsplit("/", 1)[1]
-        for entry in _audit_doc()["vulnerabilities"].values()
-        for via in entry["via"]
-        if isinstance(via, dict) and "advisories/" in via.get("url", "")
+def test_the_committed_list_matches_what_the_current_tree_reports() -> None:
+    """Both directions against the post-migration capture, so an empty list is a claim, not a silence."""
+    current = json.loads(CURRENT_CAPTURE.read_text(encoding="utf-8"))
+    assert current["vulnerabilities"] == {}, current["vulnerabilities"]
+    assert current["metadata"]["dependencies"]["total"] > 200, (
+        "the capture describes a near-empty tree, so 'no vulnerabilities' would prove nothing"
+    )
+    needs = _advisory_ids(current)
+    listed = {
+        entry["id"] for entry in json.loads(REAL_LIST.read_text(encoding="utf-8"))["advisories"]
     }
-    committed = json.loads(REAL_LIST.read_text(encoding="utf-8"))["advisories"]
-    listed = {entry["id"] for entry in committed}
-    assert listed <= ids_in_capture, f"{sorted(listed - ids_in_capture)} is not in the capture"
+    assert listed == needs, (
+        f"list has {sorted(listed - needs)}, tree needs {sorted(needs - listed)}"
+    )
+    assert _run_current(CURRENT_CAPTURE, REAL_LIST) == gate.EXIT_CLEAN
+
+
+def test_the_installed_trees_no_longer_carry_the_braces_chain() -> None:
+    """The exemption was only ever safe because nothing else could reach it; re-derive that here.
+
+    Both locks are checked: `apps/web` pinned tailwind 3, and the workspace root carried its own
+    unused `tailwindcss: 3.4`, which was the second live path to `braces`. A downgrade or a re-added
+    root dependency reddens this instead of quietly leaving an empty exemption list behind.
+    """
+    web = json.loads(WEB_LOCK.read_text(encoding="utf-8"))
+    root = json.loads(ROOT_LOCK.read_text(encoding="utf-8"))
+    assert _chain_present(web) == set(), _chain_present(web)
+    assert _chain_present(root) == set(), _chain_present(root)
+    versions = {
+        key.rsplit("node_modules/", 1)[-1]: val.get("version")
+        for key, val in web["packages"].items()
+        if key.endswith("node_modules/tailwindcss")
+    }
+    assert versions and all(str(v).startswith("4.") for v in versions.values()), versions
+
+    forged = _chain_present(
+        {"packages": {"node_modules/braces": {}, "apps/web/node_modules/micromatch": {}}}
+    )
+    assert forged == {"braces", "micromatch"}, forged
 
 
 def test_cyclic_via_references_terminate(tmp_path: Path, capsys) -> None:

@@ -24,7 +24,7 @@
 |---|---|
 | Next.js | MIT |
 | React / React-DOM | MIT |
-| Tailwind CSS / PostCSS / Autoprefixer | MIT |
+| Tailwind CSS / PostCSS / @tailwindcss/postcss | MIT |
 | TypeScript | Apache-2.0 |
 
 ## Tooling
