@@ -196,7 +196,7 @@ async function runAnalysisFlow(dataset: string, task: string): Promise<void> {
             if (s) {
               try {
                 const cp = await import('child_process');
-                cp.execSync('uv run dsa plugin validate --json', { timeout: 5000 });
+                cp.execFileSync('uv', ['run', 'dsa', 'plugin', 'validate', '--json'], { timeout: 5000 });
               } catch {}
             }
           });

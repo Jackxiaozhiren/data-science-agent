@@ -216,7 +216,28 @@ curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/datasets/
 `/version` reports the version of the distribution actually installed in the running container, read from
 its package metadata, plus the effective reasoning mode (`/health` stays import-free and I/O-free, so the
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
-idle.
+idle -- measured at 44.5 s and at 92.8 s on the two days this was checked, from the same service.
+
+Three answers decide whether a redeploy did its job, and none of them needs a credential:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/version | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"
+curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/research/experiments \
+  | python3 -c "import json,sys; print('deployed', json.load(sys.stdin)['total'], 'tracked', $(git ls-files research/results | wc -l | tr -d ' '))"
+```
+
+The first has to name the tag that was just built, not the one before it. The second has to carry a
+`script-src 'sha256-…'` for the page being served: a policy of `default-src 'none'` on an HTML document is the
+browser refusing to run that document's own script, which is a page that looks present and does nothing. The
+third compares the deployment against the repository rather than against a number written into this file -- as
+measured on 2026-10-22 the hosted answer was 3 and `git ls-files research/results` counts 3, which is the shape
+a passing check has: two independent counts that are allowed to disagree.
+
+The web side is checked the same way, from wherever you are:
+`curl -sI https://data-science-agent-web.vercel.app/datasets`. A healthy answer is an HTTP `200` with the app
+shell; a TCP connect that never completes says about your path what a 62-second probe said about the API last
+round, which is why the timeout on the command matters as much as its status code.
 
 What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
 published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance
