@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the waking probe gave up at 62 s on a 92.8 s wake
+
+- R-11 sized the browser's bounded "waking up" retry to clear the cold start it had measured: `GET /health`
+  answered 200 after 44.5 s on 2026-10-13. Re-measured on the same free service today, the same request held
+  its connection for **92.8 s** before answering. The budget is four attempts of 12 s plus 2/4/8 s of backoff
+  -- 62 s -- so the first visitor of the day was told `API unreachable — nothing answered` while the instance
+  was still booting, which is the precise defect R-11 exists to remove, come back because a constant encoded
+  one measurement and the measurement moved.
+- Constants now: `PROBE_TIMEOUT_MS` 18000, `PROBE_ATTEMPTS` 6, `PROBE_BACKOFF_MS` [2000, 4000, 6000] -- 132 s
+  of coverage, with attempt windows opening at 0, 20, 40, 62, 86 and 112 s so a wake that answers at 93 s
+  lands inside a live request instead of after the give-up. Six attempts is not an accident: the module's own
+  guard rejects a bound above 6, because past that the retry stops being distinguishable from an infinite wait.
+- The sentence and the budget are now checked against each other rather than against a floor. The warming copy
+  says "up to two minutes" in English and 两分钟 in Chinese; the guard reads the longest wait either sentence
+  names and requires the computed coverage to clear it, replacing a fixed `coverage >= 45 s` test that a
+  two-minute promise would have sailed through.
+- The premise stopped being a single number: `COLD_START_SAMPLES_MS` is now a dated sample list and the budget
+  is compared to the maximum, so the next slow measurement raises the requirement instead of hiding behind the
+  old one. `docs/hosted-demo.md` carries both samples with their dates and says which instrument enforces it.
+- Falsified three ways: the copy promising five minutes (promise pin red), the Chinese sentence dropping the
+  wait (promise pin red, which is the half a single-language check would have missed), a 4 s per-attempt
+  timeout (coverage pin red). 8 tests in `tests/contract/test_web_backend_probe.py` green, including the plant
+  that has always been there -- shrink one constant and the guard must fail.
+
 ### Verified (post-4.6.0) — the settings route's promise to stay offline is now enforced
 
 - `docs/api.md` says `PUT /api/v1/provider` is "Shape-validated only -- the route never contacts the provider,
