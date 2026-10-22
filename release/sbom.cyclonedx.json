@@ -1170,9 +1170,9 @@
     },
     {
       "name": "pyarrow",
-      "version": "25.0.1",
+      "version": "26.0.0",
       "licenses": [],
-      "purl": "pkg:pypi/pyarrow@25.0.1",
+      "purl": "pkg:pypi/pyarrow@26.0.0",
       "source": "https://pypi.org/simple"
     },
     {
