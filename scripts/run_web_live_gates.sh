@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The two live web gates, runnable as one command anywhere -- including inside the gate mirror.
 #
-# Why this file exists: two instruments measure things that only exist on a live, seeded run --
+# Why this file exists: three instruments measure things that only exist on a live, seeded run --
 # `inspector-a11y.mjs` needs a disclosure to open on Enter and focus stops to show a ring; the run-page half of
 # `locale-chrome-acceptance.mjs` needs the validation card to be mounted, and its labels live in `main li strong`,
 # outside the selector the offline routes are checked with. The static tour (`regression.mjs`) runs with no backend
@@ -174,17 +174,18 @@ done
 }
 
 echo "seeded run ${SEEN}; stack up: ${WEB} against ${API}"
-# Two instruments, one stack. Both need a live seeded run and both were manual until now: the keyboard gate owns
-# "a disclosure opens on Enter", the chrome acceptance owns "every region the interface speaks is in the reader's
-# language" -- including the validation card, whose labels sit in `main li strong` and are therefore outside the
-# static selector the offline routes are checked with.
+# Three instruments, one stack. All three need a live seeded instance and all three were manual until now: the
+# keyboard gate owns "a disclosure opens on Enter", the chrome acceptance owns "every region the interface speaks is
+# in the reader's language" -- including the validation card, whose labels sit in `main li strong` and are therefore
+# outside the static selector the offline routes are checked with -- and the App page gate owns "the page the MCP
+# client opens actually runs its own script", which no static scan of that script can show.
 STATUS=0
-for instrument in inspector-a11y.mjs locale-chrome-acceptance.mjs; do
+for instrument in inspector-a11y.mjs locale-chrome-acceptance.mjs mcp-app-page.mjs; do
   printf '\n=== %s\n' "$instrument"
   R13I_WEB="$WEB" R13I_API="$API" node "apps/web/scripts/${instrument}" || STATUS=1
 done
 if [[ "$STATUS" -eq 0 ]]; then
-  echo "WEB_LIVE_GATES_PASS -- both instruments green on one booted stack"
+  echo "WEB_LIVE_GATES_PASS -- all three instruments green on one booted stack"
 else
   echo "WEB_LIVE_GATES_FAIL -- at least one instrument failed (see its section above)" >&2
 fi

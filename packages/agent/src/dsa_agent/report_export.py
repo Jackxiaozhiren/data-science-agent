@@ -27,6 +27,8 @@ never absent, even when the run found nothing to qualify.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import html
 import json
 import re
@@ -710,3 +712,42 @@ def export_html(source: Any) -> str:
     parts.append("</body>")
     parts.append("</html>")
     return "\n".join(parts) + "\n"
+
+
+_INLINE_BLOCK = re.compile(r"<(script|style)\b[^>]*>(.*?)</\1>", re.DOTALL | re.IGNORECASE)
+
+
+def document_security_headers(document: str, *, allow_self_frame: bool = False) -> dict[str, str]:
+    """The headers that make one served HTML document safe to hand to a browser.
+
+    ``default-src 'none'`` is the right policy for a JSON API and the wrong one for the HTML routes the same API
+    also serves. Measured on a live instance: ``/mcp-app/`` offered zero dataset options while its own server
+    published thirty, because Chromium refused to execute the page's inline script -- and ``connect-src`` fell back
+    to ``'none'``, so the page could not have called home even if the script had run. Every test of that page had
+    used ``TestClient``, which runs no JavaScript, so nothing between the mount and a real browser ever noticed.
+
+    The policy is therefore derived from the document it protects: each ``<script>`` and ``<style>`` block the bytes
+    actually contain is named by hash, which keeps ``'unsafe-inline'`` out of the answer entirely. A block added
+    later is a page that visibly stops working in a browser rather than a page that quietly gains reach.
+    """
+    named: dict[str, set[str]] = {"script": set(), "style": set()}
+    for kind, body in _INLINE_BLOCK.findall(document):
+        digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        named[kind.lower()].add(f"'sha256-{digest}'")
+    directives = [
+        "default-src 'none'",
+        "script-src " + (" ".join(sorted(named["script"])) or "'none'"),
+        "style-src " + (" ".join(sorted(named["style"])) or "'none'"),
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "base-uri 'none'",
+        "form-action 'none'",
+    ]
+    if "<iframe" in document.lower():
+        directives.append("frame-src 'self'")
+    directives.append("frame-ancestors 'self'" if allow_self_frame else "frame-ancestors 'none'")
+    return {
+        "Content-Security-Policy": "; ".join(directives),
+        "X-Frame-Options": "SAMEORIGIN" if allow_self_frame else "DENY",
+    }
