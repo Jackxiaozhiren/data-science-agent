@@ -192,7 +192,7 @@
   `AUDIT_LEDGER.md` §240 to §242.
 
 
-### Changed (post-4.6.0) — Tailwind 3 → 4, which removed the only reason the advisory list existed
+### Changed (post-4.6.0) — Tailwind 3 → 4, which closed both live paths to the one advisory the list carried
 
 - `apps/web` builds on `tailwindcss@4.3.3` with `@tailwindcss/postcss`. `autoprefixer` left the graph
   (v4 prefixes through Lightning CSS), and `app/globals.css` trades the three `@tailwind` directives for
