@@ -145,8 +145,9 @@ async function fetchProfile(){
   // Use profile_dataset tool
   try{
     const r = await jrpc('tools/call', {name:'profile_dataset', arguments:{path: path}});
-    if(r.result && r.result.output){
-      const p = r.result.output.profile || r.result.output;
+    const res = r.result || {};
+    if(res.structuredContent || res.content){
+      const p = (res.structuredContent || {}).profile || res.structuredContent || JSON.parse(res.content[0].text);
       document.getElementById('profile').textContent = `Profile: ${JSON.stringify(p).slice(0,300)}`;
     }
   }catch(e){
@@ -168,7 +169,14 @@ async function runAnalysis(){
   try{
     const r = await jrpc('tools/call', {name:'analyze', arguments:{dataset: dsPath, task: q}});
     if(r.error){ document.getElementById('progress').textContent = 'Error: '+(r.error.message||JSON.stringify(r.error)); btn.disabled=false; return; }
-    const out = r.result && r.result.output ? r.result.output : r.result;
+    const res = r.result || {};
+    if(res.isError){
+      const block = (res.content && res.content[0]) || {};
+      document.getElementById('progress').textContent = 'Error: ' + (block.text || 'the tool reported an error');
+      btn.disabled=false;
+      return;
+    }
+    const out = res.structuredContent || (res.content ? JSON.parse(res.content[0].text) : {});
     lastRunId = out.run_id || out.analysis_id || Date.now().toString();
     history.replaceState(null,'','?run_id='+lastRunId);
     document.getElementById('progress').textContent = `COMPLETED ${lastRunId} (${(out.evidence||[]).length} evidence)`;
@@ -210,7 +218,8 @@ async function openResource(uri){
     return;
   }
   if(r.result){
-    const text = r.result.text || JSON.stringify(r.result, null, 2);
+    const item = (r.result.contents && r.result.contents[0]) || {};
+    const text = item.text || JSON.stringify(r.result, null, 2);
     view.textContent = text;
     note.textContent = uri + ' — ' + text.length + ' characters, shown in full.';
   } else {

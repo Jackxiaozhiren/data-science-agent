@@ -148,6 +148,7 @@ def test_analyze_advertises_the_argument_it_refuses_to_run_without() -> None:
             "params": {"name": "analyze", "arguments": {}},
         },
     )
-    assert res.json()["error"]["message"].startswith("task/question required"), (
-        f"the dispatcher no longer names the required field: {res.json()}"
-    )
+    result = res.json()["result"]
+    assert result["isError"] is True and result["content"][0]["text"].startswith(
+        "task/question required"
+    ), f"the dispatcher no longer names the required field: {res.json()}"

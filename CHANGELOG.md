@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the JSON-RPC surface answered with a shape no MCP client is specified to read
+
+- Two required protocol fields were missing. `CallToolResult` is `content: list[ContentBlock]` plus `isError`, and
+  `ReadResourceResult` is `contents: list[...]` -- the reference model in `modelcontextprotocol/python-sdk` declares
+  both with no default, on the same 2026-07-28 revision this repository pins. This server returned the tool's own
+  object as the result (`{"isError":…, "tool":…, "output":{…}}`) and the resource item bare
+  (`{"uri":…, "mimeType":…, "text":…}`), so a conformant client got no `content` for any of the 19 tools and no
+  `contents` for any resource. The product's own App page reads those non-standard keys, which is why every surface of
+  the product kept working while the advertised protocol did not hold: `tests/mcp` drove the same hand, and the
+  conformance suite checked `"error" in json()` and `status_code == 200` rather than the result shape.
+- Tool errors moved too. The reference docstring is explicit that an error originating in the tool "SHOULD be reported
+  inside the result with `is_error` set to true, not as an MCP protocol-level error, so the LLM can see and
+  self-correct", while "errors in finding the tool" belong at the protocol level. `tools/call` used to answer `-32602`
+  for both. A bad argument set now comes back as `isError: true` with the validation text in `content`, and an unknown
+  tool name is resolved against the registry at the boundary and answered `-32601` -- which the conformance test
+  already required, and which failed loudly while this was being written, proving the new envelope was not simply
+  fitted to the old expectations.
+- Owners: `adapter.tool_result_for_wire()` and `adapter.resource_result_for_wire()`, used by the HTTP handler and the
+  stdio loop. The internal object still travels intact as `structuredContent` (and as JSON inside the text block), so
+  nothing is dropped and no reader has to invent a second shape. The App page, which is this product's own client, was
+  moved onto `structuredContent` / `contents[0].text` in the same commit: the old keys are gone from the wire, and a
+  boundary that answers two shapes at once is the defect this section is about.
+- Guards: conformance and acceptance assertions now read the protocol fields (a tool error must not surface as a
+  JSON-RPC error; `contents[0]["mimeType"]`; `structuredContent["run_id"]`), and `tests/mcp/test_stdio_transport.py`
+  asserts `content[0]["type"] == "text"` with `isError` false on the success path and the missing field named on the
+  failure path. Live, the browser instrument drives the whole flow through the new envelope.
+- Evidence for the field names was read rather than recalled: `CallToolResult`, `ReadResourceResult` and
+  `Tool.input_schema` were quoted from the SDK's own types module fetched over the GitHub API -- and
+  `Tool.input_schema` being required is the same defect the previous section fixed.
+- Falsified by removing the required `content` field: `test_tools_call_and_errors` and the analyze guard both went
+  red, restored byte-exact. The stdio subprocess guard did *not* fail under that mutation, and the reason is its own
+  lesson: the spawned `dsa` script executes the vendored mirror, and only `packages/mcp` was edited -- so the
+  console script answered from a copy that was still correct. That is §1b's import-order trap demonstrated on a
+  falsification rather than a fix, and it is why every mirror in this repository is committed in the same change as
+  its source.
+
 ### Fixed (post-4.6.0) — `tools/list` published the schemas under a name no MCP client reads
 
 - The schemas were built correctly and then lost on the way out. `_tool_input_schema` derives each one from the

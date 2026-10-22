@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -225,6 +226,31 @@ def tools_for_wire() -> list[dict[str, Any]]:
 
 def list_tools() -> list[dict[str, Any]]:
     return tools_for_wire()
+
+
+def tool_result_for_wire(result: dict[str, Any]) -> dict[str, Any]:
+    """The ``CallToolResult`` a conformant client can parse, built from the product's own result object.
+
+    ``content`` is required by the protocol, and a tool-level failure belongs *inside* the result with ``isError``
+    set rather than in a JSON-RPC error -- the reference model's docstring is explicit that the caller has to be able
+    to see it and self-correct. The internal object travels as ``structuredContent``, so nothing is lost and no second
+    shape has to be guessed by whoever reads it.
+    """
+    is_error = bool(result.get("isError"))
+    if is_error:
+        text = str(result.get("error") or result.get("text") or "the tool reported an error")
+    else:
+        text = json.dumps(result, ensure_ascii=False, default=str)
+    wire: dict[str, Any] = {"content": [{"type": "text", "text": text}], "isError": is_error}
+    if not is_error and isinstance(result.get("output"), dict):
+        wire["structuredContent"] = result["output"]
+    return wire
+
+
+def resource_result_for_wire(result: dict[str, Any]) -> dict[str, Any]:
+    """``ReadResourceResult`` wraps what was read in ``contents``; this server used to hand back the bare item."""
+    item = {key: value for key, value in result.items() if key != "isError"}
+    return {"contents": [item]}
 
 
 async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:

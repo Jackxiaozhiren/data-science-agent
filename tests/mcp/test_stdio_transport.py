@@ -87,9 +87,10 @@ def test_stdio_calls_a_tool_and_returns_its_result() -> None:
         ]
     )
     result = replies[0]["result"]
-    assert result.get("isError") is not True, result
-    assert "rows" in json.dumps(result)[:4000] or "columns" in json.dumps(result)[:4000], (
-        f"the profile result carries neither rows nor columns: {str(result)[:200]}"
+    assert result.get("isError") is False, result
+    assert result["content"][0]["type"] == "text", result
+    assert "columns" in json.dumps(result["structuredContent"]), (
+        f"the profile result carries no columns: {str(result)[:200]}"
     )
 
 
@@ -117,8 +118,12 @@ def test_stdio_reports_a_missing_required_argument() -> None:
             }
         ]
     )
-    err = replies[0].get("error") or {}
-    assert err, f"an argument-less causal_check should not report success: {replies[0]}"
+    result = replies[0].get("result") or {}
+    # A failure that originates in the tool stays inside the result with isError, per CallToolResult: the caller has
+    # to be able to read the complaint and retry, which a JSON-RPC-level error would hide from it.
+    assert "error" not in replies[0], f"a tool error must not become a protocol error: {replies[0]}"
+    assert result.get("isError") is True, result
+    assert "treatment" in result["content"][0]["text"], result["content"][0]["text"][:200]
 
 
 @pytest.mark.parametrize("flag", ["--stdio"])

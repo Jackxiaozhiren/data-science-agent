@@ -7,7 +7,14 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools, tools_for_wire
+from dsa_mcp.adapter import (
+    MCP_TOOL_MAP,
+    call_mcp_tool,
+    list_mcp_tools,
+    resource_result_for_wire,
+    tool_result_for_wire,
+    tools_for_wire,
+)
 from dsa_mcp.resources import list_resources, read_resource
 
 app = FastAPI(title="Data Science MCP Server", version="0.1.0")
@@ -77,18 +84,21 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
                 },
                 status_code=200,
             )
-        arguments = params.get("arguments") or {}
-        result = await call_mcp_tool(name, arguments if isinstance(arguments, dict) else {})
-        if result.get("isError"):
+        if name not in MCP_TOOL_MAP:
             return JSONResponse(
                 {
                     "jsonrpc": "2.0",
                     "id": req_id,
-                    "error": {"code": -32602, "message": result.get("error")},
+                    "error": {"code": -32601, "message": f"Unknown tool: {name}"},
                 },
                 status_code=200,
             )
-        return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": result})
+        arguments = params.get("arguments") or {}
+        result = await call_mcp_tool(name, arguments if isinstance(arguments, dict) else {})
+        return JSONResponse(
+            {"jsonrpc": "2.0", "id": req_id, "result": tool_result_for_wire(result)},
+            status_code=200,
+        )
 
     if method == "resources/list":
         resources = list_resources()
@@ -115,7 +125,9 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
                 },
                 status_code=200,
             )
-        return JSONResponse({"jsonrpc": "2.0", "id": req_id, "result": result})
+        return JSONResponse(
+            {"jsonrpc": "2.0", "id": req_id, "result": resource_result_for_wire(result)}
+        )
 
     return JSONResponse(
         {
@@ -172,18 +184,22 @@ async def stdio_main() -> (
                     "error": {"code": -32602, "message": "Missing tool name"},
                 }
             else:
-                arguments = params.get("arguments") or {}
-                result = await call_mcp_tool(
-                    name2, arguments if isinstance(arguments, dict) else {}
-                )
-                if result.get("isError"):
+                if name2 not in MCP_TOOL_MAP:
                     resp = {
                         "jsonrpc": "2.0",
                         "id": req_id,
-                        "error": {"code": -32602, "message": result.get("error")},
+                        "error": {"code": -32601, "message": f"Unknown tool: {name2}"},
                     }
                 else:
-                    resp = {"jsonrpc": "2.0", "id": req_id, "result": result}
+                    arguments = params.get("arguments") or {}
+                    result = await call_mcp_tool(
+                        name2, arguments if isinstance(arguments, dict) else {}
+                    )
+                    resp = {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": tool_result_for_wire(result),
+                    }
         elif method == "resources/list":
             resources = list_resources()
             resp = {"jsonrpc": "2.0", "id": req_id, "result": {"resources": resources}}
@@ -204,7 +220,11 @@ async def stdio_main() -> (
                         "error": {"code": -32602, "message": result.get("text", "not found")},
                     }
                 else:
-                    resp = {"jsonrpc": "2.0", "id": req_id, "result": result}
+                    resp = {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": resource_result_for_wire(result),
+                    }
         else:
             resp = {
                 "jsonrpc": "2.0",
