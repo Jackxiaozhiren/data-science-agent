@@ -20,8 +20,23 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from dsa_agent.report_export import export_html
+from dsa_agent.report_export import document_security_headers, export_html
 from dsa_mcp.resources import get_state
+
+
+def _served(document: str, *, allow_self_frame: bool = False) -> HTMLResponse:
+    """Hand a document to a browser with a policy its own bytes satisfy.
+
+    The host's hardening middleware says ``default-src 'none'``, which is correct for JSON and fatal for this page:
+    measured, the App offered zero dataset options against a server publishing thirty, because the inline script was
+    refused. The hashes come from ``document_security_headers``, so a page that changes its own script changes its
+    policy too -- and a page that gains an unnamed block stops rendering in a browser instead of gaining reach.
+    """
+    return HTMLResponse(
+        content=document,
+        headers=document_security_headers(document, allow_self_frame=allow_self_frame),
+    )
+
 
 app = FastAPI(title="DSA MCP App", version="0.1.0")
 
@@ -54,6 +69,7 @@ pre{white-space:pre-wrap; background:#fafafa; padding:10px; border-radius:6px; m
 .small{color:#666; font-size:12px}
 table{border-collapse:collapse; width:100%;}
 th,td{border:1px solid #ddd; padding:6px; text-align:left; font-size:13px;}
+#reportFrame{width:100%;height:420px;border:1px solid #ddd;border-radius:6px;}
 </style></head><body>
 <h1>🔬 Data Science Agent — MCP App (§36)</h1>
 <p class="small">Flow: <b>Dataset</b> → <b>Question</b> → <b>Analysis</b> → <b>Evidence</b> → <b>Visualization</b> → <b>Report</b> — stateless with explicit handles (§38)</p>
@@ -78,14 +94,28 @@ th,td{border:1px solid #ddd; padding:6px; text-align:left; font-size:13px;}
 
 <div class="card"><h2>5. Report <span class="small">report://{run_id}</span></h2>
 <p class="small">Rendered by the same report renderer the web app uses — charts inlined, drill-down in page.</p>
-<iframe id="reportFrame" title="Rendered analysis report" style="width:100%;height:420px;border:1px solid #ddd;border-radius:6px;" hidden></iframe>
+<iframe id="reportFrame" title="Rendered analysis report" hidden></iframe>
 <p id="reportEmpty" class="small">Run an analysis to see its report here.</p>
 <button id="openReportBtn" disabled>Open report:// resource</button>
+</div>
+
+<div class="card"><h2>6. Resource read <span class="small">resources/read</span></h2>
+<p class="small">The raw resource the buttons above ask for, shown here rather than in a dialog: an alert blocks
+the page's own script and a 2,000-character cut would hide the rest of the bundle without saying so.</p>
+<pre id="resourceView" hidden></pre>
+<p id="resourceNote" class="small" hidden></p>
 </div>
 
 <div class="card small">Handles: <code>run_id</code> / <code>analysis_id</code> / <code>dataset</code> — explicit in URL (?run_id=...) and resource URIs (§38). Stateless MCP 2026-07-28 — no session.</div>
 
 <script>
+// Everything these touch arrives over the wire -- a dataset's own name/description, and an evidence
+// claim that quotes the user's question and the CSV's header row -- so none of it is markup until esc() says so.
+const esc = (v) => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+const renderOptions = (ds) => ds.map(x=>`<option value="${esc(x.uri)}">${esc(x.name)} — ${esc((x.description ?? '').slice(0,60))}</option>`).join('');
+const renderEvidence = (ev) => '<table><tr><th>id</th><th>claim</th><th>source</th></tr>'
+  + ev.slice(0,5).map(e=>`<tr><td>${esc(e.id)}</td><td>${esc((e.claim ?? '').slice(0,80))}</td><td>${esc(e.source_type)}</td></tr>`).join('') + '</table>';
+
 let lastRunId = new URLSearchParams(location.search).get('run_id') || '';
 let lastDataset = '';
 
@@ -99,7 +129,7 @@ async function loadDatasets(){
     const res = await jrpc('resources/list', {});
     const resources = (res.result && res.result.resources) || [];
     const ds = resources.filter(x=>x.uri.startsWith('dataset://'));
-    sel.innerHTML = ds.map(x=>`<option value="${x.uri}">${x.name} — ${x.description.slice(0,60)}</option>`).join('') || '<option value="dataset://sales">dataset://sales (fallback)</option>';
+    sel.innerHTML = renderOptions(ds) || '<option value="dataset://sales">dataset://sales (fallback)</option>';
     if(ds[0]) { lastDataset = ds[0].uri; document.getElementById('profile').textContent = ds[0].description; }
     sel.onchange = ()=>{ lastDataset = sel.value; fetchProfile(); };
     fetchProfile();
@@ -115,15 +145,18 @@ async function fetchProfile(){
   // Use profile_dataset tool
   try{
     const r = await jrpc('tools/call', {name:'profile_dataset', arguments:{path: path}});
-    if(r.result && r.result.output){
-      const p = r.result.output.profile || r.result.output;
+    const res = r.result || {};
+    if(res.structuredContent || res.content){
+      const p = (res.structuredContent || {}).profile || res.structuredContent || JSON.parse(res.content[0].text);
       document.getElementById('profile').textContent = `Profile: ${JSON.stringify(p).slice(0,300)}`;
     }
-  }catch(e){}
+  }catch(e){
+    document.getElementById('profile').textContent = 'No profile for ' + dsId + ': ' + String(e && e.message || e);
+  }
 }
 async function runAnalysis(){
   const q = document.getElementById('question').value.trim();
-  if(!q){ alert('Enter question'); return; }
+  if(!q){ document.getElementById('progress').textContent = 'Write a question first — the box above is the task.'; return; }
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   document.getElementById('progress').textContent = 'Planner→Scientist→Critic→Report …';
@@ -136,7 +169,14 @@ async function runAnalysis(){
   try{
     const r = await jrpc('tools/call', {name:'analyze', arguments:{dataset: dsPath, task: q}});
     if(r.error){ document.getElementById('progress').textContent = 'Error: '+(r.error.message||JSON.stringify(r.error)); btn.disabled=false; return; }
-    const out = r.result && r.result.output ? r.result.output : r.result;
+    const res = r.result || {};
+    if(res.isError){
+      const block = (res.content && res.content[0]) || {};
+      document.getElementById('progress').textContent = 'Error: ' + (block.text || 'the tool reported an error');
+      btn.disabled=false;
+      return;
+    }
+    const out = res.structuredContent || (res.content ? JSON.parse(res.content[0].text) : {});
     lastRunId = out.run_id || out.analysis_id || Date.now().toString();
     history.replaceState(null,'','?run_id='+lastRunId);
     document.getElementById('progress').textContent = `COMPLETED ${lastRunId} (${(out.evidence||[]).length} evidence)`;
@@ -144,7 +184,7 @@ async function runAnalysis(){
     // Evidence
     const evDiv = document.getElementById('evidence');
     const ev = out.evidence || [];
-    evDiv.innerHTML = ev.length ? '<table><tr><th>id</th><th>claim</th><th>source</th></tr>'+ev.slice(0,5).map(e=>`<tr><td>${e.id}</td><td>${(e.claim||'').slice(0,80)}</td><td>${e.source_type||''}</td></tr>`).join('')+'</table>' : 'No evidence';
+    evDiv.innerHTML = ev.length ? renderEvidence(ev) : 'No evidence';
     document.getElementById('openEvidenceBtn').disabled=false;
     document.getElementById('openEvidenceBtn').onclick=()=> openResource('evidence://'+lastRunId);
     // Report — rendered by the single owner (R-14), embedded rather than re-implemented
@@ -164,9 +204,29 @@ async function runAnalysis(){
   btn.disabled=false;
 }
 async function openResource(uri){
-  const r = await jrpc('resources/read', {uri});
-  if(r.result) alert(uri+'\\n\\n'+ (r.result.text||JSON.stringify(r.result)).slice(0,2000));
-  else alert('Error: '+JSON.stringify(r.error).slice(0,1000));
+  const view = document.getElementById('resourceView');
+  const note = document.getElementById('resourceNote');
+  view.hidden = false; note.hidden = false;
+  view.textContent = 'reading ' + uri + ' …';
+  note.textContent = '';
+  let r;
+  try{
+    r = await jrpc('resources/read', {uri});
+  }catch(e){
+    view.textContent = String(e && e.message || e);
+    note.textContent = uri + ' — the read never completed: the request itself failed, so nothing below the line is resource content.';
+    return;
+  }
+  if(r.result){
+    const item = (r.result.contents && r.result.contents[0]) || {};
+    const text = item.text || JSON.stringify(r.result, null, 2);
+    view.textContent = text;
+    note.textContent = uri + ' — ' + text.length + ' characters, shown in full.';
+  } else {
+    const text = JSON.stringify(r.error, null, 2);
+    view.textContent = text;
+    note.textContent = uri + ' — the server refused this read; what follows is its error, not the resource.';
+  }
 }
 document.getElementById('analyzeBtn').onclick=runAnalysis;
 document.getElementById('openEvidenceBtn').onclick=()=> openResource('evidence://'+lastRunId);
@@ -187,8 +247,8 @@ if(lastRunId){
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root() -> str:
-    return HTML
+async def root() -> HTMLResponse:
+    return _served(HTML)
 
 
 @app.get("/report/{run_id}", response_class=HTMLResponse)
@@ -211,7 +271,7 @@ async def report_view(run_id: str) -> HTMLResponse:
                 "report the instance itself publishes."
             ),
         )
-    return HTMLResponse(content=export_html(state))
+    return _served(export_html(state), allow_self_frame=True)
 
 
 @app.get("/app", response_class=JSONResponse)

@@ -149,6 +149,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_plugin.add_argument("--json", action="store_true", help="JSON output")
     p_mcp = sub.add_parser("mcp", help="MCP (§32): list the tool surface (dsa mcp [--json])")
     p_mcp.add_argument("--json", action="store_true", help="JSON output")
+    p_mcp.add_argument(
+        "--stdio",
+        action="store_true",
+        help="serve tools/list and tools/call over stdio JSON-RPC, for an MCP client's command config",
+    )
     p_ui = sub.add_parser(
         "ui",
         help=(
@@ -553,6 +558,14 @@ def main() -> None:
             print(json.dumps({"error": str(e), "isError": True}, ensure_ascii=False))
             sys.exit(1)
     if args.cmd == "mcp":
+        if args.stdio:
+            import asyncio
+
+            from dsa_mcp.server import stdio_main
+
+            # The loop reads stdin until EOF, so this is the client's subprocess, not a command that returns.
+            asyncio.run(stdio_main())
+            return
         from dsa_mcp.adapter import list_tools as mcp_list
 
         tools = mcp_list()

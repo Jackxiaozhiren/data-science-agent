@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -12,8 +13,8 @@ ToolClass = Literal["SAFE_READ", "ANALYSIS", "COMPUTE", "WRITE_ARTIFACT", "DESTR
 class MCPToolDef(BaseModel):
     name: str
     description: str
-    input_schema: dict[str, Any] = Field(default_factory=dict)
-    output_schema: dict[str, Any] = Field(default_factory=dict)
+    input_schema: dict[str, Any] = Field(default_factory=dict, serialization_alias="inputSchema")
+    output_schema: dict[str, Any] = Field(default_factory=dict, serialization_alias="outputSchema")
     permissions: list[str] = Field(default_factory=list)
     idempotency: bool = False
     timeout_ms: int = 30000
@@ -211,8 +212,45 @@ def list_mcp_tools() -> list[MCPToolDef]:
     return out
 
 
+def tools_for_wire() -> list[dict[str, Any]]:
+    """The tool list as the protocol names it, from one owner.
+
+    ``inputSchema`` is MCP's field name, and a discovery response without it reads to a client as a tool that takes
+    nothing: the schemas were built here all along (``_tool_input_schema`` derives them from each backend's pydantic
+    input model), but every boundary serialized the Python attribute name instead, so ``tools/list`` published
+    ``input_schema`` and clients saw no parameters at all. Dumping through one function is what keeps a fifth
+    boundary from re-creating the bug.
+    """
+    return [t.model_dump(mode="json", by_alias=True) for t in list_mcp_tools()]
+
+
 def list_tools() -> list[dict[str, Any]]:
-    return [t.model_dump(mode="json") for t in list_mcp_tools()]
+    return tools_for_wire()
+
+
+def tool_result_for_wire(result: dict[str, Any]) -> dict[str, Any]:
+    """The ``CallToolResult`` a conformant client can parse, built from the product's own result object.
+
+    ``content`` is required by the protocol, and a tool-level failure belongs *inside* the result with ``isError``
+    set rather than in a JSON-RPC error -- the reference model's docstring is explicit that the caller has to be able
+    to see it and self-correct. The internal object travels as ``structuredContent``, so nothing is lost and no second
+    shape has to be guessed by whoever reads it.
+    """
+    is_error = bool(result.get("isError"))
+    if is_error:
+        text = str(result.get("error") or result.get("text") or "the tool reported an error")
+    else:
+        text = json.dumps(result, ensure_ascii=False, default=str)
+    wire: dict[str, Any] = {"content": [{"type": "text", "text": text}], "isError": is_error}
+    if not is_error and isinstance(result.get("output"), dict):
+        wire["structuredContent"] = result["output"]
+    return wire
+
+
+def resource_result_for_wire(result: dict[str, Any]) -> dict[str, Any]:
+    """``ReadResourceResult`` wraps what was read in ``contents``; this server used to hand back the bare item."""
+    item = {key: value for key, value in result.items() if key != "isError"}
+    return {"contents": [item]}
 
 
 async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:

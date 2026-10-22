@@ -37,6 +37,7 @@ except Exception:  # pragma: no cover
     HTML = Markdown = display = None
 
 from dsa_jupyter.display import display_analysis
+from dsa_jupyter.display import escape_html
 from dsa_jupyter.metadata import collect_notebook_metadata
 
 
@@ -192,19 +193,19 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
 
         # progress
         if display is not None:
-            display(HTML(f"<i>Profiling {ns.dataset} …</i>"))
+            display(HTML(f"<i>Profiling {escape_html(ns.dataset)} …</i>"))
         try:
             prof = Agent().profile(ns.dataset)
         except Exception as e:
             if display is not None:
-                display(HTML(f"<b style='color:red;'>Profile failed: {e}</b>"))
+                display(HTML(f"<b style='color:red;'>Profile failed: {escape_html(e)}</b>"))
             else:
                 print(f"Profile failed: {e}")
             return None
         meta = collect_notebook_metadata(ns.dataset, None, None)
         if ns.json:
             if display is not None:
-                display(HTML(f"<pre>{prof}</pre><small>{meta}</small>"))
+                display(HTML(f"<pre>{escape_html(prof)}</pre><small>{escape_html(meta)}</small>"))
             else:
                 print(prof)
             return prof
@@ -212,9 +213,9 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
         if display is not None:
             html = f"""
             <div style="border:1px solid #ddd; padding:10px; border-radius:6px;">
-              <h4>📊 Profile: {ns.dataset}</h4>
-              <b>Rows:</b> {prof.get("rows")} | <b>Columns:</b> {", ".join(map(str, prof.get("columns", [])[:10]))}<br/>
-              <small>dataset_hash:{meta["dataset_hash"]} sdk:{meta["sdk_version"]}</small>
+              <h4>📊 Profile: {escape_html(ns.dataset)}</h4>
+              <b>Rows:</b> {prof.get("rows")} | <b>Columns:</b> {escape_html(", ".join(map(str, prof.get("columns", [])[:10])))}<br/>
+              <small>dataset_hash:{escape_html(meta["dataset_hash"])} sdk:{escape_html(meta["sdk_version"])}</small>
             </div>
             """
             display(HTML(html))
@@ -258,7 +259,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
         if display is not None:
             display(
                 HTML(
-                    f"<div style='background:#eef; padding:8px; border-radius:6px;'><b>🔬 Ask:</b> {ns.task}<br/><i>Running analysis on {ns.dataset} … (Planner→Scientist→Critic→Report)</i></div>"
+                    f"<div style='background:#eef; padding:8px; border-radius:6px;'><b>🔬 Ask:</b> {escape_html(ns.task)}<br/><i>Running analysis on {escape_html(ns.dataset)} … (Planner→Scientist→Critic→Report)</i></div>"
                 )
             )
         else:
@@ -273,7 +274,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             result = _run_sync(_factory)
         except Exception as e:
             if display is not None:
-                display(HTML(f"<b style='color:red;'>Analysis failed: {e}</b>"))
+                display(HTML(f"<b style='color:red;'>Analysis failed: {escape_html(e)}</b>"))
             else:
                 print(f"Analysis failed: {e}")
             return None
@@ -289,7 +290,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
                 "meta": collect_notebook_metadata(ns.dataset, ns.task, result.run_id),
             }
             if display is not None:
-                display(HTML(f"<pre>{json.dumps(payload, indent=2)}</pre>"))
+                display(HTML(f"<pre>{escape_html(json.dumps(payload, indent=2))}</pre>"))
             else:
                 print(json.dumps(payload, indent=2))
             return result
@@ -312,14 +313,14 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
         except SystemExit:
             return None
         if display is not None:
-            display(HTML(f"<i>Running benchmark limit={ns.limit} …</i>"))
+            display(HTML(f"<i>Running benchmark limit={escape_html(ns.limit)} …</i>"))
         from data_science_agent import Benchmark
 
         try:
             res = Benchmark().run(limit=ns.limit)
         except Exception as e:
             if display is not None:
-                display(HTML(f"<b style='color:red;'>Benchmark failed: {e}</b>"))
+                display(HTML(f"<b style='color:red;'>Benchmark failed: {escape_html(e)}</b>"))
             return None
         if ns.json:
             import json
@@ -327,7 +328,7 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             if display is not None:
                 display(
                     HTML(
-                        f"<pre>{json.dumps({'n_tasks': res.n_tasks, 'aggregate': res.aggregate}, indent=2)}</pre>"
+                        f"<pre>{escape_html(json.dumps({'n_tasks': res.n_tasks, 'aggregate': res.aggregate}, indent=2))}</pre>"
                     )
                 )
             return res
@@ -351,11 +352,15 @@ Reproducibility (§31): metadata dataset_hash/agent_version/sdk_version/prompt_v
             rep = run_doctor()
             if "--json" in args:
                 if display is not None:
-                    display(HTML(f"<pre>{_json.dumps(rep, indent=2)}</pre>"))
+                    display(HTML(f"<pre>{escape_html(_json.dumps(rep, indent=2))}</pre>"))
                 return rep
             if display is not None:
                 checks = "<br/>".join(f"{c['name']}: {c['status']}" for c in rep.get("checks", []))
-                display(HTML(f"<b>dsa doctor ({rep.get('status')})</b><br/>{checks}"))
+                display(
+                    HTML(
+                        f"<b>dsa doctor ({escape_html(rep.get('status'))})</b><br/>{escape_html(checks)}"
+                    )
+                )
             else:
                 print(rep)
             return rep

@@ -77,7 +77,7 @@ export default function ComparePage() {
           setLeftId(d.datasets[0].id);
         }
       })
-      .catch((e) => setErr(`Could not reach the DSA API at ${API_BASE_URL}. ${String(e)}`))
+      .catch((e) => setErr(`${t(locale, "common.apiUnreachable").replace("{url}", API_BASE_URL)} ${String(e)}`))
       .finally(() => setLoadingList(false));
   }, []);
 
