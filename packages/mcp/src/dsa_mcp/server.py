@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools
+from dsa_mcp.adapter import call_mcp_tool, list_mcp_tools, tools_for_wire
 from dsa_mcp.resources import list_resources, read_resource
 
 app = FastAPI(title="Data Science MCP Server", version="0.1.0")
@@ -17,7 +17,7 @@ app = FastAPI(title="Data Science MCP Server", version="0.1.0")
 @app.get("/tools")
 async def mcp_tools_list() -> dict[str, Any]:
     tools = list_mcp_tools()
-    return {"tools": [t.model_dump(mode="json") for t in tools], "count": len(tools)}
+    return {"tools": tools_for_wire(), "count": len(tools)}
 
 
 @app.get("/mcp/resources")
@@ -57,12 +57,11 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
     params = body.get("params") or {}
 
     if method == "tools/list":
-        tools = list_mcp_tools()
         return JSONResponse(
             {
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "result": {"tools": [t.model_dump(mode="json") for t in tools]},
+                "result": {"tools": tools_for_wire()},
             }
         )
 
@@ -128,7 +127,9 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
     )
 
 
-async def stdio_main() -> None:  # pragma: no cover - blocking stdio loop, exercised manually
+async def stdio_main() -> (
+    None
+):  # pragma: no cover - driven in-process by tests/mcp/test_stdio_transport.py
     import asyncio
 
     loop = asyncio.get_event_loop()
@@ -156,11 +157,10 @@ async def stdio_main() -> None:  # pragma: no cover - blocking stdio loop, exerc
         params = msg.get("params") or {}
         req_id = msg.get("id")
         if method == "tools/list":
-            tools = list_mcp_tools()
             resp = {
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "result": {"tools": [t.model_dump(mode="json") for t in tools]},
+                "result": {"tools": tools_for_wire()},
             }
         elif method == "tools/call":
             raw_name2 = params.get("name")

@@ -12,8 +12,8 @@ ToolClass = Literal["SAFE_READ", "ANALYSIS", "COMPUTE", "WRITE_ARTIFACT", "DESTR
 class MCPToolDef(BaseModel):
     name: str
     description: str
-    input_schema: dict[str, Any] = Field(default_factory=dict)
-    output_schema: dict[str, Any] = Field(default_factory=dict)
+    input_schema: dict[str, Any] = Field(default_factory=dict, serialization_alias="inputSchema")
+    output_schema: dict[str, Any] = Field(default_factory=dict, serialization_alias="outputSchema")
     permissions: list[str] = Field(default_factory=list)
     idempotency: bool = False
     timeout_ms: int = 30000
@@ -211,8 +211,20 @@ def list_mcp_tools() -> list[MCPToolDef]:
     return out
 
 
+def tools_for_wire() -> list[dict[str, Any]]:
+    """The tool list as the protocol names it, from one owner.
+
+    ``inputSchema`` is MCP's field name, and a discovery response without it reads to a client as a tool that takes
+    nothing: the schemas were built here all along (``_tool_input_schema`` derives them from each backend's pydantic
+    input model), but every boundary serialized the Python attribute name instead, so ``tools/list`` published
+    ``input_schema`` and clients saw no parameters at all. Dumping through one function is what keeps a fifth
+    boundary from re-creating the bug.
+    """
+    return [t.model_dump(mode="json", by_alias=True) for t in list_mcp_tools()]
+
+
 def list_tools() -> list[dict[str, Any]]:
-    return [t.model_dump(mode="json") for t in list_mcp_tools()]
+    return tools_for_wire()
 
 
 async def call_mcp_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
