@@ -24,6 +24,16 @@ _DEFAULT_RULES: tuple[tuple[str, str, int], ...] = (
     ("/api/v1/experiments", "POST", 60),
 )
 
+#: Which `Settings` attribute governs each rule. `experiments` borrows the analysis knob, so one env var moves
+#: two routes; this map, `_DEFAULT_RULES` and the sentence in `docs/api.md` are pinned to each other by
+#: `tests/contract/test_rate_limit_surface.py`.
+_RULE_KNOBS: dict[str, str] = {
+    "/api/v1/analysis": "rate_limit_analysis_per_min",
+    "/api/v1/datasets": "rate_limit_upload_per_min",
+    "/api/v1/events": "rate_limit_events_per_min",
+    "/api/v1/experiments": "rate_limit_analysis_per_min",
+}
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Minimal hardening headers for a JSON API (no cookies, no credentials).
@@ -103,12 +113,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         for i, (prefix, method, _) in enumerate(_DEFAULT_RULES):
             if request.method == method and request.url.path.startswith(prefix):
                 # Per-test overrides of settings limits rebuild that rule's limiter.
-                want = {
-                    "/api/v1/analysis": settings.rate_limit_analysis_per_min,
-                    "/api/v1/datasets": settings.rate_limit_upload_per_min,
-                    "/api/v1/events": settings.rate_limit_events_per_min,
-                    "/api/v1/experiments": settings.rate_limit_analysis_per_min,
-                }[prefix]
+                want = getattr(settings, _RULE_KNOBS[prefix])
                 if _limiters[i].max_requests != want:
                     _limiters[i] = RateLimiter(want)
                 key = f"{_client_ip(request)}:{prefix}"

@@ -353,3 +353,40 @@ def test_cyclic_via_references_terminate(tmp_path: Path, capsys) -> None:
     audit = _write_audit(tmp_path, doc)
     assert _run(audit, _write_list(tmp_path, [_entry()])) == gate.EXIT_VIOLATION
     assert "no advisory reachable" in capsys.readouterr().out
+
+
+#: Verbatim `npm --prefix apps/web audit --json` output for the run where the registry's audit endpoint
+#: returned 503 / socket hang up. Kept as a file because the shape under test is npm's, not a guess at npm's.
+ENDPOINT_FAILURE = REPO / "tests/fixtures/npm_audit_endpoint_failure_2026-10-22.json"
+
+
+def test_an_endpoint_failure_is_named_as_one_and_not_as_a_schema_change(
+    tmp_path: Path, capsys
+) -> None:
+    """Two reds a reader must not conflate: npm did not answer, versus npm changed its format.
+
+    Measured 2026-10-22: `main` went red at this step while the registry returned 503, and the hint printed
+    told the reader to re-read npm's documentation. Both cases stay exit 2 -- an absent scan is never a clean
+    scan -- but only one of them is work this repository can do.
+    """
+    doc = json.loads(ENDPOINT_FAILURE.read_text(encoding="utf-8"))
+    assert "auditReportVersion" not in doc, doc
+    assert isinstance(doc.get("message"), str), doc
+    assert _run(_write_audit(tmp_path, doc), REAL_LIST) == gate.EXIT_INPUT_ERROR
+    captured = capsys.readouterr()
+    printed = captured.out + captured.err
+    assert "failed request" in printed, printed
+    assert "did not run" in printed, printed
+    assert "registry" in printed, printed
+    assert "changed format" not in printed, printed
+
+
+def test_a_real_report_on_an_unknown_schema_still_says_schema(tmp_path: Path, capsys) -> None:
+    """The other half: the new branch must not absorb the case it was written next to."""
+    doc = _audit_doc()
+    doc["auditReportVersion"] = 3
+    assert _run(_write_audit(tmp_path, doc), REAL_LIST) == gate.EXIT_INPUT_ERROR
+    captured = capsys.readouterr()
+    printed = captured.out + captured.err
+    assert "changed format" in printed, printed
+    assert "failed request" not in printed, printed

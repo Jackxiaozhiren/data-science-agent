@@ -7,14 +7,23 @@ Conventions:
 - Creates return **201 + `Location`** (`/api/v1/<resource>/<id>`). The one exception is an analysis run:
   it answers **202** once the row exists and is executing, because the graph is not finished by then (see
   `POST /api/v1/analysis/` below).
-- Lists accept `?limit=` (1–1000, default 100) + `?offset=` (default 0) and
-  return `{..., "total": n}` alongside the array (additive; old clients keep working).
+- The three paginated lists -- `/api/v1/datasets/`, `/api/v1/analysis/`, `/api/v1/experiments/` -- accept
+  `?limit=` (1–1000, default 100) + `?offset=` (default 0) and return `{..., "total": n}` alongside the array
+  (additive; old clients keep working). Any other route ignores `?limit=` rather than honouring it: the research
+  list further down is capped by a constant, not by a query parameter.
 - Errors keep the `{detail: string}` envelope (the web UI renders `detail`).
-- Expensive `POST`s are IP rate-limited (analysis 60/min, upload 30/min, events 120/min;
-  429 + `Retry-After`; disable with `DSA_RATE_LIMIT_ENABLED=false`).
-- Opt-in auth: set `DSA_AUTH_TOKEN` to require
-  `Authorization: Bearer <token>` on all `/api/*` routes
-  (`/health`, `/ready`, `/version` stay public). Empty = public demo mode.
+- Expensive `POST`s are IP rate-limited on a sliding 60-second window, `429` + `Retry-After` on breach:
+  `/api/v1/analysis` 60/min (`DSA_RATE_LIMIT_ANALYSIS_PER_MIN`), `/api/v1/datasets` 30/min
+  (`DSA_RATE_LIMIT_UPLOAD_PER_MIN`), `/api/v1/events` 120/min (`DSA_RATE_LIMIT_EVENTS_PER_MIN`), and
+  `/api/v1/experiments` 60/min, which owns no knob of its own and follows
+  `DSA_RATE_LIMIT_ANALYSIS_PER_MIN`. Reads stay unlimited; `DSA_RATE_LIMIT_ENABLED=false` turns the whole thing off.
+- Opt-in auth: set `DSA_AUTH_TOKEN` to require `Authorization: Bearer <token>` on all `/api/*` routes. Empty =
+  public demo mode. The token is not a whole-service gate: everything outside `/api/` answers without it, and the
+  list is measured rather than inferred -- `/health`, `/ready`, `/version`, `/health/dependencies`, `/metrics`,
+  the API root `/`, the generated interface `/docs`, `/docs/oauth2-redirect`, `/redoc`, `/openapi.json`, and the
+  two mounted surfaces `/mcp` and `/mcp-app`, which carry the tool endpoint and the App page. So a token gates
+  the data routes and nothing else, and `/mcp` on the ungated side still dispatches `run_python` and `run_sql`;
+  `tests/contract/test_auth_surface.py` fails if the boundary and this sentence ever disagree.
 - **Visitor scoping (R-08):** every stored row carries an `owner`, and a read returns that owner's rows plus the
   published sample. Send `X-DSA-Owner: <id>` on the dataset, analysis, experiment, report and bundle routes -- or
   `?owner=<id>` on a link the browser opens itself, where no header is possible. A request with no id acts as the
@@ -36,7 +45,7 @@ Conventions:
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/datasets/` | upload (multipart, 100MB, MIME sniff, archive bomb guard) → 201 |
+| POST | `/api/v1/datasets/` | upload (multipart, 100MB, MIME sniff, archive guard: extension blocklist plus the file's own leading bytes) → 201 |
 | GET | `/api/v1/datasets/` | list + `total` (paginated) |
 | GET | `/api/v1/datasets/{id}` | profile + metadata |
 | POST | `/api/v1/analysis/` | `{dataset_id, user_query}` → **202** + `Location`, with the row already persisted and the run executing in this process. Poll `GET /api/v1/analysis/{id}` or follow `/events`; a run that crashes lands on the row as `status: FAILED` with a generic `error`, never as a 500 on a later read. Re-submitting the same question while a run is in flight returns **200** with that run's id rather than starting a second one |
@@ -59,8 +68,8 @@ Conventions:
 | POST | `/api/v1/events` | `{event, payload}` → **202**. The relay for the one funnel link only a browser can observe (`arrival`); see `apps/api/src/dsa_api/services/product_events.json` for the vocabulary. It is a transport, not a second authority: the payload passes the same checks the in-process emitter applies — declared keys only, the prohibited classes (query text, dataset content, user-identifying values), the identifier-shaped value rule, and the choice list the vocabulary declares for each field — and an event the vocabulary says the **api** emits is refused with a 400, so a client cannot write `run_started`, `run_completed`, `export_taken` or `starter_question_used`. An invalid payload is a 400 whose `detail` is the vocabulary's own sentence. When this instance runs without `DSA_TELEMETRY=on` the answer is the same 202 and **nothing is written**, so the route is not a way to ask whether an operator is counting. The client half is gated at build time by `NEXT_PUBLIC_TELEMETRY=on`: a bundle that was not built with it sends no request at all, so the default deployment reports nothing about whoever opens it |
 | GET | `/api/v1/benchmarks/baseline` | the frozen aggregate, verbatim from `benchmarks/baseline/summary.json` (read-only) |
 | GET | `/api/v1/benchmarks/catalog` | `{tasks, by_category, datasets, source}` computed from `benchmarks/v2/catalog.json` |
-| GET | `/api/v1/research/experiments` | `{experiments, total}` -- `ablation_*` files under `research/results`, first 10 by name |
-| GET | `/health` | `{status, details:{process}, version}` — liveness only: no database I/O and no optional scientific/LLM imports, so a small instance can answer probes immediately |
+| GET | `/api/v1/research/experiments` | `{experiments, total}` -- `ablation_*` files under `research/results`, first 10 by name. **Not paginated**: `?limit=` and `?offset=` are ignored here, and `total` counts every file the directory holds, not the ten returned |
+| GET | `/health` | `{status, details:{process}, version}` — liveness only: no database I/O and no optional scientific/LLM imports, so a small instance can answer probes immediately. That promise is about the route, not the image: the process still imports the agent layer, and with it `polars`, at boot. To see what a module costs a fresh interpreter, import it in a subprocess and census `sys.modules` before and after -- `tests/contract/test_probe_promises.py` does exactly that for the probe and upload routes |
 | GET | `/ready` | `{status, details:{process,db}, version}` — database readiness; `status` degrades to `degraded` when the DB check fails |
 | GET | `/health/dependencies` | `{status, details:{duckdb,polars,llm}, version}` — deeper optional-dependency diagnostic |
 | GET | `/version` | `{version, distribution, reasoning_mode, storage}` — which build answers and what would plan a run: `version` is read from the installed distribution's metadata (`unknown` when there is none), `reasoning_mode` is `{mode, stub, provider, model, error}` resolved the same way `EnvLLMProvider` resolves it, so a UI copying it cannot claim a model ran where the runtime would refuse; `storage` is `{durable, ephemeral_roots}`, where `ephemeral_roots` names the roles (`database`, `datasets`, `artifacts`) whose configured path is one the host may clear, and `durable` is their conjunction -- no location is published because this route is unauthenticated, and `durable` claims nothing about the volume behind a mount |
