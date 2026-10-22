@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-10-19T03:12:31.303389+00:00",
+  "generated": "2026-10-22T03:37:03.170882+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -1110,10 +1110,10 @@
     },
     {
       "package": "ruff",
-      "version": "0.16.3",
+      "version": "0.17.1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ruff@0.16.3"
+      "purl": "pkg:pypi/ruff@0.17.1"
     },
     {
       "package": "scikit-learn",
