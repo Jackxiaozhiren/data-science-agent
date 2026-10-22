@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the hosted-demo census gained a third probe and a re-run
+
+- `docs/hosted-demo.md` already carried two credential-free currency probes: an OpenAPI path census and a
+  content probe that asks a published report how it names its own validation checks. Both were re-run on
+  2026-10-22 -- 25 paths identical on both sides, the content probe still `True`, `/version` still `4.6.0`
+  -- so the redeploy #44 asks for is still owed, and the doc now says so with its dates rather than with the
+  2026-10-21 ones alone.
+- A third probe was added, for the half neither of the two covers: whether the MCP App page can run at all.
+  `curl -s -o /dev/null -D - …/mcp-app/ | grep -i '^content-security-policy'` distinguishes the API-wide
+  `default-src 'none'` (an HTML document whose inline script that policy forbids -- a picture of a page with
+  dead buttons) from the per-document policy that names the script it sent. Measured today the hosted answer is
+  the strict default, which is the deployment consequence of the CSP fix, stated as something anyone can check.
+- The web side is recorded as *not measurable from the machine that tried*: both `*.vercel.app` URLs timed out
+  at TCP connect while Render answered, and that cannot distinguish a paused deployment from local egress
+  filtering. The doc says a connection that never opened is a fact about the path, not the service, so the
+  next reader does not repeat this session's earlier error of reading a too-short wait as a dead demo.
+
 ### Fixed (post-4.6.0) — the waking probe gave up at 62 s on a 92.8 s wake
 
 - R-11 sized the browser's bounded "waking up" retry to clear the cold start it had measured: `GET /health`

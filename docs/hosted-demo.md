@@ -165,8 +165,9 @@ l=set(TestClient(app).get('/openapi.json').json()['paths'])
 print('hosted', len(h), 'local', len(l), '| hosted-only', sorted(h-l), '| local-only', sorted(l-h))"
 ```
 
-Both sides answered the same path set when measured on 2026-10-21, so the deployed API is not behind the
-repository at the route level. It can still be behind at the *content* level, and that is the half a path census
+Both sides answered the same path set when measured on 2026-10-21 and again on 2026-10-22 (25 paths each, no
+difference either way), so the deployed API is not behind the repository at the route level. It can still be
+behind at the *content* level, and that is the half a path census
 cannot see: a route that exists in both may render differently. The content check needs no credentials either --
 ask a published run for its report and look at what the product itself says:
 
@@ -181,7 +182,25 @@ The second line prints whether any validation check is being named by the engine
 word the report owns (`Evidence coverage`, 证据覆盖率). Measured on 2026-10-21 the answer was `True`: the running
 container predates that change, which is the evidence a redeploy is owed -- and the reason `identical: True` above
 is a route claim, not a currency claim. Run the same probe again after a deploy; when it prints `False`, the
-artifact the visitors download matches the repository.
+artifact the visitors download matches the repository. Re-measured on 2026-10-22: still `True`.
+
+A third probe, cheaper than both, answers the same currency question for the MCP App page -- a page is only real
+if the browser can run it:
+
+```bash
+curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+```
+
+A response whose policy is the API-wide `default-src 'none'; frame-ancestors 'none'` is serving an HTML document
+whose own inline script that policy forbids, so the visitor gets a picture of the page with dead buttons; the
+fixed build answers a per-document policy that names the script block it actually sent (`script-src
+'sha256-...'`). Measured on 2026-10-22 the hosted answer was the strict default, i.e. the deployed container
+predates that fix too, while `/version` on both hosts reported `4.6.0`.
+
+The web side could not be censused from the same machine on 2026-10-22: both `*.vercel.app` URLs timed out at
+TCP connect while Render answered, and that observation cannot distinguish a paused deployment from this network
+blocking Vercel. Say which of the two it is only after checking from a second vantage point -- a connection that
+never opened is a fact about the path, not about the service.
 
 ### Verify a deploy from the outside
 
