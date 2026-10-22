@@ -220,9 +220,11 @@ def main() -> None:
             scoped = " ".join(f"--package {name}" for name in drifted) or "--package NAME"
             print(
                 "DRIFT: vendored dsa_* differs from its sources (nothing was written).\n"
-                f"Repair only what you changed: `python scripts/sync_vendor.py {scoped}`\n"
-                "`--all` repairs every drifted package and will copy another session's "
-                "uncommitted source into _vendor; a bare run is refused for that reason.",
+                f"Repair only what you changed: `python scripts/sync_vendor.py --file <source path>` per file, or "
+                f"`python scripts/sync_vendor.py {scoped}` when the whole package is yours.\n"
+                "`--package NAME` re-copies every file in that package, so on a shared worktree it also copies "
+                "another session's uncommitted edits into _vendor. `--all` repairs every drifted package and "
+                "will do the same across all of them; a bare run is refused for that reason.",
                 file=sys.stderr,
             )
             for reason in problems:

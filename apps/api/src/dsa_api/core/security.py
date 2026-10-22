@@ -26,16 +26,23 @@ _DEFAULT_RULES: tuple[tuple[str, str, int], ...] = (
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Minimal hardening headers for a JSON API (no cookies, no credentials)."""
+    """Minimal hardening headers for a JSON API (no cookies, no credentials).
+
+    The policy is a default, not a verdict: the two routes that hand an HTML document to a browser set their own,
+    because a document's ``script-src`` has to name the blocks that document actually carries. A header already on
+    the response is left alone -- overwriting it here is what made ``/mcp-app/`` render as a picture of a page.
+    """
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+        response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers["Referrer-Policy"] = "same-origin"
-        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        response.headers.setdefault(
+            "Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"
+        )
         return response
 
 

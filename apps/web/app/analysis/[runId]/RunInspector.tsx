@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Copy, Check, Download, ChevronDown, FileText, FileJson, TerminalSquare, BookOpen, XCircle, Send, Loader2, Bell, BellOff } from "lucide-react";
 import { clientFetch, apiUrl, classifyResponse, failurePresentation, type ApiFailure } from "@/lib/api";
-import { t } from "@/lib/locale";
+import { callStatusLabel, checkLabel, t } from "@/lib/locale";
 import { useLocale } from "@/app/lib/LocaleProvider";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
@@ -69,6 +69,7 @@ function useLiveProgress(runId: string, initialStatus: string) {
   const [prog, setProg] = React.useState<Progress | null>(null);
   const [live, setLive] = React.useState(!TERMINAL.has(initialStatus.trim().toUpperCase()));
   const [notify, setNotify] = React.useState(false);
+  const [notifyBlocked, setNotifyBlocked] = React.useState(false);
   const lastStatus = React.useRef(initialStatus);
   // The title this page had before the poll started rewriting it. The fallback is the dictionary's own
   // product title, not a second copy of it -- the sweep in tests/contract/test_web_locale_parity.py refuses a
@@ -119,13 +120,32 @@ function useLiveProgress(runId: string, initialStatus: string) {
   }, [runId, live, notify, router, locale]);
 
   const toggleNotify = React.useCallback(async () => {
-    if (!notify && "Notification" in window && Notification.permission === "default") {
-      await Notification.requestPermission();
+    if (notify) {
+      setNotify(false);
+      return;
     }
-    setNotify((v) => !v);
+    // The control must not claim a delivery the browser will refuse. `requestPermission()` resolves to
+    // "denied" wherever the visitor dismissed the prompt or the context forbids notifications -- and headless
+    // or permission-policy-restricted browsers resolve it without ever showing a prompt -- so the *result*,
+    // never the click, decides whether this reads as on. A denied visitor gets the reason, not a bell that
+    // will stay quiet until the run finishes.
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotifyBlocked(true);
+      return;
+    }
+    let permission: NotificationPermission = Notification.permission;
+    if (permission !== "granted") {
+      permission = await Notification.requestPermission().catch(() => "denied" as NotificationPermission);
+    }
+    if (permission !== "granted") {
+      setNotifyBlocked(true);
+      return;
+    }
+    setNotifyBlocked(false);
+    setNotify(true);
   }, [notify]);
 
-  return { prog, live, notify, toggleNotify };
+  return { prog, live, notify, notifyBlocked, toggleNotify };
 }
 
 // The five stage names a reader sees under the status badge. They are the interface's words for where a
@@ -173,7 +193,7 @@ function ValidationRing({ passed, total }: { passed: number; total: number }) {
 function ApprovalCard({ runId }: { runId: string }) {
   const locale = useLocale();
   const router = useRouter();
-  const [note, setNote] = React.useState("Approved by human");
+  const [note, setNote] = React.useState(t(locale, "insp.approvalNote"));
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
 
@@ -371,7 +391,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
   const passed = validations.filter((v) => v.passed).length;
   const limitations = (st?.insights ?? []).filter((i) => i.limitation);
   const severeCount = limitations.filter((i) => limitationSeverity(i.limitation ?? "") === "error").length;
-  const { prog, live, notify, toggleNotify } = useLiveProgress(run.id, run.status);
+  const { prog, live, notify, notifyBlocked, toggleNotify } = useLiveProgress(run.id, run.status);
   const statusNow = prog?.status ?? run.status;
   const stepsDone = prog?.steps_done ?? st?.tool_calls.length ?? 0;
   const stepsTotal = prog?.steps_total ?? st?.plan.length ?? 0;
@@ -604,11 +624,21 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                   type="button"
                   onClick={toggleNotify}
                   aria-pressed={notify}
-                  title={notify ? t(locale, "insp.notifyAriaOn") : t(locale, "insp.notifyAriaOff")}
+                  title={
+                    notifyBlocked
+                      ? t(locale, "insp.notifyBlockedWhy")
+                      : notify
+                        ? t(locale, "insp.notifyAriaOn")
+                        : t(locale, "insp.notifyAriaOff")
+                  }
                   className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
                 >
                   {notify ? <Bell className="size-3.5" aria-hidden /> : <BellOff className="size-3.5" aria-hidden />}
-                  {notify ? t(locale, "insp.notifying") : t(locale, "insp.notify")}
+                  {notifyBlocked
+                    ? t(locale, "insp.notifyBlocked")
+                    : notify
+                      ? t(locale, "insp.notifying")
+                      : t(locale, "insp.notify")}
                 </button>
               </div>
             </div>
@@ -686,7 +716,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                     {validations.map((v, i) => (
                       <li key={i} className={`flex items-start gap-2 text-xs leading-5 ${v.passed ? "text-emerald-700" : "text-red-600"}`}>
                         {v.passed ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" aria-hidden /> : <XCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />}
-                        <span><strong>{v.check}:</strong> {v.message}</span>
+                        <span><strong>{checkLabel(locale, v.check)}:</strong> {v.message}</span>
                       </li>
                     ))}
                   </ul>
@@ -757,7 +787,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
                           >
                             <TableCell><code className="font-mono text-xs">{tc.tool}</code></TableCell>
                             <TableCell>
-                              <Badge variant={tc.status === "ok" ? "success" : "destructive"}>{tc.status}</Badge>
+                              <Badge variant={tc.status === "ok" ? "success" : "destructive"}>{callStatusLabel(locale, tc.status)}</Badge>
                             </TableCell>
                             <TableCell>
                               <span className="flex items-center gap-2">

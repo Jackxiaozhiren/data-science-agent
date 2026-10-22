@@ -133,6 +133,14 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   on must not arrive in a language nobody chose -- while the critic's own `limitation` text, stored on the
   insight at analysis time, stays the run's byte: changing it would edit what the run said, which is a
   decision about data and is left open rather than half-taken.
+  A validation check's *name* is on the product's side of that line and its *sentence* is on the run's:
+  `report_export._label()` says `evidence_coverage` as 证据覆盖率 / "Evidence coverage" in the report's list, in the
+  limitations block, and -- through `lib/locale.ts`'s `chk.*` keys and `checkLabel()` -- in the inspector's card,
+  while `Evidence coverage ok` stays exactly as recorded. The vocabulary is enumerated from the producers by an AST
+  shape rule (a `ValidationResult(check=...)`, or a dict carrying `check`+`passed`+`message`), so a check the
+  engine can emit but nobody named reddens `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it`
+  rather than showing a reader an identifier. A tool's per-column assumption records (`levene`, `normality`) are
+  deliberately outside that set: they are a tool's output rendered as data, not a label the product chose.
 - The keyboard is a supported input, not a fallback. `apps/web/scripts/regression.mjs` walks the analyst's
   routes and requires every tab stop to show a *visible* indicator (style, width and colour -- a transparent
   outline is not one) and every `<details>` drill-down to open on Enter.
@@ -225,8 +233,9 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   `summary`, `label`, `h1`–`h3`, `button` and the shell's links -- so a plain `<span>` is outside it, and three of
   the last leaks sat in spans (`Saved.`, `{a} of {b} calls`, `conf 0.92`). More consequentially, the region check
   only sees **states the harness enters**: the failure-diagnostics panel renders only when a run has a failed tool
-  call, the live-progress line only while a run is running, and the notify button only when the browser offers
-  notifications. Each held English, and none could be reached from a seeded cold page. That is the same failure as
+  call, the live-progress line only while a run is running, and the notify button only on the run page -- headless
+  Chromium renders it, so it was the route's absence rather than any browser capability that hid it (§235 measured
+  this). Each held English, and none could be reached from a seeded cold page. That is the same failure as
   the inactive-tab hole -- not mounted is not measured -- and the answer is the same division of labour: the page
   check measures what is on screen, the AST check measures what the source *can* put on screen, because in source
   a conditional is not a state. The AST instrument's own two new rules are falsifiable: a planted ternary literal,
@@ -235,8 +244,14 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   chip, the footer and the run badge are as reader-facing as a `.tsx` -- with the dictionary itself excluded
   because it is the owner rather than a page. `short:` and `detail:` were added to the reader-slot list for the
   same reason: `describeStorage()` hands its `detail` sentence straight to the footer's tooltip, and a slot rule
-  that named only `label`/`title`/`description` could not see it. Both were gaps in the instrument, not in the
-  product, and §232-§233 of the ledger carry the measurements that found them.
+  that named only `label`/`title`/`description` could not see it. Both were gaps in the instrument -- and each one
+  hid a real defect in the product, which is the reason a gap is worth measuring rather than noting. A third class
+  still cannot be decided statically, because the string is not in any position the reader-slot rules reach:
+  `setErr(\`Could not reach the DSA API at ${url}\`)` builds a sentence in a variable, and it renders later. The
+  inventory prints those as a **census to adjudicate** (multi-word literals outside every reader slot), counting
+  developer `throw` messages, copyable command lines and Tailwind class lists separately so the list stays short
+  enough to read; three such sentences came out of the first non-empty census. §232-§234 of the ledger carry the
+  measurements.
 - **Two English strings changed visible text, on purpose.** The status chip used to render the raw enum token, so
   `COMPLETED` appeared in capitals and the in-flight filter option said `Data_profiling`; both now come from
   `statusLabel()`, so the chip says "Completed" and the option says "Data profiling". The settings readout lines
@@ -263,9 +278,15 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   the data-in-chrome pattern and the leak decision. Two runners ask it rather than each deciding. `regression.mjs`,
   the web job GitHub Actions already runs, adds one check per static route per locale -- each route is loaded under
   a `dsa_locale=zh` and an `=en` cookie and fails on an English chrome region or a `⟨missing-key⟩` marker, and the
-  tour's own summary line prints that pass's count. `locale-chrome-acceptance.mjs` needs a seeded backend and so
-  runs by hand, covering what the tour cannot see: the column heads that only exist once a table has rows, and the
-  three routes that need a real run or dataset id. `test_the_two_language_runners_share_one_rule_owner` is what
+  tour's own summary line prints that pass's count. `locale-chrome-acceptance.mjs` needs a seeded backend, so it
+  used to run by hand; `scripts/run_web_live_gates.sh` now boots a throwaway stack (API on a temporary SQLite file
+  in heuristic mode, the built web app on a scratch port) and runs it beside `inspector-a11y.mjs` on that one boot,
+  as a gate in CI and in `run_gates.sh`. It covers what the tour cannot see: the column heads that only exist once a
+  table has rows, the three routes that need a real run or dataset id, and the run page's validation card, whose
+  labels sit in `main li strong` -- outside `CHROME_SELECTOR`, so a region scan visits the page and never reads
+  them. Those labels are examined against the dictionary instead: a label the dictionary has a key for is a defect,
+  and the run's own rendered report is excluded by the `data-run-document` boundary, so the card's absence cannot be
+  papered over by the report body's bold text. `test_the_two_language_runners_share_one_rule_owner` is what
   keeps them the same test -- it refuses a runner that re-declares `IDENTIFIERS` or `CHROME_SELECTOR` beside its
   import, and it floors the identifier list at 25 entries, because a rule owner emptied of entries would let both
   runners report a clean tree. The wiring was falsified from both sides: forcing the tour's cookie to `en` reddened

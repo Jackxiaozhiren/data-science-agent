@@ -22,8 +22,17 @@ Conventions:
   API does not confirm that a run or upload is real. `shared` names the demo's own published content and is
   reserved: a client cannot be given it. Threat model, in the operator's words, is in
   [hosted-demo.md](hosted-demo.md).
-- Responses carry `X-Content-Type-Options`, `X-Frame-Options`,
-  `Referrer-Policy`, and a minimal `Content-Security-Policy`.
+- Responses carry `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and a minimal
+  `Content-Security-Policy` -- `default-src 'none'; frame-ancestors 'none'`, which is what a JSON API should say.
+  The routes that hand an HTML *document* to a browser -- `/mcp-app/`, `/mcp-app/report/{run_id}`, and
+  `GET /api/v1/analysis/{run_id}/report?format=html` -- set their own instead, derived from the bytes they return:
+  every `<script>` and `<style>` block in the document is named by `sha256-` hash, so no `'unsafe-inline'` appears
+  anywhere and a block added later has to be re-admitted by name. The middleware leaves a header the route already
+  set alone. That split exists because the blanket policy made the App page inert -- measured 2026-10-21, Chromium
+  refused its inline script and the page offered zero dataset options while the same server answered `resources/list`
+  with its whole catalog, and no `TestClient`-based test could see it because none of them runs JavaScript. The
+  report document carries no script at all, so its policy says `script-src 'none'`; `img-src` allows `data:` because
+  the charts travel inside the file.
 
 | Method | Path | Description |
 |---|---|---|
