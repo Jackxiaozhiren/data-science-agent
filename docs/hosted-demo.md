@@ -260,7 +260,7 @@ For the public demo, visitors should assume:
 - uploaded datasets are temporary;
 - generated chart/report files are temporary;
 - a restart or redeploy may require re-uploading the dataset;
-- the free instance sleeps when idle, and the first request after an idle period was measured at 44.5 s to answer `/health`. The web app now says this up front and shows a bounded "waking up" retry rather than a spinner; see R-11 in the changelog.
+- the free instance sleeps when idle, and the first request after an idle period hangs rather than failing: measured at 44.5 s to answer `/health` on 2026-10-13 and **92.8 s on 2026-10-22**, same service, connection held open the whole time. The web app says this up front and shows a bounded "waking up" retry rather than a spinner (R-11); the bound is derived from its own attempt budget and `tests/contract/test_web_backend_probe.py` requires that budget to clear the slowest measurement recorded here, because a probe that gives up mid-wake reports a sleeping machine as a dead one.
 
 A production deployment should replace ephemeral local dataset/artifact storage with durable object storage, a persistent disk, or another explicitly managed persistence layer.
 

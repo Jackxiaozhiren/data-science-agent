@@ -184,7 +184,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "probe.ready": "API connected",
     "probe.probing": "Checking API…",
     "probe.warming":
-      "Demo waking up — the free instance sleeps when idle, so the first request can take about a minute. Attempt {attempt} of {total}.",
+      "Demo waking up — the free instance sleeps when idle, so the first request can take up to two minutes. Attempt {attempt} of {total}.",
     "probe.unreachable": "API unreachable — nothing answered. Check that the API is running, or retry.",
     "probe.shortReady": "API up",
     "probe.shortProbing": "Checking…",
@@ -879,7 +879,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "ds.dupNote": "已经存在同名数据集 —— 将作为一份新的副本上传。",
     "probe.ready": "API 已连接",
     "probe.probing": "正在检查 API…",
-    "probe.warming": "演示正在唤醒 —— 免费实例在空闲时会休眠，因此第一个请求可能需要一分钟左右。第 {attempt} 次尝试，共 {total} 次。",
+    "probe.warming": "演示正在唤醒 —— 免费实例在空闲时会休眠，因此第一个请求可能需要两分钟左右。第 {attempt} 次尝试，共 {total} 次。",
     "probe.unreachable": "API 不可达 —— 没有任何应答。请确认 API 正在运行，或重试。",
     "probe.shortReady": "API 正常",
     "probe.shortProbing": "检查中…",
