@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 from pathlib import Path
 
 
@@ -47,8 +49,12 @@ def test_extension_src_exists_and_arch_guard() -> None:
     assert "from dsa_agent" not in ext
     assert "import dsa_agent" not in ext
     assert "from dsa_agent" not in dsa
-    # dsa.ts must call CLI, not Agent logic
-    assert "uv run dsa" in dsa
+    # dsa.ts must call CLI, not Agent logic. The command is argv rather than one string since §35's shell fix:
+    # the program is `uv` and the words are the array, so the assertion reads the call rather than a substring
+    # that only exists when the arguments are interpolated into a shell line.
+    assert re.search(r"execFile\(\s*'uv'\s*,\s*\[\s*'run',\s*'dsa'", dsa), (
+        "dsa.ts no longer shells out to the public CLI in argv form"
+    )
     assert "child_process" in dsa
     # No duplicate Agent graph in extension
     assert "StateGraph" not in ext
@@ -204,3 +210,84 @@ def test_no_stub_anymore() -> None:
     assert "Ask DSA" in readme
     assert "§33" in readme
     assert "§35" in readme
+
+
+#: `exec` / `execSync` run their argument through /bin/sh. `execFile`, `execFileSync` and `spawn` do not, and
+#: `executeCommand` is the VS Code API rather than a process. The shape is matched on the call, so a comment or
+#: a docstring mentioning the word cannot trip it.
+_SHELL_CALL = re.compile(r"\bexec\s*\(|\bexecSync\s*\(|promisify\(\s*cp\.exec\s*\)")
+
+
+def test_no_extension_call_hands_the_shell_a_word_from_outside() -> None:
+    """A dataset filename is outside input, and the workspace can set `dsa.pythonPath`.
+
+    Every command was built as one string -- `exec(`uv run dsa analyze ${JSON.stringify(dataset)} ...`)` -- and
+    `exec` hands that string to /bin/sh. JSON.stringify adds *shell* double quotes too, and shell double quotes
+    still expand `$(...)` and backticks, so a file named `a$(touch /tmp/x).csv` ran the substitution before the
+    CLI saw the path -- and reached the CLI as `a.csv`, silently truncated. `test_the_shell_vs_argv_pair`
+    measures both halves; this test keeps the shape from coming back.
+    """
+    offenders: dict[str, list[str]] = {}
+    for source in sorted((VSCODE / "src").glob("*.ts")):
+        hits = [
+            line.strip()
+            for line in source.read_text(encoding="utf-8").splitlines()
+            if _SHELL_CALL.search(line)
+        ]
+        if hits:
+            offenders[source.name] = hits
+    assert offenders == {}, f"a shell-splicing call came back: {offenders}"
+
+    # The predicate must be able to see the shape it exists to catch -- the pre-fix line, verbatim in form.
+    old_shape = "    const { stdout } = await exec(`uv run dsa analyze ${JSON.stringify(dataset)} --json`, {});"
+    assert _SHELL_CALL.search(old_shape), "the guard cannot fail, so it guards nothing"
+    assert not _SHELL_CALL.search("    const { stdout } = await execFile('uv', argv, {});"), (
+        "the guard fires on the safe shape too, so it will be widened away"
+    )
+    dsa = (VSCODE / "src" / "dsa.ts").read_text(encoding="utf-8")
+    assert re.search(r"execFile\(\s*py\s*,\s*\[", dsa), (
+        "the config-derived interpreter is not argv'd"
+    )
+    assert re.search(r"execFile\(\s*'uv'\s*,\s*\[", dsa), "the CLI calls are not argv'd"
+    assert "JSON.stringify(dataset)" not in dsa and "JSON.stringify(task)" not in dsa, (
+        "quoting reappeared where an argv array belongs"
+    )
+
+
+def test_the_shell_vs_argv_pair_behave_as_the_guard_assumes(tmp_path: Path) -> None:
+    """The mechanism, measured rather than asserted: /bin/sh substitutes, `execFile` does not.
+
+    Written as one node probe because the two outcomes are the point of the pair -- a test that only showed
+    argv being safe would also pass in a world where the string form was safe, and the guard above would then
+    be policing nothing.
+    """
+    marker = tmp_path / "substituted"
+    probe = tmp_path / "probe.mjs"
+    probe.write_text(
+        "import cp from 'node:child_process';\n"
+        "import util from 'node:util';\n"
+        "import fs from 'node:fs';\n"
+        "const exec = util.promisify(cp.exec);\n"
+        "const execFile = util.promisify(cp.execFile);\n"
+        "const marker = process.argv[2];\n"
+        "const evil = `x$(touch ${marker}).csv`;\n"
+        "await exec(`node echo.mjs ${JSON.stringify(evil)}`).catch(() => {});\n"
+        "const shellSubstituted = fs.existsSync(marker);\n"
+        "fs.rmSync(marker, { force: true });\n"
+        "const out = await execFile(process.execPath, [new URL('./echo.mjs', import.meta.url).pathname, evil]);\n"
+        "console.log(JSON.stringify({ shellSubstituted, argvIntact: out.stdout.trim() === evil }));\n",
+        encoding="utf-8",
+    )
+    echo = tmp_path / "echo.mjs"
+    echo.write_text("console.log(process.argv[2] ?? '');\n", encoding="utf-8")
+    # `exec` runs in the probe's cwd, where echo.mjs sits next to it.
+    result = subprocess.run(
+        ["node", str(probe), str(marker)],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr[-400:]
+    observed = json.loads(result.stdout.strip().splitlines()[-1])
+    assert observed == {"shellSubstituted": True, "argvIntact": True}, observed

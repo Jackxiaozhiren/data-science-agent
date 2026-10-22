@@ -43,6 +43,29 @@
   timeout (coverage pin red). 8 tests in `tests/contract/test_web_backend_probe.py` green, including the plant
   that has always been there -- shrink one constant and the guard must fail.
 
+### Security (post-4.6.0) — the VS Code extension handed the shell a filename
+
+- Every CLI call in `apps/vscode/src/dsa.ts` was one interpolated string passed to `cp.exec`, which runs it
+  through `/bin/sh`. The interpolated words were the dataset path (taken from the file picker or the workspace
+  tree the extension itself lists), the typed question, and `dsa.pythonPath` -- a setting a repository can ship
+  in `.vscode/settings.json`. `JSON.stringify` was used as quoting, and it is not: its quotes are shell double
+  quotes, which still expand `$(…)` and backticks.
+- Measured, not inferred: a path shaped like `/tmp/a$(touch /tmp/probe_pwn).csv` built into the same string and
+  handed to `exec` created the marker and reached the receiving program as `/tmp/a.csv` -- code ran, and the
+  argument arrived silently truncated. Both halves matter: the second one means a *benign* file named with `$(`
+  already produced wrong analyses before there was any attacker.
+- All six call sites now use `execFile`/`execFileSync` with an argv array; `extension.ts`'s `execSync` came with
+  them. The arch guard in `tests/vscode/test_vscode_extension.py` that asserted the literal `"uv run dsa"` was
+  reading the old string shape and now matches the argv call, so no assertion was loosened to accommodate the fix.
+- Guards: a shape check over `src/*.ts` for `exec(`/`execSync(`/`promisify(cp.exec)` that also proves *itself*
+  -- the pre-fix line must be caught by the predicate and the safe line must not be, so the guard cannot pass by
+  being blind -- plus a node probe that runs the pair and asserts `shellSubstituted: True, argvIntact: True`. A
+  test that showed only the argv half would still pass in a world where the string half was safe.
+- Residual, named rather than fixed: `dsa.pythonPath` still names a program the workspace can choose, which is a
+  trust decision VS Code mediates with workspace trust; removing the shell means a value there is no longer
+  *parsed*, but a hostile value could still name a binary to run. That is the setting's meaning, not a bug to
+  patch here, and it is why the extension README says the argv form is what changed.
+
 ### Verified (post-4.6.0) — the settings route's promise to stay offline is now enforced
 
 - `docs/api.md` says `PUT /api/v1/provider` is "Shape-validated only -- the route never contacts the provider,
