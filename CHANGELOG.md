@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the token's boundary had twelve public sides and the docs named three
+
+- `docs/api.md` said `DSA_AUTH_TOKEN` gates all `/api/*` routes and that `/health`, `/ready`, `/version` "stay
+  public". The first clause is true; the parenthetical read as a list of exceptions, and `AuthMiddleware` in fact
+  returns early for anything that does not start with `/api/`. Measured with a token configured: 19 `/api/`
+  routes answer `401`, and twelve other surfaces answer without a credential -- `/health`, `/ready`, `/version`,
+  `/health/dependencies`, `/metrics`, the API root `/`, `/docs`, `/docs/oauth2-redirect`, `/redoc`,
+  `/openapi.json`, `/mcp`, `/mcp-app`.
+- That matters because `/mcp` is on the ungated side and dispatches `run_python` and `run_sql`. An operator who
+  set the token to lock down a self-hosted instance got a locked data API and an open tool surface, and the
+  sentence they acted on did not say so. This is documentation of a boundary, not a change to it: what protects
+  the tool surface is still the owner's call (`AUDIT_LEDGER.md` §252, open item #59).
+- Guard: `tests/contract/test_auth_surface.py`, 6 tests. The route surface is enumerated from the app -- OpenAPI
+  paths split on the prefix, the framework's own generated docs URLs, and the mounted sub-apps -- so no list in
+  the test can go stale. Behavioural: every gated route must refuse an absent token, every other route must
+  answer without one, a correct bearer is admitted, and a wrong token, an empty `Authorization`, and a `Basic`
+  scheme are all refused. Documentation: the auth bullet's backticked paths and the measured public set must be
+  equal in both directions, and the sentence has to name `/mcp`, `/mcp-app` and the two tools they dispatch.
+- Falsified four ways. Restoring the three-exception sentence reddened the equality and the naming tests.
+  Removing the `/api/` predicate -- tightening the boundary rather than loosening it -- reddened only the
+  behavioural test, because the public set is enumerated from routes and not from behaviour, which is the right
+  separation: the docs list what exists, the requests prove what the middleware does. Blanking the token read
+  reddened all three behavioural checks. Adding a path to the docs that the service does not actually serve
+  publicly reddened the equality, so the sentence cannot over-claim either.
+
 ### Fixed (post-4.6.0) — the advisory gate blamed npm's documentation for npm's outage
 
 - `main` went red at the advisory step on the upload-guard commit, and nothing in this repository had changed:

@@ -17,9 +17,13 @@ Conventions:
   (`DSA_RATE_LIMIT_UPLOAD_PER_MIN`), `/api/v1/events` 120/min (`DSA_RATE_LIMIT_EVENTS_PER_MIN`), and
   `/api/v1/experiments` 60/min, which owns no knob of its own and follows
   `DSA_RATE_LIMIT_ANALYSIS_PER_MIN`. Reads stay unlimited; `DSA_RATE_LIMIT_ENABLED=false` turns the whole thing off.
-- Opt-in auth: set `DSA_AUTH_TOKEN` to require
-  `Authorization: Bearer <token>` on all `/api/*` routes
-  (`/health`, `/ready`, `/version` stay public). Empty = public demo mode.
+- Opt-in auth: set `DSA_AUTH_TOKEN` to require `Authorization: Bearer <token>` on all `/api/*` routes. Empty =
+  public demo mode. The token is not a whole-service gate: everything outside `/api/` answers without it, and the
+  list is measured rather than inferred -- `/health`, `/ready`, `/version`, `/health/dependencies`, `/metrics`,
+  the API root `/`, the generated interface `/docs`, `/docs/oauth2-redirect`, `/redoc`, `/openapi.json`, and the
+  two mounted surfaces `/mcp` and `/mcp-app`, which carry the tool endpoint and the App page. So a token gates
+  the data routes and nothing else, and `/mcp` on the ungated side still dispatches `run_python` and `run_sql`;
+  `tests/contract/test_auth_surface.py` fails if the boundary and this sentence ever disagree.
 - **Visitor scoping (R-08):** every stored row carries an `owner`, and a read returns that owner's rows plus the
   published sample. Send `X-DSA-Owner: <id>` on the dataset, analysis, experiment, report and bundle routes -- or
   `?owner=<id>` on a link the browser opens itself, where no header is possible. A request with no id acts as the
