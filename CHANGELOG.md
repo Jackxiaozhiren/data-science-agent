@@ -2,6 +2,136 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the token's boundary had twelve public sides and the docs named three
+
+- `docs/api.md` said `DSA_AUTH_TOKEN` gates all `/api/*` routes and that `/health`, `/ready`, `/version` "stay
+  public". The first clause is true; the parenthetical read as a list of exceptions, and `AuthMiddleware` in fact
+  returns early for anything that does not start with `/api/`. Measured with a token configured: 19 `/api/`
+  routes answer `401`, and twelve other surfaces answer without a credential -- `/health`, `/ready`, `/version`,
+  `/health/dependencies`, `/metrics`, the API root `/`, `/docs`, `/docs/oauth2-redirect`, `/redoc`,
+  `/openapi.json`, `/mcp`, `/mcp-app`.
+- That matters because `/mcp` is on the ungated side and dispatches `run_python` and `run_sql`. An operator who
+  set the token to lock down a self-hosted instance got a locked data API and an open tool surface, and the
+  sentence they acted on did not say so. This is documentation of a boundary, not a change to it: what protects
+  the tool surface is still the owner's call (`AUDIT_LEDGER.md` §252, open item #59).
+- Guard: `tests/contract/test_auth_surface.py`, 6 tests. The route surface is enumerated from the app -- OpenAPI
+  paths split on the prefix, the framework's own generated docs URLs, and the mounted sub-apps -- so no list in
+  the test can go stale. Behavioural: every gated route must refuse an absent token, every other route must
+  answer without one, a correct bearer is admitted, and a wrong token, an empty `Authorization`, and a `Basic`
+  scheme are all refused. Documentation: the auth bullet's backticked paths and the measured public set must be
+  equal in both directions, and the sentence has to name `/mcp`, `/mcp-app` and the two tools they dispatch.
+- Falsified four ways. Restoring the three-exception sentence reddened the equality and the naming tests.
+  Removing the `/api/` predicate -- tightening the boundary rather than loosening it -- reddened only the
+  behavioural test, because the public set is enumerated from routes and not from behaviour, which is the right
+  separation: the docs list what exists, the requests prove what the middleware does. Blanking the token read
+  reddened all three behavioural checks. Adding a path to the docs that the service does not actually serve
+  publicly reddened the equality, so the sentence cannot over-claim either.
+
+### Fixed (post-4.6.0) — the advisory gate blamed npm's documentation for npm's outage
+
+- `main` went red at the advisory step on the upload-guard commit, and nothing in this repository had changed:
+  the registry's audit endpoint returned `503` / `socket hang up` for about seven minutes, `npm audit --json`
+  wrote its *error* document to the report path, the CI step's `|| true` let that step pass, and the reader was
+  handed `{message: "request to ... failed, reason: socket hang up", error: {...}}` with no
+  `auditReportVersion`.
+- Refusing that input is right, and it is the only reason the outage was visible at all. The message was wrong:
+  "npm changed format; re-read its docs before trusting counts" sends whoever is paged to npm's documentation
+  when the true answer is "the registry did not answer, and the gate did not run." The reader now separates the
+  two -- a document that carries npm's own failure `message` and no report version is named as an endpoint
+  failure -- and both cases still exit 2. An absent scan is never a clean scan.
+- Guards: `tests/test_npm_advisory_gate.py` gained a pair, tested against the verbatim failure capture
+  (`tests/fixtures/npm_audit_endpoint_failure_2026-10-22.json`) and against a real report whose version has been
+  moved to 3. Each asserts the other's wording is absent, so the discrimination is the claim: the failure case
+  must not say "changed format", the schema case must not say "failed request". Removing the new branch reddens
+  exactly the first of the pair; the second stays green, which is what shows the branch did not swallow it.
+- Measured after the fact: the endpoint recovered minutes later, and the same reader against a live clean report
+  prints `no high/critical findings` and exits 0 with `vulnerabilities: {}`. The change re-attributed the failure;
+  it did not loosen the gate.
+
+### Fixed (post-4.6.0) — "lists accept ?limit=" is a promise three routes make and a fourth does not
+
+- The pagination bullet opened "Lists accept `?limit=` (1–1000, default 100)". Three routes do -- datasets,
+  analysis, experiments. A fourth returns the same shape, `{experiments, total}`, and accepts no query parameter
+  at all: `/api/v1/research/experiments` truncates to `RESULTS_LIMIT = 10` and reports `total` as the *uncapped*
+  count. A client that trusted the bullet asked for 500, received ten, saw no error, and got a `total` that
+  looked like a page it could not reach.
+- The bullet now names the three routes by path, and the research row says what it means in the table: not
+  paginated, `?limit=` and `?offset=` ignored, `total` counts every file the directory holds.
+- Guard: `tests/contract/test_pagination_surface.py`, 5 tests, built on `app.openapi()` because that is the
+  contract a client can discover rather than a shape the test assumed. Containment runs both ways between the
+  routes the schema paginates and the routes the doc names; `(1–1000, default 100)` and `?offset=` `(default 0)`
+  are read out of the published schema and required in the sentence, so a changed ceiling cannot leave the prose
+  behind; each route must refuse `limit=0`, `limit=1001` and `offset=-1` with 422 *and* answer a 200 with both a
+  `total` and an array for a request inside its own bounds, so a route that refused everything cannot pass the
+  guard either.
+- Falsified five ways: restoring the old generalisation (the extractor now requires exactly one bullet that
+  promises both parameters, so a doc that stops making the claim goes red instead of quietly having nothing to
+  check); deleting "Not paginated" from the row; raising `RESULTS_LIMIT` to 12 (the row reddens, the cap witness
+  stays green -- it pins the relation between array and total, not the number); relaxing `ge=1` to `ge=0` on one
+  route (both the bounds pin and the refusal test fire).
+- Two mistakes inside the guard's own construction, recorded because they are the reason it was run before it was
+  trusted: an in-bounds request was assumed to short-circuit at validation and instead reached the service layer
+  with a stubbed session, and the first search keyed on the bullet's opening words, which this round's rewording
+  had moved.
+
+### Fixed (post-4.6.0) — a rate limit nobody told the operator about
+
+- `dsa_api.core.security` limits four `POST` routes: `/api/v1/analysis` 60/min, `/api/v1/datasets` 30/min,
+  `/api/v1/events` 120/min, `/api/v1/experiments` 60/min. `docs/api.md` named three of them, so the fourth was an
+  undocumented control on a route the demo's own comparison feature uses.
+- The size of each rule was resolved by a dict literal built inside `dispatch` and looked up as `{...}[prefix]`,
+  keyed on the same prefixes as `_DEFAULT_RULES`. Two lists describing one control, checked by nothing: a rule
+  added to one and not the other raises `KeyError` inside the request path, and the client gets a 500 on the
+  route the new rule was meant to protect. The map is now the module constant `_RULE_KNOBS`, which is also what
+  made the relation testable -- a local literal cannot be inspected.
+- `experiments` owns no knob: it reads `rate_limit_analysis_per_min`, so `DSA_RATE_LIMIT_ANALYSIS_PER_MIN` moves
+  two routes at once. That is now said in the docs, because an operator sizing a 512 MB free-tier instance reads
+  the docs and not the source.
+- Guards: `tests/contract/test_rate_limit_surface.py`, 6 tests. Three pin the relation -- the two lists and the
+  documentation paragraph must name the same routes, at the numbers `settings` actually enforces (derived per
+  test, not transcribed, so a changed default cannot leave the doc behind), and every knob's environment
+  variable must appear. Two are behavioural, because a documentation pin cannot show that a limit is real: post
+  three times at a monkeypatched ceiling of 2 and `/api/v1/experiments` must answer `429` + `Retry-After`, and
+  with `DSA_RATE_LIMIT_ENABLED=false` it must not.
+- Falsified four ways, each reddening only its own guard: deleting the experiments clause from the doc paragraph
+  (1 red); deleting the experiments entry from `_RULE_KNOBS` (3 red -- the set equality, the doc pin, and the
+  behavioural test, which is the `KeyError` surfacing as a request failure); removing the `rate_limit_enabled`
+  early return (2 red, including the check that the switch is even read); appending a fifth rule with no knob and
+  no doc line (2 red, which is the case the old shape punished only at runtime).
+- The one limitation this round documents rather than fixes: the borrowed knob stays borrowed. Giving
+  `experiments` its own `DSA_RATE_LIMIT_EXPERIMENTS_PER_MIN` would be a third setting nobody has asked for, and
+  the doc now says plainly which variable moves it.
+
+### Fixed (post-4.6.0) — the upload guard read the filename, not the file
+
+- `docs/api.md` advertises `upload (multipart, 100MB, MIME sniff, archive bomb guard)`. The archive half of that
+  sentence was carried by a parameter nothing read: the route captured the file's first 4 KiB, `save_dataset`
+  threaded it along, and `validate_file` accepted `head=` and never looked at it. Measured before the fix: a zip
+  body named `evil.csv` returned `DatasetFormat.csv`, was stored, and was profiled as one enormous text column
+  (201). What actually ran was an extension blocklist -- `.zip`, `.gz`, `.tar` -- which any caller can leave
+  behind by renaming the file.
+- `validate_file` now tests the leading bytes against four container signatures plus the tar header at its own
+  offset 257, and keeps the one exception the format specification forces: an `.xlsx` *is* a zip container, so a
+  `PK` opening is expected there and accepted nowhere else. A caller that supplies no bytes -- a CLI path reading
+  its own file -- still gets the name-only check, which is now stated rather than implied. What the guard does is
+  reject containers; it does not open them, so there is no decompression to bomb, and the doc says "archive guard"
+  rather than "archive bomb guard".
+- Two more defects were sitting in the same three lines. The capture was `tmp_path.read_bytes()[:4096]`: to keep
+  4 KiB the server loaded the whole upload into memory a second time, beside a comment saying the temp file
+  existed to avoid exactly that, and on the 512 MB free-tier instance a 100 MB upload was a 100 MB allocation.
+  And `MAX_SIZE_BYTES` was enforced only after the body had been fully written to disk, so "the limit is 100 MB"
+  described the row that gets rejected, not the work a request costs. The route now takes the head off the same
+  chunks that reach the disk, refuses at the limit while streaming, and removes the temp file on that path --
+  which it also now does when a client disconnects mid-body, something the old shape leaked.
+- Guard: `tests/security/test_upload_guard.py`, 17 tests, every rejection paired with an acceptance so the guard
+  cannot pass by rejecting everything. Falsified four ways: deleting the leading-byte block reddened the six
+  signature tests and left the acceptances green; emptying the `.xlsx` exception reddened exactly the two tests
+  that protect Excel uploads; moving the size check after the loop reddened the refusal test, which counts the
+  reads the stream saw; reintroducing the whole-file pass reddened a structural test that walks both functions'
+  ASTs for `read_bytes`/`read_text`, because every other assertion in the file is satisfied by that buggy shape.
+- `docs/api.md` names the mechanism now, and one test pins the advertised `100MB` to the constant the code
+  enforces, so the two cannot drift apart silently.
+
 ### Fixed (post-4.6.0) — the `/mcp` page copied a call that could not succeed
 
 - `copyTemplate` built `{ params: { name, arguments: {} } }` for every tool. Half the surface rejects an empty

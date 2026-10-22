@@ -15,8 +15,50 @@ from dsa_datasets.errors import (
     UnsupportedFormatError,
     ValidationError,
 )
+from dsa_datasets.validate import MAX_SIZE_BYTES
 
 router = APIRouter(prefix="/api/v1/datasets", tags=["datasets"])
+
+#: How many leading bytes the magic-byte guard gets to look at.
+HEAD_BYTES = 4096
+
+
+async def _write_upload_to_temp(
+    file: UploadFile, limit: int = MAX_SIZE_BYTES
+) -> tuple[Path, int, bytes]:
+    """Stream a request body to a temp file, returning its path, size, and first `HEAD_BYTES` bytes.
+
+    The head comes off the same chunks that reach the disk, so the body is never read twice -- the
+    previous version re-opened the finished file and did `read_bytes()[:4096]`, which put a whole
+    100 MB upload into memory to keep 4 KB of it. The size limit is applied *while* streaming, so an
+    oversized body costs one chunk instead of a full write, and the temp file is removed on the way
+    out either way. The caller owns the returned path.
+    """
+    head = bytearray()
+    size = 0
+    kept = False
+    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename or "").suffix) as tmp:
+        path = Path(tmp.name)
+        try:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                tmp.write(chunk)
+                if len(head) < HEAD_BYTES:
+                    head.extend(chunk[: HEAD_BYTES - len(head)])
+                if size > limit:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"File too large: {size} bytes > limit {limit} bytes",
+                    )
+            kept = True
+        finally:
+            if not kept:
+                with contextlib.suppress(OSError):
+                    path.unlink(missing_ok=True)
+    return path, size, bytes(head)
 
 
 @router.get("/")
@@ -51,23 +93,7 @@ async def create_dataset_route(
 ) -> dict[str, Any]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename required")
-    # read to temp file to avoid holding all in memory twice
-    suffix = Path(file.filename).suffix
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp_path = Path(tmp.name)
-        size = 0
-        while True:
-            chunk = await file.read(1024 * 1024)
-            if not chunk:
-                break
-            size += len(chunk)
-            tmp.write(chunk)
-    # Capture head for MIME sniff + archive bomb heuristic
-    head: bytes | None = None
-    try:
-        head = tmp_path.read_bytes()[:4096] if tmp_path.exists() else None
-    except Exception:
-        head = None
+    tmp_path, size, head = await _write_upload_to_temp(file)
     ct = file.content_type
     try:
         result = await save_dataset(
