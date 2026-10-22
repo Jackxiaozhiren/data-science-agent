@@ -19,8 +19,9 @@ from typing import Any
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-#: A credential shaped like a real one, so a call that shipped it would be a leak the test can see.
-PROBE_KEY = "sk-or-v1-4f9c2a71be3d085fa6c17e0b2d94k73f"
+#: Distinctive rather than shaped like a vendor key: the assertion needs a string whose appearance in a
+#: response would be a leak, and gitleaks is right to stop a real-shaped one from being committed.
+PROBE_KEY = "probe-key-4f9c2a71be3d085fa6c17e0b2d94k73f"
 #: Port 4 is unreachable by design; if the route ever tried to use it, the blocked socket records the attempt.
 COMPAT_URL = "http://127.0.0.1:4/v1"
 

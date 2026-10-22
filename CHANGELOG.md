@@ -12,8 +12,8 @@
   `socket.create_connection` and `socket.getaddrinfo` for the duration of the request, records every attempt,
   and asserts both that the route answers 200 and that the attempt list is empty -- a raise nobody counted
   would be a test passing for the wrong reason. Three routes are covered: the write, the two reads that report
-  what `resolve_llm_mode()` decided (`GET /api/v1/provider` and `/version`), and the erase. The payload carries
-  a realistically shaped key, so a call that shipped it would also be a leak the test can see.
+  what `resolve_llm_mode()` decided (`GET /api/v1/provider` and `/version`), and the erase. The payload carries a
+  distinctive string, so a call that shipped it would also be a leak the test can see.
 - Falsified by inserting one line into `save_provider_settings` that dials `127.0.0.1:4` before validating: all
   three tests went red, and `tests/contract/test_provider_settings.py` stayed green beside them, which is the
   point -- the existing sixteen tests cover merge semantics, file mode and refusal paths, and none of them could
