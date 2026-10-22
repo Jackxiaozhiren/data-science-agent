@@ -262,6 +262,31 @@
   `AUDIT_LEDGER.md` §240 to §242.
 
 
+### Changed (post-4.6.0) — Tailwind 3 → 4, which closed both live paths to the one advisory the list carried
+
+- `apps/web` builds on `tailwindcss@4.3.3` with `@tailwindcss/postcss`. `autoprefixer` left the graph
+  (v4 prefixes through Lightning CSS), and `app/globals.css` trades the three `@tailwind` directives for
+  `@import "tailwindcss"` plus `@config "../tailwind.config.js"`, so the existing theme -- font stacks,
+  radii, the `beam` keyframes -- carries over without re-typing a token.
+- v4 changed the preflight default border colour to `currentColor`. Sixteen elements in `apps/web` use
+  `border` with no colour class, so `@layer base` pins `border-color: hsl(var(--border))` -- zinc-200, the
+  shade the other 56 border sites already name. Measured on the built bundle: all 16 compute to
+  `rgb(228, 228, 231)` across `/`, `/datasets`, `/settings`, `/reports` and `/runs`, zero offenders.
+- The workspace root carried its own `tailwindcss: 3.4`, `postcss` and `autoprefixer` in `dependencies`
+  from the first frontend commit with no consumer at all: no config outside `apps/web`, no import, and no CI
+  step that installs at root (`docs/getting-started.md:183` documents `cd apps/web && npm ci`). That dead trio
+  was the **second** live path to `braces`, so it is deleted rather than migrated.
+- `docs/audit/npm-advisory-exceptions.json` is therefore empty -- its own `removal_path` named this
+  migration, and the gate had already called the entry stale on PR 82's branch. `tests/test_npm_advisory_gate.py`
+  is re-aimed so an empty list reads as a claim, not a silence: the 2026-10-03 capture still exercises the
+  exemption path against a planted list, a new test asserts the committed empty list does **not** forgive that
+  historical advisory, the list is cross-checked against the post-migration capture in both directions, and the
+  absence of `braces|micromatch|chokidar|fast-glob` is re-derived from both lockfiles. Falsified: planting the
+  old entry back reddens exactly those two guards (`2 failed, 16 deselected`), restoring returns `18 passed`.
+- Root lock 372 → 299 packages, `apps/web` lock 287 → 254. `npm --prefix apps/web audit` reports 0
+  vulnerabilities; `scripts/check_npm_workspace_lock.py`, `next build` and `tsc --noEmit` are clean.
+
+
 ### Fixed (post-4.6.0) — the run's report called its checks by their engine names, and one heading broke the language rule
 
 - Reading the MCP App page for a Chinese run (`/mcp-app/report/{id}`) showed the deliverable's own inconsistency:
