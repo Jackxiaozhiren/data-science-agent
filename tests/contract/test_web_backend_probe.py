@@ -115,7 +115,47 @@ def test_the_retry_is_bounded_and_says_so() -> None:
     )
 
 
-COLD_START_MS_MEASURED = 44_500  # hosted demo, 2026-10-13: /health answered 200 after 44.5 s
+#: Dated cold-start samples on the same free service: time from `GET /health` to the first byte with the
+#: connection held open the whole way. The budget has to clear the slowest sample ever taken -- the first budget
+#: was sized to 44.5 s plus margin, and on 2026-10-22 the same host took 92.8 s, so a waking instance was
+#: reported as an unreachable one for the whole middle of that wait.
+COLD_START_SAMPLES_MS = {"2026-10-13": 44_500, "2026-10-22": 92_808}
+COLD_START_MS_MEASURED = max(COLD_START_SAMPLES_MS.values())
+
+#: Word numbers, because the sentence a reader trusts is written in words in one language and digits in the
+#: other, and a promise the guard can only read in one of them is a promise it half-checks.
+_WORD_NUMBERS = {
+    "a": 1,
+    "an": 1,
+    "one": 1,
+    "一": 1,
+    "two": 2,
+    "二": 2,
+    "两": 2,
+    "three": 3,
+    "三": 3,
+    "four": 4,
+    "四": 4,
+    "five": 5,
+    "五": 5,
+}
+
+
+def _promised_wait_ms(warming: str) -> int:
+    """The longest wait the sentence names, in milliseconds -- 0 when it names none."""
+    minutes = re.findall(
+        r"(\d+|a|an|one|two|three|four|five|一|二|两|三|四|五)\s*(?:minutes?|min(?![a-z])|分钟)",
+        warming,
+        re.I,
+    )
+    seconds = re.findall(r"(\d+)\s*(?:seconds?|秒)", warming, re.I)
+    candidates = []
+    for number in minutes:
+        value = int(number) if number.isdigit() else _WORD_NUMBERS.get(number.lower(), 0)
+        if value:
+            candidates.append(value * 60_000)
+    candidates.extend(int(number) * 1000 for number in seconds)
+    return max(candidates) if candidates else 0
 
 
 def test_the_probe_waits_longer_than_the_cold_start_it_is_meant_to_cover() -> None:
@@ -159,14 +199,15 @@ def test_the_probe_waits_longer_than_the_cold_start_it_is_meant_to_cover() -> No
     # the same coverage, and a zh sentence that quietly dropped the wait would otherwise be invisible here.
     for locale in ("en", "zh"):
         warming = _dictionary_value(locale, "probe.warming")
-        assert re.search(r"minute|分钟|second|秒", warming, re.I), (
-            f"the {locale} waking sentence names no wait, so the reader cannot tell how long to stay"
+        promised_ms = _promised_wait_ms(warming)
+        assert promised_ms, (
+            f"the {locale} waking sentence names no wait, so the reader cannot tell how long to stay: "
+            f"{warming!r}"
         )
-        if re.search(r"minute|分钟", warming, re.I):
-            assert coverage >= 45_000, (
-                f"the {locale} warming copy promises about a minute but the probe stops at "
-                f"{coverage / 1000:.1f}s"
-            )
+        assert coverage >= promised_ms, (
+            f"the {locale} copy tells the reader to wait {promised_ms / 1000:.0f}s while the probe gives up "
+            f"at {coverage / 1000:.1f}s -- the sentence promises longer than the code delivers"
+        )
 
     thin = _planted(
         source,

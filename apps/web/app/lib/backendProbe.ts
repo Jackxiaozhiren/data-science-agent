@@ -4,14 +4,16 @@
 // colours, each page inferred "down" from its own rejected request, and an empty list could mean either a
 // new account or a dead API (web plan B3/B4). The case none of them described is the common one on a free
 // instance: the first request hangs for tens of seconds while the machine wakes. Measured on the hosted
-// demo on 2026-10-13 -- `GET /health` answered 200 after **44.5 s** (output/lane-c capture log). So
-// "nothing has answered yet" is a real third state, it is what a first-time visitor actually sees, and
-// calling it "unreachable" loses the visitor.
+// demo on 2026-10-13 -- `GET /health` answered 200 after **44.5 s** (output/lane-c capture log) -- and
+// re-measured on 2026-10-22 on the same service at **92.8 s** (`curl -w` timing, connection held open the
+// whole time, no bytes first). So "nothing has answered yet" is a real third state, it is what a first-time
+// visitor actually sees, and calling it "unreachable" loses the visitor.
 //
-// The budget below is that measurement, not a guess, and it has to *exceed* it: a sequence that gives up
-// before the instance wakes reports a sleeping machine as a dead one, which is the exact defect R-11 exists
-// to remove. The first attempt is short so the waiting state appears at once, and the rest hold long enough
-// that total coverage clears 44.5 s with margin -- PROBE_BUDGET_MS is what the guard compares against it.
+// The budget below is those measurements, not a guess, and it has to *exceed* the slowest one: a sequence
+// that gives up before the instance wakes reports a sleeping machine as a dead one, which is the exact
+// defect R-11 exists to remove. That is what happened to the first budget -- sized to clear 44.5 s with
+// margin -- on a 92.8 s wake. The silence hint, not the attempt length, is what makes the waiting state
+// appear at once; PROBE_BUDGET_MS is what the guard compares against the measurements.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
@@ -22,11 +24,11 @@ import { useLocale } from "@/app/lib/LocaleProvider";
 export type BackendPhase = "probing" | "warming" | "ready" | "unreachable";
 
 /** Per-attempt ceiling. A sleeping instance hangs rather than refusing, so this is what detects it. */
-export const PROBE_TIMEOUT_MS = 12000;
+export const PROBE_TIMEOUT_MS = 18000;
 /** Attempts are bounded on purpose: an unbounded retry is indistinguishable from a hang. */
-export const PROBE_ATTEMPTS = 4;
+export const PROBE_ATTEMPTS = 6;
 /** Waits between attempts. */
-export const PROBE_BACKOFF_MS = [2000, 4000, 8000] as const;
+export const PROBE_BACKOFF_MS = [2000, 4000, 6000] as const;
 
 /**
  * How long an outstanding request may go unanswered before the page says it is waiting. Deliberately much
@@ -129,9 +131,9 @@ function delay(ms: number): Promise<void> {
 }
 
 async function oneProbe(onSilent: () => void): Promise<ProbeOutcome> {
-  // The wait is explained while it is happening, not after a whole attempt has timed out: a 12 s per-attempt
-  // ceiling buys the coverage a 44.5 s cold start needs, but publishing `warming` only when that attempt ends
-  // would leave the visitor staring at "Checking API…" for 12 seconds. So the attempt stays in flight and a
+  // The wait is explained while it is happening, not after a whole attempt has timed out: an 18 s per-attempt
+  // ceiling buys the coverage a 92.8 s cold start needs, but publishing `warming` only when that attempt ends
+  // would leave the visitor staring at "Checking API…" for 18 seconds. So the attempt stays in flight and a
   // short silence timer repaints it. A ready instance answers inside the hint window and never sees this fire.
   const hint = setTimeout(onSilent, PROBE_SILENCE_HINT_MS);
   try {
