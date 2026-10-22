@@ -251,7 +251,7 @@ export default function DatasetsPage() {
             </ul>
           )}
           {/* While the probe is still waiting, its own notice is the truth on screen: showing "no response
-              could be read" next to "waking up, attempt 2 of 4" is the contradiction R-11 exists to remove. */}
+              could be read" next to "waking up, attempt 2 of 6" is the contradiction R-11 exists to remove. */}
           {err && phase !== "warming" && phase !== "probing" && (
             <div className="mt-3"><ErrorState message={err} retry={() => { retry(); void load(); }} /></div>
           )}

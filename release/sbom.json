@@ -1124,10 +1124,10 @@
     },
     {
       "package": "scipy",
-      "version": "1.18.0",
+      "version": "1.18.1",
       "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.\n All rights rese...",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/scipy@1.18.0"
+      "purl": "pkg:pypi/scipy@1.18.1"
     },
     {
       "package": "send2trash",

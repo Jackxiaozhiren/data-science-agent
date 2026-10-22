@@ -109,6 +109,15 @@ def _load_audit(path: Path) -> dict[str, dict]:
         raise InputError(f"{path}: not valid JSON ({exc}). Truncated npm output?") from exc
     if not isinstance(doc, dict):
         raise InputError(f"{path}: expected a JSON object, got {type(doc).__name__}")
+    if "auditReportVersion" not in doc and isinstance(doc.get("message"), str):
+        # Measured 2026-10-22: the registry's audit endpoint answered 503 / socket hang up and npm wrote
+        # `{"message": "request to ... failed, reason: ...", "error": {...}}` to the report path. Naming that
+        # as a schema change sent the reader's own hint about npm docs, which is the wrong thing to tell the
+        # person whose main branch just went red.
+        raise InputError(
+            f"{path}: npm reported a failed request rather than an audit -- {doc['message']!r}. "
+            "The advisory gate did not run. This describes the registry, not these packages."
+        )
     if doc.get("auditReportVersion") != 2:
         raise InputError(
             f"{path}: auditReportVersion is {doc.get('auditReportVersion')!r}, this reader "

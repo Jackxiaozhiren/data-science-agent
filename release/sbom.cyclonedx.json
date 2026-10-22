@@ -1396,7 +1396,7 @@
     },
     {
       "name": "scipy",
-      "version": "1.18.0",
+      "version": "1.18.1",
       "licenses": [
         {
           "license": {
@@ -1404,7 +1404,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/scipy@1.18.0",
+      "purl": "pkg:pypi/scipy@1.18.1",
       "source": "https://pypi.org/simple"
     },
     {

@@ -2,6 +2,248 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the hosted-demo census gained a third probe and a re-run
+
+- `docs/hosted-demo.md` already carried two credential-free currency probes: an OpenAPI path census and a
+  content probe that asks a published report how it names its own validation checks. Both were re-run on
+  2026-10-22 -- 25 paths identical on both sides, the content probe still `True`, `/version` still `4.6.0`
+  -- so the redeploy #44 asks for is still owed, and the doc now says so with its dates rather than with the
+  2026-10-21 ones alone.
+- A third probe was added, for the half neither of the two covers: whether the MCP App page can run at all.
+  `curl -s -o /dev/null -D - …/mcp-app/ | grep -i '^content-security-policy'` distinguishes the API-wide
+  `default-src 'none'` (an HTML document whose inline script that policy forbids -- a picture of a page with
+  dead buttons) from the per-document policy that names the script it sent. Measured today the hosted answer is
+  the strict default, which is the deployment consequence of the CSP fix, stated as something anyone can check.
+- The web side is recorded as *not measurable from the machine that tried*: both `*.vercel.app` URLs timed out
+  at TCP connect while Render answered, and that cannot distinguish a paused deployment from local egress
+  filtering. The doc says a connection that never opened is a fact about the path, not the service, so the
+  next reader does not repeat this session's earlier error of reading a too-short wait as a dead demo.
+
+### Fixed (post-4.6.0) — the waking probe gave up at 62 s on a 92.8 s wake
+
+- R-11 sized the browser's bounded "waking up" retry to clear the cold start it had measured: `GET /health`
+  answered 200 after 44.5 s on 2026-10-13. Re-measured on the same free service today, the same request held
+  its connection for **92.8 s** before answering. The budget is four attempts of 12 s plus 2/4/8 s of backoff
+  -- 62 s -- so the first visitor of the day was told `API unreachable — nothing answered` while the instance
+  was still booting, which is the precise defect R-11 exists to remove, come back because a constant encoded
+  one measurement and the measurement moved.
+- Constants now: `PROBE_TIMEOUT_MS` 18000, `PROBE_ATTEMPTS` 6, `PROBE_BACKOFF_MS` [2000, 4000, 6000] -- 132 s
+  of coverage, with attempt windows opening at 0, 20, 40, 62, 86 and 112 s so a wake that answers at 93 s
+  lands inside a live request instead of after the give-up. Six attempts is not an accident: the module's own
+  guard rejects a bound above 6, because past that the retry stops being distinguishable from an infinite wait.
+- The sentence and the budget are now checked against each other rather than against a floor. The warming copy
+  says "up to two minutes" in English and 两分钟 in Chinese; the guard reads the longest wait either sentence
+  names and requires the computed coverage to clear it, replacing a fixed `coverage >= 45 s` test that a
+  two-minute promise would have sailed through.
+- The premise stopped being a single number: `COLD_START_SAMPLES_MS` is now a dated sample list and the budget
+  is compared to the maximum, so the next slow measurement raises the requirement instead of hiding behind the
+  old one. `docs/hosted-demo.md` carries both samples with their dates and says which instrument enforces it.
+- Falsified three ways: the copy promising five minutes (promise pin red), the Chinese sentence dropping the
+  wait (promise pin red, which is the half a single-language check would have missed), a 4 s per-attempt
+  timeout (coverage pin red). 8 tests in `tests/contract/test_web_backend_probe.py` green, including the plant
+  that has always been there -- shrink one constant and the guard must fail.
+
+### Verified (post-4.6.0) — the settings route's promise to stay offline is now enforced
+
+- `docs/api.md` says `PUT /api/v1/provider` is "Shape-validated only -- the route never contacts the provider,
+  because a verification call would spend the operator's credit or ship their data unsolicited." It holds, and
+  nothing tested it: the claim was carried by prose and by the absence of an HTTP client in the module's
+  imports, which is not the same thing as the route not dialling out three calls deeper.
+- Witness: `tests/contract/test_provider_route_is_offline.py` blocks `socket.socket`,
+  `socket.create_connection` and `socket.getaddrinfo` for the duration of the request, records every attempt,
+  and asserts both that the route answers 200 and that the attempt list is empty -- a raise nobody counted
+  would be a test passing for the wrong reason. Three routes are covered: the write, the two reads that report
+  what `resolve_llm_mode()` decided (`GET /api/v1/provider` and `/version`), and the erase. The payload carries a
+  distinctive string, so a call that shipped it would also be a leak the test can see.
+- Falsified by inserting one line into `save_provider_settings` that dials `127.0.0.1:4` before validating: all
+  three tests went red, and `tests/contract/test_provider_settings.py` stayed green beside them, which is the
+  point -- the existing sixteen tests cover merge semantics, file mode and refusal paths, and none of them could
+  see a verification call. Restored by digest; no production line changed. One caveat this round earned its own line: the
+  credential literal first shipped was copied from the sibling suite, whose identical string is listed in
+  `.gitleaksignore`, and an ignore entry is keyed `commit:file:rule:line` so it does not travel with a copy; and
+  removing the vendor prefix was not enough, because `generic-api-key` matches the long random tail behind it.
+  The committed value is now a short dictionary string, chosen so there is nothing for the detector to match
+  rather than so that a rule is asked to forgive it.
+
+### Fixed (post-4.6.0) — the dataset package dragged polars onto the API's import path
+
+- `dsa_datasets/__init__.py` re-exported the whole layer eagerly, `load_dataframe` from `dsa_datasets.loader`
+  and `build_profile` from the profiler included. Importing *any* submodule runs the package initialiser first,
+  so the upload route's own `from dsa_datasets.errors import ValidationError` pulled polars into the process.
+  `apps/api/src/dsa_api/services/dataset_service.py` defers its dataframe imports with a comment saying it
+  keeps the scientific stack off the API import path "so lightweight health checks can start reliably on
+  memory-constrained demo instances" -- while the initialiser made that deferral decorative.
+- Measured: importing `dsa_api.routers.datasets` in a clean interpreter cost 87.8 MiB with the eager chain and
+  64.3 MiB without it; `import polars` on its own is 0.15 s of a boot. The names now resolve on first use
+  (PEP 562) with `__all__` unchanged, so `from dsa_datasets import load_dataframe` still works, caches its
+  resolution, and an unknown attribute is still an `AttributeError` -- the surface did not shrink, only the
+  moment it costs.
+- What is still true, and is now written down rather than inferred: the *process* loads polars at boot, through
+  `packages/agent/src/dsa_agent/graph.py:30`. The `/health` sentence was about the route, so the row says that
+  explicitly and points at the subprocess `sys.modules` census as the way to test any such claim, instead of
+  carrying today's numbers into a doc where they would rot.
+- Guards: `tests/contract/test_probe_promises.py`, 8 tests. The probe claims themselves held -- `/health` answers
+  `ok` against an unopenable database, its handler names no session, engine or `_database_status` (checked on the
+  AST, because a database that happens to be reachable during a test run would hide a newly added dependency
+  from the behavioural check), and `/ready` returns `degraded` with the sqlite error carried in `details.db`
+  instead of raising or claiming readiness. Neither promise had any check before this round, so the deliverable
+  is the witness.
+- Falsified six ways: liveness reading the database (2 red -- behavioural and AST); readiness always answering
+  `degraded` (the positive control red); readiness ignoring a failed check (the degrade test red); a
+  module-scope `import polars` in the health route (the subprocess census red); the docs dropping the word
+  `degraded` (the prose pin red); the eager re-export restored (the upload-route census red).
+
+### Changed (post-4.6.0) — the token's boundary had twelve public sides and the docs named three
+
+- `docs/api.md` said `DSA_AUTH_TOKEN` gates all `/api/*` routes and that `/health`, `/ready`, `/version` "stay
+  public". The first clause is true; the parenthetical read as a list of exceptions, and `AuthMiddleware` in fact
+  returns early for anything that does not start with `/api/`. Measured with a token configured: 19 `/api/`
+  routes answer `401`, and twelve other surfaces answer without a credential -- `/health`, `/ready`, `/version`,
+  `/health/dependencies`, `/metrics`, the API root `/`, `/docs`, `/docs/oauth2-redirect`, `/redoc`,
+  `/openapi.json`, `/mcp`, `/mcp-app`.
+- That matters because `/mcp` is on the ungated side and dispatches `run_python` and `run_sql`. An operator who
+  set the token to lock down a self-hosted instance got a locked data API and an open tool surface, and the
+  sentence they acted on did not say so. This is documentation of a boundary, not a change to it: what protects
+  the tool surface is still the owner's call (`AUDIT_LEDGER.md` §252, open item #59).
+- Guard: `tests/contract/test_auth_surface.py`, 6 tests. The route surface is enumerated from the app -- OpenAPI
+  paths split on the prefix, the framework's own generated docs URLs, and the mounted sub-apps -- so no list in
+  the test can go stale. Behavioural: every gated route must refuse an absent token, every other route must
+  answer without one, a correct bearer is admitted, and a wrong token, an empty `Authorization`, and a `Basic`
+  scheme are all refused. Documentation: the auth bullet's backticked paths and the measured public set must be
+  equal in both directions, and the sentence has to name `/mcp`, `/mcp-app` and the two tools they dispatch.
+- Falsified four ways. Restoring the three-exception sentence reddened the equality and the naming tests.
+  Removing the `/api/` predicate -- tightening the boundary rather than loosening it -- reddened only the
+  behavioural test, because the public set is enumerated from routes and not from behaviour, which is the right
+  separation: the docs list what exists, the requests prove what the middleware does. Blanking the token read
+  reddened all three behavioural checks. Adding a path to the docs that the service does not actually serve
+  publicly reddened the equality, so the sentence cannot over-claim either.
+
+### Fixed (post-4.6.0) — the advisory gate blamed npm's documentation for npm's outage
+
+- `main` went red at the advisory step on the upload-guard commit, and nothing in this repository had changed:
+  the registry's audit endpoint returned `503` / `socket hang up` for about seven minutes, `npm audit --json`
+  wrote its *error* document to the report path, the CI step's `|| true` let that step pass, and the reader was
+  handed `{message: "request to ... failed, reason: socket hang up", error: {...}}` with no
+  `auditReportVersion`.
+- Refusing that input is right, and it is the only reason the outage was visible at all. The message was wrong:
+  "npm changed format; re-read its docs before trusting counts" sends whoever is paged to npm's documentation
+  when the true answer is "the registry did not answer, and the gate did not run." The reader now separates the
+  two -- a document that carries npm's own failure `message` and no report version is named as an endpoint
+  failure -- and both cases still exit 2. An absent scan is never a clean scan.
+- Guards: `tests/test_npm_advisory_gate.py` gained a pair, tested against the verbatim failure capture
+  (`tests/fixtures/npm_audit_endpoint_failure_2026-10-22.json`) and against a real report whose version has been
+  moved to 3. Each asserts the other's wording is absent, so the discrimination is the claim: the failure case
+  must not say "changed format", the schema case must not say "failed request". Removing the new branch reddens
+  exactly the first of the pair; the second stays green, which is what shows the branch did not swallow it.
+- Measured after the fact: the endpoint recovered minutes later, and the same reader against a live clean report
+  prints `no high/critical findings` and exits 0 with `vulnerabilities: {}`. The change re-attributed the failure;
+  it did not loosen the gate.
+
+### Fixed (post-4.6.0) — "lists accept ?limit=" is a promise three routes make and a fourth does not
+
+- The pagination bullet opened "Lists accept `?limit=` (1–1000, default 100)". Three routes do -- datasets,
+  analysis, experiments. A fourth returns the same shape, `{experiments, total}`, and accepts no query parameter
+  at all: `/api/v1/research/experiments` truncates to `RESULTS_LIMIT = 10` and reports `total` as the *uncapped*
+  count. A client that trusted the bullet asked for 500, received ten, saw no error, and got a `total` that
+  looked like a page it could not reach.
+- The bullet now names the three routes by path, and the research row says what it means in the table: not
+  paginated, `?limit=` and `?offset=` ignored, `total` counts every file the directory holds.
+- Guard: `tests/contract/test_pagination_surface.py`, 5 tests, built on `app.openapi()` because that is the
+  contract a client can discover rather than a shape the test assumed. Containment runs both ways between the
+  routes the schema paginates and the routes the doc names; `(1–1000, default 100)` and `?offset=` `(default 0)`
+  are read out of the published schema and required in the sentence, so a changed ceiling cannot leave the prose
+  behind; each route must refuse `limit=0`, `limit=1001` and `offset=-1` with 422 *and* answer a 200 with both a
+  `total` and an array for a request inside its own bounds, so a route that refused everything cannot pass the
+  guard either.
+- Falsified five ways: restoring the old generalisation (the extractor now requires exactly one bullet that
+  promises both parameters, so a doc that stops making the claim goes red instead of quietly having nothing to
+  check); deleting "Not paginated" from the row; raising `RESULTS_LIMIT` to 12 (the row reddens, the cap witness
+  stays green -- it pins the relation between array and total, not the number); relaxing `ge=1` to `ge=0` on one
+  route (both the bounds pin and the refusal test fire).
+- Two mistakes inside the guard's own construction, recorded because they are the reason it was run before it was
+  trusted: an in-bounds request was assumed to short-circuit at validation and instead reached the service layer
+  with a stubbed session, and the first search keyed on the bullet's opening words, which this round's rewording
+  had moved.
+
+### Fixed (post-4.6.0) — a rate limit nobody told the operator about
+
+- `dsa_api.core.security` limits four `POST` routes: `/api/v1/analysis` 60/min, `/api/v1/datasets` 30/min,
+  `/api/v1/events` 120/min, `/api/v1/experiments` 60/min. `docs/api.md` named three of them, so the fourth was an
+  undocumented control on a route the demo's own comparison feature uses.
+- The size of each rule was resolved by a dict literal built inside `dispatch` and looked up as `{...}[prefix]`,
+  keyed on the same prefixes as `_DEFAULT_RULES`. Two lists describing one control, checked by nothing: a rule
+  added to one and not the other raises `KeyError` inside the request path, and the client gets a 500 on the
+  route the new rule was meant to protect. The map is now the module constant `_RULE_KNOBS`, which is also what
+  made the relation testable -- a local literal cannot be inspected.
+- `experiments` owns no knob: it reads `rate_limit_analysis_per_min`, so `DSA_RATE_LIMIT_ANALYSIS_PER_MIN` moves
+  two routes at once. That is now said in the docs, because an operator sizing a 512 MB free-tier instance reads
+  the docs and not the source.
+- Guards: `tests/contract/test_rate_limit_surface.py`, 6 tests. Three pin the relation -- the two lists and the
+  documentation paragraph must name the same routes, at the numbers `settings` actually enforces (derived per
+  test, not transcribed, so a changed default cannot leave the doc behind), and every knob's environment
+  variable must appear. Two are behavioural, because a documentation pin cannot show that a limit is real: post
+  three times at a monkeypatched ceiling of 2 and `/api/v1/experiments` must answer `429` + `Retry-After`, and
+  with `DSA_RATE_LIMIT_ENABLED=false` it must not.
+- Falsified four ways, each reddening only its own guard: deleting the experiments clause from the doc paragraph
+  (1 red); deleting the experiments entry from `_RULE_KNOBS` (3 red -- the set equality, the doc pin, and the
+  behavioural test, which is the `KeyError` surfacing as a request failure); removing the `rate_limit_enabled`
+  early return (2 red, including the check that the switch is even read); appending a fifth rule with no knob and
+  no doc line (2 red, which is the case the old shape punished only at runtime).
+- The one limitation this round documents rather than fixes: the borrowed knob stays borrowed. Giving
+  `experiments` its own `DSA_RATE_LIMIT_EXPERIMENTS_PER_MIN` would be a third setting nobody has asked for, and
+  the doc now says plainly which variable moves it.
+
+### Fixed (post-4.6.0) — the upload guard read the filename, not the file
+
+- `docs/api.md` advertises `upload (multipart, 100MB, MIME sniff, archive bomb guard)`. The archive half of that
+  sentence was carried by a parameter nothing read: the route captured the file's first 4 KiB, `save_dataset`
+  threaded it along, and `validate_file` accepted `head=` and never looked at it. Measured before the fix: a zip
+  body named `evil.csv` returned `DatasetFormat.csv`, was stored, and was profiled as one enormous text column
+  (201). What actually ran was an extension blocklist -- `.zip`, `.gz`, `.tar` -- which any caller can leave
+  behind by renaming the file.
+- `validate_file` now tests the leading bytes against four container signatures plus the tar header at its own
+  offset 257, and keeps the one exception the format specification forces: an `.xlsx` *is* a zip container, so a
+  `PK` opening is expected there and accepted nowhere else. A caller that supplies no bytes -- a CLI path reading
+  its own file -- still gets the name-only check, which is now stated rather than implied. What the guard does is
+  reject containers; it does not open them, so there is no decompression to bomb, and the doc says "archive guard"
+  rather than "archive bomb guard".
+- Two more defects were sitting in the same three lines. The capture was `tmp_path.read_bytes()[:4096]`: to keep
+  4 KiB the server loaded the whole upload into memory a second time, beside a comment saying the temp file
+  existed to avoid exactly that, and on the 512 MB free-tier instance a 100 MB upload was a 100 MB allocation.
+  And `MAX_SIZE_BYTES` was enforced only after the body had been fully written to disk, so "the limit is 100 MB"
+  described the row that gets rejected, not the work a request costs. The route now takes the head off the same
+  chunks that reach the disk, refuses at the limit while streaming, and removes the temp file on that path --
+  which it also now does when a client disconnects mid-body, something the old shape leaked.
+- Guard: `tests/security/test_upload_guard.py`, 17 tests, every rejection paired with an acceptance so the guard
+  cannot pass by rejecting everything. Falsified four ways: deleting the leading-byte block reddened the six
+  signature tests and left the acceptances green; emptying the `.xlsx` exception reddened exactly the two tests
+  that protect Excel uploads; moving the size check after the loop reddened the refusal test, which counts the
+  reads the stream saw; reintroducing the whole-file pass reddened a structural test that walks both functions'
+  ASTs for `read_bytes`/`read_text`, because every other assertion in the file is satisfied by that buggy shape.
+- `docs/api.md` names the mechanism now, and one test pins the advertised `100MB` to the constant the code
+  enforces, so the two cannot drift apart silently.
+
+### Fixed (post-4.6.0) — the `/mcp` page copied a call that could not succeed
+
+- `copyTemplate` built `{ params: { name, arguments: {} } }` for every tool. Half the surface rejects an empty
+  argument object -- `run_sql` needs `sql`, `analyze` needs `task`, `causal_check` needs `dataset_path`,
+  `treatment` and `outcome` -- so the button that exists to hand someone a working call handed out a guaranteed
+  error, and the failure surfaced later in whatever they pasted it into.
+- It now derives the arguments from the tool's own `inputSchema`, which is the field the server only started
+  publishing correctly this round (§250): required properties get a type-appropriate placeholder (`"<required>"`,
+  `0`, `true`, `[]`, `{}`), optional ones are left out, so the copy is a call the server accepts and the placeholder
+  is impossible to mistake for a finished value.
+- Guard: `tests/contract/test_mcp_page_template.py` parses the component with the TypeScript compiler the web
+  package already ships and asserts the `arguments` property is a `requiredArguments(...)` call -- not `{}` -- that
+  the template still names the tool, and that the helper reads both `required` and `properties` and keeps the
+  `<required>` string placeholder. Falsified by putting `arguments: {}` back: the first test failed as intended.
+- One mistake during that falsification, recorded because the rule already existed and was broken anyway: the
+  restore step used `git checkout HEAD -- apps/web/app/mcp/McpTable.tsx` on a file whose only committed state was
+  the *unfixed* one, which discarded the fix along with the mutation. The three edits were re-applied and the
+  recovery proved by hash -- the file now matches its pre-mutation digest byte for byte, guard and `tsc --noEmit`
+  green. The lesson the repository already documents is to restore from a saved copy, never from `HEAD`, in a dirty
+  tree.
+
 ### Changed (post-4.6.0) — the MCP docs promised a token gate that no code reads
 
 - `docs/MCP_DESIGN.md` said "Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only", and

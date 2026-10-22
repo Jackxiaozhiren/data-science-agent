@@ -124,7 +124,7 @@ const UPLOAD_INPUT_ARIA = "Dataset files";
 
 // R-11: the wait and the failure have to be distinguishable *in the browser*, not just in the phase
 // machine. Two scenarios, both driven by intercepting the health check rather than by starting a backend:
-// a request that hangs is what a sleeping free instance actually does (measured 44.5 s on the hosted demo),
+// a request that hangs is what a sleeping free instance actually does (44.5 s and 92.8 s on the hosted demo),
 // and a request that gets a 503 is something answering without the API answering. The timings are printed
 // because "it looked like it was waking up for 5 seconds then said unreachable" is the acceptance criterion.
 const PROBE_SCENARIOS = [
@@ -557,7 +557,7 @@ try {
 
   // R-11: the two states a first visit actually passes through, asserted where they are observable. The
   // health check is intercepted rather than backed by a real server, because "hangs for tens of seconds"
-  // is the measured behaviour of a sleeping free instance (44.5 s to first byte on the hosted demo) and no
+  // is the measured behaviour of a sleeping free instance (up to 92.8 s to first byte on the hosted demo) and no
   // test harness should wait for that. Timings are printed: a state that appears after 40 s is a different
   // product than one that appears after 4.
   for (const scenario of PROBE_SCENARIOS) {
