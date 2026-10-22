@@ -69,7 +69,11 @@ def test_tools_call_and_errors() -> None:
             "params": {"name": "run_sql", "arguments": {}},
         },
     )
-    assert r2.status_code == 200 and "error" in r2.json()
+    # A failure that originates in the tool stays inside the result with isError set -- MCP's CallToolResult
+    # requires `content` and the model has to be able to read the error and self-correct, so a JSON-RPC-level
+    # error here would hide it.
+    assert r2.status_code == 200 and r2.json()["result"]["isError"] is True
+    assert "ValidationError" in r2.json()["result"]["content"][0]["text"]
     # invalid schema (unknown tool)
     r3 = c.post(
         "/mcp",
@@ -136,7 +140,7 @@ def test_stateless_repeated_calls_and_caching() -> None:
                 "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}},
             },
         )
-        assert h1.json()["result"]["output"] == h2.json()["result"]["output"]
+        assert h1.json()["result"]["structuredContent"] == h2.json()["result"]["structuredContent"]
 
     asyncio.run(_run())
 

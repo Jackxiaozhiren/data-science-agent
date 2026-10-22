@@ -23,8 +23,19 @@ except Exception:  # pragma: no cover
 from dsa_jupyter.metadata import collect_notebook_metadata
 
 
+def escape_html(value: Any) -> str:
+    """The package's one HTML escaper.
+
+    Every value that reaches a markup sink goes through here, from either module: a notebook frontend renders
+    ``display(HTML(...))`` without sanitising it, so the escaping cannot be left to the call site that happens to
+    remember. Accepts anything because the things most worth escaping here -- a path a user typed, a dataset's own
+    column names, an exception message quoting a bad file -- are not always strings.
+    """
+    return html.escape("" if value is None else str(value))
+
+
 def _h(s: str) -> str:
-    return html.escape(s)
+    return escape_html(s)
 
 
 def format_analysis_html(analysis: Any, dataset: str | None = None, task: str | None = None) -> str:

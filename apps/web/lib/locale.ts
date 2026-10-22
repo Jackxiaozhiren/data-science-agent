@@ -263,6 +263,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.approvalLabel": "Approval note",
     "insp.approving": "Approving…",
     "insp.approve": "Approve run",
+    "insp.approvalNote": "Approved by human",
     "insp.colReason": "Reason",
     "insp.copied": "Copied",
     "insp.copyDiagnostics": "Copy diagnostics",
@@ -420,6 +421,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "settings.saving": "Saving",
     "settings.deleteFile": "Delete settings file",
     "settings.deletedNotice": "Stored settings deleted. The key stays only if your shell exported one.",
+    "settings.clearFailed": "The settings could not be cleared: {status}.",
     "failures.title": "Failure Analysis",
     "failures.errorOne": "{n} error",
     "failures.errorMany": "{n} errors",
@@ -504,6 +506,8 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "analysis.noTraceUnreadable": "No trace for {id} could be read, so nothing below is a statement about the run.",
     "insp.notifyAriaOn": "Notification on completion: on",
     "insp.notifyAriaOff": "Notify me when done",
+    "insp.notifyBlocked": "Notifications blocked",
+    "insp.notifyBlockedWhy": "This browser will not deliver notifications for the site, so the setting stays off.",
     "insp.artifactsBody": "Files generated during the run. Each path is on the server, so copy one to fetch it from the host; &ldquo;Download bundle&rdquo; above returns everything the run recorded as one archive, naming any file it could not read.",
     "dsd.nullRatio": "{pct}% null",
     "dsd.columns": "Columns",
@@ -528,6 +532,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.tabEvidence": "Evidence ({n})",
     "insp.tabInsights": "Insights ({n})",
     "common.backToAnalysis": "Back to Analysis →",
+    "common.apiUnreachable": "Could not reach the DSA API at {url}.",
     "mcp.eyebrow": "Reference · Step 3",
     "mcp.summary": "Stateless core · {n} tools · No Mcp-Session-Id · cacheHints via cache_hint · Explicit handles: run_id / dataset_id.",
     "mcp.summaryNoTools":
@@ -626,6 +631,20 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "status.VALIDATION": "Validation",
     "status.SYNTHESIS": "Synthesis",
     "status.REPORTING": "Reporting",
+    "call.ok": "OK",
+    "call.error": "Error",
+    "chk.evidence_coverage": "Evidence coverage",
+    "chk.unsupported_claim": "Causal language",
+    "chk.tool_errors": "Tool execution",
+    "chk.budget": "Run budget",
+    "chk.insight_evidence": "Insight grounding",
+    "chk.evidence_traceability": "Evidence traceability",
+    "chk.statistical_power": "Statistical power",
+    "chk.prompt_injection": "Prompt injection",
+    "chk.resource_limits": "Resource limits",
+    "chk.dataset_hash": "Dataset hash",
+    "chk.evidence_bundle": "Evidence bundle",
+    "chk.langgraph_fallback": "Graph fallback",
     "status.COMPLETED": "Completed",
     "status.FAILED": "Failed",
     "status.HUMAN_REVIEW": "Human review",
@@ -922,6 +941,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.approvalLabel": "批准说明",
     "insp.approving": "正在批准……",
     "insp.approve": "批准此次运行",
+    "insp.approvalNote": "人工审核通过",
     "insp.colReason": "原因",
     "insp.copied": "已复制",
     "insp.copyDiagnostics": "复制诊断信息",
@@ -1077,6 +1097,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "settings.saving": "正在保存",
     "settings.deleteFile": "删除设置文件",
     "settings.deletedNotice": "已删除存储的设置。只有你在自己的 shell 里 export 过密钥，它才会保留。",
+    "settings.clearFailed": "设置未能清除：HTTP {status}。",
     "failures.title": "失败分析",
     "failures.errorOne": "{n} 个错误",
     "failures.errorMany": "{n} 个错误",
@@ -1161,6 +1182,8 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "analysis.noTraceUnreadable": "无法读取 {id} 的轨迹，因此下方内容都不是对这次运行的论断。",
     "insp.notifyAriaOn": "完成时通知：已开启",
     "insp.notifyAriaOff": "完成后通知我",
+    "insp.notifyBlocked": "通知已被阻止",
+    "insp.notifyBlockedWhy": "此浏览器不会向该站点投递通知，因此这项保持关闭。",
     "insp.artifactsBody": "运行期间生成的文件。每个路径都在服务器上，因此可以复制其中一个从主机取回；上方的“Download bundle”会把这次运行登记的全部内容打包成一个压缩包，并点名其中无法读取的文件。",
     "dsd.nullRatio": "空值 {pct}%",
     "dsd.columns": "字段数",
@@ -1185,6 +1208,7 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "insp.tabEvidence": "证据（{n}）",
     "insp.tabInsights": "洞察（{n}）",
     "common.backToAnalysis": "返回分析页 →",
+    "common.apiUnreachable": "无法连接到 {url} 的 DSA API。",
     "mcp.eyebrow": "参考 · 第 3 步",
     "mcp.summary": "无状态核心 · {n} 个工具 · 不使用 Mcp-Session-Id · 通过 cache_hint 传递 cacheHints · 显式句柄：run_id / dataset_id。",
     "mcp.summaryNoTools":
@@ -1282,6 +1306,20 @@ export const UI_STRINGS: Record<Locale, Record<string, string>> = {
     "status.VALIDATION": "校验中",
     "status.SYNTHESIS": "归纳中",
     "status.REPORTING": "生成报告",
+    "call.ok": "正常",
+    "call.error": "出错",
+    "chk.evidence_coverage": "证据覆盖率",
+    "chk.unsupported_claim": "因果表述",
+    "chk.tool_errors": "工具执行",
+    "chk.budget": "运行预算",
+    "chk.insight_evidence": "洞察的依据",
+    "chk.evidence_traceability": "证据可追溯性",
+    "chk.statistical_power": "统计功效",
+    "chk.prompt_injection": "提示注入",
+    "chk.resource_limits": "资源限制",
+    "chk.dataset_hash": "数据集哈希",
+    "chk.evidence_bundle": "证据打包",
+    "chk.langgraph_fallback": "编排回退",
     "status.COMPLETED": "已完成",
     "status.FAILED": "失败",
     "status.HUMAN_REVIEW": "待人工确认",
@@ -1413,6 +1451,34 @@ export function t(locale: Locale, key: string): string {
 export function statusLabel(locale: Locale, status: string): string {
   const value = UI_STRINGS[locale]?.[`status.${normalizeStatus(status)}`];
   return value ?? status;
+}
+
+/**
+ * The badge for one tool call, whose status is the engine's own closed pair (`Literal["ok", "error"]` in
+ * `dsa_agent/state.py`), not a value that came out of the visitor's data.
+ *
+ * Same shape as `statusLabel`: anything the producer does not declare is passed through rather than invented --
+ * a token the web has never seen is worth reading exactly as it arrived, and translating it would be guessing.
+ */
+export function callStatusLabel(locale: Locale, status: string): string {
+  const value = UI_STRINGS[locale]?.[`call.${status}`];
+  return value ?? status;
+}
+
+/**
+ * The name of one validation check, in the visitor's language.
+ *
+ * `check` is the engine's identifier (`evidence_coverage`), and the inspector list is chrome the reviewer reads,
+ * so the identifier is not the word to show. `packages/agent/src/dsa_agent/report_export.py` owns the same
+ * vocabulary for the exported report;
+ * `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it` fails if the two drift, because a run's
+ * report and its page must not call the same check by two names.
+ *
+ * An undeclared key passes through unchanged -- same rule as `callStatusLabel`.
+ */
+export function checkLabel(locale: Locale, check: string): string {
+  const value = UI_STRINGS[locale]?.[`chk.${check}`];
+  return value ?? check;
 }
 
 /** The id the browser is already using, or the default when the cookie is absent or malformed. */
