@@ -71,7 +71,7 @@ function CompareWorkspace() {
         setB(rb);
       })
       .catch((e) => {
-        if (!cancelled) setErr(`Could not reach the DSA API at ${API_BASE_URL}. ${String(e)}`);
+        if (!cancelled) setErr(`${t(locale, "common.apiUnreachable").replace("{url}", API_BASE_URL)} ${String(e)}`);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
