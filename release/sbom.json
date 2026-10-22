@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-10-19T03:12:31.303389+00:00",
+  "generated": "2026-10-22T03:35:52.092736+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -381,6 +381,13 @@
       "purl": "pkg:pypi/httpcore@1.0.9"
     },
     {
+      "package": "httpcore2",
+      "version": "2.15.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpcore2@2.15.1"
+    },
+    {
       "package": "httptools",
       "version": "0.8.0",
       "license": "Unknown",
@@ -393,6 +400,20 @@
       "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/httpx@0.28.1"
+    },
+    {
+      "package": "httpx2",
+      "version": "2.15.1",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpx2@2.15.1"
+    },
+    {
+      "package": "httpx2-jsfetch",
+      "version": "1.0",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpx2-jsfetch@1.0"
     },
     {
       "package": "idna",
@@ -620,10 +641,10 @@
     },
     {
       "package": "langsmith",
-      "version": "0.11.0",
-      "license": "MIT",
+      "version": "0.14.11",
+      "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langsmith@0.11.0"
+      "purl": "pkg:pypi/langsmith@0.14.11"
     },
     {
       "package": "lark",
@@ -1226,6 +1247,13 @@
       "license": "BSD 3-Clause License\n\n- Copyright (c) 2001-, IPython Development Team\n\nAll right...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/traitlets@5.16.1"
+    },
+    {
+      "package": "truststore",
+      "version": "0.10.5",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/truststore@0.10.5"
     },
     {
       "package": "typing-extensions",

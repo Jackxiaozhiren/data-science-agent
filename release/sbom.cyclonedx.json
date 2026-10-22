@@ -479,6 +479,13 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "httpcore2",
+      "version": "2.15.1",
+      "licenses": [],
+      "purl": "pkg:pypi/httpcore2@2.15.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "httptools",
       "version": "0.8.0",
       "licenses": [],
@@ -496,6 +503,20 @@
         }
       ],
       "purl": "pkg:pypi/httpx@0.28.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "httpx2",
+      "version": "2.15.1",
+      "licenses": [],
+      "purl": "pkg:pypi/httpx2@2.15.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "httpx2-jsfetch",
+      "version": "1.0",
+      "licenses": [],
+      "purl": "pkg:pypi/httpx2-jsfetch@1.0",
       "source": "https://pypi.org/simple"
     },
     {
@@ -772,15 +793,9 @@
     },
     {
       "name": "langsmith",
-      "version": "0.11.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:pypi/langsmith@0.11.0",
+      "version": "0.14.11",
+      "licenses": [],
+      "purl": "pkg:pypi/langsmith@0.14.11",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1551,6 +1566,13 @@
         }
       ],
       "purl": "pkg:pypi/traitlets@5.16.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "truststore",
+      "version": "0.10.5",
+      "licenses": [],
+      "purl": "pkg:pypi/truststore@0.10.5",
       "source": "https://pypi.org/simple"
     },
     {
