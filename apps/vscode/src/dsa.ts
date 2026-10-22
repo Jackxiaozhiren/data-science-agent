@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as util from 'util';
 import * as vscode from 'vscode';
 
-const exec = util.promisify(cp.exec);
+const execFile = util.promisify(cp.execFile);
 
 export interface CheckResult {
   ok: boolean;
@@ -18,12 +18,12 @@ export async function checkPython(): Promise<CheckResult> {
   const cfg = vscode.workspace.getConfiguration('dsa');
   const py = cfg.get<string>('pythonPath', 'python');
   try {
-    const { stdout } = await exec(`${py} --version`);
+    const { stdout } = await execFile(py, ['--version']);
     if (stdout.includes('Python')) return { ok: true };
     return { ok: true };
   } catch {
     try {
-      await exec('uv run python --version');
+      await execFile('uv', ['run', 'python', '--version']);
       return { ok: true };
     } catch (e: any) {
       return {
@@ -60,7 +60,7 @@ export async function checkDataset(datasetPath: string): Promise<CheckResult> {
 
 export async function checkPlugin(): Promise<CheckResult> {
   try {
-    const { stdout } = await exec('uv run dsa plugin --json', { timeout: 5000 });
+    const { stdout } = await execFile('uv', ['run', 'dsa', 'plugin', '--json'], { timeout: 5000 });
     const arr = JSON.parse(stdout);
     if (Array.isArray(arr) && arr.some((p: any) => p.name === 'dsa-time-series')) return { ok: true };
     return { ok: true, message: 'Plugin dsa-time-series not found', suggestion: 'Run `dsa plugin validate` (§35).' };
@@ -114,10 +114,14 @@ export async function runAnalysis(dataset: string, task: string): Promise<Analys
     vscode.window.showInformationMessage(`Backend unavailable — running via CLI (local-first). ${backend.suggestion}`);
   }
 
-  // Execute via Public CLI (§34) — not duplicating Agent logic
-  const cmd = `uv run dsa analyze ${JSON.stringify(dataset)} --task ${JSON.stringify(task)} --json`;
+  // Execute via Public CLI (§34) — not duplicating Agent logic. `execFile` rather than `exec` because the
+  // dataset path and the question both arrive from outside this extension -- a filename listed from the
+  // workspace, a question typed into the input box -- and `exec` hands its argument to /bin/sh, where a name
+  // like `a$(touch /tmp/x).csv` is expanded before the CLI ever sees it. `JSON.stringify` is not protection:
+  // the quotes it adds are shell double quotes, which still substitute `$(...)` and backticks.
+  const argv = ['run', 'dsa', 'analyze', dataset, '--task', task, '--json'];
   try {
-    const { stdout, stderr } = await exec(cmd, { timeout: 30000, maxBuffer: 5 * 1024 * 1024 });
+    const { stdout, stderr } = await execFile('uv', argv, { timeout: 30000, maxBuffer: 5 * 1024 * 1024 });
     if (stderr && stderr.includes('Usage:')) throw new Error(stderr);
     const parsed = JSON.parse(stdout);
     if (parsed.error) throw new Error(parsed.error);
@@ -131,7 +135,7 @@ export async function runAnalysis(dataset: string, task: string): Promise<Analys
       raw: parsed,
     };
   } catch (e: any) {
-    // Try to parse stdout if exec threw but produced JSON
+    // Try to parse stdout if the CLI exited non-zero but still produced JSON
     if (e.stdout) {
       try {
         const p = JSON.parse(e.stdout);
@@ -145,12 +149,11 @@ export async function runAnalysis(dataset: string, task: string): Promise<Analys
 export async function runProfile(dataset: string): Promise<any> {
   const chk = await checkDataset(dataset);
   if (!chk.ok) throw new Error(`${chk.message}. ${chk.suggestion}`);
-  const cmd = `uv run dsa profile ${JSON.stringify(dataset)} --json`;
-  const { stdout } = await exec(cmd, { timeout: 10000 });
+  const { stdout } = await execFile('uv', ['run', 'dsa', 'profile', dataset, '--json'], { timeout: 10000 });
   return JSON.parse(stdout);
 }
 
 export async function runDoctor(): Promise<any> {
-  const { stdout } = await exec('uv run dsa doctor --json', { timeout: 8000 });
+  const { stdout } = await execFile('uv', ['run', 'dsa', 'doctor', '--json'], { timeout: 8000 });
   return JSON.parse(stdout);
 }

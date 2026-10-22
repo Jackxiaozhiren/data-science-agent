@@ -165,8 +165,9 @@ l=set(TestClient(app).get('/openapi.json').json()['paths'])
 print('hosted', len(h), 'local', len(l), '| hosted-only', sorted(h-l), '| local-only', sorted(l-h))"
 ```
 
-Both sides answered the same path set when measured on 2026-10-21, so the deployed API is not behind the
-repository at the route level. It can still be behind at the *content* level, and that is the half a path census
+Both sides answered the same path set when measured on 2026-10-21 and again on 2026-10-22 (25 paths each, no
+difference either way), so the deployed API is not behind the repository at the route level. It can still be
+behind at the *content* level, and that is the half a path census
 cannot see: a route that exists in both may render differently. The content check needs no credentials either --
 ask a published run for its report and look at what the product itself says:
 
@@ -181,7 +182,25 @@ The second line prints whether any validation check is being named by the engine
 word the report owns (`Evidence coverage`, 证据覆盖率). Measured on 2026-10-21 the answer was `True`: the running
 container predates that change, which is the evidence a redeploy is owed -- and the reason `identical: True` above
 is a route claim, not a currency claim. Run the same probe again after a deploy; when it prints `False`, the
-artifact the visitors download matches the repository.
+artifact the visitors download matches the repository. Re-measured on 2026-10-22: still `True`.
+
+A third probe, cheaper than both, answers the same currency question for the MCP App page -- a page is only real
+if the browser can run it:
+
+```bash
+curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+```
+
+A response whose policy is the API-wide `default-src 'none'; frame-ancestors 'none'` is serving an HTML document
+whose own inline script that policy forbids, so the visitor gets a picture of the page with dead buttons; the
+fixed build answers a per-document policy that names the script block it actually sent (`script-src
+'sha256-...'`). Measured on 2026-10-22 the hosted answer was the strict default, i.e. the deployed container
+predates that fix too, while `/version` on both hosts reported `4.6.0`.
+
+The web side could not be censused from the same machine on 2026-10-22: both `*.vercel.app` URLs timed out at
+TCP connect while Render answered, and that observation cannot distinguish a paused deployment from this network
+blocking Vercel. Say which of the two it is only after checking from a second vantage point -- a connection that
+never opened is a fact about the path, not about the service.
 
 ### Verify a deploy from the outside
 
@@ -197,7 +216,28 @@ curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/datasets/
 `/version` reports the version of the distribution actually installed in the running container, read from
 its package metadata, plus the effective reasoning mode (`/health` stays import-free and I/O-free, so the
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
-idle.
+idle -- measured at 44.5 s and at 92.8 s on the two days this was checked, from the same service.
+
+Three answers decide whether a redeploy did its job, and none of them needs a credential:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/version | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"
+curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/research/experiments \
+  | python3 -c "import json,sys; print('deployed', json.load(sys.stdin)['total'], 'tracked', $(git ls-files research/results | wc -l | tr -d ' '))"
+```
+
+The first has to name the tag that was just built, not the one before it. The second has to carry a
+`script-src 'sha256-…'` for the page being served: a policy of `default-src 'none'` on an HTML document is the
+browser refusing to run that document's own script, which is a page that looks present and does nothing. The
+third compares the deployment against the repository rather than against a number written into this file -- as
+measured on 2026-10-22 the hosted answer was 3 and `git ls-files research/results` counts 3, which is the shape
+a passing check has: two independent counts that are allowed to disagree.
+
+The web side is checked the same way, from wherever you are:
+`curl -sI https://data-science-agent-web.vercel.app/datasets`. A healthy answer is an HTTP `200` with the app
+shell; a TCP connect that never completes says about your path what a 62-second probe said about the API last
+round, which is why the timeout on the command matters as much as its status code.
 
 What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
 published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance

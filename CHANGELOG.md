@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the hosted-demo census gained a third probe and a re-run
+
+- `docs/hosted-demo.md` already carried two credential-free currency probes: an OpenAPI path census and a
+  content probe that asks a published report how it names its own validation checks. Both were re-run on
+  2026-10-22 -- 25 paths identical on both sides, the content probe still `True`, `/version` still `4.6.0`
+  -- so the redeploy #44 asks for is still owed, and the doc now says so with its dates rather than with the
+  2026-10-21 ones alone.
+- A third probe was added, for the half neither of the two covers: whether the MCP App page can run at all.
+  `curl -s -o /dev/null -D - …/mcp-app/ | grep -i '^content-security-policy'` distinguishes the API-wide
+  `default-src 'none'` (an HTML document whose inline script that policy forbids -- a picture of a page with
+  dead buttons) from the per-document policy that names the script it sent. Measured today the hosted answer is
+  the strict default, which is the deployment consequence of the CSP fix, stated as something anyone can check.
+- The web side is recorded as *not measurable from the machine that tried*: both `*.vercel.app` URLs timed out
+  at TCP connect while Render answered, and that cannot distinguish a paused deployment from local egress
+  filtering. The doc says a connection that never opened is a fact about the path, not the service, so the
+  next reader does not repeat this session's earlier error of reading a too-short wait as a dead demo.
+
 ### Fixed (post-4.6.0) — the waking probe gave up at 62 s on a 92.8 s wake
 
 - R-11 sized the browser's bounded "waking up" retry to clear the cold start it had measured: `GET /health`
@@ -25,6 +42,29 @@
   wait (promise pin red, which is the half a single-language check would have missed), a 4 s per-attempt
   timeout (coverage pin red). 8 tests in `tests/contract/test_web_backend_probe.py` green, including the plant
   that has always been there -- shrink one constant and the guard must fail.
+
+### Security (post-4.6.0) — the VS Code extension handed the shell a filename
+
+- Every CLI call in `apps/vscode/src/dsa.ts` was one interpolated string passed to `cp.exec`, which runs it
+  through `/bin/sh`. The interpolated words were the dataset path (taken from the file picker or the workspace
+  tree the extension itself lists), the typed question, and `dsa.pythonPath` -- a setting a repository can ship
+  in `.vscode/settings.json`. `JSON.stringify` was used as quoting, and it is not: its quotes are shell double
+  quotes, which still expand `$(…)` and backticks.
+- Measured, not inferred: a path shaped like `/tmp/a$(touch /tmp/probe_pwn).csv` built into the same string and
+  handed to `exec` created the marker and reached the receiving program as `/tmp/a.csv` -- code ran, and the
+  argument arrived silently truncated. Both halves matter: the second one means a *benign* file named with `$(`
+  already produced wrong analyses before there was any attacker.
+- All six call sites now use `execFile`/`execFileSync` with an argv array; `extension.ts`'s `execSync` came with
+  them. The arch guard in `tests/vscode/test_vscode_extension.py` that asserted the literal `"uv run dsa"` was
+  reading the old string shape and now matches the argv call, so no assertion was loosened to accommodate the fix.
+- Guards: a shape check for `execSync(`, `<receiver>.exec(` and `promisify(x.exec)` over **every** `.ts`, `.tsx`, `.mjs` and `.js` file under `apps/` and `packages/` (measured: the extension was the only offender, so the guard now locks the class rather than one directory), and it proves *itself*
+  -- `cp.exec(cmd, …)` must be caught, `execFile('uv', argv)` and a regular expression's own `.exec()` must not
+  be, because a predicate with false positives gets loosened away within a week -- plus a node probe that runs the pair and asserts `shellSubstituted: True, argvIntact: True`. A
+  test that showed only the argv half would still pass in a world where the string half was safe.
+- Residual, named rather than fixed: `dsa.pythonPath` still names a program the workspace can choose, which is a
+  trust decision VS Code mediates with workspace trust; removing the shell means a value there is no longer
+  *parsed*, but a hostile value could still name a binary to run. That is the setting's meaning, not a bug to
+  patch here, and it is why the extension README says the argv form is what changed.
 
 ### Verified (post-4.6.0) — the settings route's promise to stay offline is now enforced
 

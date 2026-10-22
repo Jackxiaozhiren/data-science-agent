@@ -1170,9 +1170,9 @@
     },
     {
       "name": "pyarrow",
-      "version": "25.0.1",
+      "version": "26.0.0",
       "licenses": [],
-      "purl": "pkg:pypi/pyarrow@25.0.1",
+      "purl": "pkg:pypi/pyarrow@26.0.0",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1396,7 +1396,7 @@
     },
     {
       "name": "scipy",
-      "version": "1.18.0",
+      "version": "1.18.1",
       "licenses": [
         {
           "license": {
@@ -1404,7 +1404,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/scipy@1.18.0",
+      "purl": "pkg:pypi/scipy@1.18.1",
       "source": "https://pypi.org/simple"
     },
     {
