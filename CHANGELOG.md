@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — `tools/list` published the schemas under a name no MCP client reads
+
+- The schemas were built correctly and then lost on the way out. `_tool_input_schema` derives each one from the
+  backend tool's own pydantic input model, `list_mcp_tools` stores it on `MCPToolDef.input_schema`, and every
+  boundary serialized the object with pydantic's default aliases -- so the wire carried `input_schema` while the
+  protocol field is `inputSchema`. Measured before the change: all 19 advertised tools returned
+  `"inputSchema": {}` from `POST /mcp` `tools/list`. A client reading discovery therefore saw nineteen tools that
+  take no arguments, including `analyze`. Nothing noticed because the two existing assertions check the Python
+  object (`t.input_schema is not None`), which is the side that was always right.
+- One owner now serializes: `adapter.tools_for_wire()` dumps `by_alias=True`, and `GET /mcp/tools`, the JSON-RPC
+  handler, the stdio loop and `dsa mcp` all call it, so a fifth boundary cannot re-create the bug. `output_schema`
+  travels as `outputSchema` for the same reason; the extension fields (`tool_class`, `cache_hint`, …) stay
+  snake_case because nothing outside this product parses them.
+- `dsa mcp --stdio` is the door the design document already described. `stdio_main` is a working line-delimited
+  JSON-RPC loop, but nothing in the distribution could reach it -- the only console script is `dsa`, `dsa mcp`
+  printed a list and returned, and four tests named `*_stdio_*` all drove the HTTP app with `TestClient`, which
+  never opens a stdin pipe. One of them asserted `status_code in (200, 404, 405)`, a check that cannot fail for the
+  wrong reason; it is reported in `AUDIT_LEDGER.md` §250 rather than quietly rewritten.
+- `docs/MCP_DESIGN.md` listed 13 of 19 tools with a heading that counted them, and `analyze` -- the product's whole
+  loop -- was not among the rows. The heading's numeral is gone, the six missing rows are added with the argument
+  subsets read from each backend's input model, and a new guard compares the served set against the table, so
+  adding a tool without documenting it is red. `dsa mcp --stdio` is now named where a reader looks for it.
+- Guards: `tests/mcp/test_tools_list_wire_shape.py` (every boundary publishes `inputSchema` and not `input_schema`;
+  advertised properties equal the backend model's for every registry-backed tool; `analyze` advertises the argument
+  its dispatcher refuses to run without; the doc table covers the served surface) and
+  `tests/mcp/test_stdio_transport.py` (spawns the installed `dsa` script with `mcp --stdio`, speaks four client
+  exchanges to it, and reads the replies -- discovery, a real `profile_dataset` call, a malformed line answered
+  with `-32700` and followed by a working next request, and a missing-required-argument error; plus the flag in
+  `--help`). Falsified: dropping `by_alias=True` reddens the boundary, `properties` and `analyze` guards; deleting a
+  table row reddens the doc guard naming the row (`['forecast']`). Two mistakes made while writing these guards are
+  recorded in §250 -- an edit that swallowed the next test's `def` line, silently merging two tests into one, and a
+  `--package dsa_evaluation` repair that copied a peer session's uncommitted file into `_vendor`, reverted from
+  HEAD, and turned into a fix to `sync_vendor.py`'s own hint, which had been recommending the coarse mode.
+
 ### Fixed (post-4.6.0) — the App page delivered its resources through a modal that hid part of them
 
 - `openResource()` answered `alert(uri + text.slice(0, 2000))`. Two defects in one line, measured on a stored run of

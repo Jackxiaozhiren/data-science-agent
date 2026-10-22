@@ -10,6 +10,8 @@ Core Domain (dsa_tools, dsa_agent, dsa_datasets)
       ↑
    MCP Clients (Claude / Cursor / VS Code / etc) via stdio / HTTP+SSE
 ```
+`dsa mcp` prints the surface as JSON; `dsa mcp --stdio` serves the same `tools/list` / `tools/call` / `resources/*`
+methods over line-delimited stdin/stdout, which is what a client config that launches a command needs.
 
 ## Protocol (2026-07-28 stateless core)
 - No server-side session. Each `tools/call` is self-contained.
@@ -17,7 +19,12 @@ Core Domain (dsa_tools, dsa_agent, dsa_datasets)
 - Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only.
 - MCP surface mirrors the Tool Layer with friendly names.
 
-## Tools Exposed (13)
+## Tools Exposed
+The table is the surface; `dsa mcp` prints what `tools/list` publishes, and a client reads the parameters from each
+tool's `inputSchema`, which is derived from the backend's own pydantic input model rather than typed here. So this
+table names the backend and the argument subset, and the schema on the wire is the authority on types and required
+fields.
+
 | MCP name | Backend | Input subset |
 |---|---|---|
 | profile_dataset | dsa_tools/profile_dataset | path/dataset_id |
@@ -33,6 +40,12 @@ Core Domain (dsa_tools, dsa_agent, dsa_datasets)
 | get_evidence | create_evidence + validate_result (read) | evidence_id / claim |
 | generate_report | generate_report | run_id, markdown... |
 | save_artifact | save_artifact | run_id, type, filename, content |
+| export_artifact | export_artifact | source, filename, format, workspace |
+| forecast | forecast | dataset_path, date_col, value_col, periods, method |
+| assumption_check | assumption_check | dataset_path, column/columns, check, group_col |
+| causal_check | causal_check | dataset_path, treatment, outcome, confounders, method |
+| feature_importance | feature_importance | dataset_path, target, task, top_k |
+| analyze | dsa_agent graph (§36 full loop) | dataset/dataset_path, task (alias question), run_id (alias analysis_id) |
 
 ## Implementation
 - `dsa_mcp/adapter.py` — stateless registry bridging MCP JSON → BaseTool.run
