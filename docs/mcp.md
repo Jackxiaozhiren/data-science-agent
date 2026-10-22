@@ -14,7 +14,13 @@
 
 ## Conformance
 
-The MCP compatibility matrix (Protocol Version / tools/list / tools/call / Stateless / Authorization / Error Handling / Tasks / Cache Hints) has been verified live: `tools/list`, `tools/call`, stateless, headers all pass.
+The MCP compatibility matrix was verified live for `tools/list`, `tools/call`, the stateless rule and the JSON-RPC
+error codes -- see `tests/mcp/conformance/` and `tests/mcp/test_{stdio_transport,tools_list_wire_shape}.py`. Two
+rows of that matrix are **not** capabilities of this server, and are listed here rather than marked pass: there is
+no Authorization on `/mcp` or `/mcp-app` at any token setting (see `MCP_DESIGN.md`), and Tasks is a stub. The
+result envelope was also wrong until 2026-10-22 -- `tools/call` answered with the product's own object instead of
+MCP's required `content`, and `resources/read` with a bare item instead of `contents` -- so "verified live" once
+meant that the product's own client agreed with the product's own server.
 
 ## Contributing
 

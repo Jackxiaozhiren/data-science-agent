@@ -1,6 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  /* Tailwind v4 changed the preflight default border colour to `currentColor`. Four components here
+     use `border` without a colour class and would render dark rules; v3 gave them gray-200. Restored
+     to the project's own token rather than a new literal -- `--border` below is zinc-200, the shade the
+     other 56 border sites already name. */
+  *,
+  ::before,
+  ::after {
+    border-color: hsl(var(--border));
+  }
+}
 
 :root {
   --background: 0 0% 100%;

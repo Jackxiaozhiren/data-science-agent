@@ -2,6 +2,394 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the MCP docs promised a token gate that no code reads
+
+- `docs/MCP_DESIGN.md` said "Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only", and
+  `docs/mcp.md` listed Authorization among the matrix rows "verified live … headers all pass". Measured:
+  `DSA_MCP_TOKEN` appears in no source file -- the two doc lines are its only occurrences in the repository -- and
+  `AuthMiddleware` returns early for any path that does not start with `/api/`, so `/mcp` and `/mcp-app` answer
+  unauthenticated at every value of `DSA_AUTH_TOKEN`.
+- That matters because `/mcp` dispatches `run_python` and `run_sql`. An operator who read the design document and set
+  a token would believe the endpoint was gated and could expose it; the sentence was the only thing between those two
+  tools and an unauthenticated caller, and it was false.
+- Both lines now say what is true -- no auth on that surface at any token setting, run it as you would run an
+  unauthenticated shell -- and `docs/mcp.md` names the matrix rows that are not capabilities (Authorization absent,
+  Tasks a stub) instead of marking them pass. Implementing a real `/mcp` gate is deliberately not done here: it
+  changes what an operator sees, and the product's own App page is mounted on the same process and would have to
+  authenticate to the endpoint it calls. Filed for the owner with the options in `AUDIT_LEDGER.md` §252.
+
+### Fixed (post-4.6.0) — the JSON-RPC surface answered with a shape no MCP client is specified to read
+
+- Two required protocol fields were missing. `CallToolResult` is `content: list[ContentBlock]` plus `isError`, and
+  `ReadResourceResult` is `contents: list[...]` -- the reference model in `modelcontextprotocol/python-sdk` declares
+  both with no default, on the same 2026-07-28 revision this repository pins. This server returned the tool's own
+  object as the result (`{"isError":…, "tool":…, "output":{…}}`) and the resource item bare
+  (`{"uri":…, "mimeType":…, "text":…}`), so a conformant client got no `content` for any of the 19 tools and no
+  `contents` for any resource. The product's own App page reads those non-standard keys, which is why every surface of
+  the product kept working while the advertised protocol did not hold: `tests/mcp` drove the same hand, and the
+  conformance suite checked `"error" in json()` and `status_code == 200` rather than the result shape.
+- Tool errors moved too. The reference docstring is explicit that an error originating in the tool "SHOULD be reported
+  inside the result with `is_error` set to true, not as an MCP protocol-level error, so the LLM can see and
+  self-correct", while "errors in finding the tool" belong at the protocol level. `tools/call` used to answer `-32602`
+  for both. A bad argument set now comes back as `isError: true` with the validation text in `content`, and an unknown
+  tool name is resolved against the registry at the boundary and answered `-32601` -- which the conformance test
+  already required, and which failed loudly while this was being written, proving the new envelope was not simply
+  fitted to the old expectations.
+- Owners: `adapter.tool_result_for_wire()` and `adapter.resource_result_for_wire()`, used by the HTTP handler and the
+  stdio loop. The internal object still travels intact as `structuredContent` (and as JSON inside the text block), so
+  nothing is dropped and no reader has to invent a second shape. The App page, which is this product's own client, was
+  moved onto `structuredContent` / `contents[0].text` in the same commit: the old keys are gone from the wire, and a
+  boundary that answers two shapes at once is the defect this section is about.
+- Guards: conformance and acceptance assertions now read the protocol fields (a tool error must not surface as a
+  JSON-RPC error; `contents[0]["mimeType"]`; `structuredContent["run_id"]`), and `tests/mcp/test_stdio_transport.py`
+  asserts `content[0]["type"] == "text"` with `isError` false on the success path and the missing field named on the
+  failure path. Live, the browser instrument drives the whole flow through the new envelope.
+- Evidence for the field names was read rather than recalled: `CallToolResult`, `ReadResourceResult` and
+  `Tool.input_schema` were quoted from the SDK's own types module fetched over the GitHub API -- and
+  `Tool.input_schema` being required is the same defect the previous section fixed.
+- Falsified by removing the required `content` field: `test_tools_call_and_errors` and the analyze guard both went
+  red, restored byte-exact. The stdio subprocess guard did *not* fail under that mutation, and the reason is its own
+  lesson: the spawned `dsa` script executes the vendored mirror, and only `packages/mcp` was edited -- so the
+  console script answered from a copy that was still correct. That is §1b's import-order trap demonstrated on a
+  falsification rather than a fix, and it is why every mirror in this repository is committed in the same change as
+  its source.
+
+### Fixed (post-4.6.0) — `tools/list` published the schemas under a name no MCP client reads
+
+- The schemas were built correctly and then lost on the way out. `_tool_input_schema` derives each one from the
+  backend tool's own pydantic input model, `list_mcp_tools` stores it on `MCPToolDef.input_schema`, and every
+  boundary serialized the object with pydantic's default aliases -- so the wire carried `input_schema` while the
+  protocol field is `inputSchema`. Measured before the change: all 19 advertised tools returned
+  `"inputSchema": {}` from `POST /mcp` `tools/list`. A client reading discovery therefore saw nineteen tools that
+  take no arguments, including `analyze`. Nothing noticed because the two existing assertions check the Python
+  object (`t.input_schema is not None`), which is the side that was always right.
+- One owner now serializes: `adapter.tools_for_wire()` dumps `by_alias=True`, and `GET /mcp/tools`, the JSON-RPC
+  handler, the stdio loop and `dsa mcp` all call it, so a fifth boundary cannot re-create the bug. `output_schema`
+  travels as `outputSchema` for the same reason; the extension fields (`tool_class`, `cache_hint`, …) stay
+  snake_case because nothing outside this product parses them.
+- `dsa mcp --stdio` is the door the design document already described. `stdio_main` is a working line-delimited
+  JSON-RPC loop, but nothing in the distribution could reach it -- the only console script is `dsa`, `dsa mcp`
+  printed a list and returned, and four tests named `*_stdio_*` all drove the HTTP app with `TestClient`, which
+  never opens a stdin pipe. One of them asserted `status_code in (200, 404, 405)`, a check that cannot fail for the
+  wrong reason; it is reported in `AUDIT_LEDGER.md` §250 rather than quietly rewritten.
+- `docs/MCP_DESIGN.md` listed 13 of 19 tools with a heading that counted them, and `analyze` -- the product's whole
+  loop -- was not among the rows. The heading's numeral is gone, the six missing rows are added with the argument
+  subsets read from each backend's input model, and a new guard compares the served set against the table, so
+  adding a tool without documenting it is red. `dsa mcp --stdio` is now named where a reader looks for it.
+- Guards: `tests/mcp/test_tools_list_wire_shape.py` (every boundary publishes `inputSchema` and not `input_schema`;
+  advertised properties equal the backend model's for every registry-backed tool; `analyze` advertises the argument
+  its dispatcher refuses to run without; the doc table covers the served surface) and
+  `tests/mcp/test_stdio_transport.py` (spawns the installed `dsa` script with `mcp --stdio`, speaks four client
+  exchanges to it, and reads the replies -- discovery, a real `profile_dataset` call, a malformed line answered
+  with `-32700` and followed by a working next request, and a missing-required-argument error; plus the flag in
+  `--help`). Falsified: dropping `by_alias=True` reddens the boundary, `properties` and `analyze` guards; deleting a
+  table row reddens the doc guard naming the row (`['forecast']`). Two mistakes made while writing these guards are
+  recorded in §250 -- an edit that swallowed the next test's `def` line, silently merging two tests into one, and a
+  `--package dsa_evaluation` repair that copied a peer session's uncommitted file into `_vendor`, reverted from
+  HEAD, and turned into a fix to `sync_vendor.py`'s own hint, which had been recommending the coarse mode.
+
+### Fixed (post-4.6.0) — the App page delivered its resources through a modal that hid part of them
+
+- `openResource()` answered `alert(uri + text.slice(0, 2000))`. Two defects in one line, measured on a stored run of
+  the local instance: that run's `report://` resource is 2,354 characters, so the dialog showed 2,000 of them and
+  hid 354 with no indication that anything was missing -- on the surface whose whole argument is that the evidence is
+  complete and checkable; and a modal blocks the page's own script thread for as long as it is open, which is the
+  opposite of a page a reviewer reads while the analysis runs. The `Enter question` validation used the same channel.
+- Card 6, "Resource read", now holds the text in a scrolling `<pre>` filled through `textContent` (so the resource's
+  own bytes are never a markup source), and the line under it states the size and whether the read succeeded:
+  `evidence://<run> — 607 characters, shown in full.` or `… — the server refused this read; what follows is its
+  error, not the resource.` Nothing is cut, so the completeness claim is the length itself. The empty-question case
+  writes to the progress line the page already owns instead of interrupting.
+- The page now raises no dialog at all, and the instrument counts them: a `page.on("dialog")` counter makes
+  `noNativeDialogWasRaised` part of the verdict, so bringing `alert()` back anywhere on this page is a red gate
+  rather than a review finding.
+- `mcp-app-page.mjs` also clicks `Open evidence:// resource` and reads the region back, asserting it is visible, that
+  it holds the resource, and that its note says `shown in full`. Falsified by leaving the region hidden: the check
+  failed with the payload in its own diagnostic (`{"hidden":true,"length":607,…}`), and the restored file's hash
+  matched. Passing, it prints `evidence resource: 607 chars, no dialog` in the gate log -- an assertion whose success
+  is silence is not distinguishable from one that never ran, so the number is in the line now.
+- The failure paths were then injected rather than hoped for, and one of them was a bug. `openResource` had no
+  `try`/`catch` and no caller awaited it, so a request that never landed left card 6 showing `reading …` with an
+  empty note forever -- a stuck state that reads as a slow load, not a failure. It now says so:
+  `… — the read never completed: the request itself failed, …`. `fetchProfile`'s `catch(e){}` swallowed every
+  profile error into silence; it now writes what failed into the line the user is reading. Both branches are covered
+  by the instrument: the refused read through the server's own answer for a run it never stored, the transport
+  failure through `route()` aborting `/mcp` on a separate page. The transport check was falsified by emptying the
+  note -- `FAIL transportFailureSaysSo -- (empty note -- the page stayed in the reading state)` -- restored
+  byte-exact. Writing that block the first time as `route("**/mcp**")` aborted the page navigation too, and the gate
+  caught it as `mcpAppPageLoaded`; the pattern is now a predicate on the pathname.
+- Unrelated to the fix but measured on the way: `POST /mcp` answers `307` and redirects to `/mcp/`. Browsers follow
+  it with the method and body intact, which is why the page works; a hand-written client that does not follow
+  redirects sees an empty 307. Recorded in `AUDIT_LEDGER.md` §249.
+
+### Fixed (post-4.6.0) — the API's own hardening header blanked the pages the API serves
+
+- `SecurityHeadersMiddleware` answered every request with `Content-Security-Policy: default-src 'none'`, which is the
+  right posture for a JSON API and fatal for the HTML this API also serves. Measured on a live instance: the browser
+  logged `Executing inline script violates the following Content Security Policy directive 'default-src 'none''`, and
+  `Applying inline style violates…` alongside it; `/mcp-app/` answered 200 and then offered **zero** dataset options
+  while the same process answered `resources/list` with its whole catalogue. `connect-src` falls back to
+  `default-src`, so the page could not have called `/mcp` even if its script had run, and
+  `X-Frame-Options: DENY` plus `frame-ancestors 'none'` meant the report it embeds could not have appeared either.
+  Nothing noticed because every test of that page drove it with `TestClient`, which executes no JavaScript: an HTML
+  surface had been recorded as accepted without ever being rendered. The escaping work below is what put a browser on
+  that page at all, and the first thing the browser found was this.
+- The policy is now derived from the document being served: `report_export.document_security_headers` reads the bytes,
+  names every `<script>` and `<style>` block by `sha256-` hash, pins the rest to `'none'`/`'self'`, allows `data:` for
+  images because the charts travel inside the file, and adds `frame-src 'self'` only when the document embeds a frame.
+  `'unsafe-inline'` appears nowhere, a block added later has to be re-admitted by name, and the middleware leaves a
+  header a route already set alone. The App page's one inline `style="…"` attribute on its iframe moved into its
+  stylesheet -- a style *attribute* cannot be admitted by hash, so keeping it would have cost a wildcard.
+- Guards: `tests/contract/test_served_html_security.py` counts blocks with `html.parser` rather than a line scan,
+  refuses a policy whose hash count does not match the document's own block count, proves the hash list moves when
+  one byte inside the page's script moves, and reads the headers the host app actually returns -- `script-src
+  'sha256-` on the page, the strict default still on a JSON 404. That 404 is also where
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` and `X-Frame-Options: DENY` are pinned now:
+  `docs/api.md` promises all four on every response and, measured by grep over `tests/`, nothing read any of them
+  before this file existed -- a middleware that stopped setting them would have left the docs green. Falsified by
+  putting the clobbering assignment back:
+  the middleware guard went red, then restored byte-exact.
+- Live: `apps/web/scripts/mcp-app-page.mjs` is the third instrument on the booted stack. It compares the option list
+  the page built against the `resources/list` the same server returns, then opens the page for a stored run and reads
+  the embedded report *inside the frame* -- heading text, disclosure count, and the h1's computed `24px`, which is
+  what the report's own `1.5rem` rule produces and not the `32px` a blocked stylesheet leaves. That half was
+  falsified as well: with `allow_self_frame` removed the frame assertion fails, so the green is not an assertion that
+  cannot miss.
+- The same instrument now also drives the flow a client drives: select a dataset, type the question, click
+  ▶ Run Analysis, wait for the page's own progress line. Measured on a booted stack the run completed, the evidence
+  table arrived with rows and not one element inside it, and the report card revealed itself pointing at
+  `/mcp-app/report/`. Falsified by making the button call a tool that does not exist -- the page reported
+  `Error: Unknown MCP tool: analyse_typo` and the instrument exited 1 -- then restored byte-exact. Until this no test
+  had ever pressed that button: every `analyze` test called the tool directly, so the page's own path from click to
+  evidence table was unmeasured, on the surface whose whole claim is that flow.
+- Not the same claim, and worth keeping separate: the hosted demo still runs the older artifact (#44), so what a
+  visitor sees there carries neither the escaping nor this policy. The census in `docs/hosted-demo.md` reads the
+  deployed bytes rather than assuming.
+
+### Fixed (post-4.6.0) — the MCP App page put wire text into `innerHTML` unescaped
+
+- `/mcp-app` built two HTML fragments by string interpolation and assigned them to `innerHTML`: the dataset
+  `<option>` list, from a resource's own `name` and `description`, and the evidence table, from `id`, `claim` and
+  `source_type`. An evidence claim quotes the question the client typed and the header row of the analysed file, and
+  `pl.read_csv` keeps a header verbatim, so both fragments are assembled from text the product never authored. The
+  page's `<script>` is the executor here; no `enableScripts` flag is involved. The report embedded below them was
+  already safe -- it comes from `export_html`, the single renderer (R-14) -- which is why this survived every check
+  the repo had: nothing visited `/mcp-app`, and no test sent markup through the two templates.
+- Found by asking which surface had no instrument, the same question that surfaced the VS Code panel: which surface
+  renders data it did not author, and who looks at it.
+- One escaper, `esc()`, and the two fragments hoisted into named renders (`renderOptions`, `renderEvidence`) so a
+  probe can call them. `renderOptions` also stops throwing on a resource with no `description` -- the old
+  `x.description.slice(0,60)` aborted the whole `try` and left the dropdown on its fallback option, so one sparse
+  resource silently hid every dataset.
+- `tests/mcp/test_app_page_escaping.py` loads the script out of `dsa_mcp.app.HTML` -- the bytes the route returns --
+  stubs the four browser globals it touches at load time, and calls both renderers on an `<img onerror>` payload.
+  Two guards, both falsified: dropping `esc()` from the claim cell alone puts a live `<img ` in the fragment, and
+  adding a fourth `innerHTML` assignment trips the census, which is pinned to three sinks on purpose so any new one
+  has to be adjudicated. 35 tests green across `tests/mcp` and `tests/vscode`; `_vendor` re-synced byte-exact.
+- The claims gate went red on the previous batch for the reason this repository exists to police: `apps/vscode/README.md`
+  counted the VS Code suite as seven tests, and the escaping guard made it eight. The count is the gate's business,
+  so it is now correct rather than removed.
+
+### Fixed (post-4.6.0) — the Jupyter magic put a CSV's own header into the notebook as live HTML
+
+- `%dsa profile` had fifteen `display(HTML(f"..."))` sinks and escaped none of them, and a notebook frontend inserts
+  `text/html` without sanitising it. The reachable input is the analysed file itself: `pl.read_csv` keeps the header
+  row verbatim, the SDK exposes it as `columns`, and the profile block interpolated the joined list -- a CSV whose
+  header is `<img src=x onerror=alert(1)>` reached the notebook as a live tag. A typed dataset path and an exception
+  message quoting a bad file reached the same class of sink. `dsa_jupyter/display.py` escaped every field it renders;
+  `magic.py` escaped none, and the package's own tests asserted on returned objects and substring presence, never on
+  markup -- so CI's lint-and-typecheck of it proved nothing about this.
+- One escaper with one contract: `display.escape_html` coerces before escaping (`html.escape` is `str`-only, and a
+  path, a column name or an error is not reliably a string) and all fifteen sinks call it. The plugin table renders
+  through `Markdown`, which frontends sanitise, so it is left alone rather than escaped on speculation.
+- `tests/jupyter/test_magic_html_escaping.py` drives the real magic through IPython and reads only the captured HTML,
+  asserting first that the payload is live markup when interpolated raw so a green cannot come from an inert
+  fixture. Falsified by unescaping one sink ("a CSV header reached the notebook document verbatim"), restored
+  byte-exact: 21 jupyter tests green, ruff and mypy clean, no `_vendor` drift. See `AUDIT_LEDGER.md` §245.
+
+### Fixed (post-4.6.0) — the VS Code result panel interpolated run-derived text into a scripted webview
+
+- `apps/vscode/src/views.ts` built the result HTML by string interpolation and created the panel with
+  `enableScripts: true`, while five values went in raw: an evidence row's `id`, `claim` and `source_type`, plus the
+  run id and status in the heading. An evidence claim is derived from the analysed file and the model's text, so a
+  claim carrying `<img src=x onerror=...>` executed a script inside a panel whose `postMessage` bridge reaches the
+  extension host. Only the report body was escaped at all, and only its `<`.
+- One `esc()` now covers every interpolation -- including the fields nobody would call attacker-controlled (a path the
+  user picked, a closed status enum), because asking "is this value safe to interpolate?" is how this class survives.
+- `test_result_webview_escapes_run_derived_text` proves it at runtime: compile the package, call `getHtml` with
+  `vscode` stubbed, feed the payload into every field, and assert no raw `<img ` and no `onerror="` in the document --
+  after first asserting that the same payload through the previous interpolation *is* live markup, so a green cannot
+  come from an inert fixture. Reverting one site reddens it (`rawInHtml: 1, rawOnerrorAttr: True`). See
+  `AUDIT_LEDGER.md` §243.
+
+### Added (post-4.6.0) — the two R-13 web instruments became gates, in six places at once
+
+- `node apps/web/scripts/locale-chrome-inventory.mjs` (what the pages say, parsed from the TypeScript AST) and
+  `bash scripts/run_web_live_gates.sh` (the keyboard gate and the live chrome acceptance, on one stack) are now CI
+  steps, `GATES` entries in
+  `scripts/run_gates.sh`, and lines in both contributor guides. Adding the workflow steps alone would have made
+  things worse: `_classify()` does not know either command, `_ci_gates()` drops what it cannot classify, so the
+  gates would have run in CI while being invisible to the mirror test and absent from the guides -- one truth in
+  one place, which is the failure `docs/FRONTEND_IA.md` and §113.5 keep recording. Wiring is six edits: two
+  classifier keys (`web-chrome`, `web-a11y`), the `GATES` array, both guide fences, `CI_ONLY_STEPS` for the
+  browser install, and that declaration's own enumeration inside the control test -- friction that is deliberate.
+- New `scripts/run_web_live_gates.sh`, because the instrument needs a live seeded run and a gate that needs a
+  stack and is invoked without one gets skipped, which is a gate that passes by doing nothing. It boots an API on
+  a temporary SQLite file in heuristic mode (no provider, nothing paid for), waits for `/health` and for a
+  `COMPLETED` seeded run, builds the web app only if `apps/web/.next/BUILD_ID` is absent, serves it on a scratch
+  port, runs the instrument, then tears the stack down taking the **port** as the source of truth -- `kill $!`
+  left a listener behind on the first version, because `uv run` does not forward SIGTERM and `next start` execs a
+  server child, and an incomplete teardown now exits 3 from inside the trap rather than reporting a pass.
+- A busy port 8000 is a refusal with a reason, not a port hop: the bundle resolves the API origin at build time
+  (`apps/web/lib/api.ts`), so on another port the page could not reach its own backend and the gate would measure
+  a fiction. The keyboard gate therefore lives in the `ci` job rather than `web-regression`, whose static tour
+  claims port 8000 and refuses a live API there.
+- `apps/web/scripts/locale-chrome-acceptance.mjs` now reads the validation card. It had visited `/analysis/<id>`
+  and reported PASS while never examining those labels, because `main li strong` is outside `CHROME_SELECTOR`; and
+  the first version of the new check collected labels page-wide, so the run's own rendered report -- whose bold
+  text is `Evidence coverage` for an English run -- satisfied the "was the card read at all" floor. Labels now
+  share the boundary the chrome read uses (`Markdown.tsx:16` marks the document `data-run-document`), and a label
+  is a defect only when the dictionary has a key for it, so the audited trace's tool names stay legal without an
+  allowlist. Proven red on the real bundle: unwire the component, rebuild, run --
+  `checkKeysShownAsLabels[7] ... validationCardNotRead labels=7` in both locales, and the collected count drops
+  from 26 to the card's 7.
+- The two live instruments now share one booted stack: `scripts/run_inspector_a11y.sh` became
+  `scripts/run_web_live_gates.sh`, and CI plus `run_gates.sh` call the same command for both (`WEB_LIVE_GATES_PASS`,
+  both scratch ports free afterwards by `lsof`).
+
+
+- The runner refuses before booting anything when the browser is not there, and names the reason it observed:
+  `apps/web/scripts/browser-state.mjs` prints `INSTALLED`, `MISSING` or `UNRESOLVABLE`, and the gate maps them to
+  two different remedies. The first version asked from the repository root inside the shell script, which is a
+  different package context from the instruments' -- CI installs `apps/web` and `apps/vscode` and never a root
+  `node_modules`, so the module was simply unresolvable there and the gate reddened its own job claiming the
+  *browser* was missing, one commit after the same job passed without the check. Living beside the instruments makes
+  Node resolve the probe the way it resolves them, so a caller cannot get the context wrong by forgetting a `cd`.
+
+- `tests/contract/test_web_live_gate_probe.py` pins that separation without depending on this machine having a
+  browser: one of three words, `MISSING` when `PLAYWRIGHT_BROWSERS_PATH` is emptied (skipped, not passed, where no
+  browser exists at all), and `UNRESOLVABLE` for a copy of the probe outside `apps/web` -- the assertion that fails
+  if the check ever becomes cwd-dependent again.
+- Measured: both instruments pass locally (`INSPECTOR_A11Y_PASS` -- 18 disclosure toggles across both locales, 16
+  stops with a visible ring, 0 console errors, screenshots in `output/inspector-a11y/`; and
+  `R13I_CHROME_ACCEPTANCE_PASS (34 route/locale checks)`), `tests/test_command_surface.py`
+  and `tests/test_ci_gate_integrity.py` pass (21), the derived gate sets agree on both sides with zero
+  unclassified commands, and `docs/contributing.md` plus `CONTRIBUTING.md` mirror the full set. See
+  `AUDIT_LEDGER.md` §240 to §242.
+
+
+### Changed (post-4.6.0) — Tailwind 3 → 4, which closed both live paths to the one advisory the list carried
+
+- `apps/web` builds on `tailwindcss@4.3.3` with `@tailwindcss/postcss`. `autoprefixer` left the graph
+  (v4 prefixes through Lightning CSS), and `app/globals.css` trades the three `@tailwind` directives for
+  `@import "tailwindcss"` plus `@config "../tailwind.config.js"`, so the existing theme -- font stacks,
+  radii, the `beam` keyframes -- carries over without re-typing a token.
+- v4 changed the preflight default border colour to `currentColor`. Sixteen elements in `apps/web` use
+  `border` with no colour class, so `@layer base` pins `border-color: hsl(var(--border))` -- zinc-200, the
+  shade the other 56 border sites already name. Measured on the built bundle: all 16 compute to
+  `rgb(228, 228, 231)` across `/`, `/datasets`, `/settings`, `/reports` and `/runs`, zero offenders.
+- The workspace root carried its own `tailwindcss: 3.4`, `postcss` and `autoprefixer` in `dependencies`
+  from the first frontend commit with no consumer at all: no config outside `apps/web`, no import, and no CI
+  step that installs at root (`docs/getting-started.md:183` documents `cd apps/web && npm ci`). That dead trio
+  was the **second** live path to `braces`, so it is deleted rather than migrated.
+- `docs/audit/npm-advisory-exceptions.json` is therefore empty -- its own `removal_path` named this
+  migration, and the gate had already called the entry stale on PR 82's branch. `tests/test_npm_advisory_gate.py`
+  is re-aimed so an empty list reads as a claim, not a silence: the 2026-10-03 capture still exercises the
+  exemption path against a planted list, a new test asserts the committed empty list does **not** forgive that
+  historical advisory, the list is cross-checked against the post-migration capture in both directions, and the
+  absence of `braces|micromatch|chokidar|fast-glob` is re-derived from both lockfiles. Falsified: planting the
+  old entry back reddens exactly those two guards (`2 failed, 16 deselected`), restoring returns `18 passed`.
+- Root lock 372 → 299 packages, `apps/web` lock 287 → 254. `npm --prefix apps/web audit` reports 0
+  vulnerabilities; `scripts/check_npm_workspace_lock.py`, `next build` and `tsc --noEmit` are clean.
+
+
+### Fixed (post-4.6.0) — the run's report called its checks by their engine names, and one heading broke the language rule
+
+- Reading the MCP App page for a Chinese run (`/mcp-app/report/{id}`) showed the deliverable's own inconsistency:
+  the document declared `lang="zh"` and titled five sections in Chinese -- 图表, 计划, 工具调用, 证据, 洞察 -- and
+  then printed `Validation`. `export_html` hardcoded that `<h2>` while the Markdown serialisation of the same
+  assembly called `_lbl(lang, "validation")` and said `## 校验`. The heading guard missed it because it enumerated
+  the Markdown headings and read one HTML heading (`AUDIT_LEDGER.md` §238).
+- The wider half: the check *name* was the engine's identifier. `✓ **evidence_coverage**: Evidence coverage ok` in
+  both exports, and `<strong>evidence_coverage:</strong>` in the inspector's validation list, in either language --
+  while the same Chinese report's limitations block already said 证据覆盖率. `_label()` has owned that vocabulary
+  and only limitations used it; its two maps named 7 keys where the producers emit more.
+- The vocabulary is now enumerated, not counted. A `check="..."` text sweep returns 14 keys and two of them
+  (`levene`, `normality`) are a tool's per-column assumption records -- data, not chrome -- so the shape decides:
+  an `ValidationResult(check=...)` construction or a dict carrying `check`+`passed`+`message`, which yields 11 and
+  also finds `reporting.py`, the fifth producer a hand-listed module set would have missed. Both maps, and a new
+  `chk.*` block pair in `apps/web/lib/locale.ts` behind `checkLabel()`, now name all of them; `_validation_lines`,
+  `export_html` and `RunInspector.tsx` go through those owners. Validation *messages* stay verbatim -- the rule
+  `test_the_runs_own_bytes_are_never_translated` protects.
+- Kept honest by `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it`: producers against the
+  Python columns, the two columns against each other, the web blocks against them by key and value, then the
+  renderings (`**证据覆盖率**` in, `evidence_coverage` out) and the component wiring. Falsified six ways -- literal
+  heading restored, key dropped from both maps, dropped from one, web value reworded, component unwired, and two
+  forged empty inputs for the parsers -- each red, then the tree back byte-identical under `shasum -c`.
+- Live, on a run created through the API rather than a mutated fixture: its stored report reads `# 分析报告 /
+  ## 校验 / ## 局限` with items `**证据覆盖率**, **因果表述**, **工具执行**, **运行预算**`; in the browser as that
+  run's owner the validation card showed the seven Chinese names and the seven English ones with no identifier and
+  no `⟨` (`R13W_CHECKLABEL_PASS (12)`, 5 tabs); the App page on a published row renders `校验` with `⟨` count 0.
+  Three lookalikes were adjudicated as correct and are recorded rather than changed: the tool names in the audited
+  trace, the App's 404 on a visitor-owned run (R-08 scoping -- an unidentified surface must not read private rows),
+  and the page's 验证 against the report's 校验 for the same section.
+
+
+### Fixed (post-4.6.0) — the repo-wide secret scan was reading installed third-party packages
+
+- `test_secret_protection_no_hardcoded_secrets_in_repo` walked `Path(".").rglob("*.py")`, so its corpus was the
+  working tree rather than the repository. A 2.8 GB git-ignored `benchmarks/external/datascibench/.workspace/venv`
+  left by an external-benchmark run contains joblib's `test_func_inspect_special_encoding.py`, whose bytes are
+  deliberately not UTF-8; the guard fails closed on an unreadable file, so one scratch directory held the
+  security test red -- and CI, whose checkout has no such tree, could never have shown it. The skip list
+  (`.venv`, `.git`, `node_modules`) already conceded that installed packages do not belong in the scan; the
+  problem is a list of names, which any new scratch directory defeats.
+- The corpus is now anything committable -- `git ls-files` plus the untracked-but-not-ignored set -- which is the
+  boundary the Secret Scan job already draws. 441 files today, against thousands of `site-packages` sources before.
+- Verified in both directions: a credential-shaped literal in an untracked, committable file is still caught by
+  path (`Potential secret sk-[A-Za-z0-9]{20} in tests/_r13t_plant_probe.py`), and the guard's three existing
+  negative controls are untouched. A floor, a positive scope check (the corpus must contain `packages/`) and a
+  negative one (no `site-packages`, no `.workspace`) keep a quiet `git` from passing on an empty scan.
+
+### Fixed (post-4.6.0) — the notify button could promise a notification the browser had already refused
+
+- Reading the run report in a live browser (the pass that found the raw status token) turned up a second silent
+  failure on the same panel: `toggleNotify` requested permission and then discarded the answer, flipping its own
+  state regardless. The send at the other end requires `Notification.permission === "granted"`, so the control
+  could read `aria-pressed="true"` with the label "Notifying" (通知已开启) on a bell that could never ring. Worse,
+  the old code only asked when permission was `default`, so a visitor who had already clicked **Block** never saw
+  a prompt at all -- the click simply turned the claim on.
+- Measured both ways on the same page: with the pre-fix bundle the click reported `pressed=true, Notifying` while
+  the page's own `Notification.permission` read `denied`; with the fix the same click leaves it off and renames the
+  control 通知已被阻止 / "Notifications blocked", with the reason in its tooltip (`此浏览器不会向该站点投递通知，因此这项保持关闭。`).
+  The granted path was exercised too -- under a stubbed `Notification`, because headless Chromium keeps the
+  permission `denied` even for a granted context -- so the label is stated, not implied.
+- `tests/contract/test_web_notification_capability.py` is the CI half: the handler must branch on the permission
+  result, must not contain the unconditional flip, and the refusal must be rendered from the dictionary in both
+  languages. It was falsified by putting the old handler back -- red on the branch assertion, then restored and
+  verified byte-identical.
+
+### Fixed (post-4.6.0) — the run report showed a raw status token, and three sentences lived where no check could read them
+
+- Booting the seeded pair and reading the dynamic routes in a browser (the check §232 named as owed) found the
+  run report's Trace tab rendering `ok` five times on a 中文 page. `ToolCallRecord.status` is
+  `Literal["ok", "error"]` -- the engine's own word, not a value from the visitor's data -- so this is the defect
+  class the status layer already retired for run statuses, surviving in a second place. `callStatusLabel()` now
+  supplies it, with the same deliberate fallback to the raw token for a status the producer does not declare, and
+  the guard parses the `Literal` out of `state.py` so adding a member upstream reddens a test instead of shipping
+  English on a translated page.
+- Three sentences reached the reader from a variable, not a JSX position, which neither the region check nor the
+  AST check could see: `Could not reach the DSA API at …` (written out twice, once per compare page) and
+  `The settings could not be cleared: …` -- one line below a sibling that already asked the dictionary. They read
+  from the dictionary now, one key shared by both pages, with the transport error's own text appended verbatim
+  because that part is data. `useState("Approved by human")` became `insp.approvalNote`; its rendering is
+  unverified, since the approval panel only mounts for a run awaiting review.
+- The inventory reports a census for the class: multi-word literals outside any reader position, with
+  developer-facing `throw` messages, copyable command lines and Tailwind class lists counted rather than mixed in.
+  The first drafts of that bucket held 720 and 205 entries -- a list nobody would read -- until the exclusions were
+  structural. It prints `assembled=0 excluded: developer-throw=2 command=3 class-list=2` today, and a planted
+  sentence was reported at its file and line before being removed.
+
 ### Added (post-4.6.0) — the language check can now read a conditional, and it found the last page-owned English (R-13, adjudication)
 
 - The closure claim rested on an AST inventory that read only *attribute* positions and only dictionary values

@@ -151,6 +151,38 @@ still has to be written down somewhere a person can see. The payload contract it
 consent: query text, dataset content and user-identifying values are refused at emit time, before the consent
 check, whether or not counting is on.
 
+The cheapest check that the running container is the code the repository has is the route census, and it needs
+no credentials and no deploy: compare the two OpenAPI path sets.
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/openapi.json > /tmp/hosted.json
+uv run --frozen python -c "
+import json
+from fastapi.testclient import TestClient
+from dsa_api.main import app
+h=set(json.load(open('/tmp/hosted.json'))['paths'])
+l=set(TestClient(app).get('/openapi.json').json()['paths'])
+print('hosted', len(h), 'local', len(l), '| hosted-only', sorted(h-l), '| local-only', sorted(l-h))"
+```
+
+Both sides answered the same path set when measured on 2026-10-21, so the deployed API is not behind the
+repository at the route level. It can still be behind at the *content* level, and that is the half a path census
+cannot see: a route that exists in both may render differently. The content check needs no credentials either --
+ask a published run for its report and look at what the product itself says:
+
+```bash
+RID=$(curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/ \
+  | python3 -c "import json,sys; a=json.load(sys.stdin)['analyses']; print(a[0]['id'])")
+curl -s "https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/$RID/report?format=html" \
+  | python3 -c "import re,sys; h=sys.stdin.read(); print(re.findall(r'<h2>(.*?)</h2>', h)); print(bool(re.search(r'<strong>[a-z]+_[a-z_]+</strong>', h)))"
+```
+
+The second line prints whether any validation check is being named by the engine's identifier instead of by the
+word the report owns (`Evidence coverage`, 证据覆盖率). Measured on 2026-10-21 the answer was `True`: the running
+container predates that change, which is the evidence a redeploy is owed -- and the reason `identical: True` above
+is a route claim, not a currency claim. Run the same probe again after a deploy; when it prints `False`, the
+artifact the visitors download matches the repository.
+
 ### Verify a deploy from the outside
 
 A deploy is not confirmed by the dashboard going green; confirm the artifact answers. Run these after the
@@ -165,16 +197,26 @@ curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/datasets/
 `/version` reports the version of the distribution actually installed in the running container, read from
 its package metadata, plus the effective reasoning mode (`/health` stays import-free and I/O-free, so the
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
-idle. The dataset listing is expected to be empty after a deploy -- see the storage note below -- so an
-empty list is the healthy answer, not a failure.
+idle.
+
+What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
+published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance
+answers `2` datasets and `2` analyses, every one of them `owner: shared` -- the sample datasets and the
+example runs the first screen is built from, seeded so a visitor never lands on an empty product (R-01,
+R-08). Their ids are different on every cold start, because the database is not durable: a *visitor's* rows
+are the ones that disappear, and the shared rows are re-created. So a non-empty list is the healthy answer,
+and a run id copied from an earlier check is expected to 404.
 
 `/version` also answers `storage`, and on the free demo it says so out loud:
 
 ```bash
 curl -s https://data-science-agent-api-h43i.onrender.com/version \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['storage'])"
-# {'durable': False, 'ephemeral_roots': ['database']}
 ```
+
+Read the output rather than transcribing it -- the value names whichever roots sit on a path the host may
+clear, and it grows as the container layout changes (measured 2026-10-21: `durable: False` with all three of
+`artifacts`, `database`, `datasets` listed).
 
 `ephemeral_roots` names which of `database` / `datasets` / `artifacts` sit on a path the host may clear, and
 the web header renders "not kept" whenever `durable` is false -- so a visitor who returns to an empty run

@@ -112,7 +112,7 @@ export default function SettingsPage() {
     try {
       const res = await clientFetch("/api/v1/provider", { method: "DELETE" });
       if (classifyResponse(res)) {
-        setNotice(`The settings could not be cleared: ${res.status}.`);
+        setNotice(t(locale, "settings.clearFailed").replace("{status}", String(res.status)));
         return;
       }
       setNotice(t(locale, "settings.deletedNotice"));

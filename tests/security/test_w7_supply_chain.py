@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -249,6 +250,47 @@ def test_plugin_hash_is_deterministic_and_moves_with_content(tmp_path: Path) -> 
     assert m.compute_hash(root) != before
 
 
+def _committable_python_files() -> list[Path]:
+    """The sources a secret could actually reach the world through -- not everything on my disk.
+
+    This walked `Path(".").rglob("*.py")`, so its corpus was the working tree, and it broke the moment a local
+    run left an installed package tree behind: a 2.8 GB git-ignored `benchmarks/external/.../.workspace/venv`
+    made it abort on joblib's `test_func_inspect_special_encoding.py`, a fixture whose bytes are *deliberately*
+    not UTF-8. The skip list (`.venv`, `.git`, `node_modules`) shows the author knew installed packages did not
+    belong in the scan, but a list of names has to be guessed right every time, and a scratch directory is
+    free to be called anything.
+
+    `git ls-files` plus the untracked-but-not-ignored set is right by construction, and it is the same boundary
+    the Secret Scan job and `run_secret_scanning` draw: content that cannot be committed cannot ship a
+    credential, and content that can is all covered. Ignored scratch is not weaker -- it is out of scope.
+    """
+    args = ["git", "ls-files", "-z"]
+    tracked = subprocess.run([*args, "--", "*.py"], capture_output=True, text=True, check=True)  # noqa: S603 - fixed argv, no shell
+    untracked = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [*args, "--others", "--exclude-standard", "--", "*.py"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    files = [
+        Path(p) for chunk in (tracked.stdout, untracked.stdout) for p in chunk.split("\0") if p
+    ]
+    # A scan that inspects nothing must not read as clean, so the floor carries headroom (441 today) and the
+    # scope is asserted both ways: the corpus must contain the packages this guard exists to protect, and must
+    # not contain the installed tree that broke the previous version.
+    assert len(files) > 300, (
+        f"the credential scan resolved only {len(files)} Python files; it is about to pass on an empty corpus"
+    )
+    assert any(str(f).startswith("packages/") for f in files), (
+        "the scan no longer reads the packages it guards"
+    )
+    assert not [f for f in files if "site-packages" in str(f) or ".workspace" in str(f)], (
+        "installed third-party source is back in the corpus -- the shape that made this abort on joblib's "
+        "encoding fixture, whose bytes are deliberately not UTF-8"
+    )
+    return files
+
+
 def _assert_no_credential_patterns(paths: Iterable[Path]) -> None:
     """Fail closed on unreadable Python sources or detected credential patterns."""
     patterns = [
@@ -299,7 +341,7 @@ def test_secret_scanner_fails_closed_when_unreadable(tmp_path: Path, monkeypatch
 
 
 def test_secret_protection_no_hardcoded_secrets_in_repo() -> None:
-    _assert_no_credential_patterns(Path(".").rglob("*.py"))
+    _assert_no_credential_patterns(_committable_python_files())
     # Also check that SECURITY.md mentions secret scanning
     assert (
         "Secret Scanning" in Path("SECURITY.md").read_text()

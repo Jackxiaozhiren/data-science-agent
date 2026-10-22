@@ -14177,3 +14177,275 @@ its wording moved into the dictionary. Nothing was deleted from §232.
 **Falsification.** Re-hardcoding `short: "not kept"` into the module was reported at `lib/buildProvenance.ts:122`
 and exited 1 -- as a second-owner duplicate, since the dictionary now owns the phrase, which is the correct
 verdict for a page re-adding a string the owner already carries. The file was restored and its sha256 re-checked.
+
+## 234. Reading the rendered dynamic routes found a raw enum token and three sentences no instrument could see
+
+2026-10-20, continuing §233. §232 left a debt note: the seeded acceptance had not been re-run, so nothing had
+looked at the dynamic routes since the compare rows moved. Booting the pair by hand (`uvicorn` on `:8000` with a
+temp sqlite file and `DSA_CORS_ORIGINS` naming the web port, `next start` on `:3221` -- the traps are recorded in
+project memory) and clicking into the tabs produced the kind of finding no static pass can make: the run report's
+Trace tab showed `ok` five times on a 中文 page.
+
+That is the defect §13 already retired for run statuses -- a closed product enum printed as its token -- surviving
+in a second place. `ToolCallRecord.status` is `Literal["ok", "error"]` in `dsa_agent/state.py`: a word the product
+chose, not a value that came out of the visitor's data, so it belongs to the interface and must be sayable in the
+reader's language. `callStatusLabel()` mirrors `statusLabel()` exactly, including the deliberate fallback to the
+raw token for anything the producer does not declare. The new guard in
+`test_web_analysis_status_vocabulary.py` parses the `Literal` out of `ToolCallRecord` rather than listing the two
+words, floors the extraction so a blind regex cannot pass, and states why `validation_status` is excluded: the
+interface never renders it, and a vocabulary test that demands labels for invisible words becomes a dictionary of
+unused strings.
+
+The same read turned up a class neither instrument can see at all, because the string never appears in a JSX
+position: `setErr(\`Could not reach the DSA API at ${url}. ${err}\`)` -- written twice, once per compare page, which
+is second-owner drift in a place the duplicate check was never looking -- and
+`setNotice(\`The settings could not be cleared: ${status}.\`)`, sitting one line below a sibling that already asked
+the dictionary. Both now read from `common.apiUnreachable` and `settings.clearFailed`, with the error's own text
+appended verbatim because a transport failure's detail is data. `useState("Approved by human")` became
+`insp.approvalNote`; its rendering stays **unverified** here, because the seeded run is `COMPLETED` and the approval
+panel only mounts for a pending one -- the key exists in both locales and its reference resolves, which is what the
+static check can prove. The API's own default at `routers/analysis.py:314` was left alone on purpose: it fires only
+for a caller that sends no note at all, and the note is the reviewer's assertion, so the language it arrives in is
+the reviewer's client's business.
+
+The instrument grew a bucket for the class, because finding it twice by hand is how a blind spot becomes permanent:
+multi-word literals whose context is neither a reader slot nor a JSX position are now printed as a census to
+adjudicate, with three counted exclusions -- developer-facing `throw` messages, copyable command lines, and
+Tailwind class lists. Its first three drafts reported 720, then 205, then 1 entries, which is the story of a census
+nobody would read: module specifiers and `[&_svg]:size-4` needed to be excluded by *structure* (a `skip` context is
+className, a space-separated word count is not a slash-separated one) before the list meant anything. Now it prints
+`assembled=0 excluded: developer-throw=2 command=3 class-list=2`.
+
+**Falsification.** A planted `setErr("Planted english failure notice outside JSX")` was reported at
+`app/runs/compare/page.tsx:75` and removed. Two of my own plants broke in the process and both were caught by
+reading the tree rather than by a gate: a shell-quoted perl substitution mangled an import line in
+`apps/web/app/research/page.tsx` (`git diff` showed exactly that and nothing else, so it was repaired by editing
+the line back, not by restoring the file), and a second plant asserted an anchor that did not exist, which is why
+the insert is now done against a line read from the file first.
+
+**Verification.** The seeded pair rendered `正常` on all five tool-call badges and `全部 / 正常 / 出错` on the filter
+chips, `5／5 次调用`, `置信 0.80` and the seven Chinese compare row names -- read from a live browser against the
+rebuilt bundle. Both ports were verified free afterwards (`lsof -sTCP:LISTEN` returns nothing for `:3221` and
+`:8000`) and the seed left no new files in the tree. `tsc` 0, `next build` 0, inventory `prose=0 duplicates=0
+assembled=0 keys referenced=628 unknown=0`.
+
+## 235. The review panel was rendered, and three claims about why things were invisible were corrected
+
+2026-10-20, continuing §234. §234 ended with one thing explicitly unverified: `insp.approvalNote`, because the
+approval panel only mounts for a run in the review state and the seeded run is `COMPLETED`. Producing that state
+cost four commands and nothing: boot the API against the throwaway `/tmp` sqlite file the previous run had left,
+`UPDATE analysis_runs SET status='HUMAN_REVIEW'` (and the same field inside `state_json`, so whichever half the API
+reads agrees), start `next start`, open the page in a browser with `dsa_locale=zh`. The fixture was then deleted and
+both ports were verified free.
+
+The panel arrived entirely in 中文: the pause banner `已暂停，等待人工确认`, `已请求人工复核` with the sentence that
+says a run stops at the review gate and becomes `COMPLETED` on approval, the field label `批准说明`, the button
+`批准此次运行`, the note input whose value is `人工审核通过`, and the follow-up textarea's placeholder. No `⟨` marker
+anywhere. Three claims in §232-§234 were wrong in the process of being right about something else, and they are
+corrected here rather than quietly reworded:
+
+* the status is `HUMAN_REVIEW` in `AnalysisStatus`; §234's handoff addendum called it `REVIEW_PENDING`, a name no
+  code carries, so a reader searching for it would have found nothing;
+* §232 attributed the notify button's invisibility to capability gating -- "rendered only where the browser offers
+  notifications". Headless Chromium renders it, and it read `开启完成通知` here. The real reason the region check never
+  saw it is the one that applies to every string in this batch: the static routes the tour walks simply do not
+  contain that control;
+* `insp.liveProgress` and `prov.heuristicDetail`, both written this session and each verified only statically until
+  now, rendered for real: `100% · 5 条证据 · 1 条洞察` and `推理模式：stub` followed by the whole deterministic-planner
+  sentence. The trace tab counted `轨迹（7）` and `证据（5）`, so §230's tab fix and this batch's keys are now both
+  witnessed on a live run rather than in a source parse.
+
+Nothing new was found to fix -- the census, the key-resolution check and this render pass now agree, which is the
+point of holding all three. No money was involved: local processes against a temporary database, deleted afterwards.
+
+## 236. A button that claimed a delivery the browser had refused, found by the same live read as the status token
+
+2026-10-20, continuing §235. The browser pass that verified the review panel looked at one control next to it and
+found the second silent failure of the session. `toggleNotify` did this: if permission was `default`, request it,
+then -- unconditionally -- `setNotify((v) => !v)`. The code that sends requires
+`Notification.permission === "granted"`, so the state the button reported and the capability the browser would
+honor were two different things. A visitor who had previously chosen **Block** never even saw a prompt, because
+`default` was no longer the value; their click simply produced `aria-pressed="true"` and the word "Notifying".
+
+Measured rather than inferred, on both bundles, same page, same script:
+
+* pre-fix: `perm=denied`, click → `pressed=true`, text `Notifying` -- a claim the browser will not keep;
+* post-fix: `perm=denied`, click → `pressed=false`, text `Notifications blocked`, tooltip naming the reason;
+  in 中文 `通知已被阻止` with `此浏览器不会向该站点投递通知，因此这项保持关闭。`;
+* granted path: turns on (`pressed=true`, `Notifying`). Reported honestly -- this one ran against a stubbed
+  `Notification`, because headless Chromium keeps `Notification.permission === "denied"` even in a context where
+  Playwright granted the permission. A stub proving the branch is not the same evidence as a real browser proving
+  the feature, so the difference is written here rather than smoothed over.
+
+The fix moves the decision to the permission result and makes a refusal visible; `insp.notifyBlocked` and
+`insp.notifyBlockedWhy` are new keys in both locales. `tests/contract/test_web_notification_capability.py` is the
+CI half, because the tour never reaches a run-report control on a live run and the acceptance script reads regions,
+not capability claims. It was falsified by restoring the old handler verbatim -- red on
+`test_the_permission_result_decides_whether_the_control_is_on`, which is the assertion that must fire -- then
+restored and hash-compared (`restored_ok=yes`) with the guard green again.
+
+**Instrument note, because it nearly produced a false finding.** The first probe run reported the granted path
+broken. The product was fine: the script created a context, granted notifications on it, closed it unused, and
+then tested a *different* context with no permission. A red from an instrument is read as a red until the
+instrument is audited -- the same rule as §231's proxy 502 and §234's phantom `T`s. The corrected script prints
+which path it used and what permission the page itself reported, so this class of mistake cannot hide again.
+
+**Verification.** `tsc` 0, `next build` 0 on the final source, guard 3 passed (red on the planted handler),
+parity guard green, inventory `prose=0 duplicates=0 assembled=0 keys referenced=630 unknown=0`. The seeded pair
+was booted from a temporary `/tmp` database with one row flipped to `HUMAN_REVIEW`, and that fixture plus both
+listeners were removed afterwards (`lsof` reports nothing on `:3221` or `:8000`). No cost: local processes, local
+bundle, one scripted browser.
+
+## 237. The secret scan was reading the whole disk, and an ignored 2.8 GB venv could have reddened it forever
+
+2026-10-20, continuing §236. The 17-gate mirror run for the notify fix went red on the pytest gate, and the
+failure was not in this lane: `test_secret_protection_no_hardcoded_secrets_in_repo` -- hardened in another
+session's merged `6c82ba0` -- walks `Path(".").rglob("*.py")`, so its corpus is the working tree. This machine has
+a 2.8 GB git-ignored `benchmarks/external/datascibench/.workspace/venv` left by an external-benchmark run, and
+inside it sits joblib's `test_func_inspect_special_encoding.py`, a fixture whose bytes are deliberately not
+UTF-8. The guard fails closed on an unreadable source, so one local scratch directory turned a security test red
+indefinitely -- while CI, whose checkout has no such tree, could never have shown it. That is the
+green-in-CI/red-locally shape whose cause is the file corpus rather than the code.
+
+The guard already skipped `.venv`, `.git` and `node_modules`, which is the author's own evidence that installed
+packages do not belong in the scan; a list of names is the part that cannot work, because whatever a run decides
+to call its scratch directory is a new exception. The corpus is now *anything committable* -- `git ls-files`
+plus `git ls-files --others --exclude-standard` -- which is the same boundary the Secret Scan job and
+`run_secret_scanning` draw: ignored scratch cannot be committed and therefore cannot ship a credential, and
+everything that can be committed is covered. Measured 441 files today, with the previous shape walking thousands
+of `site-packages` sources.
+
+Three assertions keep it from passing on absence: a floor with headroom, a positive scope check (the corpus must
+contain `packages/`), and a negative one (no `site-packages`, no `.workspace`) written as the flip condition
+rather than a count, so widening the git invocation back to a bare `--others` reddens it. Falsified in both
+directions: a credential-shaped literal dropped into an untracked, non-ignored file produced
+`Potential secret sk-[A-Za-z0-9]{20} in tests/_r13t_plant_probe.py`, and removing it returned the file to green --
+so the narrowing did not cost the guard its power to catch the thing it exists for. Its three existing negative
+controls (a secret past 5 KB, a planted literal, an unreadable file) still pass unchanged.
+
+The venv was left in place: it belongs to another session's run, it is ignored, and deleting it would only cost
+a peer a reinstall. It is named here so nobody re-diagnoses the red from scratch. Nothing was paid for.
+
+## 238. The report's own validation block spoke the engine's identifiers, and its HTML heading ignored the rule the Markdown followed
+
+Found by reading a live App page instead of trusting the export tests. `GET /mcp-app/report/{run_id}` for a run
+whose question is Chinese returned `lang="zh"`, `图表`, `计划`, `工具调用`, `证据`, `洞察` -- and `Validation`. The
+hardcoded literal was at `report_export.py:683`: `parts.append("<h2>Validation</h2>")`, in the one section whose
+Markdown sibling called `_lbl(lang, "validation")`. So the two serialisations of a single assembly disagreed about
+the section's name, which is the exact failure this module's docstring forbids. `test_the_html_declares_the_language_it_actually_uses`
+missed it for the same reason every earlier R-13 miss happened: it enumerated the Markdown headings and read only
+`<h2>工具调用</h2>` from the HTML.
+
+The second finding was wider. The check *name* -- `evidence_coverage`, `unsupported_claim`, `budget` -- was rendered
+raw by both exports and by the inspector list (`RunInspector.tsx:719`), while the same document's limitations block
+already called those checks 证据覆盖率 and 因果表述: `_label()` has been the owner of that vocabulary since §234, and
+only `derived_limitations` used it. The two label maps named 7 keys; the engine emits more.
+
+Enumerating instead of counting: a text sweep over `packages/` for `check="..."` returned 14 keys, of which
+`levene` and `normality` are a tool's per-column assumption records -- data the report prints as data, not chrome.
+The shape rule (an `ValidationResult(check=...)` construction, or a dict literal carrying `check`, `passed` and
+`message`) returns 11 and is the one committed. It also found a fifth producer that hand-listing the modules would
+have kept out: `reporting.py` appends `evidence_bundle` when bundling fails.
+
+Fix, one owner per fact: both maps now name all 11 (plus `statistical_power`, which the reachability test already
+exercises); `_validation_lines` and `export_html` render the check through `_label`; the HTML heading uses `_lbl`;
+`apps/web/lib/locale.ts` gained `chk.*` entries for the same vocabulary in both blocks and a `checkLabel()` beside
+`callStatusLabel()`, and the inspector calls it. Messages stay verbatim -- `test_the_runs_own_bytes_are_never_translated`
+pins that, and the key is the engine's identifier while the sentence is what it observed.
+
+The guard (`test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it`) cross-checks in both directions:
+producer set against the Python columns, the columns against each other, the web blocks against the columns by key
+*and value*, then the wiring -- `**证据覆盖率**` present, `evidence_coverage` absent from all four renderings,
+`checkLabel(locale, v.check)` present in the component. Falsified six ways: restoring the literal heading, deleting
+a key from both maps, deleting it from one, rewording a web value, unwiring the component, and forging two empty
+inputs for the parsers (each floor fired; the three files returned byte-identical under `shasum -c`).
+
+Live evidence, with no fixture surgery this time: a run created through `POST /api/v1/analysis/` with a Chinese
+question on the heuristic engine (free) stored a report whose headings are `# 分析报告 / ## 计划 / ## 工具调用 /
+## 证据 / ## 洞察 / ## 校验 / ## 局限` and whose items read `**证据覆盖率**`, `**因果表述**`, `**工具执行**`,
+`**运行预算**`. In the browser, as that run's owner, the validation card showed 证据覆盖率/因果表述/工具执行/运行预算/
+洞察的依据/证据可追溯性/数据集哈希 in Chinese and the same seven in English, with no identifier and no `⟨`
+(`R13W_CHECKLABEL_PASS (12)`, 5 tabs walked). The App surface on a published row renders `校验` plus the Chinese
+labels, `⟨` count 0. Full mirror: see the CHANGELOG entry; nothing was paid for.
+
+Three things were adjudicated rather than changed. Tool names in the audited trace (`**correlation_analysis**` next
+to its `TC-` id and duration) are trace material the audited mode exists to show. `GET /mcp-app/report/{id}` returns
+404 for a run the visitor owns: `app.py` documents the loader as scoped to what the instance publishes precisely so
+an unidentified client surface cannot reach private rows (R-08), so that 404 is the fix working, and it was checked
+against the docstring before being accepted. And the page titles the card 验证 while the report titles the section
+校验 -- two near-synonyms; the page's word is the one its whole family of keys uses (验证关卡, 验证中, 可验证的), so
+aligning it would move the product's headline vocabulary for a cosmetic gain. Recorded instead.
+
+Two instrument lessons. A run's stored `report_markdown` is generated at run time, so flipping `user_query` in a
+throwaway database and then reading the stored report manufactures a "the language rule is broken" finding: the
+document was correct for the question it was written under, and the mutation, not the product, was the defect. And
+a fresh browser context mints its own `dsa_owner`, so it honestly cannot see a row stamped with another id -- the
+first two probe runs failed on that, not on the page.
+
+## 239. A green Secret Scan never meant the repository was clean: the range comes from the push payload, and a merge commit widens it to 139 commits
+
+2026-10-21, after PR 77 landed. The owner merged Dependabot's Node 22 -> 26 bump with `gh pr merge 77 --merge
+--auto`; it landed as merge commit `32e24055` at 12:49:58Z. Two verdicts came off that one push, and they point in
+opposite directions:
+
+- `ci` (the only required context, `strict: true`) -- run `39602781284`, **success**, and the step named
+  `Run docker build -f docker/Dockerfile.web -t dsa-web:ci .` was read out of the job individually rather than
+  inferred from the job's colour, because a green job is not evidence that a particular step ran. That step is the
+  production-path witness that `node:26-alpine` builds.
+- `Secret Scan` -- run `39602781315`, **failure**, `leaks found: 2`. Not a required context, so nothing was blocked.
+
+The two matches are `8535e148` at `tests/contract/test_provider_settings.py:38` and `d883c7df` at
+`docs/hosted-demo.md:125`. Both are ancestors of the tip that was green the day before, and neither is a
+credential: the first is `CREDENTIAL_CANARY`, whose own preceding comment declares it "A credential shaped like a
+real one. Not a placeholder", and the second is prose naming `DSA_TELEMETRY` and `DSA_EVENT_LOG`, verified by
+printing the line with runs of 13+ characters masked. So the question was not "what leaked" but "why is a
+long-quiet gate suddenly reading old commits".
+
+**The mechanism is in the action, not in gitleaks.** Read at the pinned ref `e0c47f4f` (v3.0.0):
+`src/index.js:161-162` sets `baseRef = eventJSON.commits[0].id` and `headRef = commits[last].id`, and
+`src/gitleaks.js:105-110` then runs either `--log-opts=-1` when those two are equal, or
+`--log-opts=--no-merges --first-parent ${baseRef}^..${headRef}` when they are not. The webhook's `before..after` is
+never used. Both arms were observed, not deduced: today's log printed `--log-opts=--no-merges --first-parent
+0d5f3de0...^..32e24055...`, while the successful run on `e548d87` printed `--log-opts=-1`. A squash merge pushes one
+commit, so `commits[0] == commits[-1]` and the gate reads a single commit; a `--merge` push lists the branch's own
+commits first, and `0d5f3de0` -- Dependabot's bump, cut on 2026-10-12 -- made the walk start nine days back.
+
+The arithmetic closes it. The log said `139 commits scanned`, and
+`git rev-list --count --first-parent --no-merges 0d5f3de0^..e548d87` = **139** on this clone. One link here is
+argued rather than measured: the merge commit's objects are not local, because `git fetch` died on the
+github.com:443 flap, so the count was taken against the *pre-merge* tip as a proxy. The equality is expected --
+`--first-parent` prunes the branch side and `--no-merges` drops both merge commits -- but it is a proxy, and the
+same command against `32e24055` should be run by whoever next has the object.
+
+The consequence is a statement about the gate, not about this PR: **a green Secret Scan on main means "the range
+this push walked is clean", and that range is chosen by how the PR was merged.** The same two strings were caught
+at their own arrivals -- runs `38893715137` (10-16) and `39018232999` (10-17), both `failure`, one leak each -- and
+neither was fixed or recorded, after which single-commit pushes stopped looking at them. Squash-merging is not a
+fix; it only narrows what the gate can see.
+
+One change was made, and it is a strengthening: `GITLEAKS_VERSION: "8.24.3"` is now set on the step, with a comment
+naming the reason. Unset, `src/index.js:138-140` calls `repos.getLatestRelease` on the gitleaks repository and
+installs whatever that returns, so the rule set -- and therefore the verdict -- can move under a commit that
+changed nothing else. 8.24.3 is the version every run examined here printed, and it is upstream's current release
+(tag `v8.24.3`, published 2025-04-11), so pinning it changes no behaviour today; that is precisely why it is safe,
+and also why its effect is latent -- no run here can show the pin firing, because upstream has not released since.
+
+Deliberately not changed, with the measurement that decided it: the guide-line mirror in
+`tests/test_ci_gate_integrity.py` already pins ten `uv lock --check` occurrences across five surfaces
+(`CONTRIBUTING.md`, `docs/contributing.md`, `docs/gate-reference.md`, `docs/gate-reference-cn.md`,
+`docs-standalone.md`), those files are being rewritten by a concurrent session in this shared worktree right now,
+and `test_secret_scan_workflow` in `tests/security/test_w7_supply_chain.py` asserts only that the file exists and
+mentions gitleaks. Extending that mirror to a non-gate environment variable would police ten lines of prose for one
+constant and fight the other session while doing it. And the two findings themselves were left unresolved on
+purpose: removing the canary would delete the fixture's reason for existing, and a `.gitleaksignore` entry is a
+change to what the gate forgives, which is the owner's call rather than a way to arrive at green.
+
+Reproduce with:
+`gh run view 39602781315 --repo Jackxiaozhiren/data-science-agent --log | grep "gitleaks cmd"`,
+`gh run view 39440661611 --log | grep "gitleaks cmd"` for the single-commit arm, and
+`git rev-list --count --first-parent --no-merges 0d5f3de0^..e548d87`.
+
+Three instrument errors in this pass, all of them the known shape: `timeout` does not exist on this Mac, so a
+bounded fetch exited 127 and printed nothing; `?recursive=1` unquoted was glob-expanded by zsh into "no matches
+found"; and `echo rc=$?` measured the `tail` at the end of a pipe rather than the `git fetch` in front of it. The
+first and third were caught by reading the output, not by the exit status.

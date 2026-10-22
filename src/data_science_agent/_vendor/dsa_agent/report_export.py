@@ -27,6 +27,8 @@ never absent, even when the run found nothing to qualify.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import html
 import json
 import re
@@ -70,7 +72,11 @@ _IDENTIFIER_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
 )
 
-#: Validation check keys, in the words a person who did not write them would use.
+#: Validation check keys, in the words a person who did not write them would use. Every key the engine can
+#: put in ``validation_results[].check`` has to be listed here: the two exports and the web inspector all say
+#: this word to the reviewer, so an unmapped key would show ``prompt_injection`` where the document says
+#: everything else in plain language. ``test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it``
+#: enumerates the producers and fails if one of them has no words here.
 _CHECK_LABELS = {
     "evidence_coverage": "Evidence coverage",
     "unsupported_claim": "Causal language",
@@ -79,9 +85,14 @@ _CHECK_LABELS = {
     "insight_evidence": "Insight grounding",
     "evidence_traceability": "Evidence traceability",
     "statistical_power": "Statistical power",
+    "prompt_injection": "Prompt injection",
+    "resource_limits": "Resource limits",
+    "dataset_hash": "Dataset hash",
+    "evidence_bundle": "Evidence bundle",
+    "langgraph_fallback": "Graph fallback",
 }
 
-#: The same seven checks, in the language the run was asked in.
+#: The same checks, in the language the run was asked in.
 _CHECK_LABELS_ZH = {
     "evidence_coverage": "证据覆盖率",
     "unsupported_claim": "因果表述",
@@ -90,6 +101,11 @@ _CHECK_LABELS_ZH = {
     "insight_evidence": "洞察的依据",
     "evidence_traceability": "证据可追溯性",
     "statistical_power": "统计功效",
+    "prompt_injection": "提示注入",
+    "resource_limits": "资源限制",
+    "dataset_hash": "数据集哈希",
+    "evidence_bundle": "证据打包",
+    "langgraph_fallback": "编排回退",
 }
 
 #: Every word this file says *about* a run. A report keeps the language the run was asked in
@@ -369,9 +385,11 @@ def _tool_call_lines(calls: list[dict[str, Any]], lang: str = "en") -> list[str]
     return lines
 
 
-def _validation_lines(results: list[dict[str, Any]]) -> list[str]:
+def _validation_lines(results: list[dict[str, Any]], lang: str = "en") -> list[str]:
+    # The check is named by `_label`, the message is the run's own bytes. That split is the whole rule: the
+    # key is the engine's identifier shown to a reviewer, the sentence is what the engine actually observed.
     return [
-        f"- {'✓' if result.get('passed') else '✗'} **{result.get('check')}**: {result.get('message')}"
+        f"- {'✓' if result.get('passed') else '✗'} **{_label(result.get('check'), lang)}**: {result.get('message')}"
         for result in results
     ]
 
@@ -425,7 +443,7 @@ def build_sections(source: Any, *, plain: bool) -> list[tuple[str, list[str]]]:
     )
 
     if not plain:
-        validation = _validation_lines(summary.get("validation_results") or [])
+        validation = _validation_lines(summary.get("validation_results") or [], lang)
         if validation:
             blocks.append((_lbl(lang, "validation"), validation))
 
@@ -680,16 +698,56 @@ def export_html(source: Any) -> str:
             parts.append(f'<p class="meta">{_lbl(lang, "evidenceInline")} {links}</p>')
         parts.append("</details>")
 
-    parts.append("<h2>Validation</h2>")
+    parts.append(f"<h2>{_lbl(lang, 'validation')}</h2>")
     parts.append("<ul>")
     for check in summary.get("validation_results") or []:
         mark = "✓" if check.get("passed") else "✗"
         klass = ' class="pass"' if check.get("passed") else ' class="fail"'
         parts.append(
-            f"<li{klass}>{mark} <strong>{_esc(check.get('check'))}</strong> — {_esc(check.get('message'))}</li>"
+            f"<li{klass}>{mark} <strong>{_esc(_label(check.get('check'), lang))}</strong> — "
+            f"{_esc(check.get('message'))}</li>"
         )
     parts.append("</ul>")
 
     parts.append("</body>")
     parts.append("</html>")
     return "\n".join(parts) + "\n"
+
+
+_INLINE_BLOCK = re.compile(r"<(script|style)\b[^>]*>(.*?)</\1>", re.DOTALL | re.IGNORECASE)
+
+
+def document_security_headers(document: str, *, allow_self_frame: bool = False) -> dict[str, str]:
+    """The headers that make one served HTML document safe to hand to a browser.
+
+    ``default-src 'none'`` is the right policy for a JSON API and the wrong one for the HTML routes the same API
+    also serves. Measured on a live instance: ``/mcp-app/`` offered zero dataset options while its own server
+    published thirty, because Chromium refused to execute the page's inline script -- and ``connect-src`` fell back
+    to ``'none'``, so the page could not have called home even if the script had run. Every test of that page had
+    used ``TestClient``, which runs no JavaScript, so nothing between the mount and a real browser ever noticed.
+
+    The policy is therefore derived from the document it protects: each ``<script>`` and ``<style>`` block the bytes
+    actually contain is named by hash, which keeps ``'unsafe-inline'`` out of the answer entirely. A block added
+    later is a page that visibly stops working in a browser rather than a page that quietly gains reach.
+    """
+    named: dict[str, set[str]] = {"script": set(), "style": set()}
+    for kind, body in _INLINE_BLOCK.findall(document):
+        digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        named[kind.lower()].add(f"'sha256-{digest}'")
+    directives = [
+        "default-src 'none'",
+        "script-src " + (" ".join(sorted(named["script"])) or "'none'"),
+        "style-src " + (" ".join(sorted(named["style"])) or "'none'"),
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "base-uri 'none'",
+        "form-action 'none'",
+    ]
+    if "<iframe" in document.lower():
+        directives.append("frame-src 'self'")
+    directives.append("frame-ancestors 'self'" if allow_self_frame else "frame-ancestors 'none'")
+    return {
+        "Content-Security-Policy": "; ".join(directives),
+        "X-Frame-Options": "SAMEORIGIN" if allow_self_frame else "DENY",
+    }

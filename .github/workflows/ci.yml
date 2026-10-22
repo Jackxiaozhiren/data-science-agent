@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm --prefix apps/web ci --legacy-peer-deps
@@ -185,6 +185,15 @@ jobs:
           PY
       - run: docker build -f docker/Dockerfile.web -t dsa-web:ci .
       - run: set -o pipefail; npm --prefix apps/web run build 2>&1 | tail -n 20
+      # The two instruments R-13 kept running by hand, now gates. The chrome inventory is a static AST scan of what
+      # the pages actually say; the keyboard gate boots its own throwaway API + web stack, because the claim it
+      # measures -- a disclosure opening on Enter -- only exists on a live seeded run, and the static tour above
+      # deliberately has no backend. CI runs the same one command `scripts/run_gates.sh` lists, so a contributor
+      # and the workflow measure the same thing (audit §113.5).
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: node apps/web/scripts/locale-chrome-inventory.mjs
+      - run: bash scripts/run_web_live_gates.sh
       - run: set -o pipefail; docker compose config 2>&1 | head -n 40
       - run: set -o pipefail; uv run python -m mkdocs build --strict 2>&1 | tail -n 50
       - name: Verify v4.3.0 release candidate
