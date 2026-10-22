@@ -16,7 +16,10 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
 ## Protocol (2026-07-28 stateless core)
 - No server-side session. Each `tools/call` is self-contained.
 - Tool discovery via `tools/list`; calls via `tools/call` with JSON args.
-- Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only.
+- Auth: **none on this surface.** `AuthMiddleware` covers `/api/*` only -- it returns early for any path that does
+  not start with `/api/` -- so `/mcp` and `/mcp-app` are reachable without a credential even when `DSA_AUTH_TOKEN`
+  is set, and there is no `DSA_MCP_TOKEN` anywhere in the code. Run the MCP endpoint only where you would run an
+  unauthenticated shell: `run_python` and `run_sql` are among its tools.
 - MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed

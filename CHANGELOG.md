@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the MCP docs promised a token gate that no code reads
+
+- `docs/MCP_DESIGN.md` said "Auth: bearer token optional (env `DSA_MCP_TOKEN`), otherwise local-only", and
+  `docs/mcp.md` listed Authorization among the matrix rows "verified live … headers all pass". Measured:
+  `DSA_MCP_TOKEN` appears in no source file -- the two doc lines are its only occurrences in the repository -- and
+  `AuthMiddleware` returns early for any path that does not start with `/api/`, so `/mcp` and `/mcp-app` answer
+  unauthenticated at every value of `DSA_AUTH_TOKEN`.
+- That matters because `/mcp` dispatches `run_python` and `run_sql`. An operator who read the design document and set
+  a token would believe the endpoint was gated and could expose it; the sentence was the only thing between those two
+  tools and an unauthenticated caller, and it was false.
+- Both lines now say what is true -- no auth on that surface at any token setting, run it as you would run an
+  unauthenticated shell -- and `docs/mcp.md` names the matrix rows that are not capabilities (Authorization absent,
+  Tasks a stub) instead of marking them pass. Implementing a real `/mcp` gate is deliberately not done here: it
+  changes what an operator sees, and the product's own App page is mounted on the same process and would have to
+  authenticate to the endpoint it calls. Filed for the owner with the options in `AUDIT_LEDGER.md` §252.
+
 ### Fixed (post-4.6.0) — the JSON-RPC surface answered with a shape no MCP client is specified to read
 
 - Two required protocol fields were missing. `CallToolResult` is `content: list[ContentBlock]` plus `isError`, and
