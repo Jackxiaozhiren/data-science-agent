@@ -578,10 +578,10 @@
     },
     {
       "package": "langchain-core",
-      "version": "1.5.5",
+      "version": "1.6.12",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-core@1.5.5"
+      "purl": "pkg:pypi/langchain-core@1.6.12"
     },
     {
       "package": "langchain-protocol",

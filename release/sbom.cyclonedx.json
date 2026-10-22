@@ -718,7 +718,7 @@
     },
     {
       "name": "langchain-core",
-      "version": "1.5.5",
+      "version": "1.6.12",
       "licenses": [
         {
           "license": {
@@ -726,7 +726,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/langchain-core@1.5.5",
+      "purl": "pkg:pypi/langchain-core@1.6.12",
       "source": "https://pypi.org/simple"
     },
     {
