@@ -212,10 +212,22 @@ def test_no_stub_anymore() -> None:
     assert "§35" in readme
 
 
-#: `exec` / `execSync` run their argument through /bin/sh. `execFile`, `execFileSync` and `spawn` do not, and
-#: `executeCommand` is the VS Code API rather than a process. The shape is matched on the call, so a comment or
-#: a docstring mentioning the word cannot trip it.
-_SHELL_CALL = re.compile(r"\bexec\s*\(|\bexecSync\s*\(|promisify\(\s*cp\.exec\s*\)")
+#: Child-process calls that hand their argument to /bin/sh: `exec` and `execSync`. `execFile`, `execFileSync`
+#: and `spawn` do not, `executeCommand` is the VS Code API rather than a process, and the receiver is required
+#: on `exec` because `/re/.exec(s)` is a string method with the same name -- a predicate that flags that would
+#: be loosened away within a week, which is how this kind of guard actually dies.
+_SHELL_CALL = re.compile(r"\bexecSync\s*\(|\w+\.exec\s*\(|promisify\([^)]*\.exec\b")
+#: The shell sink lived in one directory; the class is repo-wide, and the same lines that pin `apps/vscode` can
+#: pin every script under apps/ and packages/.
+_JS_GLOBS = (
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "apps/**/*.mjs",
+    "apps/**/*.js",
+    "packages/**/*.ts",
+    "packages/**/*.mjs",
+)
+_SKIP_DIRS = {"node_modules", ".next", "dist", "out", "__pycache__", ".venv", ".turbo"}
 
 
 def test_no_extension_call_hands_the_shell_a_word_from_outside() -> None:
@@ -228,20 +240,29 @@ def test_no_extension_call_hands_the_shell_a_word_from_outside() -> None:
     measures both halves; this test keeps the shape from coming back.
     """
     offenders: dict[str, list[str]] = {}
-    for source in sorted((VSCODE / "src").glob("*.ts")):
-        hits = [
-            line.strip()
-            for line in source.read_text(encoding="utf-8").splitlines()
-            if _SHELL_CALL.search(line)
-        ]
-        if hits:
-            offenders[source.name] = hits
+    for pattern in _JS_GLOBS:
+        for source in sorted(REPO.glob(pattern)):
+            if _SKIP_DIRS & set(source.parts):
+                continue
+            hits = [
+                f"{i}: {line.strip()[:90]}"
+                for i, line in enumerate(
+                    source.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+                )
+                if _SHELL_CALL.search(line)
+            ]
+            if hits:
+                offenders[str(source.relative_to(REPO))] = hits
     assert offenders == {}, f"a shell-splicing call came back: {offenders}"
 
-    # The predicate must be able to see the shape it exists to catch -- the pre-fix line, verbatim in form.
-    old_shape = "    const { stdout } = await exec(`uv run dsa analyze ${JSON.stringify(dataset)} --json`, {});"
-    assert _SHELL_CALL.search(old_shape), "the guard cannot fail, so it guards nothing"
-    assert not _SHELL_CALL.search("    const { stdout } = await execFile('uv', argv, {});"), (
+    # The predicate's own eyes, both directions -- otherwise "no offenders" may only mean "no sight".
+    assert _SHELL_CALL.search("    const { stdout } = await cp.exec(cmd, { timeout: 30000 });"), (
+        "the guard cannot see the shape it exists to catch, so it guards nothing"
+    )
+    assert not _SHELL_CALL.search('  const m = /rgba?\\\\(([^)]*)\\\\)/.exec(color ?? "");'), (
+        "the guard fires on a regular expression's .exec() -- false positives get a guard loosened away"
+    )
+    assert not _SHELL_CALL.search("  await execFile('uv', argv, { timeout: 10000 });"), (
         "the guard fires on the safe shape too, so it will be widened away"
     )
     dsa = (VSCODE / "src" / "dsa.ts").read_text(encoding="utf-8")
