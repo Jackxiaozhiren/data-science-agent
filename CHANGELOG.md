@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the demo's two halves are not equally behind, and that changes what the redeploy owes
+
+- The web side, recorded last round as unmeasurable from this machine, answered on 2026-10-23: `200` in about a
+  second and a half with the app shell. Read as a fact about the path rather than the service -- which is what
+  the paragraph warned a never-opening connection would turn out to be.
+- `server: Vercel` plus an `x-vercel-id` naming an edge and an origin region are what make that readable on a
+  machine behind a filtering proxy that answers for blocked hosts with `198.18.0.0/15` addresses. A status code
+  alone cannot distinguish the origin's page from a proxy's, and the doc now says which headers to look for.
+- The asymmetry: the chunk the deployed page references carries the cold-start copy committed on 2026-10-22
+  ("up to two minutes" / 两分钟), so the web deployment tracks `main`; the API's `/mcp` still publishes
+  `input_schema` for every tool, so the Render service predates the discovery-field fix. Both checks are
+  credential-free and live in `docs/hosted-demo.md`, with the bundle loop printing the chunk it matched instead
+  of the file owning a count. #44 is therefore one service of work, not two.
+
 ### Tests (post-4.6.0) — the artifact traversal block was real, and nothing could tell if it broke
 
 - `docs/tools.md` advertises `save_artifact` as a "traversal block", and reading the code the claim holds in two
@@ -12,6 +26,13 @@
   control that writes a normal file, so the refusals cannot be satisfied by a tool that writes nothing.
 - Both layers were falsified rather than trusted: deleting the component rule reddens the segment and reader
   tests, deleting the resolution comparison reddens exactly the symlink test.
+- The same promise turned out to be unowned on the read side too: `GET /api/v1/analysis/{run_id}/bundle`
+  composes its zip from stored artifact paths via `bundles._classify`, which resolves each path, requires
+  containment under the artifact root, and reports a reason for every entry it drops -- and no test named the
+  function or any of its reasons. One test now walks eight stored shapes (absolute, relative, outside, `../`
+  climb, symlink-out, missing, path-less, non-dict); deleting the containment comparison reddens it on exactly
+  the climb and the symlink. The residual it documents instead of fixing: two spellings of one stored file
+  yield two zip members with the same name.
 - One instrument error worth the sentence: the reader test passed before the fixture also created `reports/`,
   because `reports/..` cannot resolve when `reports/` is absent -- so the climb failed for a reason unrelated to
   the rule, and the mutation kept passing. Adding the directory made the same mutation redden it. Recorded in

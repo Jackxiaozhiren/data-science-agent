@@ -251,6 +251,26 @@ The web side is checked the same way, from wherever you are:
 shell; a TCP connect that never completes says about your path what a 62-second probe said about the API last
 round, which is why the timeout on the command matters as much as its status code.
 
+Re-run on 2026-10-23 and it answered: `200` in about a second and a half, with the app shell. Two headers make
+that reading trustworthy rather than hopeful on this machine, which sits behind a filtering proxy that answers
+for hosts it blocks (`198.18.0.0/15` addresses): `server: Vercel` and an `x-vercel-id` carrying an edge and an
+origin region. A proxy-generated page has neither.
+
+The same two requests also say something the version endpoint does not: the two halves of the demo are not
+equally behind. The web bundle the deployment serves contains the cold-start copy committed on 2026-10-22,
+which is checkable in one loop --
+
+```bash
+W=https://data-science-agent-web.vercel.app
+curl -s $W/datasets | grep -o '/_next/static/[^"]*\.js' | sort -u | while read -r s; do
+  curl -s "$W$s" | grep -q "two minutes" && echo "current cold-start copy in $s"
+done
+```
+
+-- and it names the chunk rather than a claim, while the API's `/mcp` still publishes the pre-fix
+`input_schema`. So Vercel is tracking `main` and the Render service is not, and the remaining deploy work is
+one service rather than two. That is worth knowing before spending the token a redeploy needs.
+
 What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
 published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance
 answers `2` datasets and `2` analyses, every one of them `owner: shared` -- the sample datasets and the

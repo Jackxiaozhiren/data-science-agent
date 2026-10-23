@@ -105,3 +105,55 @@ async def test_a_reader_refuses_a_run_id_that_would_climb_out_of_the_tree(root: 
     out = await read_resource("report://..")
     assert out.get("isError"), f"the reader returned a resource for a climbing run id: {out}"
     assert sentinel not in str(out.get("text", "")), "the climb read the file one level up"
+
+
+# --- the API's bundle reader makes the same promise from stored rows (docs/api.md: a run's artifacts) ---
+
+
+def _classify(root: Path, entries: list) -> tuple:
+    from dsa_api.routers.bundles import _classify as prod_classify
+
+    return prod_classify(root, entries)
+
+
+def test_the_bundle_reader_refuses_paths_that_are_not_under_the_root(tmp_path: Path) -> None:
+    """Stored artifact rows are outside input: they were written by another process, on another host, once.
+
+    `_classify` is pure, so each shape below is a case rather than a scenario -- and the two that a name check
+    cannot see (a climb and a symlink) are the reason the function resolves before comparing.
+    """
+    root = tmp_path / "artifacts"
+    (root / "run-1").mkdir(parents=True)
+    kept = root / "run-1" / "report.md"
+    kept.write_text("kept\n", encoding="utf-8")
+    elsewhere = tmp_path / "secrets.txt"
+    elsewhere.write_text("not yours\n", encoding="utf-8")
+    os.symlink(elsewhere, root / "run-1" / "link.txt")
+
+    entries = [
+        {"type": "report", "path": str(kept)},
+        {"type": "report", "path": "run-1/report.md"},
+        {"type": "report", "path": str(elsewhere)},
+        {"type": "report", "path": str(root / "run-1" / ".." / ".." / "secrets.txt")},
+        {"type": "chart", "path": str(root / "run-1" / "link.txt")},
+        {"type": "chart", "path": str(root / "run-1" / "gone.png")},
+        {"type": "code"},
+        "not-a-dict",
+    ]
+    include, excluded = _classify(root.resolve(), entries)
+    names = sorted(n for n, _ in include)
+    assert names == ["report.md", "report.md"], f"unexpected bundle contents: {names}"
+    for _name, path in include:
+        assert path.is_relative_to(root.resolve()), f"{path} escaped while being bundled"
+
+    reasons = {(e["name"], e["reason"]) for e in excluded}
+    assert ("secrets.txt", "outside the artifact root") in reasons, reasons
+    assert ("link.txt", "outside the artifact root") in reasons, (
+        f"the symlink was bundled as an ordinary file: {reasons}"
+    )
+    assert ("gone.png", "not present in this deployment") in reasons, reasons
+    assert ("code", "no path recorded") in reasons, reasons
+    assert ("artifact", "no path recorded") in reasons, (
+        f"a non-dict entry was handled oddly: {reasons}"
+    )
+    assert len(excluded) == 6, f"expected six refusals, got {sorted(reasons)}"

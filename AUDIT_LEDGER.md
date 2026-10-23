@@ -15559,3 +15559,45 @@ Second, smaller instrument error, same shape: a probe command printed "restored"
 `cp` back was in a later line than the `echo`. Caught by running `shasum -c` in the next command instead of
 trusting the label. Two rounds in a row now, so the rule is that a mutation script ends by restoring and
 verifying inside the same command, never by announcing what the next command will do.
+
+## 268. The demo's two halves turned out to be moving at different speeds, and one proxy header was the difference between knowing and guessing
+
+Last round recorded the web side as "not measurable from the machine that tried": both `*.vercel.app` URLs
+timed out at TCP connect while Render answered. Re-run on 2026-10-23 it answers `200` in about a second and a
+half, so that note was a fact about the path, not the service -- which is exactly what the paragraph said a
+connection that never opens would turn out to mean.
+
+Two headers make the new reading safe on this machine, because it sits behind a filtering proxy that answers
+for hosts it blocks and hands out `198.18.0.0/15` addresses: `server: Vercel` and an `x-vercel-id` with an edge
+and an origin region. A proxy that generated the page itself would not carry the origin's routing identity, and
+a status code alone cannot tell those two apart. Same reason a body check belongs next to the header check: the
+response contains the app shell and its hashed chunks, not a generic error page.
+
+The finding is the asymmetry, and it is measured rather than inferred. The chunk the deployed page references
+carries the cold-start copy committed on 2026-10-22 ("up to two minutes" / 两分钟), so the web deployment tracks
+`main`. The API's `/mcp` still publishes `input_schema` for every tool, so the Render service predates the
+discovery-field fix. One check per side, no credentials, and the answer is that #44 is one service of work
+rather than two -- which is the thing worth knowing before asking for the token a redeploy needs. The commands
+went into `docs/hosted-demo.md` (the bundle loop prints the chunk it matched, so the file owns no count), and
+the earlier "unmeasurable" note stays as a dated record with this one appended beside it.
+
+§267 follow-up, same day -- the same containment promise is made by a reader the tests did not cover either.
+
+`GET /api/v1/analysis/{run_id}/bundle` builds its zip from `state["artifacts"]` -- paths recorded by some other
+process, possibly on a different deployment -- through `bundles._classify`. That function does the right thing
+and does it in the right order: it resolves each stored path, requires `is_relative_to(resolved_root)`, then
+requires the target to be a readable file, and it reports the reason for everything it drops. The run id
+itself is shape-checked before the row is fetched, and the row is owner-scoped, so the caller names neither a
+path nor another visitor's run. Verified true by reading, with zero tests naming `_classify`, `outside the
+artifact root`, or any of its refusal reasons -- so the reason strings were the only specification.
+
+One test now covers eight stored-entry shapes at once: an absolute path under the root, the same file spelled
+relatively, an absolute path outside it, a `../../` climb, a symlink inside the root pointing out, a recorded
+file that is not present, an entry with no path, and a non-dict entry. Deleting the containment comparison
+reddens it on the climb and the symlink -- the two shapes a name check cannot see -- and restoring it returns
+the file to green, with the tree re-hashed inside the same command.
+
+Worth naming the residual rather than fixing it: because the same file can be recorded twice under two
+spellings, `include` can hold two entries with the same zip member name. It is not a security boundary and it
+is not what a bundle is for, so nothing here changes; the assertion spells out the duplicate rather than
+hiding it, so whoever adds dedup sees the test that documents today.
