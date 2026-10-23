@@ -351,14 +351,17 @@ instance they are talking to.
 One more, because it is measured rather than inferred: the `/mcp` surface on the same host takes no credential at
 all (`AuthMiddleware` is `/api/*`-only), and `profile_dataset` accepts any path whose extension it recognises, so
 a caller can have a file outside the repository read back to them as a profile -- including the literal first
-values of its columns. `run_python` refuses `import os` and `run_sql` refuses `read_*`, so this is not a general
-file-system oracle and not an arbitrary-code path; it is a read oracle for files ending in `.csv`, `.json`,
-`.jsonl`, `.parquet`, `.xls` or `.xlsx`, which on a deployed container includes configuration and credential
-files that happen to carry those extensions. Visitor uploads are not enumerable through it (the stored names are
-`<uuid>_<filename>`), so the exposure is the host's files rather than other visitors' rows. What to do about it
--- authenticate that surface, restrict it to loopback, or accept it as the price of a public tool endpoint -- is
-an open owner decision, recorded in `AUDIT_LEDGER.md`; the sentence is here so nobody has to read the code to
-learn the boundary.
+values of its columns. `run_python` refuses `import os` and `run_sql` refuses `read_*`, so this is not an
+arbitrary-code path and not a general file *reader*: it reads files ending in `.csv`, `.json`, `.jsonl`,
+`.parquet`, `.xls` or `.xlsx`, which on a deployed container includes configuration and credential files that
+happen to carry those extensions. It is however a host-wide path oracle, and that half is wider than the six
+extensions: the tool checks that a path exists before it checks the suffix, so an existing file answers
+`Unsupported file extension` and an absent one answers `File not found`, and any path on the container can be
+confirmed or denied by name even when it can never be read. Visitor uploads are not enumerable through it (the
+stored names are `<uuid>_<filename>`), so the exposure is the host's files rather than other visitors' rows. What
+to do about it -- authenticate that surface, restrict it to loopback, or accept it as the price of a public tool
+endpoint -- is an open owner decision, recorded in `AUDIT_LEDGER.md`; the sentence is here so nobody has to read
+the code to learn the boundary.
 
 ## Required configuration
 

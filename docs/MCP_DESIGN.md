@@ -25,8 +25,13 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
   `profile_dataset` takes any `path` the caller names and validates only its extension, so a file outside the
   repository is read and its first values come back -- `sample_values` in the column profile, measured returning
   the literal cell contents of a CSV in a temporary directory. On a deployed instance that means any `.csv`,
-  `.json`, `.jsonl`, `.parquet`, `.xls` or `.xlsx` file on the host. The endpoint should be run where that is
-  acceptable; the decision is recorded open in `AUDIT_LEDGER.md`.
+  `.json`, `.jsonl`, `.parquet`, `.xls` or `.xlsx` file on the host. The same tool checks that the path exists
+  *before* it looks at the extension, and that reaches further than the six formats: an existing path with no
+  allowed suffix answers `Unsupported file extension` while an absent one answers `File not found`, so the
+  surface is a host-wide path-existence oracle -- it reports on files it can never read. Both halves are pinned
+  in `tests/security/test_upload_guard.py`, the extension set against `ALLOWED_EXTS` and the oracle against the
+  two error strings, so widening the reach or reordering those checks has to change this paragraph on purpose.
+  The endpoint should be run where that is acceptable; the decision is recorded open in `AUDIT_LEDGER.md`.
 - MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed

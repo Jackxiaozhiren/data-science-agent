@@ -215,27 +215,76 @@ def test_the_limit_the_docs_promise_is_the_limit_the_code_enforces() -> None:
     assert MAX_SIZE_BYTES == 100 * 1024 * 1024
 
 
+#: Each document states the readable set inside its own clause; the spans are anchored on the words that
+#: introduce and close the list, so the guard reads the claim rather than the whole file.
+_BOUNDARY_CLAUSES = (
+    ("docs/MCP_DESIGN.md", "means any ", " file on the host"),
+    ("docs/hosted-demo.md", "it reads files ending in ", ", which on a deployed container"),
+)
+
+
 def test_the_extensions_the_mcp_boundary_sentence_lists_are_the_ones_the_loader_accepts() -> None:
     """`profile_dataset` reads whatever `validate_file` will accept, so the two lists are one fact.
 
-    The MCP design document now states the exposure as a set of extensions. Written by hand it is a
-    transcription, and a seventh format added to `ALLOWED_EXTS` would widen the reachable set without touching
-    the sentence. Read folded: the sentence wraps across two lines in the file, and a literal-space pattern
-    goes blind the next time someone rewraps it.
+    The MCP documents now state the exposure as a set of extensions, twice -- the design doc and the
+    operator-facing demo page. Written by hand each copy is a transcription, and a seventh format added to
+    `ALLOWED_EXTS` would widen the reachable set without touching either sentence. Read folded: the sentences
+    wrap across lines, and a literal-space pattern goes blind the next time someone rewraps one.
     """
-    text = " ".join((REPO / "docs/MCP_DESIGN.md").read_text(encoding="utf-8").split())
-    clause = "means any "
-    assert text.count(clause) == 1, (
-        f"the boundary sentence must appear exactly once: {text.count(clause)}"
+    for rel, start, end in _BOUNDARY_CLAUSES:
+        text = " ".join((REPO / rel).read_text(encoding="utf-8").split())
+        assert text.count(start) == 1, (
+            f"{rel}: the boundary clause must appear exactly once: {start!r}"
+        )
+        segment = text.split(start, 1)[1].split(end, 1)[0]
+        listed = re.findall(r"`(\.[a-z0-9]+)`", segment)
+        assert sorted(set(listed)) == sorted(ALLOWED_EXTS), (
+            f"{rel}: the documented readable set != the enforced one: doc={sorted(set(listed))} "
+            f"code={sorted(ALLOWED_EXTS)}"
+        )
+        assert len(listed) == len(set(listed)), (
+            f"{rel}: a duplicated extension hides a missing one: {listed}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_profile_dataset_answers_differ_only_by_whether_the_path_exists(
+    tmp_path: Path,
+) -> None:
+    """The tool checks `p.exists()` before it checks the extension, so it answers two different questions.
+
+    Measured 2026-10-23: an extensionless path that exists returns `UnsupportedFormatError` and its absent
+    sibling returns `File not found` -- so an unauthenticated `/mcp` caller can ask whether any path on the
+    host is there, for every path and not only for the six readable extensions. The docs now say that, and
+    this test is what makes saying it a claim someone has to keep true: if the order ever changes, or a root
+    confinement is added, the two errors collapse into one and this goes red.
+    """
+    from dsa_tools.tools.profile_dataset import ProfileDatasetInput, ProfileDatasetTool
+
+    tool = ProfileDatasetTool()
+    present = tmp_path / "probe"
+    present.write_text("x\n", encoding="utf-8")
+    absent = tmp_path / "probe-absent"
+
+    with pytest.raises(Exception) as exists:
+        await tool.execute(ProfileDatasetInput(path=str(present)))
+    with pytest.raises(Exception) as missing:
+        await tool.execute(ProfileDatasetInput(path=str(absent)))
+
+    assert "Unsupported" in str(exists.value), (
+        f"an existing extensionless path must not read as absent: {exists.value}"
     )
-    listed = re.findall(
-        r"`(\.[a-z0-9]+)`", text[text.index(clause) :].split(" file on the host")[0]
+    assert "File not found" in str(missing.value), (
+        f"an absent path must not read as present: {missing.value}"
     )
-    assert sorted(set(listed)) == sorted(ALLOWED_EXTS), (
-        f"the documented readable set != the enforced one: doc={sorted(set(listed))} "
-        f"code={sorted(ALLOWED_EXTS)}"
-    )
-    assert len(listed) == len(set(listed)), f"a duplicated extension hides a missing one: {listed}"
+    assert "File not found" not in str(exists.value)
+
+    # And the readable half: a real file outside the repository is profiled, contents and all.
+    readable = tmp_path / "outside.csv"
+    readable.write_text("measured_col\nrow-a-1\nrow-a-2\n", encoding="utf-8")
+    out = await tool.execute(ProfileDatasetInput(path=str(readable)))
+    values = out.profile["column_profiles"][0]["sample_values"]
+    assert values, f"the documented read must actually return cells: {out.profile}"
 
 
 # --- and the route actually hands those bytes to the guard ---
