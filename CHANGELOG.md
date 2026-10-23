@@ -26,6 +26,13 @@
   control that writes a normal file, so the refusals cannot be satisfied by a tool that writes nothing.
 - Both layers were falsified rather than trusted: deleting the component rule reddens the segment and reader
   tests, deleting the resolution comparison reddens exactly the symlink test.
+- The same promise turned out to be unowned on the read side too: `GET /api/v1/analysis/{run_id}/bundle`
+  composes its zip from stored artifact paths via `bundles._classify`, which resolves each path, requires
+  containment under the artifact root, and reports a reason for every entry it drops -- and no test named the
+  function or any of its reasons. One test now walks eight stored shapes (absolute, relative, outside, `../`
+  climb, symlink-out, missing, path-less, non-dict); deleting the containment comparison reddens it on exactly
+  the climb and the symlink. The residual it documents instead of fixing: two spellings of one stored file
+  yield two zip members with the same name.
 - One instrument error worth the sentence: the reader test passed before the fixture also created `reports/`,
   because `reports/..` cannot resolve when `reports/` is absent -- so the climb failed for a reason unrelated to
   the rule, and the mutation kept passing. Adding the directory made the same mutation redden it. Recorded in

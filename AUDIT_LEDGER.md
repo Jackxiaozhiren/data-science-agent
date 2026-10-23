@@ -15580,3 +15580,24 @@ discovery-field fix. One check per side, no credentials, and the answer is that 
 rather than two -- which is the thing worth knowing before asking for the token a redeploy needs. The commands
 went into `docs/hosted-demo.md` (the bundle loop prints the chunk it matched, so the file owns no count), and
 the earlier "unmeasurable" note stays as a dated record with this one appended beside it.
+
+§267 follow-up, same day -- the same containment promise is made by a reader the tests did not cover either.
+
+`GET /api/v1/analysis/{run_id}/bundle` builds its zip from `state["artifacts"]` -- paths recorded by some other
+process, possibly on a different deployment -- through `bundles._classify`. That function does the right thing
+and does it in the right order: it resolves each stored path, requires `is_relative_to(resolved_root)`, then
+requires the target to be a readable file, and it reports the reason for everything it drops. The run id
+itself is shape-checked before the row is fetched, and the row is owner-scoped, so the caller names neither a
+path nor another visitor's run. Verified true by reading, with zero tests naming `_classify`, `outside the
+artifact root`, or any of its refusal reasons -- so the reason strings were the only specification.
+
+One test now covers eight stored-entry shapes at once: an absolute path under the root, the same file spelled
+relatively, an absolute path outside it, a `../../` climb, a symlink inside the root pointing out, a recorded
+file that is not present, an entry with no path, and a non-dict entry. Deleting the containment comparison
+reddens it on the climb and the symlink -- the two shapes a name check cannot see -- and restoring it returns
+the file to green, with the tree re-hashed inside the same command.
+
+Worth naming the residual rather than fixing it: because the same file can be recorded twice under two
+spellings, `include` can hold two entries with the same zip member name. It is not a security boundary and it
+is not what a bundle is for, so nothing here changes; the assertion spells out the duplicate rather than
+hiding it, so whoever adds dedup sees the test that documents today.
