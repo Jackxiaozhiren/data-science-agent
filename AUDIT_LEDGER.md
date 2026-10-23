@@ -15827,3 +15827,101 @@ filename. Where both needs fit was the message; the regex was where they collide
 What is still the owner's call is the half this change did not take: refusing a name for containing two dots is
 a policy, and narrowing it to `.`/`..` as whole segments would turn a 400 into a 201 for a visitor uploading
 `Q1..Q2.csv`. Open item #71 carries that, and the refusal fires today exactly as it did before.
+## 276. The dependency queue had three causes, and my own waiter invented a fourth
+The queue looked like one job -- land the open Dependabot bumps -- and turned out to be three different
+failures wearing the same clothes, plus one I built myself.
+
+**Cause one was structural.** This repository keeps three npm lockfiles (root, `apps/web`, `apps/vscode`), so
+every npm bump arrives as two half-PRs: one updating the member lock, one updating the root lock. Neither can
+pass alone, because `npm --prefix apps/web ci` reads the member lock while
+`scripts/check_npm_workspace_lock.py` compares the root lock against the member manifests. #87 and #88 were
+closed as superseded rather than fixed -- measured first: `origin/main` already carried every version they
+proposed (`react 19.3.1`, `react-dom 19.3.1`, `@types/react 19.3.0`, `react-is ^19.3.1`), so landing them would
+have re-broken a passing state.
+
+**Cause two was a member lock that cannot be regenerated where it lives.** `npm install` run inside
+`apps/vscode` walks up to the workspace root: it reported `up to date in 372ms` and rewrote the ROOT lock,
+leaving `apps/vscode/package-lock.json` untouched. The member lock has to be generated from a standalone copy of
+the manifest in a directory with no parent workspace. #106 landed `@vscode/test-electron` 2.5.2 -> 3.1.0 that
+way, with all three locks in step; the bump raises an engine floor from `node >= 16` to `>= 22`, which CI's Node
+26 clears. The same measurement says something about that package: nothing imports it, `apps/vscode/src` is
+`extension.ts`, `dsa.ts`, `views.ts`, and its `"test": "node ./out/test/suite.test.js"` names a source file that
+does not exist -- so the guard that would catch a real 3.x break there is `tsc`, not a test runner.
+
+**Cause three was mine.** My merge loop watched CI with `gh run watch --exit-status >/dev/null 2>&1` and read
+any non-zero as "the run was not green". It is not: a watch can fail for its own reasons while the run is still
+in progress. That false negative stopped the queue at #90, whose CI had finished `conclusion=success`. The
+verdict now comes from the run's own `status`/`conclusion` fields, a `gh` error is printed as an error and
+retried rather than becoming a finding, and only `completed` + non-success is a red. Falsified rather than
+asserted: pointed at #91, which really is failing, the same function returns `RED:failure` -- which is what makes
+its `GREEN` mean something. Two more instrument faults surfaced in the same hour, both of the "silence read as
+evidence" kind: `set -- $line` does not word-split in zsh, so every PR came back as `PENDING:` with an empty
+status -- not a wrong verdict but a wait that can never end -- and a `gh` call with no timeout stalled a poller
+between `PENDING:in_progress` at 09:39 and its next line at 12:35. `echo "x_rc=$?"` after a pipeline reports
+`sed`'s status, not the merge's, and `${PIPESTATUS[0]}` is bash-only: under zsh it prints `x_rc=?`.
+
+**Dependabot cannot rebase what a human has touched.** #92 and #89 are `CONFLICTING`, and `@dependabot rebase`
+answered "Looks like this PR has been edited by someone other than Dependabot." Both conflicts are in derived
+files only (`uv.lock` and the two `release/sbom*`), so #109 re-derives each PR's own resolution on current main.
+One piece of discipline there earned its keep: plain `uv lock --upgrade-package langchain-core==1.6.12` also
+moved langsmith to 0.14.12, one patch past what #89 proposed and was green on, so langsmith is pinned back to
+0.14.11 -- the goal is landing the reviewed change, not whatever is newest today.
+
+**The SBOM still needs two steps, not one.** `generate_sbom.py` takes its component set from `uv.lock` but reads
+every license from `importlib.metadata` of the *installed* environment. Run straight over the tracked files in a
+fresh worktree it copies license strings off the pre-bump versions and writes `Unknown` for the four packages
+nothing has installed -- and `--check` cannot see any of it, because it compares `(package, version)` pairs and
+release version, and license is not one of the fields it reads. So: set from a `--out` scratch run, licenses
+carried verbatim from HEAD for unchanged rows, the seven changed rows named from pypi.org. Asserted after: 0 rows
+erased to `Unknown`, 0 unchanged rows whose license differs from HEAD.
+
+**Ruff 0.17.1 was the risky half, because the bump replaces the gate itself**, so it was A/B'd on one tree:
+`uvx ruff@0.16.3 check .` and `uvx ruff@0.17.1 check .` both print `All checks passed!`, and
+`uvx ruff@0.17.1 format --check .` reports `315 files already formatted`. No new rule fires and no reformat is
+owed.
+
+**lucide 1.x deleted the brand icons, and the changelog was not the evidence.** Measured on the installed
+package: `Github`, `Gitlab`, `Twitter`, `Facebook`, `Linkedin`, `Youtube` are all absent from 1.61.0's 6506 export
+names, so #72 could not land as written -- the import at `apps/web/app/page.tsx:2` had to go. The mark is inlined
+rather than traded for a second icon dependency; its two `d` strings are byte-for-byte those in
+`lucide-react@0.545.0/dist/esm/icons/github.js`, checked against the 0.545 tree still on disk rather than against
+memory. Asserted in a browser, not by reading JSX: 16x16 box, `viewBox 0 0 24 24`, `aria-hidden`, `fill none`, 2px
+round/round stroke, and both paths with non-zero bounding boxes (`[4,2,16,20]`, `[2,16,7,2.6]`), identical at 1280
+and 390 and in both locales. #105.
+
+**Building the tour for another port was impossible, and the tour said so while telling you to do it.**
+`assertBundleMatchesThisTree` refused any bundle origin whose port differed from `--api-port` -- but `lib/api.ts`
+compiles `(configuredApiUrl || "http://localhost:8000")` and minification keeps the fallback, so a `:8010` build
+always carries `:8000` too, and `--api-port 8010` exited 1 with an instruction to perform the build that had just
+been done. CI never sees this: it always uses 8000, where the guarded port and the fallback are the same string.
+The rule is now two-sided -- the port must be *present*, and nothing else may appear unless the source names it --
+with the second half existing precisely so the first cannot be relaxed into a no-op for a bundle carrying no
+loopback origin at all. Verified on one real tree in four configurations, then falsified by re-planting the old
+one-sided rule: 3 of the 8 new tests go red. Writing that pin caught an asymmetry in my own fix -- presence
+accepted `https://localhost:PORT` while the allow-list carried only the two `http` spellings, so a TLS loopback
+build satisfied one edge and was refused by the other. #108.
+
+**I also opened a duplicate and closed it.** `docs/FRONTEND_IA.md:269` cited
+`build/r13f-nav-acceptance.mjs`, and `.gitignore:14` ignores `build/`, so that path exists only on the machine
+that ran the original check. Reproduced both ways: `git archive origin/main | tar -x` +
+`pytest tests/contract/test_doc_code_paths.py` exits 1 with
+`assert not ['docs/FRONTEND_IA.md: `build/r13f-nav-acceptance.mjs`']`, while the same run in a working tree that
+happens to hold the ignored script exits 0 -- which is why the commit that fixed twelve other dangling citations
+left this one: green here, red there. I repointed the sentence (#110); `cd7a3a8` landed at 14:57:24, one minute
+after my push, and did it better by moving the instrument to a tracked path and repairing its absolute playwright
+import so the cited file can actually run for a reader. #110 is closed as superseded. Two lessons kept: re-measure
+`origin/main` immediately before opening anything, and a guard that resolves citations with `.exists()` rather
+than `git ls-files` will stay blind to any untracked file outside its named scratch directories -- stated on that
+PR for whoever owns the guard, not fixed by me because the file is actively owned.
+
+**Two things I did not do.** #91 and #102 fail `dependency-review`, and extending a gate's allowlist is not mine
+to decide. The framing matters and is measured: `certifi@2026.10.19` reports `MPL-2.0` and `pillow@13.0.0` reports
+`MIT-CMU`, neither in the allowed list -- but main already ships `certifi 2026.7.22` and `pillow 12.3.0`, and PyPI
+reports the *same* identifiers for those current versions. `dependency-review` only inspects the lines a PR
+changes, so any bump surfaces a pre-existing state as a fresh violation; the matplotlib `LicenseRef-scancode-*`
+label is a separate question and should not be bundled with it. And
+`check_public_claims.released_versions()` reads `<root>/.git/packed-refs` and `<root>/.git/refs/tags`, which do
+not exist in a linked worktree where `.git` is a pointer file -- the same interpreter returns 38 tag entries in
+the shared working tree and 0 in a worktree, which is what made two suite failures and the claims gate red locally
+and has nothing to do with the dependency change. Fixing it needs care because `scripts/` is under bandit's S
+rules and cannot shell out to git, so it is recorded rather than folded into a dependency PR.
