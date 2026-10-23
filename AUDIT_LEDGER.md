@@ -15719,3 +15719,22 @@ matmul size is a knob a reader can turn in their own head rather than on their o
 The doc line now says which half is enforced, cites the module's own docstring, and names the availability
 consequence next to #59. The loop case and the C-call case are both in the sentence because a claim about a
 mechanism needs both directions, and the second one is what stops the reader assuming the budget is a wall.
+
+## 273. One of my own commits describes the wrong diff
+
+`59e356a` contains `HANDOFF-2026-10-19.md` and nothing else -- a twenty-eighth addendum and one witness line --
+and its message describes the *previous two* commits instead: the sandbox timeout measurement and the
+"declared type, when present" fix. The content is the right content in the right place; the subject line is a
+record of work that lives under other SHAs.
+
+Why this belongs in the ledger rather than quietly: `git show <sha>` is the instrument a future reader uses to
+answer "what did this commit change", and after this one the honest answer is "not what the message says".
+Amending is not an option -- the commit is pushed, and rewriting a published commit is the class of action that
+this repository's rules reserve for the owner. So the correction is a sentence here plus the habit it argues
+for: a commit whose diff is only the handoff log says so in its subject, because the log's own message is the
+one place where "what I meant" and "what changed" have to agree.
+
+Nothing about the product's behaviour moved in `59e356a`, so no doc, test, or CHANGELOG entry needs to change:
+the timeout claim (`docs/security.md`), the availability consequence, and the absent-declaration rule were all
+shipped in `d9bafe7` and `48885f2` under their own accurate messages, and CI for those three heads is recorded
+above. This is instrument hygiene, kept where instrument errors are kept.
