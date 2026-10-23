@@ -15559,3 +15559,24 @@ Second, smaller instrument error, same shape: a probe command printed "restored"
 `cp` back was in a later line than the `echo`. Caught by running `shasum -c` in the next command instead of
 trusting the label. Two rounds in a row now, so the rule is that a mutation script ends by restoring and
 verifying inside the same command, never by announcing what the next command will do.
+
+## 268. The demo's two halves turned out to be moving at different speeds, and one proxy header was the difference between knowing and guessing
+
+Last round recorded the web side as "not measurable from the machine that tried": both `*.vercel.app` URLs
+timed out at TCP connect while Render answered. Re-run on 2026-10-23 it answers `200` in about a second and a
+half, so that note was a fact about the path, not the service -- which is exactly what the paragraph said a
+connection that never opens would turn out to mean.
+
+Two headers make the new reading safe on this machine, because it sits behind a filtering proxy that answers
+for hosts it blocks and hands out `198.18.0.0/15` addresses: `server: Vercel` and an `x-vercel-id` with an edge
+and an origin region. A proxy that generated the page itself would not carry the origin's routing identity, and
+a status code alone cannot tell those two apart. Same reason a body check belongs next to the header check: the
+response contains the app shell and its hashed chunks, not a generic error page.
+
+The finding is the asymmetry, and it is measured rather than inferred. The chunk the deployed page references
+carries the cold-start copy committed on 2026-10-22 ("up to two minutes" / 两分钟), so the web deployment tracks
+`main`. The API's `/mcp` still publishes `input_schema` for every tool, so the Render service predates the
+discovery-field fix. One check per side, no credentials, and the answer is that #44 is one service of work
+rather than two -- which is the thing worth knowing before asking for the token a redeploy needs. The commands
+went into `docs/hosted-demo.md` (the bundle loop prints the chunk it matched, so the file owns no count), and
+the earlier "unmeasurable" note stays as a dated record with this one appended beside it.

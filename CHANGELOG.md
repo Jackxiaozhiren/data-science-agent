@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the demo's two halves are not equally behind, and that changes what the redeploy owes
+
+- The web side, recorded last round as unmeasurable from this machine, answered on 2026-10-23: `200` in about a
+  second and a half with the app shell. Read as a fact about the path rather than the service -- which is what
+  the paragraph warned a never-opening connection would turn out to be.
+- `server: Vercel` plus an `x-vercel-id` naming an edge and an origin region are what make that readable on a
+  machine behind a filtering proxy that answers for blocked hosts with `198.18.0.0/15` addresses. A status code
+  alone cannot distinguish the origin's page from a proxy's, and the doc now says which headers to look for.
+- The asymmetry: the chunk the deployed page references carries the cold-start copy committed on 2026-10-22
+  ("up to two minutes" / 两分钟), so the web deployment tracks `main`; the API's `/mcp` still publishes
+  `input_schema` for every tool, so the Render service predates the discovery-field fix. Both checks are
+  credential-free and live in `docs/hosted-demo.md`, with the bundle loop printing the chunk it matched instead
+  of the file owning a count. #44 is therefore one service of work, not two.
+
 ### Tests (post-4.6.0) — the artifact traversal block was real, and nothing could tell if it broke
 
 - `docs/tools.md` advertises `save_artifact` as a "traversal block", and reading the code the claim holds in two
