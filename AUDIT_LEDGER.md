@@ -15738,3 +15738,13 @@ Nothing about the product's behaviour moved in `59e356a`, so no doc, test, or CH
 the timeout claim (`docs/security.md`), the availability consequence, and the absent-declaration rule were all
 shipped in `d9bafe7` and `48885f2` under their own accurate messages, and CI for those three heads is recorded
 above. This is instrument hygiene, kept where instrument errors are kept.
+
+The subject repeated before it was caught. `229f408` -- whose diff is this section alone -- carries the same
+wrong line as `59e356a`, because the message was written from the round's narrative rather than from `git show
+--stat` for the paths actually staged. Two adjacent commits now read as copies of each other. No force-push and
+no amend: both are published, and rewriting published history is the owner's call, not a convenience for the
+author. What was done instead is the thing a reader can use -- `HANDOFF-2026-10-19.md`'s twenty-eighth addendum
+now carries a per-SHA inventory generated from `git show --name-only`, so the four SHAs of the round are matched
+to their real file lists, and the two mislabelled ones are named as such. The habit that follows is mechanical:
+read the stat for the paths being committed *before* writing the subject, every time, including for a commit
+whose only content is a log entry.
