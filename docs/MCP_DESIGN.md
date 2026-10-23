@@ -74,8 +74,8 @@ fields.
 | analyze | dsa_agent graph (§36 full loop) | dataset/dataset_path, task (alias question), run_id (alias analysis_id) |
 
 ## Implementation
-- `dsa_mcp/adapter.py` — stateless registry bridging MCP JSON → BaseTool.run
-- `dsa_mcp/server.py` — FastMCP-like HTTP server on /mcp (JSON-RPC 2.0), plus STDIO mode for Claude Desktop
+- `packages/mcp/src/dsa_mcp/adapter.py` — stateless registry bridging MCP JSON → BaseTool.run
+- `packages/mcp/src/dsa_mcp/server.py` — FastMCP-like HTTP server on /mcp (JSON-RPC 2.0), plus STDIO mode for Claude Desktop
 - No global mutation of core; bootstrap idempotent.
 
 ## Out of Scope (V0.1)

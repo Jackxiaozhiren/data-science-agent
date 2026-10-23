@@ -15601,3 +15601,33 @@ Worth naming the residual rather than fixing it: because the same file can be re
 spellings, `include` can hold two entries with the same zip member name. It is not a security boundary and it
 is not what a bundle is for, so nothing here changes; the assertion spells out the duplicate rather than
 hiding it, so whoever adds dedup sees the test that documents today.
+
+## 269. Twelve citations in five live documents pointed at files that are not there
+
+Asked one question of the docs nobody had asked: does every code path a document names exist? Walked every
+backticked path with a code extension in the live corpus -- 46 markdown files, 107 citations -- and twelve of
+them resolved to nothing, in `docs/security.md`, `docs/statistics.md`, `docs/FRONTEND_IA.md`,
+`docs/MCP_DESIGN.md` and `docs/portfolio/PROJECT_SUMMARY.md`.
+
+Two shapes, both systematic. Four were modules cited one directory above their real home: the security doc said
+`packages/execution/sql_guard.py` where the file is `packages/execution/src/dsa_execution/sql_guard.py` -- a
+PEP 621 src-layout detail the prose never picked up. Five said `app/lib/backendProbe.ts`, `lib/locale.ts`,
+`dsa_mcp/adapter.py`, names that are correct *inside* the app or package and wrong from the repository root,
+which is where a reader standing in the checkout types. The last was a planned artifact cited as if committed:
+`human-eval/samples.json`, which is what `dsa_evaluation.human_eval` generates at evaluation time.
+
+`tests/contract/test_doc_code_paths.py` keeps the count at zero. It resolves relative to the document first and
+only then to the repository root, because that is the order a reader tries and the alternative flags prose that
+is correct. Dated records are exempt -- `CHANGELOG.md`, `AUDIT_LEDGER.md`, `HANDOFF-*.md`, `docs/v4_*/` -- since
+they describe the tree as it was, and making them pass a present-day check would make them lie. Two controls,
+both required by the shape of this file: the census asserts it found a non-trivial number of citations, so a
+broken glob cannot read as green, and a planted fake path is asserted to be reported. Planted into
+`docs/security.md` the guard went red naming exactly that path; restored, the file re-hashed identical and the
+suite returned to green.
+
+The security doc's two control sentences were rewritten in the same pass, which is the part that mattered:
+`docs/security.md` described the SQL guard as a deny list and the Python guard as an AST sandbox, and §264/§265
+had just measured that neither list is the boundary. It now says the SQL fence is the deny list *plus*
+`enable_external_access=false`, and labels `run_python` **Not a security boundary** with the four calls that
+pass its checker -- in the doc whose whole job is to say what is and is not a control. The `Tests:` line names
+the four security suites, so the guard next to the claim is findable from the claim.
