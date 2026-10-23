@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the HTTP MCP surface no longer offers the tools that could run code
+
+- Owner decision from 2026-10-23, option 1 of #59: `run_python` and `run_sql` are withheld from every HTTP
+  boundary of the MCP app — `GET /mcp/tools`, `GET /tools`, JSON-RPC `tools/list`, and both call shapes refuse
+  them *before* the dispatcher. `dsa mcp` (stdio) still publishes all 19; that process is launched by whoever
+  owns the machine.
+- Refusal is JSON-RPC `-32000` (the server-defined block), not `-32601`: the tool exists and this transport
+  declines to run it. The message names the tool and the alternative, because a security refusal that does not
+  say what to do instead reads like a broken deployment.
+- One `frozenset` plus one filtered function (`adapter.HTTP_WITHHELD_TOOLS`, `http_tools_for_wire`) rather than
+  a check per route — the `inputSchema` defect this module also fixed was five boundaries serializing one object
+  five ways, and a per-route exclusion would have the same shape. `tests/security/test_mcp_http_surface.py`
+  covers both HTTP routes, the REST refusal, and a stdio control that still expects the whole registry; its
+  refusals are witnessed by a trap that raises if `call_mcp_tool` is entered, so a refusal that ran the tool and
+  discarded the result cannot pass.
+- Six existing tests encoded the old contract and moved with it rather than being dropped: the conformance
+  suite's valid-call and stateless-repeat now use a retained tool, two hardcoded counts became the relation
+  `registry − withheld`, and the import guard in `tests/mcp/test_resources_seam.py` now requires
+  `http_tools_for_wire` instead of a `list_mcp_tools` the server stopped calling — keeping that import alive to
+  satisfy a guard would have re-created the dead-code shape §271 documented.
+- `profile_dataset` stays, and the docs say so: the arbitrary-path read and the path-existence oracle are
+  unchanged. Narrower, not closed; the authentication half of #59 stays open.
+
+### Changed (post-4.6.0) — secret scanning gained a nightly sweep it cannot lose
+
+- A push run scans only its own event's commit range and `cancel-in-progress: true` let a newer push interrupt
+  an older one, so four pushes in four minutes on 2026-10-23 left three ranges never scanned (§275). The workflow
+  now also fires `schedule: 37 4 * * *`, where no event range exists and gitleaks walks the history
+  `fetch-depth: 0` checked out, with `cancel-in-progress: ${{ github.event_name != 'schedule' }}` so the
+  backstop cannot be interrupted while push/PR runs keep their fast-feedback cancellation.
+- Every run prints its own `SCOPE=`, so the log answers "what was covered" instead of leaving it to be inferred
+  from a green tick.
+- `tests/security/test_w7_supply_chain.py::test_secret_scan_workflow` went from one substring check to six named
+  properties (schedule, cron, non-cancellable sweep, `fetch-depth: 0`, pinned `GITLEAKS_VERSION`, `SCOPE=`) and
+  was falsified against the previous file: restore the old workflow and it reddens, restore the new one and it is
+  green.
+
 ### Fixed (post-4.6.0) — the upload refusal now names the rule it fired instead of alleging traversal
 
 - `validate_filename` mixed `..`, `//` and `\` into one regex behind one sentence, "Path traversal detected in

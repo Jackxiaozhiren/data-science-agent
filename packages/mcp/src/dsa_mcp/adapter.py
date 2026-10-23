@@ -228,6 +228,24 @@ def list_tools() -> list[dict[str, Any]]:
     return tools_for_wire()
 
 
+#: The two tools whose sandbox turned out to be a name list rather than a boundary -- `AUDIT_LEDGER.md` 264 and
+#: 265 measured that `run_sql` read an arbitrary file through a shape its deny list could not see, and that
+#: `run_python` passes `pl.os.walk('/')`, `pl.os.remove('…')` and `pl._dependencies.subprocess.Popen('…')`
+#: because polars re-exports `os` and `subprocess`. Neither has an engine-level switch left to pull, and this
+#: transport authenticates nobody: `AuthMiddleware` covers `/api/*` only. So the HTTP surface withholds them and
+#: `dsa mcp` -- stdio, launched by whoever owns that machine -- publishes the whole registry.
+HTTP_WITHHELD_TOOLS: frozenset[str] = frozenset({"run_python", "run_sql"})
+
+
+def http_tools_for_wire() -> list[dict[str, Any]]:
+    """`tools_for_wire()` minus the pair the HTTP transport does not offer.
+
+    The exclusion lives here, in one function, because the field-name bug this module also fixed was a bug of
+    exactly this shape: five boundaries each serializing the same object their own way.
+    """
+    return [t for t in tools_for_wire() if str(t.get("name")) not in HTTP_WITHHELD_TOOLS]
+
+
 def tool_result_for_wire(result: dict[str, Any]) -> dict[str, Any]:
     """The ``CallToolResult`` a conformant client can parse, built from the product's own result object.
 

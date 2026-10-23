@@ -21,8 +21,10 @@ def test_mcp_server_extra_branches() -> None:
     # POST /mcp/call success via adapter
     p = Path(tempfile.gettempdir()) / "cov_mcp_call.csv"
     p.write_text("a,b\n1,2\n", encoding="utf-8")
-    r3 = c.post("/mcp/call", json={"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}})
-    assert r3.status_code == 200
+    # profile_dataset rather than run_sql: the HTTP transport withholds the two execution tools, so a
+    # "success via the adapter" probe has to name a tool the transport actually offers.
+    r3 = c.post("/mcp/call", json={"name": "profile_dataset", "arguments": {"path": str(p)}})
+    assert r3.status_code == 200, r3.text
 
 
 def test_cached_llm_provider_and_hypothesis_extra() -> None:

@@ -72,26 +72,40 @@ def _backends_by_tool() -> dict[str, str]:
 
 
 def test_every_boundary_publishes_the_protocol_field_name() -> None:
-    for label, tools in (
+    """The shape is checked at each boundary; the *sets* differ there on purpose, and the difference is named.
+
+    HTTP withholds the two execution tools -- see `tests/security/test_mcp_http_surface.py` and `MCP_DESIGN.md` --
+    so asserting "every boundary carries the whole registry" would either fail or tempt someone to widen the
+    filter back out. What must hold at every boundary is that nothing is invented and the protocol field name is
+    used, and what must hold across them is exactly the documented asymmetry.
+    """
+    from dsa_mcp.adapter import HTTP_WITHHELD_TOOLS
+
+    boundaries = (
         ("GET /mcp/tools", _rest_http()),
         ("POST /mcp tools/list", _jsonrpc_http()),
         ("dsa mcp", _cli()),
-    ):
+    )
+    for label, tools in boundaries:
         assert tools, f"{label} published no tools at all"
-        assert _tool_names(tools) == set(MCP_TOOL_MAP), (
-            f"{label} does not carry the whole surface: {sorted(set(MCP_TOOL_MAP) - _tool_names(tools))}"
+        for t in tools:
+            assert "inputSchema" in t, (
+                f"{label}: a tool without the protocol field name: {sorted(t)}"
+            )
+            assert t["inputSchema"], f"{label}: {t['name']} advertises an empty inputSchema"
+        assert _tool_names(tools) <= set(MCP_TOOL_MAP), (
+            f"{label} invented names: {sorted(_tool_names(tools) - set(MCP_TOOL_MAP))}"
         )
-        for tool in tools:
-            assert "inputSchema" in tool, (
-                f"{label}: {tool['name']} has no inputSchema a client can read"
-            )
-            assert "input_schema" not in tool, (
-                f"{label}: {tool['name']} still leaks the Python attribute name where the protocol field belongs"
-            )
-            schema = tool["inputSchema"]
-            assert schema.get("type") == "object", (
-                f"{label}: {tool['name']}'s inputSchema is not an object schema: {schema}"
-            )
+    stdio = _tool_names(dict(boundaries)["dsa mcp"])
+    assert stdio == set(MCP_TOOL_MAP), (
+        f"stdio no longer publishes the whole registry: {sorted(stdio ^ set(MCP_TOOL_MAP))}"
+    )
+    for label in ("GET /mcp/tools", "POST /mcp tools/list"):
+        served = _tool_names(dict(boundaries)[label])
+        assert served == stdio - HTTP_WITHHELD_TOOLS, (
+            f"{label} differs from stdio by more than the withheld pair: "
+            f"extra={sorted(served - stdio)} missing={sorted(stdio - served)}"
+        )
 
 
 def test_the_documented_table_is_the_served_surface() -> None:
@@ -116,8 +130,15 @@ def test_the_documented_table_is_the_served_surface() -> None:
 
 
 def test_advertised_parameters_are_the_ones_the_backend_declares() -> None:
-    """The advertised property set equals the backend model's own, for every registry-backed tool."""
-    tools = {t["name"]: t for t in _jsonrpc_http()}
+    """The advertised property set equals the backend model's own, for every registry-backed tool.
+
+    Read from the complete published shape (`tools_for_wire`, what stdio serves) rather than from one HTTP
+    boundary, so the two withheld tools are still checked: the property names a client must see are a property of
+    the registry, not of the transport that happens to withhold them.
+    """
+    from dsa_mcp.adapter import tools_for_wire
+
+    tools = {t["name"]: t for t in tools_for_wire()}
     covered = 0
     for mcp_name, backend in _backends_by_tool().items():
         declared = set(

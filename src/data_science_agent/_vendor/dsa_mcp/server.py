@@ -8,14 +8,24 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from dsa_mcp.adapter import (
+    HTTP_WITHHELD_TOOLS,
     MCP_TOOL_MAP,
     call_mcp_tool,
-    list_mcp_tools,
+    http_tools_for_wire,
     resource_result_for_wire,
     tool_result_for_wire,
     tools_for_wire,
 )
 from dsa_mcp.resources import list_resources, read_resource
+
+
+def _withheld_message(name: str) -> str:
+    """One sentence, used by both HTTP shapes, that names the tool, the transport and the way to get it back."""
+    return (
+        f"{name} is withheld from the HTTP surface, which takes no credential; "
+        "run `dsa mcp` (stdio) to use it"
+    )
+
 
 app = FastAPI(title="Data Science MCP Server", version="0.1.0")
 
@@ -23,8 +33,10 @@ app = FastAPI(title="Data Science MCP Server", version="0.1.0")
 @app.get("/mcp/tools")
 @app.get("/tools")
 async def mcp_tools_list() -> dict[str, Any]:
-    tools = list_mcp_tools()
-    return {"tools": tools_for_wire(), "count": len(tools)}
+    # Counted from the same list that is returned, so the number cannot describe a wider surface than the one
+    # this transport actually offers.
+    served = http_tools_for_wire()
+    return {"tools": served, "count": len(served)}
 
 
 @app.get("/mcp/resources")
@@ -49,6 +61,15 @@ async def mcp_call(body: dict[str, Any]) -> JSONResponse:
     arguments = body.get("arguments") or body.get("input") or {}
     if not name:
         return JSONResponse({"isError": True, "error": "Missing tool name"}, status_code=400)
+    if name in HTTP_WITHHELD_TOOLS:
+        return JSONResponse(
+            {
+                "isError": True,
+                "error": _withheld_message(str(name)),
+                "hint": "run `dsa mcp` (stdio) to use this tool",
+            },
+            status_code=400,
+        )
     result = await call_mcp_tool(name, arguments if isinstance(arguments, dict) else {})
     status = 200 if not result.get("isError") else 400
     return JSONResponse(result, status_code=status)
@@ -68,7 +89,7 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
             {
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "result": {"tools": tools_for_wire()},
+                "result": {"tools": http_tools_for_wire()},
             }
         )
 
@@ -81,6 +102,17 @@ async def mcp_jsonrpc(request: Request) -> JSONResponse:
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "error": {"code": -32602, "message": "Missing tool name"},
+                },
+                status_code=200,
+            )
+        if name in HTTP_WITHHELD_TOOLS:
+            # -32000, in the range the JSON-RPC spec leaves to the server: the tool exists and this transport
+            # declines to run it, which is not the same answer as -32601 for a name nobody knows.
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32000, "message": _withheld_message(name)},
                 },
                 status_code=200,
             )

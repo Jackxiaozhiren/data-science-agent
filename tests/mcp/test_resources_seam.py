@@ -94,7 +94,11 @@ def test_the_server_wires_both_surfaces_from_where_they_live() -> None:
     resources = by_module.get("dsa_mcp.resources", set())
     tools = by_module.get("dsa_mcp.adapter", set())
     assert {"list_resources", "read_resource"} <= resources, by_module
-    assert {"call_mcp_tool", "list_mcp_tools"} <= tools, by_module
+    # The pair the server has to reach into the adapter for is its two surfaces: discovery, which is served
+    # through the transport-specific `http_tools_for_wire` so the withheld pair cannot leak back in through a
+    # fourth route, and the call. `list_mcp_tools` is deliberately absent -- the server stopped needing it, and
+    # an import kept alive to satisfy a guard is the dead-code shape this repository just spent a round on.
+    assert {"call_mcp_tool", "http_tools_for_wire"} <= tools, by_module
 
 
 def test_the_analysis_store_the_isolation_fixture_clears_is_this_one() -> None:

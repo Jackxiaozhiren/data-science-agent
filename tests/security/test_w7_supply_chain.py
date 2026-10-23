@@ -29,10 +29,31 @@ def test_dependency_review_workflow() -> None:
 
 
 def test_secret_scan_workflow() -> None:
+    """The properties that make the scan a gate rather than a gesture.
+
+    Each was earned by an incident: the version pin, because an unpinned action re-resolves gitleaks' rule set
+    behind a green badge; the nightly sweep, because a push run scans only its own payload range and
+    `cancel-in-progress` can leave a cancelled range never scanned at all -- three heads did on 2026-10-23,
+    `AUDIT_LEDGER.md` 275.
+    """
     p = Path(".github/workflows/secret-scan.yml")
     assert p.exists(), "Secret scan workflow missing (§44)"
     txt = p.read_text()
     assert "gitleaks" in txt.lower()
+    assert re.search(r"(?m)^\s*schedule:\s*$", txt), (
+        "no scheduled sweep: a cancelled push range stays unscanned forever"
+    )
+    assert re.search(r"(?m)^\s*-\s+cron:\s*[\"'][^\"']+[\"']\s*(#.*)?$", txt), (
+        "the sweep has no cron line to run on"
+    )
+    assert re.search(
+        r"(?m)^\s*cancel-in-progress:\s*\$\{\{[^}]*!=\s*'schedule'[^}]*\}\}\s*$", txt
+    ), "the backstop must not be cancellable, or an interrupted sweep recreates the gap it closes"
+    assert "fetch-depth: 0" in txt, "history is not fetched, so a sweep has nothing to walk"
+    assert re.search(r'GITLEAKS_VERSION:\s*["\'][0-9.]+["\']', txt), (
+        "gitleaks is unpinned, so the rule set can move without a commit"
+    )
+    assert "SCOPE=" in txt, "the run never states which range it actually covered"
 
 
 def test_dependabot_exists() -> None:

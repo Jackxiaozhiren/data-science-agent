@@ -6,6 +6,7 @@
 
 - Stateless core: no `Mcp-Session-Id` as protocol state; no `initialize/initialized` state (stateless `tools/list` + `tools/call` via `MCP_TOOL_MAP`).
 - Endpoints: `GET /mcp/tools` + `POST /mcp/call` + stateless JSON-RPC `POST /mcp` (`tools/list`, `tools/call`), mounted at `app.mount("/mcp", mcp_app)`.
+- Transport asymmetry (2026-10-23): `run_python` and `run_sql` are withheld from the HTTP endpoints -- not listed, refused before dispatch with JSON-RPC `-32000` -- while `dsa mcp` (stdio) publishes the whole registry. See `MCP_DESIGN.md` for why.
 
 ## Tool Discovery / Schemas / Calls / Errors
 

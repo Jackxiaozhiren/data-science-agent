@@ -141,7 +141,12 @@ def test_mcp_app_acceptance_via_main_app() -> None:
     c = TestClient(main_app)
     # Discover via main
     r = c.get("/mcp/tools")
-    assert r.status_code == 200 and r.json()["count"] >= 18
+    # Stated as the relation between the registry and this transport's exclusion, so the check cannot drift
+    # into a second place that has to remember how many tools HTTP serves.
+    from dsa_mcp.adapter import HTTP_WITHHELD_TOOLS, MCP_TOOL_MAP
+
+    assert r.status_code == 200
+    assert r.json()["count"] == len(MCP_TOOL_MAP) - len(HTTP_WITHHELD_TOOLS)
     # Resources via main
     r2 = c.get("/mcp/resources")
     assert r2.status_code == 200 and any(
