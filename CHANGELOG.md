@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Tests (post-4.6.0) — the artifact traversal block was real, and nothing could tell if it broke
+
+- `docs/tools.md` advertises `save_artifact` as a "traversal block", and reading the code the claim holds in two
+  layers: `artifact_root()` validates every path component (`[A-Za-z0-9._-]`, no leading dot), and the writer
+  compares `dest.resolve()` against `root.resolve()` before writing. Zero tests named either layer, so the
+  guarantee was carried by prose. `tests/security/test_artifact_containment.py` adds 7, including the case the
+  filename blacklist cannot see -- a symlink *inside* the artifact root with an ordinary name -- and a positive
+  control that writes a normal file, so the refusals cannot be satisfied by a tool that writes nothing.
+- Both layers were falsified rather than trusted: deleting the component rule reddens the segment and reader
+  tests, deleting the resolution comparison reddens exactly the symlink test.
+- One instrument error worth the sentence: the reader test passed before the fixture also created `reports/`,
+  because `reports/..` cannot resolve when `reports/` is absent -- so the climb failed for a reason unrelated to
+  the rule, and the mutation kept passing. Adding the directory made the same mutation redden it. Recorded in
+  `AUDIT_LEDGER.md` §267 with the second lapse in the same shape (a probe printed "restored" before the restore
+  ran), which is why every mutation script here now restores and re-hashes inside its own command.
+
 ### Changed (post-4.6.0) — the outside check gained a fourth answer, and it says the live demo is behind `main`
 
 - `POST /mcp/ {"method":"tools/list"}` against the free-tier instance, with no credential and no arguments:

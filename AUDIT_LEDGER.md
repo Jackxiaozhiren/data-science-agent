@@ -15526,3 +15526,36 @@ than a version string, because the version can be right while the code path that
 answering it costs one request that needs no secrets. Recorded with #44 (redeploy owed: the census half is
 refreshed, the code half is not) and with #59, whose severity this raises from "the surface is reachable in
 principle" to "the surface is reachable, warm, and answering right now".
+
+## 267. The artifact traversal block was real, untested, and its first test passed for the wrong reason
+
+`docs/tools.md` advertises `save_artifact` as "run_id-scoped write | traversal block". Reading it: the rule is
+in two layers, and the layer that matters is the second one. `artifact_root(*parts)` runs `_checked` on every
+argument (`[A-Za-z0-9][A-Za-z0-9._-]{0,127}` fullmatch, so no separators and no leading dot), and the writer
+additionally does `dest.resolve().relative_to(root.resolve())` before writing. The reader in
+`dsa_mcp.resources` gets its containment from the same `_checked`, which is why `report://..` cannot climb.
+That is the right shape -- containment by resolution rather than by name list -- and it is the opposite of what
+§264 and §265 found.
+
+It was also carried by zero tests: nothing in `tests/` named `is_safe_segment`, `artifact_root` containment, or
+the escape error, so the only thing standing between a refactor and a regression was this file's prose. Added
+`tests/security/test_artifact_containment.py`, 7 tests: the segment truth table (11 refused, 4 accepted, so the
+rule cannot be widened by accident), `artifact_root` raising per argument, the writer's filename refusals with
+its positive control (an ordinary name writes, or the refusals would be satisfiable by a tool that writes
+nothing), the symlink case, and the reader's climb.
+
+Both layers were falsified. Deleting `_checked` reddens the component test and the reader test. Deleting the
+`resolve()`/`relative_to()` block reddens exactly the symlink test -- which is the case the filename blacklist
+cannot see, since `link.csv` is a perfectly ordinary name.
+
+The instrument error is the part to keep. The reader test first created only `<root>/report.md` and asserted a
+refusal; it passed. With `_checked` removed it still passed, because `reports/..` cannot resolve when `reports/`
+does not exist -- POSIX walks left to right -- so the climb failed for a reason that had nothing to do with the
+rule under test. The fixture now creates `reports/` as well, and the same mutation reddens it. A negative test
+that would also pass on the broken tree is not a guard, and nothing about its assertion text hints at that;
+only running the mutation does.
+
+Second, smaller instrument error, same shape: a probe command printed "restored" and did not restore -- the
+`cp` back was in a later line than the `echo`. Caught by running `shasum -c` in the next command instead of
+trusting the label. Two rounds in a row now, so the rule is that a mutation script ends by restoring and
+verifying inside the same command, never by announcing what the next command will do.
