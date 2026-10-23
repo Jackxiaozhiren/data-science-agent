@@ -348,6 +348,18 @@ credentials belong to a private instance started with `dsa ui`, where the key is
 data directory. `GET /version`'s `reasoning_mode.source` tells a reader which knob decided the mode on the
 instance they are talking to.
 
+One more, because it is measured rather than inferred: the `/mcp` surface on the same host takes no credential at
+all (`AuthMiddleware` is `/api/*`-only), and `profile_dataset` accepts any path whose extension it recognises, so
+a caller can have a file outside the repository read back to them as a profile -- including the literal first
+values of its columns. `run_python` refuses `import os` and `run_sql` refuses `read_*`, so this is not a general
+file-system oracle and not an arbitrary-code path; it is a read oracle for files ending in `.csv`, `.json`,
+`.jsonl`, `.parquet`, `.xls` or `.xlsx`, which on a deployed container includes configuration and credential
+files that happen to carry those extensions. Visitor uploads are not enumerable through it (the stored names are
+`<uuid>_<filename>`), so the exposure is the host's files rather than other visitors' rows. What to do about it
+-- authenticate that surface, restrict it to loopback, or accept it as the price of a public tool endpoint -- is
+an open owner decision, recorded in `AUDIT_LEDGER.md`; the sentence is here so nobody has to read the code to
+learn the boundary.
+
 ## Required configuration
 
 ### Web

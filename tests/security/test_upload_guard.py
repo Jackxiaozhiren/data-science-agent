@@ -13,6 +13,7 @@ acceptance so the guard cannot be satisfied by rejecting everything.
 
 from __future__ import annotations
 
+import re
 import tempfile
 from pathlib import Path
 
@@ -25,7 +26,7 @@ from dsa_api.core.database import Base, get_session
 from dsa_api.main import app
 from dsa_api.routers.datasets import HEAD_BYTES, _write_upload_to_temp, create_dataset_route
 from dsa_datasets.errors import ValidationError
-from dsa_datasets.validate import MAX_SIZE_BYTES, validate_file
+from dsa_datasets.validate import ALLOWED_EXTS, MAX_SIZE_BYTES, validate_file
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -212,6 +213,29 @@ def test_the_limit_the_docs_promise_is_the_limit_the_code_enforces() -> None:
         f"the advertised ceiling no longer matches the enforced one: {rows[0]}"
     )
     assert MAX_SIZE_BYTES == 100 * 1024 * 1024
+
+
+def test_the_extensions_the_mcp_boundary_sentence_lists_are_the_ones_the_loader_accepts() -> None:
+    """`profile_dataset` reads whatever `validate_file` will accept, so the two lists are one fact.
+
+    The MCP design document now states the exposure as a set of extensions. Written by hand it is a
+    transcription, and a seventh format added to `ALLOWED_EXTS` would widen the reachable set without touching
+    the sentence. Read folded: the sentence wraps across two lines in the file, and a literal-space pattern
+    goes blind the next time someone rewraps it.
+    """
+    text = " ".join((REPO / "docs/MCP_DESIGN.md").read_text(encoding="utf-8").split())
+    clause = "means any "
+    assert text.count(clause) == 1, (
+        f"the boundary sentence must appear exactly once: {text.count(clause)}"
+    )
+    listed = re.findall(
+        r"`(\.[a-z0-9]+)`", text[text.index(clause) :].split(" file on the host")[0]
+    )
+    assert sorted(set(listed)) == sorted(ALLOWED_EXTS), (
+        f"the documented readable set != the enforced one: doc={sorted(set(listed))} "
+        f"code={sorted(ALLOWED_EXTS)}"
+    )
+    assert len(listed) == len(set(listed)), f"a duplicated extension hides a missing one: {listed}"
 
 
 # --- and the route actually hands those bytes to the guard ---

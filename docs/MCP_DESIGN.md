@@ -18,8 +18,15 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
 - Tool discovery via `tools/list`; calls via `tools/call` with JSON args.
 - Auth: **none on this surface.** `AuthMiddleware` covers `/api/*` only -- it returns early for any path that does
   not start with `/api/` -- so `/mcp` and `/mcp-app` are reachable without a credential even when `DSA_AUTH_TOKEN`
-  is set, and there is no `DSA_MCP_TOKEN` anywhere in the code. Run the MCP endpoint only where you would run an
-  unauthenticated shell: `run_python` and `run_sql` are among its tools.
+  is set, and there is no `DSA_MCP_TOKEN` anywhere in the code.
+- What that surface can actually do, measured on a local instance rather than asserted:
+  `run_python` denies `import os`, and `run_sql` refuses `read_*` calls, so it is *not* the unauthenticated shell
+  an earlier version of this paragraph said it was. It is narrower than that and worse in one specific way:
+  `profile_dataset` takes any `path` the caller names and validates only its extension, so a file outside the
+  repository is read and its first values come back -- `sample_values` in the column profile, measured returning
+  the literal cell contents of a CSV in a temporary directory. On a deployed instance that means any `.csv`,
+  `.json`, `.jsonl`, `.parquet`, `.xls` or `.xlsx` file on the host. The endpoint should be run where that is
+  acceptable; the decision is recorded open in `AUDIT_LEDGER.md`.
 - MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed

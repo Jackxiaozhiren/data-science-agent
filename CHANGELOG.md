@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the `/mcp` boundary sentence was measured instead of inferred, and both halves moved
+
+- `docs/MCP_DESIGN.md` told the operator to run the MCP endpoint "only where you would run an unauthenticated
+  shell". §252 had proved the surface takes no credential, and the sentence generalised that into a claim about
+  capability. Measured on a local instance: `run_python` answers `Import denied: os`, `run_sql` answers
+  `Disallowed SQL pattern: '\bread_\w+'`, so the surface is *not* a shell -- and it is also not what the
+  paragraph worried about, because the tool with no fence is `profile_dataset`. It takes any `path` the caller
+  names, checks only the extension, and returns the file: a CSV in a temporary directory came back with its
+  literal cell values in `sample_values`, and `/etc/hosts` was refused for lacking a recognised suffix rather
+  than for being outside the repository.
+- Both documents now state the measured boundary, including the part that bounds it: stored visitor uploads are
+  named `<uuid>_<filename>` and are not enumerable through the surface, so what an anonymous caller reaches is
+  the host's files, not other visitors' rows. `docs/hosted-demo.md` carries the same paragraph for whoever
+  operates the demo, and `AUDIT_LEDGER.md` §263 keeps the measurements.
+- The extension list in the new sentence is a transcription of `ALLOWED_EXTS`, so it is now checked rather than
+  trusted: `test_the_extensions_the_mcp_boundary_sentence_lists_are_the_ones_the_loader_accepts` compares the
+  two sets over whitespace-folded text, because the sentence wraps. Dropping `.json` from the doc is red and
+  adding a seventh format to the loader is red, which is the whole point -- the readable set and the documented
+  set are one fact, and the code decides it.
+- Left open on purpose: whether to authenticate `/mcp`, bind it to loopback, or accept it as the price of a
+  public tool endpoint. That changes what a deployed instance offers to anonymous callers, so it is the owner's
+  decision (open item #59), and correcting the prose deliberately does not pre-empt it.
+
 ### Changed (post-4.6.0) — the hosted-demo census gained a third probe and a re-run
 
 - `docs/hosted-demo.md` already carried two credential-free currency probes: an OpenAPI path census and a
