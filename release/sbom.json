@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-10-22T03:36:43.294962+00:00",
+  "generated": "2026-10-23T00:26:09.408146+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -381,6 +381,13 @@
       "purl": "pkg:pypi/httpcore@1.0.9"
     },
     {
+      "package": "httpcore2",
+      "version": "2.16.0",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpcore2@2.16.0"
+    },
+    {
       "package": "httptools",
       "version": "0.8.0",
       "license": "Unknown",
@@ -393,6 +400,20 @@
       "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/httpx@0.28.1"
+    },
+    {
+      "package": "httpx2",
+      "version": "2.16.0",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpx2@2.16.0"
+    },
+    {
+      "package": "httpx2-jsfetch",
+      "version": "1.0",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/httpx2-jsfetch@1.0"
     },
     {
       "package": "idna",
@@ -578,10 +599,10 @@
     },
     {
       "package": "langchain-core",
-      "version": "1.5.5",
+      "version": "1.6.12",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-core@1.5.5"
+      "purl": "pkg:pypi/langchain-core@1.6.12"
     },
     {
       "package": "langchain-protocol",
@@ -620,10 +641,10 @@
     },
     {
       "package": "langsmith",
-      "version": "0.11.0",
+      "version": "0.14.11",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langsmith@0.11.0"
+      "purl": "pkg:pypi/langsmith@0.14.11"
     },
     {
       "package": "lark",
@@ -1110,10 +1131,10 @@
     },
     {
       "package": "ruff",
-      "version": "0.16.3",
-      "license": "Unknown",
+      "version": "0.17.1",
+      "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ruff@0.16.3"
+      "purl": "pkg:pypi/ruff@0.17.1"
     },
     {
       "package": "scikit-learn",
@@ -1226,6 +1247,13 @@
       "license": "BSD 3-Clause License\n\n- Copyright (c) 2001-, IPython Development Team\n\nAll right...",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/traitlets@5.16.1"
+    },
+    {
+      "package": "truststore",
+      "version": "0.10.5",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/truststore@0.10.5"
     },
     {
       "package": "typing-extensions",
