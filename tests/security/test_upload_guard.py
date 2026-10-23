@@ -424,6 +424,21 @@ def test_the_shipped_mime_rule_is_the_strict_one_and_the_sniffer_is_looser() -> 
     )
 
 
+def test_an_absent_declaration_skips_the_type_rule_entirely() -> None:
+    """The one case the allowlist cannot see, so the doc has to say it out loud.
+
+    `validate_file` guards the type branch with `if content_type:`, so an upload that declares nothing is
+    checked by extension and magic bytes only -- measured as accepted for `.csv` with no type at all. Not a bug
+    on its own: curl's `-F` sends a type, browsers send one, and the archive-magic refusal still applies. The
+    claim worth pinning is the boundary -- the type rule is a filter on a declaration, not a verdict on the
+    file -- because `docs/api.md` advertises it in one table cell where the difference is easy to lose.
+    """
+    assert _live_accepts("data.csv", None, b"a,b\n1,2\n") is True
+    assert _live_accepts("data.csv", "", b"a,b\n1,2\n") is True
+    # ... and the same absent declaration does not rescue an archive pretending to be a CSV.
+    assert _live_accepts("evil.csv", None, b"PK\x03\x04rest") is False
+
+
 def test_the_mime_sniff_module_is_not_called_by_any_shipped_path() -> None:
     """The doc sentence that says "no shipped path calls it" needs to be re-checked, not re-remembered.
 

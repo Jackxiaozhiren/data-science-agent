@@ -15695,3 +15695,79 @@ contains the string `mime_sniff` in the very comment that explains why it does n
 would report that comment as a caller. The first is falsified by tightening the sniffer's `.xls` entry to an
 empty set, which makes the live rule the looser one and reddens it naming that case; the second by planting a
 temporary module that imports it, then removing it and proving it is gone.
+
+## 272. The sandbox's wall-clock timeout bounds reported time, not occupied time -- measured at both ends
+
+`docs/security.md` listed "wall-clock timeout" among the Python guard's controls. `_LoopDeadline` documents its
+own coverage honestly -- pure-Python iteration is interruptible at loop heads, "a single long call into C still
+runs to completion and is only reported afterwards" -- so the check was not whether the code lies, but whether
+the sentence around it carries the caveat. Measured on 2026-10-23 with `timeout_ms=300`:
+
+- `while True: n += 1` -- wall clock 0.33 s, reported 312 ms, `TimeoutError`. The deadline fires, within one
+  frame of the budget.
+- `np.matmul(np.ones((3200, 3200)), np.ones((3200, 3200)))` -- wall clock 0.34 s, reported 331 ms,
+  `TimeoutError`. The matrix multiply ran to its natural end; the budget was noticed afterwards. Same code at a
+  1000 ms budget: 0.37 s, no error, which is the control that says the first answer was not just a slow machine.
+
+So the timeout is a *reporting* bound for C calls and only an *execution* bound for interpreted loops. That is
+worth one sentence in a security document because the two behave differently under the only threat that matters
+here: an anonymous caller who can reach `/mcp` can occupy an API worker for as long as one call takes, and on a
+0.5-vCPU free instance the cheapest way to make the demo slow is not exfiltration but arithmetic. No plant was
+run that deliberately outlasted tens of seconds -- the 331 ms case is enough to show the mechanism, and the
+matmul size is a knob a reader can turn in their own head rather than on their own CPU.
+
+The doc line now says which half is enforced, cites the module's own docstring, and names the availability
+consequence next to #59. The loop case and the C-call case are both in the sentence because a claim about a
+mechanism needs both directions, and the second one is what stops the reader assuming the budget is a wall.
+
+## 273. One of my own commits describes the wrong diff
+
+`59e356a` contains `HANDOFF-2026-10-19.md` and nothing else -- a twenty-eighth addendum and one witness line --
+and its message describes the *previous two* commits instead: the sandbox timeout measurement and the
+"declared type, when present" fix. The content is the right content in the right place; the subject line is a
+record of work that lives under other SHAs.
+
+Why this belongs in the ledger rather than quietly: `git show <sha>` is the instrument a future reader uses to
+answer "what did this commit change", and after this one the honest answer is "not what the message says".
+Amending is not an option -- the commit is pushed, and rewriting a published commit is the class of action that
+this repository's rules reserve for the owner. So the correction is a sentence here plus the habit it argues
+for: a commit whose diff is only the handoff log says so in its subject, because the log's own message is the
+one place where "what I meant" and "what changed" have to agree.
+
+Nothing about the product's behaviour moved in `59e356a`, so no doc, test, or CHANGELOG entry needs to change:
+the timeout claim (`docs/security.md`), the availability consequence, and the absent-declaration rule were all
+shipped in `d9bafe7` and `48885f2` under their own accurate messages, and CI for those three heads is recorded
+above. This is instrument hygiene, kept where instrument errors are kept.
+
+The subject repeated before it was caught. `229f408` -- whose diff is this section alone -- carries the same
+wrong line as `59e356a`, because the message was written from the round's narrative rather than from `git show
+--stat` for the paths actually staged. Two adjacent commits now read as copies of each other. No force-push and
+no amend: both are published, and rewriting published history is the owner's call, not a convenience for the
+author. What was done instead is the thing a reader can use -- `HANDOFF-2026-10-19.md`'s twenty-eighth addendum
+now carries a per-SHA inventory generated from `git show --name-only`, so the four SHAs of the round are matched
+to their real file lists, and the two mislabelled ones are named as such. The habit that follows is mechanical:
+read the stat for the paths being committed *before* writing the subject, every time, including for a commit
+whose only content is a log entry.
+
+## 274. The upload filename rule refuses `data..v2.csv` and accuses it of path traversal
+
+`validate_filename` blocks the pattern `(\.\.|//|\\)` and separately rejects any `/` or `\`. The consequence,
+measured 2026-10-23 without writing anything: `../evil.csv`, `a/../../etc/passwd` and `..\evil.csv` are refused
+-- correctly -- and so are `data..v2.csv` and any other legitimate name whose middle happens to contain two
+dots, with the message "Path traversal detected in filename". That message is false for the second group, and
+the refusal is doing no work: the separator rule already ran, and the stored name is composed as
+`f"{dataset_id}_{filename}"` (`apps/api/src/dsa_api/services/dataset_service.py:90`), so the uuid sits in front
+and a leading `..` could not traverse even if the separator rule were gone. The claim in `docs/security.md`
+-- "`..` traversal block" -- is true; what is not true is that the block is what stopped this filename.
+
+Two ways to fix it, and they are not the same change. Narrow the rule to what traversal means -- refuse exactly
+`.` and `..`, keep the separator refusal, accept interior double dots -- which turns a 400 into a 201 for
+visitors uploading files named `Q1..Q2.csv`; or leave the rule and correct only the accusation, so the message
+says the name may not contain a double dot rather than alleging traversal. The first is a behaviour change on
+the upload endpoint and therefore the owner's call, so it is on the open list rather than done here; the second
+is a string. Recorded before either, because a validation rule that fires on ordinary input and reports a
+security reason for it trains everyone who sees it to distrust the security reason.
+
+The existing tests are honest about the current behaviour and would move with either fix:
+`tests/unit/test_datasets.py:23` covers `../etc/passwd` and `a/b.csv`, and neither case is the one this section
+is about -- which is how a false positive survives a green traversal test.
