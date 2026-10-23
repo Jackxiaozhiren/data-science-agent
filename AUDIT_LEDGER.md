@@ -15403,3 +15403,25 @@ callers, so it is the owner's call, and nothing in this round pre-empts it.
 The shape worth keeping is the general one: a documented *absence* of enforcement is not evidence about
 capability. It is one fact, and the interesting question is per-tool. The previous sentence felt responsible
 because it was alarming, and alarming prose is easy to leave unmeasured.
+
+§263 follow-up, same day -- the boundary is wider than the six extensions, and the doc that said so was wrong.
+
+`profile_dataset.execute` runs `if not p.exists(): raise ToolExecutionError("File not found: …")` *before*
+`detect_format`. So the two errors answer two different questions, and the question an unauthenticated caller
+gets to ask is "does this path exist", for every path -- not only for the six extensions that can be read.
+Measured as a matched pair inside one directory so nothing but existence differs: `probe` (created) answered
+`UnsupportedFormatError: Unsupported file extension: ''`, and `probe-absent` (never created) answered
+`ToolExecutionError: File not found`. A real CSV beside them was profiled and returned its cell values.
+
+`docs/hosted-demo.md` carried "so this is not a general file-system oracle" -- written hours earlier from the
+first, partial measurement, and wrong in the direction that understates exposure. It was replaced with the
+measured sentence rather than qualified, because a clause that tells an operator a boundary is narrower than it
+is has already done its damage. The extension guard was widened to read both documents (two anchored clauses,
+each compared to `ALLOWED_EXTS`, each falsified by dropping one extension from that document), and
+`test_profile_dataset_answers_differ_only_by_whether_the_path_exists` pins the two-error distinction: reordering
+the checks or confining the tool to a data root collapses them and goes red.
+
+What the follow-up is worth as method: the first measurement asked "can it read outside the repository", got a
+yes and a no, and stopped. The existence check was in the function the whole time -- the question that found it
+was asked about the *order* of two lines rather than about a capability. Absence of confinement is not one fact
+but one per check, and checks that run before the gate that matters are part of the surface.

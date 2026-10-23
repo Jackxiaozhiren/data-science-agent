@@ -21,6 +21,16 @@
   two sets over whitespace-folded text, because the sentence wraps. Dropping `.json` from the doc is red and
   adding a seventh format to the loader is red, which is the whole point -- the readable set and the documented
   set are one fact, and the code decides it.
+- Follow-up, same day, and it widened the finding: `profile_dataset` checks that the path exists *before* it
+  checks the extension, which is a second disclosure and a broader one. Measured with a matched pair in one
+  directory, differing only in whether the file is there -- an existing extensionless path answers
+  `Unsupported file extension`, an absent one answers `File not found` -- the unauthenticated surface is a
+  host-wide path-existence oracle over every path, including the ones it can never read. `docs/hosted-demo.md`
+  had said the opposite in one clause ("not a general file-system oracle"), written from the earlier partial
+  measurement, so that sentence was replaced rather than softened, and the extension guard now reads both
+  documents -- two anchored clauses, each compared to `ALLOWED_EXTS`, and dropping one extension from either
+  document is red. New pin: `test_profile_dataset_answers_differ_only_by_whether_the_path_exists`, which goes
+  red if the two errors ever collapse -- by reordering the checks or by confining the tool to a data root.
 - Left open on purpose: whether to authenticate `/mcp`, bind it to loopback, or accept it as the price of a
   public tool endpoint. That changes what a deployed instance offers to anonymous callers, so it is the owner's
   decision (open item #59), and correcting the prose deliberately does not pre-empt it.
