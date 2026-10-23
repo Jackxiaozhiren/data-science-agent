@@ -218,13 +218,16 @@ its package metadata, plus the effective reasoning mode (`/health` stays import-
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
 idle -- measured at 44.5 s and at 92.8 s on the two days this was checked, from the same service.
 
-Three answers decide whether a redeploy did its job, and none of them needs a credential:
+Four answers decide whether a redeploy did its job, and none of them needs a credential:
 
 ```bash
 curl -s https://data-science-agent-api-h43i.onrender.com/version | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"
 curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
 curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/research/experiments \
   | python3 -c "import json,sys; print('deployed', json.load(sys.stdin)['total'], 'tracked', $(git ls-files research/results | wc -l | tr -d ' '))"
+curl -s -X POST https://data-science-agent-api-h43i.onrender.com/mcp/ -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+  | python3 -c "import json,sys; t=json.load(sys.stdin)['result']['tools']; print(len(t), 'tools;', 'current' if 'inputSchema' in t[0] else 'input_schema: image predates the discovery-field fix')"
 ```
 
 The first has to name the tag that was just built, not the one before it. The second has to carry a
@@ -233,6 +236,15 @@ browser refusing to run that document's own script, which is a page that looks p
 third compares the deployment against the repository rather than against a number written into this file -- as
 measured on 2026-10-22 the hosted answer was 3 and `git ls-files research/results` counts 3, which is the shape
 a passing check has: two independent counts that are allowed to disagree.
+
+The fourth is the one that caught a stale deployment without asking for a version number. Measured on
+2026-10-23 the live instance answered `tools/list` for an unauthenticated caller in well under a second,
+published every tool the surface has -- `run_python` and `run_sql` among them, the count printed by the command
+rather than owned by this file -- and named its schemas `input_schema`, the field name this repository stopped
+publishing when the discovery shape was fixed. A spec-compliant client reads `inputSchema` and nothing else, so
+what it sees today is a list of tools that appear to take no arguments. That one request says three things at
+once: which image is running, that the MCP surface takes no credential, and how many tools it will accept a
+call to. It is the cheapest way to learn that the demo is behind `main`.
 
 The web side is checked the same way, from wherever you are:
 `curl -sI https://data-science-agent-web.vercel.app/datasets`. A healthy answer is an HTTP `200` with the app

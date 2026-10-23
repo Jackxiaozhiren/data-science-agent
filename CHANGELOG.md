@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+### Tests (post-4.6.0) — the artifact traversal block was real, and nothing could tell if it broke
+
+- `docs/tools.md` advertises `save_artifact` as a "traversal block", and reading the code the claim holds in two
+  layers: `artifact_root()` validates every path component (`[A-Za-z0-9._-]`, no leading dot), and the writer
+  compares `dest.resolve()` against `root.resolve()` before writing. Zero tests named either layer, so the
+  guarantee was carried by prose. `tests/security/test_artifact_containment.py` adds 7, including the case the
+  filename blacklist cannot see -- a symlink *inside* the artifact root with an ordinary name -- and a positive
+  control that writes a normal file, so the refusals cannot be satisfied by a tool that writes nothing.
+- Both layers were falsified rather than trusted: deleting the component rule reddens the segment and reader
+  tests, deleting the resolution comparison reddens exactly the symlink test.
+- One instrument error worth the sentence: the reader test passed before the fixture also created `reports/`,
+  because `reports/..` cannot resolve when `reports/` is absent -- so the climb failed for a reason unrelated to
+  the rule, and the mutation kept passing. Adding the directory made the same mutation redden it. Recorded in
+  `AUDIT_LEDGER.md` §267 with the second lapse in the same shape (a probe printed "restored" before the restore
+  ran), which is why every mutation script here now restores and re-hashes inside its own command.
+
+### Changed (post-4.6.0) — the outside check gained a fourth answer, and it says the live demo is behind `main`
+
+- `POST /mcp/ {"method":"tools/list"}` against the free-tier instance, with no credential and no arguments:
+  HTTP 200 in 0.8 s, 19 tools published to an anonymous caller, `run_python` and `run_sql` among them. §265
+  described that reach from the code; this is the same fact about the deployment a visitor can reach now, which
+  is what turns a review finding into an operational one (#59, severity raised).
+- All 19 tools named their schemas `input_schema`, and none used the protocol's `inputSchema` -- the field name
+  `tools_for_wire()` publishes today, pinned for both transports by `tests/mcp/test_tools_list_wire_shape.py`.
+  So the running image predates the discovery fix, and a spec-compliant client pointed at the demo reads 19
+  tools that appear to take no arguments.
+- That is why the check went into `docs/hosted-demo.md` rather than into this entry alone: a field name a client
+  depends on is a staleness signal that costs one credential-free request and does not trust the version string
+  the deployment prints about itself. It also settles the census half of #44 without waiting for the token that
+  the redeploy half needs.
+
 ### Changed (post-4.6.0) — `run_python`'s sandbox claim was withdrawn, and the surface is now documented as what it measures
 
 - The claim written this morning -- `run_python` denies `import os`, so `/mcp` is not an unauthenticated shell --
