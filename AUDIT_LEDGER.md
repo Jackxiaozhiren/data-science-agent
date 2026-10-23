@@ -15748,3 +15748,26 @@ now carries a per-SHA inventory generated from `git show --name-only`, so the fo
 to their real file lists, and the two mislabelled ones are named as such. The habit that follows is mechanical:
 read the stat for the paths being committed *before* writing the subject, every time, including for a commit
 whose only content is a log entry.
+
+## 274. The upload filename rule refuses `data..v2.csv` and accuses it of path traversal
+
+`validate_filename` blocks the pattern `(\.\.|//|\\)` and separately rejects any `/` or `\`. The consequence,
+measured 2026-10-23 without writing anything: `../evil.csv`, `a/../../etc/passwd` and `..\evil.csv` are refused
+-- correctly -- and so are `data..v2.csv` and any other legitimate name whose middle happens to contain two
+dots, with the message "Path traversal detected in filename". That message is false for the second group, and
+the refusal is doing no work: the separator rule already ran, and the stored name is composed as
+`f"{dataset_id}_{filename}"` (`apps/api/src/dsa_api/services/dataset_service.py:90`), so the uuid sits in front
+and a leading `..` could not traverse even if the separator rule were gone. The claim in `docs/security.md`
+-- "`..` traversal block" -- is true; what is not true is that the block is what stopped this filename.
+
+Two ways to fix it, and they are not the same change. Narrow the rule to what traversal means -- refuse exactly
+`.` and `..`, keep the separator refusal, accept interior double dots -- which turns a 400 into a 201 for
+visitors uploading files named `Q1..Q2.csv`; or leave the rule and correct only the accusation, so the message
+says the name may not contain a double dot rather than alleging traversal. The first is a behaviour change on
+the upload endpoint and therefore the owner's call, so it is on the open list rather than done here; the second
+is a string. Recorded before either, because a validation rule that fires on ordinary input and reports a
+security reason for it trains everyone who sees it to distrust the security reason.
+
+The existing tests are honest about the current behaviour and would move with either fix:
+`tests/unit/test_datasets.py:23` covers `../etc/passwd` and `a/b.csv`, and neither case is the one this section
+is about -- which is how a false positive survives a green traversal test.
