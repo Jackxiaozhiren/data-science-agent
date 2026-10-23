@@ -15771,3 +15771,30 @@ security reason for it trains everyone who sees it to distrust the security reas
 The existing tests are honest about the current behaviour and would move with either fix:
 `tests/unit/test_datasets.py:23` covers `../etc/passwd` and `a/b.csv`, and neither case is the one this section
 is about -- which is how a false positive survives a green traversal test.
+
+## 275. Four pushes in four minutes cancelled three secret scans, and a cancelled scan is coverage that never happened
+
+`.github/workflows/secret-scan.yml` runs gitleaks on every push to `main` under
+`concurrency: secret-scan-push-main` with `cancel-in-progress: true`. That is the right shape for a check that
+should not pile up on a busy branch, and it has a consequence nobody wrote down: when pushes land seconds
+apart, the earlier runs are cancelled mid-scan, and because each run scans only its own push payload -- the
+range `commits[0]..commits[-1]` of that event -- a cancelled range is not picked up by the next run. Four
+pushes in the last few minutes left `59e356a`, `229f408` and `e553a64` with no completed secret scan, and the
+tip `b0a592a` shows `completed / cancelled` as well. No peer pushed in between, so the cancels were my own
+cadence cancelling each other.
+
+The coverage question is then specific rather than rhetorical: were those commits scanned by anything? Their
+content is prose -- ledger sections, the handoff addendum, doc sentences -- so the same shapes were checked
+locally instead, with eight gitleaks-style patterns (AWS access key id, the five `gh*_` token families,
+`github_pat_`, Slack app/user tokens, OpenAI-style `sk-`, a `Bearer <long>` value, a PEM private-key header,
+and a generic `api_key|secret|passwd|password|token = "<12+>"` assignment) over every file this round touched:
+zero hits. That is a substitute, not an equivalent -- gitleaks has more rules and its own entropy analysis --
+so the honest entry is: those ranges are unscanned by CI, the local check found nothing secret-shaped in prose
+only, and the durable fix is a scheduled full-history scan so that a cancel cannot silently reduce coverage.
+That is a `.github/workflows` change, which is the owner's line to cross, so it is on the open list (#5, below
+the other four) rather than done here.
+
+Worth naming the general shape next to the existing note that "green does not mean the repo is clean": green
+does not mean the range ran either, and `skipped`/`cancelled` on a check that is not a required status is
+invisible to a reader looking only at the commit badge. The per-step read the handoff now does for CI is the
+same read this finding asks for on the scan workflows.
