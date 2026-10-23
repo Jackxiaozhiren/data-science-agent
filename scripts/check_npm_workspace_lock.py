@@ -75,6 +75,20 @@ def main() -> int:
             lock_key = workspace_dir.relative_to(ROOT).as_posix()
             errors.extend(_compare_manifest(manifest_path, packages.get(lock_key), lock_key))
 
+            # The Web and VS Code workspaces also commit their own lockfiles,
+            # consumed by `npm --prefix <workspace> ci`. The root lock may
+            # be valid while a member lock silently points to old versions.
+            member_lock_path = workspace_dir / "package-lock.json"
+            if member_lock_path.is_file():
+                member_packages = _load_json(member_lock_path).get("packages")
+                member_key = f"{lock_key}/package-lock.json"
+                if not isinstance(member_packages, dict):
+                    errors.append(f"{member_key}: missing packages mapping")
+                else:
+                    errors.extend(
+                        _compare_manifest(manifest_path, member_packages.get(""), member_key)
+                    )
+
     if errors:
         print("Root npm workspace lockfile is out of sync:")
         for error in errors:
