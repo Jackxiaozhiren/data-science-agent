@@ -21,6 +21,7 @@ import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { CHROME_SELECTOR, classifyChromeRegions } from "./locale-chrome-rules.mjs";
+import { originsIn, verdict } from "./api-origin-verdict.mjs";
 
 const webDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(webDir, "..", "..");
@@ -433,20 +434,29 @@ function assertBundleMatchesThisTree() {
     };
     walkChunks(staticDir);
   }
-  const foreign = new Set();
-  for (const chunk of chunks) {
-    // An origin, not any URL: `API_BASE_URL` compiles to a bare `http://localhost:PORT`, while an endpoint
-    // written in interface text carries a path (`http://localhost:11434/v1` is the Ollama placeholder on the
-    // settings page). Without the lookahead the tour reads a placeholder as a configured origin and refuses.
-    for (const match of readFileSync(chunk, "utf8").matchAll(/https?:\/\/(?:localhost|127\.0\.0\.1):(\d{2,5})(?![\d./-])/g)) {
-      if (Number(match[1]) !== API_PORT) foreign.add(match[0]);
+  // The rule itself lives in `api-origin-verdict.mjs` so it can be exercised on forged inputs; this half is
+  // only the reading. The source is the allow-list because `lib/api.ts` compiles
+  // `(configuredApiUrl || "http://localhost:8000")` and minification keeps the fallback even when
+  // NEXT_PUBLIC_API_URL is set, so a bundle built for another port legitimately carries two origins.
+  const chunkOrigins = [];
+  for (const chunk of chunks) chunkOrigins.push(...originsIn(readFileSync(chunk, "utf8")));
+  const sourceOrigins = [];
+  for (const file of sources) sourceOrigins.push(...originsIn(readFileSync(file, "utf8")));
+  const call = verdict({ chunkOrigins, sourceOrigins, apiPort: API_PORT });
+  if (!call.ok) {
+    if (call.code === "no-baked-origin") {
+      throw new Error(
+        `no built chunk carries an origin on port ${call.detail.apiPort}, so this bundle was not compiled for ` +
+          `the port the tour is guarding (the chunks hold: ${call.detail.chunk.slice(0, 3).join(", ") || "no loopback origin at all"}) ` +
+          `-- build with NEXT_PUBLIC_API_URL=http://127.0.0.1:${API_PORT} and pass --api-port ${API_PORT}. ` +
+          "A bundle aimed at a non-loopback API is not what this tour can verify, because its console-error " +
+          "filter and its quiet-port preflight are both written against loopback."
+      );
     }
-  }
-  if (foreign.size > 0) {
     throw new Error(
-      `the built bundle points at an API origin other than the ${API_PORT} this tour is guarding: ` +
-        `${[...foreign].slice(0, 3).join(", ")} -- rebuild with NEXT_PUBLIC_API_URL for that port, ` +
-        "or the console-error filter below will be filtering a different server than the pages are calling"
+      `the built bundle points at an API origin that this tree's source never names: ${call.detail.foreign.slice(0, 3).join(", ")}` +
+        ` -- the tour is guarding port ${call.detail.apiPort} and \`apps/web/{app,lib}\` does not mention it, so ` +
+        "the pages would be calling a different server than the console-error filter below is filtering"
     );
   }
 }

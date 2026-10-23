@@ -18,8 +18,31 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
 - Tool discovery via `tools/list`; calls via `tools/call` with JSON args.
 - Auth: **none on this surface.** `AuthMiddleware` covers `/api/*` only -- it returns early for any path that does
   not start with `/api/` -- so `/mcp` and `/mcp-app` are reachable without a credential even when `DSA_AUTH_TOKEN`
-  is set, and there is no `DSA_MCP_TOKEN` anywhere in the code. Run the MCP endpoint only where you would run an
-  unauthenticated shell: `run_python` and `run_sql` are among its tools.
+  is set, and there is no `DSA_MCP_TOKEN` anywhere in the code.
+- What that surface can actually do, measured on a local instance rather than asserted.
+  `profile_dataset` takes any `path` the caller names and validates only its extension, so a file outside the
+  repository is read and its first values come back -- `sample_values` in the column profile, measured returning
+  the literal cell contents of a CSV in a temporary directory. On a deployed instance that means any `.csv`,
+  `.json`, `.jsonl`, `.parquet`, `.xls` or `.xlsx` file on the host. The same tool checks that the path exists
+  *before* it looks at the extension, and that reaches further than the six formats: an existing path with no
+  allowed suffix answers `Unsupported file extension` while an absent one answers `File not found`, so the
+  surface is a host-wide path-existence oracle -- it reports on files it can never read. Both halves are pinned
+  in `tests/security/test_upload_guard.py`, the extension set against `ALLOWED_EXTS` and the oracle against the
+  two error strings, so widening the reach or reordering those checks has to change this paragraph on purpose.
+- `run_sql` was fenced at the engine on 2026-10-23: its connection sets `enable_external_access=false`, because
+  the 24-pattern deny list did not see a quoted path used as a table name, and that path was readable. The
+  guarantee is the setting *and* the list now; `docs/tools.md` says which half does what.
+- `run_python` is **not a sandbox in the security sense**, and the claim this file carried until the same day --
+  that it denies `import os`, so the surface is not a shell -- is withdrawn. Its AST checker blocks the names
+  somebody wrote down (`import os`, `.system(`, `.environ`, `getenv`, `open()`, `__class__`), while the module
+  objects it permits carry the same API: `pl.os.walk('/')`, `pl.os.remove('…')` and
+  `pl._dependencies.subprocess.Popen('…')` each pass `_check_ast` unexecuted, because polars re-exports `os` and
+  `subprocess`. A child process makes the rest of the list beside the point. There is no in-process equivalent
+  of the DuckDB switch here -- an interpreter running as the same user holds that user's rights -- so the
+  boundary is which hosts can reach `/mcp`, not what a payload spells.
+- The endpoint should be run where a remote shell on that host is acceptable, and otherwise not run.
+  Authenticating the surface, binding it to loopback, or keeping `run_python` and `run_sql` off the HTTP
+  endpoint are the three options; the choice is recorded open in `AUDIT_LEDGER.md` §265.
 - MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed
@@ -51,8 +74,8 @@ fields.
 | analyze | dsa_agent graph (§36 full loop) | dataset/dataset_path, task (alias question), run_id (alias analysis_id) |
 
 ## Implementation
-- `dsa_mcp/adapter.py` — stateless registry bridging MCP JSON → BaseTool.run
-- `dsa_mcp/server.py` — FastMCP-like HTTP server on /mcp (JSON-RPC 2.0), plus STDIO mode for Claude Desktop
+- `packages/mcp/src/dsa_mcp/adapter.py` — stateless registry bridging MCP JSON → BaseTool.run
+- `packages/mcp/src/dsa_mcp/server.py` — FastMCP-like HTTP server on /mcp (JSON-RPC 2.0), plus STDIO mode for Claude Desktop
 - No global mutation of core; bootstrap idempotent.
 
 ## Out of Scope (V0.1)

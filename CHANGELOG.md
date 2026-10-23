@@ -2,6 +2,218 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the upload refusal now names the rule it fired instead of alleging traversal
+
+- `validate_filename` mixed `..`, `//` and `\` into one regex behind one sentence, "Path traversal detected in
+  filename", so an ordinary name like `Q1..Q2.csv` was refused and accused of an attack that the surrounding
+  rules make impossible: separators are refused on their own, and the stored name is `<uuid>_<filename>`
+  (`dataset_service.py:90`), which puts the uuid in front of anything a caller spells.
+- Each rule now reports itself -- `Filename must not contain '..' (path traversal)`, `Filename must not contain
+  path separators` -- and the mixed pattern is gone, with the vendored twin re-synced and compared byte-for-byte.
+  The reason stays in parentheses rather than being dropped: `tests/security/test_adversarial_suite.py:53` greps
+  the message for `traversal|separator|path`, and tightening someone else's contract to fit a new string is the
+  wrong direction for a wording change.
+- **No policy moved.** Fifteen names were run through both the old and the new predicate and the verdicts are
+  identical, so nothing that uploaded before fails now and nothing that failed before uploads now. The recorded
+  verdict table in `tests/security/test_upload_guard.py` is literal rather than recomputed, and it includes
+  `validate_filename(".")` passing -- refused one line later by `detect_format`, which finds no allowed extension
+  -- because "which rule actually stopped this" is the distinction the whole change is about. Whether to narrow
+  `..` to whole path segments, turning a 400 into a 201 for such names, stays the owner's call (#71).
+- `AUDIT_LEDGER.md` 274 with its same-day follow-up.
+
+### Changed (post-4.6.0) — the sandbox's wall-clock timeout bounds reported time, not occupied time
+
+- Measured at both ends with `timeout_ms=300`: `while True: n += 1` stopped at 331 ms of wall clock (inside a
+  frame of the budget), while `np.matmul` on a 3200x3200 ran to its natural end at 331 ms and *then* reported
+  `TimeoutError` -- the same code at a 1000 ms budget completed with no error, which is the control that says
+  the first case was not a slow machine.
+- `_LoopDeadline`'s own docstring already says this; the sentence around it did not. `docs/security.md` now
+  names which half is enforced, and the consequence: an anonymous caller who can reach `/mcp` can occupy a
+  worker for as long as one C call takes, and on a 0.5-vCPU free instance the cheapest attack on the demo is
+  arithmetic, not exfiltration. Stated beside #59. No deliberately long-running plant was executed.
+- Ledger §272.
+
+### Fixed (post-4.6.0) — the doc-citation guard went red in CI on its own first run, and the failure was the finding
+
+- `tests/contract/test_doc_code_paths.py` passed on the machine that wrote it and failed `ci` for `143896c`:
+  `docs/FRONTEND_IA.md` cited `build/r13f-nav-acceptance.mjs`. The file existed -- in a git-ignored directory --
+  so the reader's path resolved here and nowhere else. Existence was the wrong predicate; "openable from a clone"
+  is the right one.
+- The instrument was promoted rather than the sentence deleted: `apps/web/scripts/nav-language-acceptance.mjs`,
+  on the tracked conventions (`playwright` imported by name, `repoRoot`-derived output, `NAVLANG_*` env), with
+  its 17 expected chrome strings cross-checked against the live dictionary before shipping and `node --check`
+  clean. The scratch copy is gone, so there is one owner.
+- The guard gained a second rule: any citation spelling an unshipped directory (`build`, `site`, `.next`,
+  `dist`, `node_modules`, `.venv`) is an offender whether or not it exists locally. `output/` stays exempt -- it
+  is the documented artifact root, and naming a generated file there is honest about a path that should not
+  exist yet. Falsified by planting a citation to the existing local `build/` script: red, naming it as
+  unshipped; the CI failure now reproduces locally instead of remotely.
+
+### Changed (post-4.6.0) — "MIME sniff" named a module no shipped path calls
+
+- `docs/api.md` advertised the upload as doing `MIME sniff` and `docs/security.md` listed
+  `packages/execution/src/dsa_execution/mime_sniff.py` as a gatekeeper. The sniffer (`sniff_mime`,
+  `is_allowed_mime`, `looks_like_zip_bomb`) has no production caller: its only consumer is
+  `tests/unit/test_coverage_sweep.py`, which asserts its behaviour and makes it look enforced. What runs is a
+  table duplicated inside `validate_file` -- its own comment says it was copied to avoid an import cycle --
+  and that table filters the **client-declared** type, which is a control but is not sniffing.
+- Measured over 66 (extension, declared type, body) combinations: 29 agree, none where the live rule is looser,
+  and 37 where the sniffer would accept what the live gate refuses. The mechanism is the sniffer replacing an
+  unrecognized declaration with `sniff_mime`, which answers from the extension's guessed type, so `.xls`
+  declared `text/csv` passes because csv is allowed for xls. Every allowed extension diverges, so wiring the
+  module in later would loosen the gate rather than tighten it.
+- Two pins in `tests/security/test_upload_guard.py`: the differential with its direction and count asserted
+  (falsified by emptying the sniffer's `.xls` entry, which makes the live rule looser and reddens it naming
+  that case), and an AST scan proving nothing imports `mime_sniff` -- AST because `validate.py` carries the
+  module name in the comment explaining why it does not import it, so a text scan reports prose as a caller.
+- The first number written for this was wrong: "they agree on 52, 14 diverge, only the Excel pair", read off a
+  probe whose summary line a truncating `tail` had cut. The test computed 29 and 37 across all six extensions.
+  Recorded in `AUDIT_LEDGER.md` §271 as the second time this month a guard computing from the artifact caught
+  what a transcription had accepted.
+
+### Fixed (post-4.6.0) — twelve citations in five live documents pointed at files that do not exist
+
+- `docs/security.md` named `packages/execution/sql_guard.py` and three siblings; the files live one directory
+  deeper under `src/dsa_execution/`. Five more cited `app/lib/backendProbe.ts`, `lib/locale.ts` and
+  `dsa_mcp/adapter.py` -- right inside their package, wrong from the root a reader stands in -- and one cited a
+  generated evaluation sample as if it were committed.
+- `tests/contract/test_doc_code_paths.py` now keeps the count at zero across the 46 live documents and their
+  107 code citations, resolving document-relative before repository-relative because that is the order a reader
+  tries. Dated records are exempt (`CHANGELOG.md`, `AUDIT_LEDGER.md`, `HANDOFF-*.md`, `docs/v4_*/`): they
+  describe the tree as it was, and passing a present-day check would make them lie. The guard asserts its own
+  census is non-trivial, and a planted fake path reddens it naming exactly that path.
+- The same pass rewrote the two control sentences in `docs/security.md` that §264 and §265 had just made false:
+  the SQL line now reads deny list *plus* `enable_external_access=false`, and the Python line is labelled **Not a
+  security boundary** with the calls that pass its checker. Recorded in `AUDIT_LEDGER.md` §269.
+
+### Changed (post-4.6.0) — the demo's two halves are not equally behind, and that changes what the redeploy owes
+
+- The web side, recorded last round as unmeasurable from this machine, answered on 2026-10-23: `200` in about a
+  second and a half with the app shell. Read as a fact about the path rather than the service -- which is what
+  the paragraph warned a never-opening connection would turn out to be.
+- `server: Vercel` plus an `x-vercel-id` naming an edge and an origin region are what make that readable on a
+  machine behind a filtering proxy that answers for blocked hosts with `198.18.0.0/15` addresses. A status code
+  alone cannot distinguish the origin's page from a proxy's, and the doc now says which headers to look for.
+- The asymmetry: the chunk the deployed page references carries the cold-start copy committed on 2026-10-22
+  ("up to two minutes" / 两分钟), so the web deployment tracks `main`; the API's `/mcp` still publishes
+  `input_schema` for every tool, so the Render service predates the discovery-field fix. Both checks are
+  credential-free and live in `docs/hosted-demo.md`, with the bundle loop printing the chunk it matched instead
+  of the file owning a count. #44 is therefore one service of work, not two.
+
+### Tests (post-4.6.0) — the artifact traversal block was real, and nothing could tell if it broke
+
+- `docs/tools.md` advertises `save_artifact` as a "traversal block", and reading the code the claim holds in two
+  layers: `artifact_root()` validates every path component (`[A-Za-z0-9._-]`, no leading dot), and the writer
+  compares `dest.resolve()` against `root.resolve()` before writing. Zero tests named either layer, so the
+  guarantee was carried by prose. `tests/security/test_artifact_containment.py` adds 7, including the case the
+  filename blacklist cannot see -- a symlink *inside* the artifact root with an ordinary name -- and a positive
+  control that writes a normal file, so the refusals cannot be satisfied by a tool that writes nothing.
+- Both layers were falsified rather than trusted: deleting the component rule reddens the segment and reader
+  tests, deleting the resolution comparison reddens exactly the symlink test.
+- The same promise turned out to be unowned on the read side too: `GET /api/v1/analysis/{run_id}/bundle`
+  composes its zip from stored artifact paths via `bundles._classify`, which resolves each path, requires
+  containment under the artifact root, and reports a reason for every entry it drops -- and no test named the
+  function or any of its reasons. One test now walks eight stored shapes (absolute, relative, outside, `../`
+  climb, symlink-out, missing, path-less, non-dict); deleting the containment comparison reddens it on exactly
+  the climb and the symlink. The residual it documents instead of fixing: two spellings of one stored file
+  yield two zip members with the same name.
+- One instrument error worth the sentence: the reader test passed before the fixture also created `reports/`,
+  because `reports/..` cannot resolve when `reports/` is absent -- so the climb failed for a reason unrelated to
+  the rule, and the mutation kept passing. Adding the directory made the same mutation redden it. Recorded in
+  `AUDIT_LEDGER.md` §267 with the second lapse in the same shape (a probe printed "restored" before the restore
+  ran), which is why every mutation script here now restores and re-hashes inside its own command.
+
+### Changed (post-4.6.0) — the outside check gained a fourth answer, and it says the live demo is behind `main`
+
+- `POST /mcp/ {"method":"tools/list"}` against the free-tier instance, with no credential and no arguments:
+  HTTP 200 in 0.8 s, 19 tools published to an anonymous caller, `run_python` and `run_sql` among them. §265
+  described that reach from the code; this is the same fact about the deployment a visitor can reach now, which
+  is what turns a review finding into an operational one (#59, severity raised).
+- All 19 tools named their schemas `input_schema`, and none used the protocol's `inputSchema` -- the field name
+  `tools_for_wire()` publishes today, pinned for both transports by `tests/mcp/test_tools_list_wire_shape.py`.
+  So the running image predates the discovery fix, and a spec-compliant client pointed at the demo reads 19
+  tools that appear to take no arguments.
+- That is why the check went into `docs/hosted-demo.md` rather than into this entry alone: a field name a client
+  depends on is a staleness signal that costs one credential-free request and does not trust the version string
+  the deployment prints about itself. It also settles the census half of #44 without waiting for the token that
+  the redeploy half needs.
+
+### Changed (post-4.6.0) — `run_python`'s sandbox claim was withdrawn, and the surface is now documented as what it measures
+
+- The claim written this morning -- `run_python` denies `import os`, so `/mcp` is not an unauthenticated shell --
+  was tested the way the SQL guard was: by asking what the checker permits rather than what it names. Passing
+  `_check_ast` unexecuted: `pl.os.listdir('.')`, `pl.os.walk('/')`, `pl.os.remove('some_file')`,
+  `pl.os.mkdir('/tmp/z')`, `pl.os.read(3, 100)`, `pl.os.spawnv('x', ['x'])`,
+  `pl._dependencies.subprocess.Popen('id')`, `pl.__dict__['os'].listdir('.')`. Blocked: `import os`,
+  `pl.os.system`, `pl.os.environ`, `pl.os.getenv`, `pl.os.popen`, `open()`, `().__class__`. polars re-exports
+  `os` and `subprocess`, so reaching them takes no denied name, and once a child process is available the rest
+  of the list stops being a boundary.
+- Nothing was widened into a 25th pattern, and that is the decision worth reading: an interpreter running as the
+  same user holds that user's rights, and CPython has no `enable_external_access`. The control is who can reach
+  `/mcp`, so `docs/MCP_DESIGN.md`, `docs/hosted-demo.md` and `docs/tools.md` now say to treat the endpoint as a
+  remote shell on its host and name the three real options -- authenticate it, bind it to loopback, or keep
+  `run_python` and `run_sql` off the HTTP surface. `AUDIT_LEDGER.md` §265 carries the commands.
+- Two structural notes came out of the same read: `_check_ast`'s `ast.Subscript` branch is a comment saying it
+  blocks `__builtins__.__dict__` obfuscation followed by `pass`, and the gap between denied `pl.os.popen` and
+  permitted `subprocess.Popen` is a letter's case. Both are recorded rather than patched, because patching a
+  name list is the mistake this round exists to stop repeating.
+- Left open, with the severity now stated: the `/mcp` boundary decision (#59). It was a read-and-oracle problem
+  this morning and it is a host-shell problem now, and the free-tier demo is running with that surface open
+  until the owner picks.
+
+### Fixed (post-4.6.0) — `run_sql` denied the function names someone thought of, and DuckDB had another way to a file
+
+- `SELECT * FROM '/tmp/leak.csv'` returned every row. The tool's 24-pattern deny list is what stands between
+  caller-authored SQL and the file system, and a quoted path used as a table name reaches the file through the
+  engine's replacement scan without naming `read_*`, `*_scan(` or `glob(` -- and it starts with `SELECT`, so the
+  allow-verb check cleared it too. Measured before the fix; the same statement names no denied function today.
+- Not a 25th pattern: the connection that runs caller-authored SQL now sets `enable_external_access=false` on
+  the engine, immediately after `duckdb.connect` and before any statement of the caller's runs. The deny list
+  stays because it answers sooner and names the reason.
+- `dataset_path` survives, and that is the part a fence usually breaks: the dataset is read in Python by
+  `load_dataframe` and registered as an Arrow relation, which is not DuckDB external access.
+  `tests/security/test_sql_sandbox.py` holds both halves -- three of its five tests were red before the fix, the
+  two-row legitimate dataset read is the control -- and its placement guard is an AST walk over the two
+  `con.execute` sites rather than a substring check, because the fix is only a fence if it runs first, and it
+  insists the literal say `=false`.
+- Two documents had been leaning on the old guarantee: `docs/hosted-demo.md` and `docs/MCP_DESIGN.md` said
+  `run_sql` refuses `read_*`, which is one of 24 patterns rather than the boundary, and both now state the
+  engine fence; `docs/tools.md` gained the section explaining why the guard is two things. Recorded in
+  `AUDIT_LEDGER.md` §264, which also keeps the bypass command verbatim.
+
+### Changed (post-4.6.0) — the `/mcp` boundary sentence was measured instead of inferred, and both halves moved
+
+- `docs/MCP_DESIGN.md` told the operator to run the MCP endpoint "only where you would run an unauthenticated
+  shell". §252 had proved the surface takes no credential, and the sentence generalised that into a claim about
+  capability. Measured on a local instance: `run_python` answers `Import denied: os`, `run_sql` answers
+  `Disallowed SQL pattern: '\bread_\w+'`, so the surface is *not* a shell -- and it is also not what the
+  paragraph worried about, because the tool with no fence is `profile_dataset`. It takes any `path` the caller
+  names, checks only the extension, and returns the file: a CSV in a temporary directory came back with its
+  literal cell values in `sample_values`, and `/etc/hosts` was refused for lacking a recognised suffix rather
+  than for being outside the repository.
+- Both documents now state the measured boundary, including the part that bounds it: stored visitor uploads are
+  named `<uuid>_<filename>` and are not enumerable through the surface, so what an anonymous caller reaches is
+  the host's files, not other visitors' rows. `docs/hosted-demo.md` carries the same paragraph for whoever
+  operates the demo, and `AUDIT_LEDGER.md` §263 keeps the measurements.
+- The extension list in the new sentence is a transcription of `ALLOWED_EXTS`, so it is now checked rather than
+  trusted: `test_the_extensions_the_mcp_boundary_sentence_lists_are_the_ones_the_loader_accepts` compares the
+  two sets over whitespace-folded text, because the sentence wraps. Dropping `.json` from the doc is red and
+  adding a seventh format to the loader is red, which is the whole point -- the readable set and the documented
+  set are one fact, and the code decides it.
+- Follow-up, same day, and it widened the finding: `profile_dataset` checks that the path exists *before* it
+  checks the extension, which is a second disclosure and a broader one. Measured with a matched pair in one
+  directory, differing only in whether the file is there -- an existing extensionless path answers
+  `Unsupported file extension`, an absent one answers `File not found` -- the unauthenticated surface is a
+  host-wide path-existence oracle over every path, including the ones it can never read. `docs/hosted-demo.md`
+  had said the opposite in one clause ("not a general file-system oracle"), written from the earlier partial
+  measurement, so that sentence was replaced rather than softened, and the extension guard now reads both
+  documents -- two anchored clauses, each compared to `ALLOWED_EXTS`, and dropping one extension from either
+  document is red. New pin: `test_profile_dataset_answers_differ_only_by_whether_the_path_exists`, which goes
+  red if the two errors ever collapse -- by reordering the checks or by confining the tool to a data root.
+- Left open on purpose: whether to authenticate `/mcp`, bind it to loopback, or accept it as the price of a
+  public tool endpoint. That changes what a deployed instance offers to anonymous callers, so it is the owner's
+  decision (open item #59), and correcting the prose deliberately does not pre-empt it.
+
 ### Changed (post-4.6.0) — the hosted-demo census gained a third probe and a re-run
 
 - `docs/hosted-demo.md` already carried two credential-free currency probes: an OpenAPI path census and a

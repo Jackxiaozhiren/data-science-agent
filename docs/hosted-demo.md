@@ -218,13 +218,16 @@ its package metadata, plus the effective reasoning mode (`/health` stays import-
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
 idle -- measured at 44.5 s and at 92.8 s on the two days this was checked, from the same service.
 
-Three answers decide whether a redeploy did its job, and none of them needs a credential:
+Four answers decide whether a redeploy did its job, and none of them needs a credential:
 
 ```bash
 curl -s https://data-science-agent-api-h43i.onrender.com/version | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"
 curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
 curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/research/experiments \
   | python3 -c "import json,sys; print('deployed', json.load(sys.stdin)['total'], 'tracked', $(git ls-files research/results | wc -l | tr -d ' '))"
+curl -s -X POST https://data-science-agent-api-h43i.onrender.com/mcp/ -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+  | python3 -c "import json,sys; t=json.load(sys.stdin)['result']['tools']; print(len(t), 'tools;', 'current' if 'inputSchema' in t[0] else 'input_schema: image predates the discovery-field fix')"
 ```
 
 The first has to name the tag that was just built, not the one before it. The second has to carry a
@@ -234,10 +237,39 @@ third compares the deployment against the repository rather than against a numbe
 measured on 2026-10-22 the hosted answer was 3 and `git ls-files research/results` counts 3, which is the shape
 a passing check has: two independent counts that are allowed to disagree.
 
+The fourth is the one that caught a stale deployment without asking for a version number. Measured on
+2026-10-23 the live instance answered `tools/list` for an unauthenticated caller in well under a second,
+published every tool the surface has -- `run_python` and `run_sql` among them, the count printed by the command
+rather than owned by this file -- and named its schemas `input_schema`, the field name this repository stopped
+publishing when the discovery shape was fixed. A spec-compliant client reads `inputSchema` and nothing else, so
+what it sees today is a list of tools that appear to take no arguments. That one request says three things at
+once: which image is running, that the MCP surface takes no credential, and how many tools it will accept a
+call to. It is the cheapest way to learn that the demo is behind `main`.
+
 The web side is checked the same way, from wherever you are:
 `curl -sI https://data-science-agent-web.vercel.app/datasets`. A healthy answer is an HTTP `200` with the app
 shell; a TCP connect that never completes says about your path what a 62-second probe said about the API last
 round, which is why the timeout on the command matters as much as its status code.
+
+Re-run on 2026-10-23 and it answered: `200` in about a second and a half, with the app shell. Two headers make
+that reading trustworthy rather than hopeful on this machine, which sits behind a filtering proxy that answers
+for hosts it blocks (`198.18.0.0/15` addresses): `server: Vercel` and an `x-vercel-id` carrying an edge and an
+origin region. A proxy-generated page has neither.
+
+The same two requests also say something the version endpoint does not: the two halves of the demo are not
+equally behind. The web bundle the deployment serves contains the cold-start copy committed on 2026-10-22,
+which is checkable in one loop --
+
+```bash
+W=https://data-science-agent-web.vercel.app
+curl -s $W/datasets | grep -o '/_next/static/[^"]*\.js' | sort -u | while read -r s; do
+  curl -s "$W$s" | grep -q "two minutes" && echo "current cold-start copy in $s"
+done
+```
+
+-- and it names the chunk rather than a claim, while the API's `/mcp` still publishes the pre-fix
+`input_schema`. So Vercel is tracking `main` and the Render service is not, and the remaining deploy work is
+one service rather than two. That is worth knowing before spending the token a redeploy needs.
 
 What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
 published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance
@@ -347,6 +379,33 @@ Consequences an operator should state rather than imply: the public demo runs on
 credentials belong to a private instance started with `dsa ui`, where the key is stored 0600 in that user's own
 data directory. `GET /version`'s `reasoning_mode.source` tells a reader which knob decided the mode on the
 instance they are talking to.
+
+One more, because it is measured rather than inferred, and it is the sentence an operator needs before deciding
+what to do about it. The `/mcp` surface on the same host takes no credential at all (`AuthMiddleware` is
+`/api/*`-only), and of its three reach-bearing tools exactly one is fenced:
+
+- `run_sql` now runs on a connection with DuckDB's external file access switched off, added on 2026-10-23
+  because the 24-pattern deny list it also keeps could not see a quoted path used as a table name -- that shape
+  names none of its denied functions, and it did read files.
+- `profile_dataset` accepts any path whose extension it recognises, so a caller can have a file outside the
+  repository read back as a profile, including the literal first values of its columns. The file reach is
+  therefore bounded and it reads files ending in `.csv`, `.json`, `.jsonl`, `.parquet`, `.xls` or `.xlsx`, which
+  on a deployed container includes configuration and credential files that happen to carry those extensions. It
+  is also a host-wide path oracle, which is wider than the six extensions: the tool checks that a path exists
+  before it checks the suffix, so an existing file answers `Unsupported file extension` and an absent one
+  answers `File not found`, and any path on the container can be confirmed or denied by name even when it can
+  never be read.
+- `run_python` is not a sandbox in the security sense, and no in-process change can make it one. Its AST
+  checker denies `import os`, `.system(`, `.environ`, `getenv` and `open()`, while polars re-exports the module
+  it denied: `pl.os.walk('/')`, `pl.os.remove('…')` and `pl._dependencies.subprocess.Popen('…')` each pass the
+  same checker, measured without executing them. A child process makes the rest of that list beside the point,
+  because the child can read the environment and open the file the parent refused to spell.
+
+So on a host where `/mcp` is reachable, treat it as a remote shell on that host. Visitor uploads are still not
+enumerable through it -- stored names are `<uuid>_<filename>` -- so the exposure is the machine, not other
+visitors' rows. What to do about that is the open owner decision recorded in `AUDIT_LEDGER.md` §265:
+authenticate the surface, bind it to loopback, or keep `run_python` and `run_sql` off the HTTP endpoint. The
+sentence is here so nobody has to read the code, or this ledger, to learn the boundary before deploying.
 
 ## Required configuration
 
