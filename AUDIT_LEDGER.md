@@ -15425,3 +15425,82 @@ What the follow-up is worth as method: the first measurement asked "can it read 
 yes and a no, and stopped. The existence check was in the function the whole time -- the question that found it
 was asked about the *order* of two lines rather than about a capability. Absence of confinement is not one fact
 but one per check, and checks that run before the gate that matters are part of the surface.
+
+## 264. The SQL guard denied the function names a reviewer thought of, and the engine had another way to reach a file
+
+`dsa_execution.sql_guard` carries 24 denied patterns, and the comment above three of them says why: "the
+sandbox exposes only the `dataset` view, so any direct file or remote scan is an exfiltration vector." That is
+a statement about the sandbox, and it was enforced by matching words. Measured on 2026-10-23, one call:
+`SELECT * FROM '/var/folders/…/leak.csv'` returned `['col_a','col_b']` and every row. DuckDB resolves a quoted
+path used as a table name through its replacement scan, so the statement names no denied function -- not
+`read_\w+`, not `\w+_scan\s*\(`, not `glob\s*\(` -- and it still starts with `SELECT`, so the allow-verb check
+passed it too. The same held for `.json`. `install`/`load`/`pragma` were all blocked, so this was not a
+smuggling route into something worse; it was the file itself, which is what the comment said the sandbox did
+not expose.
+
+The fix is not a 25th pattern. The connection is created for caller-authored SQL, so the reach is switched off
+at the engine: `SET enable_external_access=false` immediately after `duckdb.connect`, before any caller
+statement runs. Measured after: the same two queries fail with a catalog error and return no rows. The
+deny list stays, because it answers earlier and names the reason.
+
+`dataset_path` had to survive, and it does -- that path is read by `load_dataframe` in Python and registered as
+an Arrow relation, which is not DuckDB external access. The test asserting the fence is the one asserting the
+tool still has a job: 5 tests in `tests/security/test_sql_sandbox.py`, three red before the fix and all green
+after, with the legitimate two-row dataset read kept as the control. The placement guard is an AST check rather
+than a substring one, because the fix is only a fence if it runs *before* the caller's SQL: it finds the two
+`con.execute` call sites by node and compares their lines, and it also requires the literal to say `=false` --
+a `SET enable_external_access=true` would satisfy a presence check and enforce nothing.
+
+Two things to keep. First, the earlier reach was documented as the sandbox's property, and the thing that made
+it false was not a missing pattern but a different way to ask for the same file; a blacklist over a language
+with implicit syntax is a list of the shapes someone imagined. Second, this found the doc sentence:
+`docs/hosted-demo.md` said "run_sql refuses read_*", and the reader who trusted it was trusting one of 24
+patterns to be the boundary. The sentence now says what the boundary is, and `docs/tools.md` gained the half
+that explains why the guard is two things rather than one.
+
+Also recorded, unfixed: `dsa_execution.sql_guard` imports `dsa_tools.errors` at module level while
+`dsa_tools/__init__` imports `run_sql`, which imports `sql_guard`. A process that touches `sql_guard` first
+gets `ImportError: cannot import name 'enforce_row_limit' from partially initialized module` -- hit while
+measuring this. Production entry points import `dsa_tools` first so the cycle resolves, and the same lazy
+`__init__` shape that fixed `dsa_datasets` (§259) would fix it; left alone because changing a package
+initialiser is a wider blast radius than this finding needs, and the failure is loud rather than silent.
+
+## 265. The Python "sandbox" blocked the spellings someone listed, and polars hands out `os` for free
+
+§263 recorded a correction: `/mcp` was described as an unauthenticated shell, and `run_python` answers
+`Import denied: os` while `run_sql` refuses `read_*`, so that was too alarming. §264 then found `run_sql`'s
+deny list was not the boundary it was presented as. Measuring `run_python` the same way -- by asking what the
+checker permits rather than what it names -- reversed the §263 correction, and the reversal is the finding.
+
+`dsa_execution.python_sandbox._check_ast` keeps three lists: denied imports, denied attributes, denied call
+names. Run through the checker with no code executed, these pass:
+
+```
+pl.os.listdir('.')                       pl.os.remove('some_file')
+pl.os.walk('/')                          pl.os.mkdir('/tmp/z')
+pl.os.read(3, 100)                       pl.os.spawnv('x', ['x'])
+pl._dependencies.subprocess.Popen('id')  pl.__dict__['os'].listdir('.')
+```
+
+and `import os`, `pl.os.system`, `pl.os.environ`, `pl.os.getenv`, `pl.os.popen`, `open()`, `().__class__` are
+blocked. The reason is not a missing pattern: polars re-exports the standard-library `os` module, so `pl.os` is
+an attribute name nobody denied, and once the module object is in hand the rest is its ordinary API.
+`pl._dependencies.subprocess` is the same story one level deeper. `Popen` matters most -- with a child process
+available, every other entry on the list stops being a boundary, because the child can read the environment,
+open the file, and run the command the parent refused to spell.
+
+Two structural notes. The `ast.Subscript` branch is a comment that says "block obfuscation like
+`__builtins__.__dict__`" followed by `pass` -- the intent is in the file and the code is not, which is how a
+`__dict__` route survives a review. And `PascalCase` versus `lowercase` is the whole difference between
+`pl.os.popen` (denied) and `subprocess.Popen` (permitted): a name list is case- and shape-sensitive in exactly
+the way a language is not.
+
+No in-process fix is on offer here, and pretending otherwise would be the same mistake as §264's 25th pattern.
+An interpreter running as the same user, in the same mount namespace, with the same file descriptors, has the
+same rights as its process; `enable_external_access=false` worked for DuckDB because that engine has a switch
+for the reach, and CPython has no equivalent for `os`. So the boundary is reachability of the surface, not the
+content of the payload, and that is the owner's decision #59 -- now stated with the measurement behind it:
+authenticate `/mcp`, or bind it to loopback, or do not ship `run_python`/`run_sql` on the HTTP surface at all,
+or accept a host-wide shell on any machine where the port opens. The docs were corrected the same day, in the
+direction of what was measured, and `docs/MCP_DESIGN.md` now says to treat the surface as a remote shell, which
+is what the original sentence got right.
