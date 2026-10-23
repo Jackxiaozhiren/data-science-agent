@@ -45,7 +45,7 @@ Conventions:
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/datasets/` | upload (multipart, 100MB, MIME sniff, archive guard: extension blocklist plus the file's own leading bytes) → 201 |
+| POST | `/api/v1/datasets/` | upload (multipart, 100MB, client-declared type checked against a per-extension allowlist, archive guard: extension blocklist plus the file's own leading bytes) → 201 |
 | GET | `/api/v1/datasets/` | list + `total` (paginated) |
 | GET | `/api/v1/datasets/{id}` | profile + metadata |
 | POST | `/api/v1/analysis/` | `{dataset_id, user_query}` → **202** + `Location`, with the row already persisted and the run executing in this process. Poll `GET /api/v1/analysis/{id}` or follow `/events`; a run that crashes lands on the row as `status: FAILED` with a generic `error`, never as a 500 on a later read. Re-submitting the same question while a run is in flight returns **200** with that run's id rather than starting a second one |

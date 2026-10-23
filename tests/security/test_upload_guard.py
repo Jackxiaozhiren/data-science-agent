@@ -1,6 +1,6 @@
 """The upload guard has to read the file, not only its name.
 
-`docs/api.md` advertises `upload (multipart, 100MB, MIME sniff, archive bomb guard)`. The last three words
+`docs/api.md` advertises the upload as `multipart, 100MB`, a declared-type allowlist and an `archive guard`. The last words
 were carried by a parameter nothing read: the route captured a head, threaded it through `save_dataset`, and
 `validate_file` accepted `head` and never looked at it. A zip body named `evil.csv` passed -- measured on
 2026-10-22 before the fix. The same capture did `tmp_path.read_bytes()[:4096]`, so keeping 4 KiB put a whole
@@ -13,6 +13,7 @@ acceptance so the guard cannot be satisfied by rejecting everything.
 
 from __future__ import annotations
 
+import ast
 import re
 import tempfile
 from pathlib import Path
@@ -352,3 +353,100 @@ async def test_the_route_does_not_refuse_a_real_xlsx_for_being_a_container(ac: A
     )
     assert r.status_code == 400, r.text
     assert "Archive contents" not in r.json()["detail"], r.json()
+
+
+# --- the "MIME sniff" the docs advertised: the module that sniffs is not the rule that runs ---
+
+#: Every allowed extension, the content types a client might declare with it, and a body whose magic bytes
+#: disagree with the declaration in the way the sniffer's magic fallback cares about.
+_MIME_MATRIX: tuple[tuple[str, bytes], ...] = (
+    (".csv", b"a,b\n1,2\n"),
+    (".json", b'{"a":1}'),
+    (".jsonl", b'{"a":1}\n'),
+    (".parquet", b"PAR1\x15\x00"),
+    (".xlsx", b"PK\x03\x04xxxx"),
+    (".xls", b"\xd0\xcf\x11\xe0"),
+)
+_DECLARED = [
+    None,
+    "",
+    "text/csv",
+    "text/plain",
+    "application/octet-stream",
+    "application/json",
+    "application/x-msdownload",
+    "text/html",
+    "application/zip",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]
+
+
+def _live_accepts(filename: str, content_type: str | None, head: bytes) -> bool:
+    try:
+        validate_file(filename, len(head), content_type=content_type, head=head)
+    except ValidationError:
+        return False
+    return True
+
+
+def test_the_shipped_mime_rule_is_the_strict_one_and_the_sniffer_is_looser() -> None:
+    """`dsa_execution.mime_sniff` is not called by any shipped path; `validate_file` carries its own table.
+
+    66 (extension, declared type, body) combinations measured 2026-10-23: they agree on 29, and on the other 37
+    the sniffer would accept an upload the live rule refuses. None runs the other way, which is the invariant
+    asserted below -- the shipped rule is never looser than the module it duplicates. The mechanism is the
+    sniffer's own fallback: when a declared type is not in its table it calls `sniff_mime`, and `sniff_mime`
+    answers from the *extension's* guessed type, so an `.xls` declared `text/csv` passes because csv is allowed
+    for xls. Every allowed extension diverges -- the reading that only the Excel pair differs was a truncated
+    read of the first probe, corrected the day this test was written -- so wiring the sniffer in would replace
+    the declared-type gate with a near no-op rather than tighten it.
+    """
+    from dsa_execution.mime_sniff import is_allowed_mime
+
+    divergent: list[tuple[str, str]] = []
+    for ext, body in _MIME_MATRIX:
+        for ct in _DECLARED:
+            live = _live_accepts(f"data{ext}", ct, body)
+            sniffed = is_allowed_mime(f"data{ext}", ct, body)
+            if live and not sniffed:
+                pytest.fail(
+                    f"the shipped rule accepted {ext!r} declared {ct!r} where the sniffer refused: "
+                    "the live gate is now looser than the module it duplicates"
+                )
+            if sniffed and not live:
+                divergent.append((ext, str(ct)))
+    assert len(divergent) == 37, (
+        f"expected the 37 measured divergences, found {len(divergent)}: {divergent}"
+    )
+    assert {ext for ext, _ in divergent} == {ext for ext, _ in _MIME_MATRIX}, (
+        f"the divergence was measured across every allowed extension, not a subset: {divergent}"
+    )
+
+
+def test_the_mime_sniff_module_is_not_called_by_any_shipped_path() -> None:
+    """The doc sentence that says "no shipped path calls it" needs to be re-checked, not re-remembered.
+
+    If someone wires it in, this reddens and `docs/security.md`'s gatekeeper paragraph has to be rewritten in
+    the same change -- which is the point: the paragraph is the claim, and the claim is about the call graph.
+    """
+    callers = []
+    for source in list((REPO / "packages").rglob("*.py")) + list((REPO / "apps").rglob("*.py")):
+        if "_vendor" in source.parts or "node_modules" in source.parts or "output" in source.parts:
+            continue
+        if source.name == "mime_sniff.py":
+            continue
+        # AST, not substring: `validate.py` mentions the module in a comment explaining why it does not import
+        # it, and a text scan would report that comment as a caller -- which is how a guard like this gets
+        # ignored the first time it cries wolf.
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module and "mime_sniff" in node.module:
+                callers.append(str(source.relative_to(REPO)))
+                break
+            if isinstance(node, ast.Import) and any("mime_sniff" in a.name for a in node.names):
+                callers.append(str(source.relative_to(REPO)))
+                break
+    assert callers == [], (
+        f"the sniffer gained a caller; update the docs and the differential: {callers}"
+    )

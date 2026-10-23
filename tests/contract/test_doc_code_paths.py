@@ -1,28 +1,32 @@
-"""Every code path a live document cites has to exist, because a reader follows it.
+"""Every code path a live document cites has to be a path the reader can actually open.
 
-Found the hard way on 2026-10-23: `docs/security.md` named four modules under `packages/execution/`, and the
-real ones live one directory deeper under `src/dsa_execution/`. The sentences beside those paths were the ones
-this round had to correct anyway, so a reader trying to verify a security claim was sent to a file that is not
-there. Twelve broken citations across five live documents -- `docs/security.md`, `docs/statistics.md`,
-`docs/FRONTEND_IA.md`, `docs/MCP_DESIGN.md`, `docs/portfolio/PROJECT_SUMMARY.md` -- were found and repaired in
-the same round this guard was written.
+Found the hard way on 2026-10-23, twice over. First reading: `docs/security.md` named four modules under
+`packages/execution/`, and the real ones live one directory deeper under `src/dsa_execution/`; twelve broken
+citations across five live documents in total, all repaired in the round this guard was written. Second
+reading: the guard passed locally and went red in CI, because `docs/FRONTEND_IA.md` cited
+`build/r13f-nav-acceptance.mjs` -- a real script, on my machine, inside a directory that is never shipped. A
+citation that resolves only on the author's box is the same defect with a worse diagnosis, because everything
+green at the time of writing says it is fine.
 
-Twelve of the 107 citations in the 46 live documents pointed at files that are not there (measured on
-2026-10-23; all twelve repaired the same round). Two shapes caused it: modules cited one directory above their
-real `src/dsa_*` home, and web files cited as `app/...` or `lib/...` where the reader is not inside `apps/web`.
-That second shape is why resolution is tried relative to the document first and only then to the repository
-root -- a reader does the same, and a guard that only tries the root would flag prose that is correct.
+So two rules, not one: the resolved path must exist, and the spelling must not name an unshipped directory.
+`output/` is deliberately excluded from the second -- it is the documented artifact root, and a sentence naming
+a generated file there tells the truth about a path that is not meant to exist yet.
 
-Dated records are exempt -- `CHANGELOG.md`, `AUDIT_LEDGER.md`, `HANDOFF-*.md` and the `docs/v4_*/` archives
-describe the tree as it was, and rewriting them to satisfy a present-day check would make them lie. The guard
-also asserts it can see: a scan that found zero citations would pass on any tree, so the census itself is
-checked for a non-trivial count, and a planted fake path is verified to be reported.
+Resolution tries the document's own directory first and then the repository root, because that is the order a
+reader tries and a root-only guard would flag prose that is correct: web documents cite `app/lib/...` and
+`lib/...` from inside `apps/web`. Dated records are exempt -- `CHANGELOG.md`, `AUDIT_LEDGER.md`, `HANDOFF-*.md`
+and `docs/v4_*/` -- they describe the tree as it was, and rewriting them to satisfy a present-day check would
+make them lie.
+
+Two controls on the guard itself, because a documentation check is exactly the kind of thing that can pass by
+measuring nothing: the census asserts it resolved a non-trivial number of citations, and a planted path is
+asserted to be reported -- both a made-up module and a made-up path under `build/`.
 """
 
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -37,6 +41,7 @@ for _app in sorted((REPO / "apps").glob("*/README.md")):
 
 _EXEMPT_PARTS = ("v4_3", "v4_4", "v4_5", "v4_6")
 _EXEMPT_NAMES = ("CHANGELOG.md", "AUDIT_LEDGER.md")
+_UNSHIPPED = {"build", "site", ".next", "dist", "node_modules", ".venv"}
 
 
 def _live_docs() -> list[Path]:
@@ -63,12 +68,17 @@ def _citations(text: str, doc: Path) -> list[tuple[str, Path]]:
     found = []
     for match in _CITE.finditer(text):
         raw = match.group(1)
-        found.append((raw, (doc.parent / raw).resolve()))
-        if not (doc.parent / raw).exists():
+        candidate = (doc.parent / raw).resolve()
+        if not candidate.exists():
             alt = (REPO / raw).resolve()
             if alt.exists():
-                found[-1] = (raw, alt)
+                candidate = alt
+        found.append((raw, candidate))
     return found
+
+
+def _unshipped(raw: str) -> bool:
+    return any(part in _UNSHIPPED for part in PurePosixPath(raw).parts[:-1])
 
 
 def test_live_documents_cite_only_paths_that_exist() -> None:
@@ -80,25 +90,35 @@ def test_live_documents_cite_only_paths_that_exist() -> None:
         text = doc.read_text(encoding="utf-8")
         for raw, resolved in _citations(text, doc):
             total += 1
-            if not resolved.exists():
+            if _unshipped(raw):
+                offenders.append(f"{doc.relative_to(REPO)}: `{raw}` names an unshipped directory")
+            elif not resolved.exists():
                 offenders.append(f"{doc.relative_to(REPO)}: `{raw}`")
     assert total >= 80, (
         f"the census found {total} code citations across {len(docs)} live docs; a scan this quiet is blind"
     )
-    assert not offenders, "documents point at files that are not there:\n" + "\n".join(
+    assert not offenders, "documents point at files a reader cannot open:\n" + "\n".join(
         sorted(offenders)
     )
 
 
-def test_the_guard_sees_a_citation_and_reports_a_fake_one(tmp_path: Path) -> None:
+def test_the_guard_sees_a_citation_and_reports_a_fake_one() -> None:
     """A doc check that cannot fail is the defect it is supposed to prevent."""
     doc = REPO / "docs/security.md"
     real = _citations(doc.read_text(encoding="utf-8"), doc)
     assert real, "docs/security.md cites no code path, so the scanner cannot be trusted"
     assert any(raw.endswith("sql_guard.py") for raw, _ in real), [r for r, _ in real][:5]
 
-    planted = "see `packages/execution/src/dsa_execution/definitely_not_a_module.py` for the rule"
-    offenders = [raw for raw, where in _citations(planted, doc) if not where.exists()]
-    assert offenders == ["packages/execution/src/dsa_execution/definitely_not_a_module.py"], (
-        offenders
+    planted = (
+        "see `packages/execution/src/dsa_execution/definitely_not_a_module.py` for the rule, "
+        "and run `build/scratch-instrument.mjs` to reproduce it"
+    )
+    parsed = _citations(planted, doc)
+    missing = [raw for raw, where in parsed if not where.exists()]
+    assert missing == [
+        "packages/execution/src/dsa_execution/definitely_not_a_module.py",
+        "build/scratch-instrument.mjs",
+    ], missing
+    assert [raw for raw, _ in parsed if _unshipped(raw)] == ["build/scratch-instrument.mjs"], (
+        "the unshipped rule does not fire on the spelling that broke CI"
     )
