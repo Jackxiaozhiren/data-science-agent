@@ -7,7 +7,7 @@
 - Model training (CV): Stratified / KFold + mean R²/accuracy, `evaluate_model` for confusion + ROC/PR downstream.
 
 ## Guardrails
-- Unsupported causal language rewritten (`causes` → `is associated with`, see `packages/execution/guardrails.py`).
+- Unsupported causal language rewritten (`causes` → `is associated with`, see `packages/execution/src/dsa_execution/guardrails.py`).
 - Prompt-injection markers: dataset content is **untrusted data**, agent instructions are never derived from dataset cells.
 
 All numeric tools return typed outputs and, where applicable, an Evidence stub for `Insight → Evidence → ToolCall`.

@@ -45,7 +45,7 @@ Clone → `uv sync --dev` → `pytest 253`, `mypy 104 clean`, `ruff OK`, `npm 13
 
 - Internal benchmarks are synthetic and closed-task (deterministic stub) — not a real-dirty-data predictor.
 - External score until GT is present is **unevaluated** (Generalization Gap §36 not computed; paired tests / CI / effect sizes §43–46 deferred).
-- Human evaluation `NOT CONDUCTED` at audit time (template + pipeline exist, `human-eval/samples.json` 11/100, `cohens_kappa`/`krippendorff_alpha` — no invented reviewers, §54).
+- Human evaluation `NOT CONDUCTED` at audit time (template + pipeline exist, `packages/evaluation/src/dsa_evaluation/human_eval.py` draws the 11/100 sample; the sample file is generated, never committed, `cohens_kappa`/`krippendorff_alpha` — no invented reviewers, §54).
 - Supply-chain still short of §91: GitHub build provenance / Scorecard branch-protection & token least-privilege / Best Practices remain remediation (Scorecard 4.6/10, `SCORECARD.md`).
 
 ## Links

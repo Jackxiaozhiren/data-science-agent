@@ -25,7 +25,7 @@ after a pause can take about a minute to answer. Both are handled below ("Cold s
 
 ## Navigation
 
-One declaration owns the navigation: `NAV_GROUPS` in `app/components/layout/Sidebar.tsx`. The sidebar and the
+One declaration owns the navigation: `NAV_GROUPS` in `apps/web/app/components/layout/Sidebar.tsx`. The sidebar and the
 top bar both read it, and `tests/contract/test_web_navigation_groups.py` compares the rendered order against
 it, so a link cannot appear in one place and not the other.
 
@@ -82,7 +82,7 @@ The browser talks to the API only; no page reads a file from the repository.
 
 ## Cold start
 
-`app/lib/backendProbe.ts` owns one probe for the whole document, shared by every screen and by the status dot,
+`apps/web/app/lib/backendProbe.ts` owns one probe for the whole document, shared by every screen and by the status dot,
 so a waking instance is not asked four times by one page load. Phases: `probing` → `warming` → `ready`, or
 `unreachable`. Four attempts with a 12 s timeout and 2/4/8 s backoff is a 62 s budget, measured against the
 44.5 s a Render cold start actually took. While a probe is in flight the screen says so in the same words the
@@ -135,7 +135,7 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   decision about data and is left open rather than half-taken.
   A validation check's *name* is on the product's side of that line and its *sentence* is on the run's:
   `report_export._label()` says `evidence_coverage` as 证据覆盖率 / "Evidence coverage" in the report's list, in the
-  limitations block, and -- through `lib/locale.ts`'s `chk.*` keys and `checkLabel()` -- in the inspector's card,
+  limitations block, and -- through `apps/web/lib/locale.ts`'s `chk.*` keys and `checkLabel()` -- in the inspector's card,
   while `Evidence coverage ok` stays exactly as recorded. The vocabulary is enumerated from the producers by an AST
   shape rule (a `ValidationResult(check=...)`, or a dict carrying `check`+`passed`+`message`), so a check the
   engine can emit but nobody named reddens `test_the_validation_vocabulary_is_named_wherever_a_reviewer_reads_it`
@@ -148,7 +148,7 @@ dataset. Each seeded row carries a `dsa_sample_dataset` marker in its metadata, 
   and the dataset behind it.
 - A caveat is sized to what it means. "Association does not imply causation" is a standing limit of the method
   and reads as a warning; a leak, a confound or an overfit is a defect in the analysis and reads as critical.
-  One owner: `app/lib/limitations.ts`, which carries the defect words in both languages the product runs in --
+  One owner: `apps/web/app/lib/limitations.ts`, which carries the defect words in both languages the product runs in --
   the Chinese ones are deliberately narrower than the English, because an over-matching keyword makes the loud
   tier fire on everything, which is the failure this bullet exists to prevent. Claiming a causal conclusion is a
   different gate -- the `unsupported_claim` validation check.
@@ -179,7 +179,7 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   computes it across runs; the number is per-run today, on the run page.
 - **Translated failure prose -- closed, and what it revealed.** The vocabulary of things going wrong is now
   bilingual: `failurePresentation()` in `apps/web/lib/api.ts` builds the five fetch-outcome lines from
-  `lib/locale.ts`, each page's transport override names a key instead of holding a sentence, the backend probe's
+  `apps/web/lib/locale.ts`, each page's transport override names a key instead of holding a sentence, the backend probe's
   four phases and the upload queue's per-file notes do the same, and so does the browser-tab title and the
   completion notification a live run writes. The English-only constant that used to own them is gone; a page may
   no longer keep its own copy, which `tests/contract/test_web_locale_parity.py` sweeps and

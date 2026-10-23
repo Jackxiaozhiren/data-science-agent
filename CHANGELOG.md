@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — twelve citations in five live documents pointed at files that do not exist
+
+- `docs/security.md` named `packages/execution/sql_guard.py` and three siblings; the files live one directory
+  deeper under `src/dsa_execution/`. Five more cited `app/lib/backendProbe.ts`, `lib/locale.ts` and
+  `dsa_mcp/adapter.py` -- right inside their package, wrong from the root a reader stands in -- and one cited a
+  generated evaluation sample as if it were committed.
+- `tests/contract/test_doc_code_paths.py` now keeps the count at zero across the 46 live documents and their
+  107 code citations, resolving document-relative before repository-relative because that is the order a reader
+  tries. Dated records are exempt (`CHANGELOG.md`, `AUDIT_LEDGER.md`, `HANDOFF-*.md`, `docs/v4_*/`): they
+  describe the tree as it was, and passing a present-day check would make them lie. The guard asserts its own
+  census is non-trivial, and a planted fake path reddens it naming exactly that path.
+- The same pass rewrote the two control sentences in `docs/security.md` that §264 and §265 had just made false:
+  the SQL line now reads deny list *plus* `enable_external_access=false`, and the Python line is labelled **Not a
+  security boundary** with the calls that pass its checker. Recorded in `AUDIT_LEDGER.md` §269.
+
 ### Changed (post-4.6.0) — the demo's two halves are not equally behind, and that changes what the redeploy owes
 
 - The web side, recorded last round as unmeasurable from this machine, answered on 2026-10-23: `200` in about a
