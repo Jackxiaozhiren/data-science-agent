@@ -110,18 +110,23 @@ def test_mcp_http_list_and_call() -> None:
     # initialize is no longer supported on 2026-07-28 stateless core
     r2 = client.post("/mcp", json={"jsonrpc": "2.0", "id": 2, "method": "initialize", "params": {}})
     assert r2.json()["error"]["code"] == -32601
-    # tools/call
+    # tools/call -- with a tool this transport offers. run_sql and run_python are withheld from HTTP
+    # (MCP_DESIGN.md, tests/security/test_mcp_http_surface.py), so a success probe cannot name them.
+    import tempfile
+
+    probe = pathlib.Path(tempfile.mkdtemp()) / "mcp_http_call.csv"
+    probe.write_text("a,b\n1,2\n", encoding="utf-8")
     r3 = client.post(
         "/mcp",
         json={
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
-            "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}},
+            "params": {"name": "profile_dataset", "arguments": {"path": str(probe)}},
         },
     )
     assert r3.status_code == 200
-    assert "result" in r3.json()
+    assert "result" in r3.json(), r3.json()
 
 
 def _r14_state() -> Any:

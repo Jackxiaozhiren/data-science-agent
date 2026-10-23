@@ -15925,3 +15925,56 @@ not exist in a linked worktree where `.git` is a pointer file -- the same interp
 the shared working tree and 0 in a worktree, which is what made two suite failures and the claims gate red locally
 and has nothing to do with the dependency change. Fixing it needs care because `scripts/` is under bandit's S
 rules and cannot shell out to git, so it is recorded rather than folded into a dependency PR.
+
+## 277. One decision taken: the HTTP MCP surface no longer offers the tools that could run code
+
+Owner chose the first option on 2026-10-23, the one that needed no new dependency, no new service and no
+credential -- withhold rather than authenticate. `run_python` and `run_sql` are gone from every HTTP boundary of
+the MCP app: `GET /mcp/tools`, `GET /tools`, `POST /mcp` `tools/list`, and both call shapes refuse them before
+the dispatcher is reached. `dsa mcp` over stdio still publishes all 19, because that process is launched by the
+person who owns the machine it runs on and its threat model never was a stranger on the network.
+
+The refusal is `-32000`, in the block the JSON-RPC spec reserves for the server, not `-32601`: the tool exists,
+this transport declines to run it, and a client that sees "unknown tool" has no way to learn the alternative.
+The message names the tool and the way back (`run \`dsa mcp\` (stdio) to use it`), because a security refusal
+that does not say what to do instead is indistinguishable from a broken deployment.
+
+Three things in the implementation are deliberate:
+
+- The excluded set is one `frozenset` in `dsa_mcp.adapter` and the filtered list is one function,
+  `http_tools_for_wire()`. The `inputSchema` bug this module also fixed (§250) was five boundaries each
+  serializing the same object their own way; a transport-level exclusion added at one of them would have had the
+  same shape. `tests/security/test_mcp_http_surface.py` checks both HTTP routes plus the stdio control, and its
+  refusals are witnessed by a trap that raises if `call_mcp_tool` is entered -- a check on the response body
+  alone would pass on a refusal that ran the tool and then threw the result away.
+- `profile_dataset` is left in place, and the docs say so out loud: the read and the path-existence oracle are
+  unchanged, so this is a narrower surface and not a closed one. #59 stays open for the authentication half.
+- Six existing tests encoded the old contract and were moved with it, not deleted: the conformance suite's
+  "valid call" and "stateless repeat" now use a retained tool, its count assertion became a relation
+  (`registry − withheld`) rather than a restated 19, `test_mcp_app_acceptance` likewise, and the resources-seam
+  import guard now requires `http_tools_for_wire` instead of a `list_mcp_tools` the server no longer calls.
+  That last one matters: leaving the import to satisfy the guard would have re-created the dead-code shape §271
+  just spent a round documenting.
+
+Measured after the change: five tool names fewer on HTTP, 17 published, and the App page unaffected because it
+calls `profile_dataset` and `analyze` -- neither withheld.
+
+## 278. The nightly sweep, and why a scan that can be cancelled is not a gate
+
+`Secret Scan` answered the question "did this content get scanned" with "sometimes", and the reason is two
+settings that are each individually reasonable: a push run takes its range from its own event payload, and
+`cancel-in-progress: true` lets a newer push interrupt an older run. Four pushes in four minutes on
+2026-10-23 therefore cancelled three scans whose ranges were never covered by anything else.
+
+Fixed by the second half of the same owner decision: a `schedule` trigger at 04:37 daily, where no event range
+exists so gitleaks walks the whole history `fetch-depth: 0` checked out, and
+`cancel-in-progress: ${{ github.event_name != 'schedule' }}` -- push and PR runs keep their fast-feedback
+cancellation, the backstop cannot be interrupted. The first step of every run now prints its own `SCOPE=`, so
+the log answers the coverage question instead of leaving the reader to infer it from a green tick, which is the
+same "read the step, not the badge" discipline the CI jobs are run under.
+
+`tests/security/test_w7_supply_chain.py::test_secret_scan_workflow` went from `"gitleaks" in txt.lower()` to
+six named properties -- schedule present, parseable cron, the non-cancellable sweep, `fetch-depth: 0`, the
+pinned `GITLEAKS_VERSION`, and the `SCOPE=` line. Falsified against the previous file: restored the old
+workflow, the test reddens; put the new one back, green. A guard that would also pass on the broken state is the
+thing this repository keeps having to discover.

@@ -395,13 +395,20 @@ what to do about it. The `/mcp` surface on the same host takes no credential at 
   before it checks the suffix, so an existing file answers `Unsupported file extension` and an absent one
   answers `File not found`, and any path on the container can be confirmed or denied by name even when it can
   never be read.
+- `run_python` and `run_sql` are, as of 2026-10-23, withheld from this transport altogether: neither is
+  listed by `tools/list`, and calling either is refused before dispatch. `dsa mcp` over stdio still offers
+  them, because that process is launched by the person who owns the machine. Read the next two bullets as
+  the reason, not as an open question.
 - `run_python` is not a sandbox in the security sense, and no in-process change can make it one. Its AST
   checker denies `import os`, `.system(`, `.environ`, `getenv` and `open()`, while polars re-exports the module
   it denied: `pl.os.walk('/')`, `pl.os.remove('…')` and `pl._dependencies.subprocess.Popen('…')` each pass the
   same checker, measured without executing them. A child process makes the rest of that list beside the point,
   because the child can read the environment and open the file the parent refused to spell.
 
-So on a host where `/mcp` is reachable, treat it as a remote shell on that host. Visitor uploads are still not
+Until this deployment is redeployed -- open item #44, and the Render service is the one still behind -- an
+instance you are reading about advertises what it shipped with, not what `main` withholds, so the
+credential-free `tools/list` above is the check. On a host where `/mcp` is reachable with the exec pair
+still listed, treat it as a remote shell on that host. Visitor uploads are still not
 enumerable through it -- stored names are `<uuid>_<filename>` -- so the exposure is the machine, not other
 visitors' rows. What to do about that is the open owner decision recorded in `AUDIT_LEDGER.md` §265:
 authenticate the surface, bind it to loopback, or keep `run_python` and `run_sql` off the HTTP endpoint. The

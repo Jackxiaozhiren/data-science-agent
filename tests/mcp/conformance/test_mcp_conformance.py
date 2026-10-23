@@ -4,7 +4,7 @@ import pathlib
 
 from fastapi.testclient import TestClient
 
-from dsa_mcp.adapter import MCP_TOOL_CLASS, MCP_TOOL_MAP, list_mcp_tools
+from dsa_mcp.adapter import HTTP_WITHHELD_TOOLS, MCP_TOOL_CLASS, MCP_TOOL_MAP, list_mcp_tools
 from dsa_mcp.server import app
 
 
@@ -39,7 +39,13 @@ def test_tools_list_endpoint() -> None:
     c = TestClient(app)
     r = c.get("/mcp/tools")
     assert r.status_code == 200
-    assert r.json()["count"] == 19
+    served = {t["name"] for t in r.json()["tools"]}
+    # The registry is 19 tools; this transport withholds the two execution tools (MCP_DESIGN.md), so the count
+    # is stated as a relation between the two owners rather than as a second place to remember 19.
+    assert served == set(MCP_TOOL_MAP) - HTTP_WITHHELD_TOOLS, sorted(
+        served ^ (set(MCP_TOOL_MAP) - HTTP_WITHHELD_TOOLS)
+    )
+    assert r.json()["count"] == len(served)
     r2 = c.post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
     assert r2.status_code == 200
     assert "tools" in r2.json()["result"]
@@ -47,26 +53,30 @@ def test_tools_list_endpoint() -> None:
 
 def test_tools_call_and_errors() -> None:
     c = TestClient(app)
-    # valid call
+    # valid call, with a tool this transport offers (the two execution tools are withheld; see below)
+    import tempfile
+
+    ds = pathlib.Path(tempfile.mkdtemp()) / "conf.csv"
+    ds.write_text("a,b\n1,2\n", encoding="utf-8")
     r = c.post(
         "/mcp",
         json={
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}},
+            "params": {"name": "profile_dataset", "arguments": {"path": str(ds)}},
         },
     )
     assert r.status_code == 200
-    assert "result" in r.json()
-    # invalid params (missing sql)
+    assert "result" in r.json(), r.json()
+    # invalid params (missing the one argument this tool requires)
     r2 = c.post(
         "/mcp",
         json={
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/call",
-            "params": {"name": "run_sql", "arguments": {}},
+            "params": {"name": "profile_dataset", "arguments": {}},
         },
     )
     # A failure that originates in the tool stays inside the result with isError set -- MCP's CallToolResult
@@ -94,6 +104,20 @@ def test_tools_call_and_errors() -> None:
     # unknown method
     r5 = c.post("/mcp", json={"jsonrpc": "2.0", "id": 5, "method": "nope", "params": {}})
     assert r5.json()["error"]["code"] == -32601
+    # a withheld tool is a different answer from an unknown one: -32000, server-defined, because the tool exists
+    # and this transport declines to run it
+    for withheld in sorted(HTTP_WITHHELD_TOOLS):
+        rw = c.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {"name": withheld, "arguments": {}},
+            },
+        )
+        assert rw.json()["error"]["code"] == -32000, rw.json()
+        assert withheld in rw.json()["error"]["message"]
 
 
 def test_no_initialize_handshake() -> None:
@@ -128,7 +152,7 @@ def test_stateless_repeated_calls_and_caching() -> None:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "tools/call",
-                "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}},
+                "params": {"name": "profile_dataset", "arguments": {"path": str(p)}},
             },
         )
         h2 = c.post(
@@ -137,10 +161,21 @@ def test_stateless_repeated_calls_and_caching() -> None:
                 "jsonrpc": "2.0",
                 "id": 2,
                 "method": "tools/call",
-                "params": {"name": "run_sql", "arguments": {"sql": "SELECT 1 as a"}},
+                "params": {"name": "profile_dataset", "arguments": {"path": str(p)}},
             },
         )
-        assert h1.json()["result"]["structuredContent"] == h2.json()["result"]["structuredContent"]
+        # One field is allowed to move between two calls of the same tool, and it is the stamp the tool puts on
+        # its own output: a profile written twice a millisecond apart is the same profile with a different
+        # `created_at`. Naming it is the point -- a repeat-equality test that silently ignores a dict of
+        # volatile keys would pass on a tool that returned random analysis results.
+        first = dict(h1.json()["result"]["structuredContent"]["profile"])
+        second = dict(h2.json()["result"]["structuredContent"]["profile"])
+        assert "created_at" in first, sorted(first)
+        first.pop("created_at")
+        second.pop("created_at")
+        assert first == second, (
+            "the same call over HTTP returned different analysis, not just a new stamp"
+        )
 
     asyncio.run(_run())
 

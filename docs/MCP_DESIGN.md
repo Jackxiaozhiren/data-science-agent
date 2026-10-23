@@ -40,9 +40,20 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
   `subprocess`. A child process makes the rest of the list beside the point. There is no in-process equivalent
   of the DuckDB switch here -- an interpreter running as the same user holds that user's rights -- so the
   boundary is which hosts can reach `/mcp`, not what a payload spells.
-- The endpoint should be run where a remote shell on that host is acceptable, and otherwise not run.
-  Authenticating the surface, binding it to loopback, or keeping `run_python` and `run_sql` off the HTTP
-  endpoint are the three options; the choice is recorded open in `AUDIT_LEDGER.md` §265.
+- Decided and executed the same day: `run_python` and `run_sql` are withheld from the HTTP surface -- neither is
+  advertised by `tools/list`, and a `tools/call` for either is refused before the dispatcher with `-32000`, a code
+  in the range the JSON-RPC spec leaves to the server, naming the tool and pointing at `dsa mcp`. The exclusion is
+  one frozen set (`adapter.HTTP_WITHHELD_TOOLS`) applied by one function (`http_tools_for_wire`) used by every HTTP
+  boundary, so no fifth route can re-publish what the last one withheld. `tests/security/test_mcp_http_surface.py`
+  pins both directions, including that a withheld call never reaches `call_mcp_tool`. Stdio is deliberately
+  unaffected: `dsa mcp` is launched by whoever owns that machine and publishes the whole registry.
+- What a credential-less caller can still do over HTTP after that: read and probe through `profile_dataset`, with
+  the reach and the path-existence oracle described two bullets up, plus the analysis and reporting tools that
+  operate on data the caller supplies. Narrower, not closed -- authenticating the surface or binding it to
+  loopback remains the owner's open decision (`AUDIT_LEDGER.md` §265).
+- One limit this file cannot express: a deployment serves the tools it shipped with. Until the Render service is
+  redeployed (open item #44), a live instance still advertises the two withheld names. Check it with the
+  credential-free `tools/list` in `docs/hosted-demo.md` instead of trusting the sentence above.
 - MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed

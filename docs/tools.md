@@ -5,8 +5,8 @@ All tools derive `BaseTool[Input, Output]` (`dsa_tools.base`) — Pydantic `Inpu
 | Tool | Purpose | Notes |
 |---|---|---|
 | profile_dataset | schema/profile | Polars · kind heuristic |
-| run_sql | SQL (DuckDB Arrow) | read-only guard + row limit |
-| run_python | Python (sandbox) | `df` bound, allowlist |
+| run_sql | SQL (DuckDB Arrow) | read-only guard + row limit; **stdio only** since 2026-10-23 |
+| run_python | Python (deny list, not a boundary) | `df` bound, allowlist; **stdio only** since 2026-10-23 |
 | correlation_analysis | Pearson/Spearman/Kendall + CI | evidence insight |
 | hypothesis_test | t/welch/mann/anova/kruskal/chi2 | Cohen d + assumptions |
 | regression_analysis | linear/ridge/lasso/elastic/logistic | metrics |
@@ -24,6 +24,9 @@ All tools derive `BaseTool[Input, Output]` (`dsa_tools.base`) — Pydantic `Inpu
 See `packages/tools/src/dsa_tools/tools/` for Typed I/O and tests `tests/unit/test_tools.py`.
 
 ## What the two file-touching tools actually bound
+
+Both are withdrawn from the HTTP `/mcp` surface (`MCP_DESIGN.md`); everything below describes a process the operator
+started, where they remain available.
 
 `run_sql` takes caller-authored SQL, so its read-only guarantee cannot rest on a list of denied words: the
 deny list (`dsa_execution.sql_guard`) is paired with an engine-level fence, `SET
