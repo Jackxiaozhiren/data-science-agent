@@ -2,6 +2,49 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — `run_python`'s sandbox claim was withdrawn, and the surface is now documented as what it measures
+
+- The claim written this morning -- `run_python` denies `import os`, so `/mcp` is not an unauthenticated shell --
+  was tested the way the SQL guard was: by asking what the checker permits rather than what it names. Passing
+  `_check_ast` unexecuted: `pl.os.listdir('.')`, `pl.os.walk('/')`, `pl.os.remove('some_file')`,
+  `pl.os.mkdir('/tmp/z')`, `pl.os.read(3, 100)`, `pl.os.spawnv('x', ['x'])`,
+  `pl._dependencies.subprocess.Popen('id')`, `pl.__dict__['os'].listdir('.')`. Blocked: `import os`,
+  `pl.os.system`, `pl.os.environ`, `pl.os.getenv`, `pl.os.popen`, `open()`, `().__class__`. polars re-exports
+  `os` and `subprocess`, so reaching them takes no denied name, and once a child process is available the rest
+  of the list stops being a boundary.
+- Nothing was widened into a 25th pattern, and that is the decision worth reading: an interpreter running as the
+  same user holds that user's rights, and CPython has no `enable_external_access`. The control is who can reach
+  `/mcp`, so `docs/MCP_DESIGN.md`, `docs/hosted-demo.md` and `docs/tools.md` now say to treat the endpoint as a
+  remote shell on its host and name the three real options -- authenticate it, bind it to loopback, or keep
+  `run_python` and `run_sql` off the HTTP surface. `AUDIT_LEDGER.md` §265 carries the commands.
+- Two structural notes came out of the same read: `_check_ast`'s `ast.Subscript` branch is a comment saying it
+  blocks `__builtins__.__dict__` obfuscation followed by `pass`, and the gap between denied `pl.os.popen` and
+  permitted `subprocess.Popen` is a letter's case. Both are recorded rather than patched, because patching a
+  name list is the mistake this round exists to stop repeating.
+- Left open, with the severity now stated: the `/mcp` boundary decision (#59). It was a read-and-oracle problem
+  this morning and it is a host-shell problem now, and the free-tier demo is running with that surface open
+  until the owner picks.
+
+### Fixed (post-4.6.0) — `run_sql` denied the function names someone thought of, and DuckDB had another way to a file
+
+- `SELECT * FROM '/tmp/leak.csv'` returned every row. The tool's 24-pattern deny list is what stands between
+  caller-authored SQL and the file system, and a quoted path used as a table name reaches the file through the
+  engine's replacement scan without naming `read_*`, `*_scan(` or `glob(` -- and it starts with `SELECT`, so the
+  allow-verb check cleared it too. Measured before the fix; the same statement names no denied function today.
+- Not a 25th pattern: the connection that runs caller-authored SQL now sets `enable_external_access=false` on
+  the engine, immediately after `duckdb.connect` and before any statement of the caller's runs. The deny list
+  stays because it answers sooner and names the reason.
+- `dataset_path` survives, and that is the part a fence usually breaks: the dataset is read in Python by
+  `load_dataframe` and registered as an Arrow relation, which is not DuckDB external access.
+  `tests/security/test_sql_sandbox.py` holds both halves -- three of its five tests were red before the fix, the
+  two-row legitimate dataset read is the control -- and its placement guard is an AST walk over the two
+  `con.execute` sites rather than a substring check, because the fix is only a fence if it runs first, and it
+  insists the literal say `=false`.
+- Two documents had been leaning on the old guarantee: `docs/hosted-demo.md` and `docs/MCP_DESIGN.md` said
+  `run_sql` refuses `read_*`, which is one of 24 patterns rather than the boundary, and both now state the
+  engine fence; `docs/tools.md` gained the section explaining why the guard is two things. Recorded in
+  `AUDIT_LEDGER.md` §264, which also keeps the bypass command verbatim.
+
 ### Changed (post-4.6.0) — the `/mcp` boundary sentence was measured instead of inferred, and both halves moved
 
 - `docs/MCP_DESIGN.md` told the operator to run the MCP endpoint "only where you would run an unauthenticated

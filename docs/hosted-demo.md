@@ -348,20 +348,32 @@ credentials belong to a private instance started with `dsa ui`, where the key is
 data directory. `GET /version`'s `reasoning_mode.source` tells a reader which knob decided the mode on the
 instance they are talking to.
 
-One more, because it is measured rather than inferred: the `/mcp` surface on the same host takes no credential at
-all (`AuthMiddleware` is `/api/*`-only), and `profile_dataset` accepts any path whose extension it recognises, so
-a caller can have a file outside the repository read back to them as a profile -- including the literal first
-values of its columns. `run_python` refuses `import os` and `run_sql` refuses `read_*`, so this is not an
-arbitrary-code path and not a general file *reader*: it reads files ending in `.csv`, `.json`, `.jsonl`,
-`.parquet`, `.xls` or `.xlsx`, which on a deployed container includes configuration and credential files that
-happen to carry those extensions. It is however a host-wide path oracle, and that half is wider than the six
-extensions: the tool checks that a path exists before it checks the suffix, so an existing file answers
-`Unsupported file extension` and an absent one answers `File not found`, and any path on the container can be
-confirmed or denied by name even when it can never be read. Visitor uploads are not enumerable through it (the
-stored names are `<uuid>_<filename>`), so the exposure is the host's files rather than other visitors' rows. What
-to do about it -- authenticate that surface, restrict it to loopback, or accept it as the price of a public tool
-endpoint -- is an open owner decision, recorded in `AUDIT_LEDGER.md`; the sentence is here so nobody has to read
-the code to learn the boundary.
+One more, because it is measured rather than inferred, and it is the sentence an operator needs before deciding
+what to do about it. The `/mcp` surface on the same host takes no credential at all (`AuthMiddleware` is
+`/api/*`-only), and of its three reach-bearing tools exactly one is fenced:
+
+- `run_sql` now runs on a connection with DuckDB's external file access switched off, added on 2026-10-23
+  because the 24-pattern deny list it also keeps could not see a quoted path used as a table name -- that shape
+  names none of its denied functions, and it did read files.
+- `profile_dataset` accepts any path whose extension it recognises, so a caller can have a file outside the
+  repository read back as a profile, including the literal first values of its columns. The file reach is
+  therefore bounded and it reads files ending in `.csv`, `.json`, `.jsonl`, `.parquet`, `.xls` or `.xlsx`, which
+  on a deployed container includes configuration and credential files that happen to carry those extensions. It
+  is also a host-wide path oracle, which is wider than the six extensions: the tool checks that a path exists
+  before it checks the suffix, so an existing file answers `Unsupported file extension` and an absent one
+  answers `File not found`, and any path on the container can be confirmed or denied by name even when it can
+  never be read.
+- `run_python` is not a sandbox in the security sense, and no in-process change can make it one. Its AST
+  checker denies `import os`, `.system(`, `.environ`, `getenv` and `open()`, while polars re-exports the module
+  it denied: `pl.os.walk('/')`, `pl.os.remove('…')` and `pl._dependencies.subprocess.Popen('…')` each pass the
+  same checker, measured without executing them. A child process makes the rest of that list beside the point,
+  because the child can read the environment and open the file the parent refused to spell.
+
+So on a host where `/mcp` is reachable, treat it as a remote shell on that host. Visitor uploads are still not
+enumerable through it -- stored names are `<uuid>_<filename>` -- so the exposure is the machine, not other
+visitors' rows. What to do about that is the open owner decision recorded in `AUDIT_LEDGER.md` §265:
+authenticate the surface, bind it to loopback, or keep `run_python` and `run_sql` off the HTTP endpoint. The
+sentence is here so nobody has to read the code, or this ledger, to learn the boundary before deploying.
 
 ## Required configuration
 

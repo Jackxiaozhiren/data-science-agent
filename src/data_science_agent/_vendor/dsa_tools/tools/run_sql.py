@@ -42,6 +42,9 @@ class RunSQLTool(BaseTool[RunSQLInput, RunSQLOutput]):
         sql = enforce_row_limit(sql, inp.max_rows)
 
         con = duckdb.connect(database=":memory:")
+        # The deny list cannot see a quoted path used as a table name: DuckDB resolves that shape through
+        # its replacement scan, so the file-system reach is switched off rather than pattern-matched.
+        con.execute("SET enable_external_access=false")
         try:
             if inp.dataset_path:
                 p = Path(inp.dataset_path)
