@@ -15504,3 +15504,25 @@ authenticate `/mcp`, or bind it to loopback, or do not ship `run_python`/`run_sq
 or accept a host-wide shell on any machine where the port opens. The docs were corrected the same day, in the
 direction of what was measured, and `docs/MCP_DESIGN.md` now says to treat the surface as a remote shell, which
 is what the original sentence got right.
+
+## 266. One request settled two open questions, and it was not the request anyone had been waiting for a token to send
+
+The outside check in `docs/hosted-demo.md` asked three questions (version tag, CSP header, research count). A
+fourth was run on 2026-10-23 and answered more than it was asked -- `POST /mcp/ {"method":"tools/list"}` against
+the live free-tier instance, no credential, no arguments:
+
+- HTTP 200 in **0.8 s**, publishing **19** tools to an anonymous caller, `run_python` and `run_sql` among them.
+  §265 described that reach from the code; this is the same fact about the deployment a visitor can reach today,
+  which is the difference between a review finding and an operational one.
+- The discovery response named its schemas `input_schema`: all 19 tools, and zero under the protocol's
+  `inputSchema` (same for `output_schema`). `tools_for_wire()` publishes `inputSchema` on `main`, pinned for both
+  transports by `tests/mcp/test_tools_list_wire_shape.py`, so the running image predates that fix and a
+  spec-compliant client pointed at the demo currently reads 19 tools that take nothing. `/version` had already
+  been read as `4.6.0`; this is the same conclusion reached from behaviour rather than from a string the
+  deployment itself chooses to print.
+
+The instrument is worth keeping as a shape: a field name a *client* depends on is a better staleness signal
+than a version string, because the version can be right while the code path that reads it is not, and because
+answering it costs one request that needs no secrets. Recorded with #44 (redeploy owed: the census half is
+refreshed, the code half is not) and with #59, whose severity this raises from "the surface is reachable in
+principle" to "the surface is reachable, warm, and answering right now".

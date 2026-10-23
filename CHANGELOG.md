@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the outside check gained a fourth answer, and it says the live demo is behind `main`
+
+- `POST /mcp/ {"method":"tools/list"}` against the free-tier instance, with no credential and no arguments:
+  HTTP 200 in 0.8 s, 19 tools published to an anonymous caller, `run_python` and `run_sql` among them. §265
+  described that reach from the code; this is the same fact about the deployment a visitor can reach now, which
+  is what turns a review finding into an operational one (#59, severity raised).
+- All 19 tools named their schemas `input_schema`, and none used the protocol's `inputSchema` -- the field name
+  `tools_for_wire()` publishes today, pinned for both transports by `tests/mcp/test_tools_list_wire_shape.py`.
+  So the running image predates the discovery fix, and a spec-compliant client pointed at the demo reads 19
+  tools that appear to take no arguments.
+- That is why the check went into `docs/hosted-demo.md` rather than into this entry alone: a field name a client
+  depends on is a staleness signal that costs one credential-free request and does not trust the version string
+  the deployment prints about itself. It also settles the census half of #44 without waiting for the token that
+  the redeploy half needs.
+
 ### Changed (post-4.6.0) — `run_python`'s sandbox claim was withdrawn, and the surface is now documented as what it measures
 
 - The claim written this morning -- `run_python` denies `import os`, so `/mcp` is not an unauthenticated shell --
