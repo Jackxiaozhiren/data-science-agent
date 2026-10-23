@@ -266,7 +266,7 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   screen read as half-done rather than broken. No source guard and no single-page browser check could see it:
   the parity guards read the dictionary and the page files, and the tour asserts layout rather than language.
   `test_the_provider_wraps_the_shell_not_just_the_route` now pins the nesting, and the live navigation check
-  (`build/r13f-nav-acceptance.mjs`) reads header, sidebar and footer text in both languages.
+  (`apps/web/scripts/nav-language-acceptance.mjs`) reads header, sidebar and footer text in both languages. It lived under `build/` and was cited here from that scratch path until 2026-10-23, when `tests/contract/test_doc_code_paths.py` found that a reader on another machine -- or in CI -- has no `build/`, so the sentence pointed at a file that was never shipped.
 - **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on nine English
   strings (measured 2026-10-19: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
   `nothing answered`, `Checking API`, `Loading table`, `Loading page`) and every one of them is a dictionary

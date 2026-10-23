@@ -15631,3 +15631,67 @@ had just measured that neither list is the boundary. It now says the SQL fence i
 `enable_external_access=false`, and labels `run_python` **Not a security boundary** with the four calls that
 pass its checker -- in the doc whose whole job is to say what is and is not a control. The `Tests:` line names
 the four security suites, so the guard next to the claim is findable from the claim.
+
+## 270. The citation guard I added went red in CI before it could go green at all
+
+`tests/contract/test_doc_code_paths.py` passed locally on the machine that wrote it and failed the `ci` job for
+`143896c` on the sentence it was supposed to protect: `docs/FRONTEND_IA.md` cited
+`build/r13f-nav-acceptance.mjs`. The file was real. It lived in `build/`, which is git-ignored, so it existed on
+one machine and nowhere else -- a reader, and every CI runner, was pointed at nothing. The guard's existence rule
+could not see it because on the author's box the path does exist.
+
+Two things were done, and the second is the one that matters. The instrument was promoted to
+`apps/web/scripts/nav-language-acceptance.mjs` -- rewritten to the tracked conventions (`import { chromium }
+from "playwright"` instead of an absolute path into `node_modules`, `repoRoot`-derived output directory, env
+prefix `NAVLANG_*`), its 17 expected chrome strings cross-checked against the current dictionary before
+shipping so it cannot fail spuriously, `node --check` clean, and the scratch copy deleted so there is one owner.
+The guard then gained a second rule: a citation whose spelling names an unshipped directory (`build`, `site`,
+`.next`, `dist`, `node_modules`, `.venv`) is an offender whether or not the path exists here. `output/` is
+excluded from that list on purpose -- it is the documented artifact root, and naming a generated file there is
+truth about a path that is not meant to exist yet.
+
+Falsified both ways: planting a citation to the *existing* local `build/r13f-nav-acceptance.mjs` into
+`docs/security.md` reddens the census test with "names an unshipped directory", which is the CI failure
+reproduced locally rather than discovered remotely; restoring returns it to green with the file re-hashed in the
+same command. The control test asserts both fakes are reported -- a made-up module and a made-up path under
+`build/` -- so the second rule cannot be silently dropped.
+
+The shape to keep: a check that reads the filesystem is only as portable as the filesystem it reads. Existence
+was the wrong predicate; "a reader can open this from a clone" is the right one, and that is a statement about
+what is shipped, not about what is present.
+
+## 271. "MIME sniff" named a module nothing calls, and the number I wrote for it came from a truncated read
+
+`docs/api.md` advertised the upload as `multipart, 100MB, MIME sniff, archive bomb guard`, and `docs/security.md`
+listed `packages/execution/src/dsa_execution/mime_sniff.py` as a file gatekeeper beside `validate.py`. Measured:
+`dsa_execution.mime_sniff` -- the module with the magic-byte `sniff_mime`, the `is_allowed_mime` decision and
+`looks_like_zip_bomb` -- has **no production caller**. Its only consumer is `tests/unit/test_coverage_sweep.py`,
+which asserts its behaviour and thereby makes it look enforced. What actually runs on `POST /api/v1/datasets/` is
+a table duplicated inside `validate_file`, whose own comment says it was copied from `mime_sniff` to avoid an
+import cycle, and that table checks the **client-declared** content type. Declared-type filtering is a legitimate
+control; it is not sniffing, and the two documents said it was.
+
+The divergence between the two rules was measured over 66 (extension, declared type, body) combinations: 29
+agree, 0 cases where the live rule accepts what the sniffer refuses, and 37 the other way -- so the shipped rule
+is strictly stricter. The mechanism is the sniffer's fallback: an unrecognized declaration is replaced by
+`sniff_mime`, which answers from the extension's own guessed type, so `.xls` declared `text/csv` passes because
+csv is allowed for xls. Every allowed extension diverges, which is why wiring the sniffer in later would loosen
+the gate rather than tighten it, and why the finding was written as a direction and a mechanism rather than a
+pattern-match list.
+
+Then my own number was wrong, and the correction is the point of this section. The first probe printed
+`disagreements: N` on a line that `tail -14` cut off, and the rows I could see named only `.xlsx`/`.xls`, so I
+wrote "they agree on 52 and the sniffer additionally accepts 14" into `docs/security.md`. Both figures were
+wrong -- 29 and 37 -- and the scope claim ("only the Excel pair") was wrong too. It was caught only because the
+test written afterwards asserted the count and the extension set rather than restating the prose: the run
+answered 37 and named all six extensions. A digit read through a truncating pipe is a transcription, and this
+is the second time this month that a guard computed from the artifact caught what an eye had accepted.
+
+`docs/api.md` now says the upload's type rule is a client-declared allowlist; `docs/security.md` names
+`validate.py` as the single owner, states that the sniffer is not wired, and says wiring it would loosen the
+gate. Two new tests in `tests/security/test_upload_guard.py` hold that: the differential, with the direction and
+the count pinned, and an AST scan asserting no shipped module imports `mime_sniff` -- AST because `validate.py`
+contains the string `mime_sniff` in the very comment that explains why it does not import it, and a text scan
+would report that comment as a caller. The first is falsified by tightening the sniffer's `.xls` entry to an
+empty set, which makes the live rule the looser one and reddens it naming that case; the second by planting a
+temporary module that imports it, then removing it and proving it is gone.

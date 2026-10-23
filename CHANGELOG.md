@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the doc-citation guard went red in CI on its own first run, and the failure was the finding
+
+- `tests/contract/test_doc_code_paths.py` passed on the machine that wrote it and failed `ci` for `143896c`:
+  `docs/FRONTEND_IA.md` cited `build/r13f-nav-acceptance.mjs`. The file existed -- in a git-ignored directory --
+  so the reader's path resolved here and nowhere else. Existence was the wrong predicate; "openable from a clone"
+  is the right one.
+- The instrument was promoted rather than the sentence deleted: `apps/web/scripts/nav-language-acceptance.mjs`,
+  on the tracked conventions (`playwright` imported by name, `repoRoot`-derived output, `NAVLANG_*` env), with
+  its 17 expected chrome strings cross-checked against the live dictionary before shipping and `node --check`
+  clean. The scratch copy is gone, so there is one owner.
+- The guard gained a second rule: any citation spelling an unshipped directory (`build`, `site`, `.next`,
+  `dist`, `node_modules`, `.venv`) is an offender whether or not it exists locally. `output/` stays exempt -- it
+  is the documented artifact root, and naming a generated file there is honest about a path that should not
+  exist yet. Falsified by planting a citation to the existing local `build/` script: red, naming it as
+  unshipped; the CI failure now reproduces locally instead of remotely.
+
+### Changed (post-4.6.0) — "MIME sniff" named a module no shipped path calls
+
+- `docs/api.md` advertised the upload as doing `MIME sniff` and `docs/security.md` listed
+  `packages/execution/src/dsa_execution/mime_sniff.py` as a gatekeeper. The sniffer (`sniff_mime`,
+  `is_allowed_mime`, `looks_like_zip_bomb`) has no production caller: its only consumer is
+  `tests/unit/test_coverage_sweep.py`, which asserts its behaviour and makes it look enforced. What runs is a
+  table duplicated inside `validate_file` -- its own comment says it was copied to avoid an import cycle --
+  and that table filters the **client-declared** type, which is a control but is not sniffing.
+- Measured over 66 (extension, declared type, body) combinations: 29 agree, none where the live rule is looser,
+  and 37 where the sniffer would accept what the live gate refuses. The mechanism is the sniffer replacing an
+  unrecognized declaration with `sniff_mime`, which answers from the extension's guessed type, so `.xls`
+  declared `text/csv` passes because csv is allowed for xls. Every allowed extension diverges, so wiring the
+  module in later would loosen the gate rather than tighten it.
+- Two pins in `tests/security/test_upload_guard.py`: the differential with its direction and count asserted
+  (falsified by emptying the sniffer's `.xls` entry, which makes the live rule looser and reddens it naming
+  that case), and an AST scan proving nothing imports `mime_sniff` -- AST because `validate.py` carries the
+  module name in the comment explaining why it does not import it, so a text scan reports prose as a caller.
+- The first number written for this was wrong: "they agree on 52, 14 diverge, only the Excel pair", read off a
+  probe whose summary line a truncating `tail` had cut. The test computed 29 and 37 across all six extensions.
+  Recorded in `AUDIT_LEDGER.md` §271 as the second time this month a guard computing from the artifact caught
+  what a transcription had accepted.
+
 ### Fixed (post-4.6.0) — twelve citations in five live documents pointed at files that do not exist
 
 - `docs/security.md` named `packages/execution/sql_guard.py` and three siblings; the files live one directory
