@@ -14449,3 +14449,957 @@ Three instrument errors in this pass, all of them the known shape: `timeout` doe
 bounded fetch exited 127 and printed nothing; `?recursive=1` unquoted was glob-expanded by zsh into "no matches
 found"; and `echo rc=$?` measured the `tail` at the end of a pipe rather than the `git fetch` in front of it. The
 first and third were caught by reading the output, not by the exit status.
+
+## 240. Two web instruments ran by hand for a lane, and wiring them into the gate surface found a hole in the wiring
+
+The R-13 lane ended with `locale-chrome-inventory.mjs` and `inspector-a11y.mjs` in `apps/web/scripts/`, run
+manually after every change, and asked whether they should become gates. Adding them to `ci.yml` alone would
+have been the worst possible outcome: `_classify()` returns `None` for a command it does not know, `_ci_gates()`
+drops the `None`s, and `test_the_runner_covers_exactly_the_ci_gate_set` compares only what both sides name -- so
+the new steps would run in CI, be invisible to the mirror test, and never appear in either contributor guide.
+The gate would exist in one place and be true in no others. The wiring therefore had to be six edits in one
+commit: two classifier branches (`web-chrome`, `web-a11y`), the `GATES` array, both guide fences, the
+`CI_ONLY_STEPS` declaration for the browser install, and that declaration's own enumeration in
+`test_the_control_an_unknown_step_is_reported_and_a_declared_one_is_not` -- which is the friction that makes
+declaring a setup step a deliberate act rather than an escape hatch.
+
+`inspector-a11y.mjs` cannot be a bare command: the claim it measures (a disclosure opening on Enter) exists only
+on a live seeded run, and the static tour deliberately runs without a backend, so on `/analysis` it truthfully
+reports zero disclosures. A gate that requires a stack and is invoked without one either fails forever or is
+skipped, and skipped-without-a-stack is a gate that passes by doing nothing. So `scripts/run_inspector_a11y.sh`
+owns the lifecycle -- boot an API on a temporary SQLite file in heuristic mode (no provider, no cost), wait for
+`/health`, wait for a `COMPLETED` seeded run, build the web app only when `.next/BUILD_ID` is missing, serve it
+on a scratch port, run the instrument, then tear down -- and CI and `run_gates.sh` call that one command, so they
+measure the same thing.
+
+Ports are part of the measurement, not a preference. The web bundle resolves the API origin at build time
+(`apps/web/lib/api.ts`, default `http://localhost:8000`), so the API must answer on 8000 for the page to reach
+its own backend; a busy 8000 is therefore a refusal with an explanation, not a silent port hop. And the static
+tour refuses to run when something already serves its API port, which is why the keyboard gate sits in the `ci`
+job (which builds the web app late, after the Docker smoke has cleaned up its own API) rather than in
+`web-regression` (where the tour owns 8000 and the tour's port rule would fight the gate's).
+
+The lifecycle was wrong on the first try, in the way this repo has now measured three times: killing `$!` left
+the listener alive. `uv run` does not forward SIGTERM to the process it spawns and `next start` execs a server
+child, so the first run printed `INSPECTOR_A11Y_PASS` and then `TEARDOWN INCOMPLETE: still listening -> 30210`,
+exit 3. Teardown now takes the port as the source of truth (kill the pids `lsof` names, re-verify, escalate), and
+the incomplete case exits from inside the trap so a leak cannot hide behind a passing instrument. Re-run: exit 0,
+both ports free, scratch directory gone.
+
+Falsification is included by accident and on purpose. The accidental half: the gate went red on the first
+attempt because of the teardown bug, which proves the red path reaches the exit code. The deliberate half:
+`bash -n`, then the two pinning suites (21 passed) after each edit, and a direct read of the derived sets --
+20 classified CI gates, 19 runner commands plus the pre-check, zero unclassified commands, `web-chrome` and
+`web-a11y` present on both sides, and both guides mirroring the full set. What is NOT yet proven is the
+instrument's own failure path in CI: its red behavior was established locally (§236-§238), and the first CI run
+with these gates will be the witness that the booted stack behaves the same on a runner.
+
+## 241. The two forgiven fingerprints come with a registry, a guard, and the fingerprint's own weakness as the reason for choosing it
+
+2026-10-21, after §239. The owner delegated the call ("我都听你的"), so the two findings §239 left open are now
+settled in the direction that keeps the test meaningful: the canary stays, the prose stays, and what changed is
+what the gate forgives -- recorded, not buried.
+
+Three files, one of them deliberately inert:
+
+- `.gitleaksignore` holds exactly the two fingerprints the gate printed itself (`gh run view 39602781315 --log
+  | grep Fingerprint`), in the shape upstream documents: `<40-hex commit>:<path>:<rule>:<line>`.
+- `docs/audit/gitleaks-ignore-registry.json` holds why each one is not a credential, following the same
+  discipline as `npm-advisory-exceptions.json` -- reason, exposure, review date (`2027-01-15`), and a
+  `_verified_by` field naming how the claim was checked rather than asserting it.
+- `tests/security/test_gitleaks_ignore_registry.py` polices the pair: the two sets must be equal in both
+  directions, every forgiven fingerprint needs a reason long enough to review, the reason's `head_marker` must
+  still appear in the file it describes, `review_by` must parse and not be past, and no prose field may carry a
+  credential-shaped run of its own.
+
+**Why the fingerprint file rather than a `.gitleaks.toml` allowlist.** A fingerprint is keyed to a commit *and* a
+line number, so the exemption dies the moment the text moves: rename `CREDENTIAL_CANARY`, rewrap that sentence in
+`docs/hosted-demo.md`, and the finding returns on its own with no human intervention. A regex allowlist forgives
+whatever matches a pattern, including the next thing nobody meant. The cost is honest and stated here: the entry
+pins a line number, so an unrelated edit above it retires the exemption and the scan goes red for a reason that
+takes one look to understand.
+
+Two small decisions that came out of measuring rather than assuming. Comments do not go in `.gitleaksignore`:
+upstream's own file is 942 lines with **zero** `#` lines, so a comment is an unparsed fingerprint waiting to
+look like a silent pass -- the reasons therefore live in the JSON, where a test can require them. And the
+credential tripwire requires *both* length and digits (`CREDENTIAL_SHAPED_RUN`), because without the digit
+condition the registry's own file paths -- `docs/audit/gitleaks_ignore_registry.json` -- are 25+ character runs
+and the guard reddens on honest prose. Both arms were sampled: a path and a sentence stay quiet, the canary value
+and a commit sha fire.
+
+Falsification. The clean pair is the control that must pass, and it does: 3 passed. Planting one comment line into
+`.gitleaksignore` reddened **two** tests -- the real guard, and the forged-pair test, because its first statement
+is that the tree's own pair produces no problems. Restoring gave a byte-identical file (`diff` empty) and green
+again. The ten forged channels each produce their own message, so none of them is decoration.
+
+Adjacent gates, all green after the change: `84 passed` across `tests/security/`, `tests/test_docs_nav_coverage.py`,
+`tests/test_doc_census_claims.py`, `tests/unit/test_debt_ratchet.py`,
+`tests/test_lint_exemption_reachability.py`, `tests/test_command_surface.py`. The new JSON cannot move the nav
+ratchet -- `_tracked_docs_pages()` keeps only `.md`. `ruff check` passed while `ruff format --check` exited 1 on the
+new file, the same shape as the `b2d76bf` self-inflicted format violation recorded in the Lane L1 table: the
+format gate is not the linter; formatting it made both clean.
+
+**Not yet witnessed, and named as pending:** no gitleaks binary ran on this machine (none installed, and the
+github.com:443 flap blocked even a `git fetch`). The claim "these two entries make Secret Scan pass" therefore
+rests on having copied the gate's own printed fingerprints in upstream's exact shape -- it is *not* a measured
+pass. The witness is the next Secret Scan run after this lands on a pushed commit.
+
+Commit hygiene in a shared worktree: `§240` in this file belongs to the concurrent session and is still uncommitted
+alongside its own in-flight edits to `tests/test_ci_gate_integrity.py`, so this section was deliberately left
+uncommitted rather than committed via `--only AUDIT_LEDGER.md`, which would publish their §240 prose under my
+message without their wiring. My commit therefore carries the three new paths only. `git commit --only` takes a whole
+file, not a hunk, and there is no non-interactive partial staging here -- the same shape that carried §226 into
+someone else's commit, this time chosen rather than suffered.
+
+## 242. The live language acceptance reached the run page and found its own check was being satisfied by the wrong element
+
+`locale-chrome-acceptance.mjs` had been the lane's manual acceptance -- 34 route/locale checks, run by hand after
+each change -- while the claim R-13i just fixed lives in `main li strong`, outside `CHROME_SELECTOR`, so the
+script visited `/analysis/<runId>` and reported PASS without ever examining the validation card. Extending it to
+read those labels turned up a second hole inside the new check itself: the first version collected labels from the
+whole page, so the run's rendered report -- whose bold text contains `Evidence coverage` and `证据覆盖率` for any
+run whose question is in that language -- satisfied the "was the card read at all" floor. The floor was proving the
+report body had been read, not the card.
+
+Both halves now share the boundary the chrome read already used: `Markdown.tsx:16` marks the rendered document
+`data-run-document`, so labels inside it are excluded. That single filter changed the falsification's shape. With
+the component unwired, the unfiltered version failed one locale and passed the floor in the other (the English
+page's report body was English, matching the English dictionary); after filtering, both locales failed and the
+label count dropped from 26 collected to the card's actual 7. The exemption for tool names is not an allowlist: a
+label is a defect only when the dictionary has a key for it, which is why `correlation_analysis` in the audited
+trace stays legal and `evidence_coverage` in the card does not.
+
+Falsified on the real thing rather than on a mock: unwire `RunInspector.tsx`, rebuild, run -- exit 1 with
+`checkKeysShownAsLabels[7]: evidence_coverage, unsupported_claim, tool_errors, budget, insight_evidence` plus
+`validationCardNotRead labels=7` in both locales; restore, rebuild, run -- `R13I_CHROME_ACCEPTANCE_PASS (34)`. The
+component came back byte-identical to `HEAD` under `shasum`.
+
+The acceptance then joined the keyboard gate in `scripts/run_web_live_gates.sh` (renamed from
+`run_inspector_a11y.sh`) rather than becoming a third boot: one stack, two instruments, one command in CI and in
+`run_gates.sh`. Renaming a gate command is a six-place edit like adding one -- classifier key, `GATES`, both guide
+fences, both guide prose blocks, the workflow step -- and the pinning suites were re-run after it (21 passed).
+Measured on the merged runner: `WEB_LIVE_GATES_PASS`, both instruments green on one booted stack, both scratch
+ports free afterwards by `lsof`.
+
+## 243. The VS Code result panel put run-derived text into a scripted webview without escaping it
+
+Looking for a surface no instrument covers (after the web's were wired), `apps/vscode/src/views.ts` builds the
+result webview by string interpolation and creates it with `enableScripts: true`. Five values went in raw: the
+evidence row's `id`, `claim` and `source_type`, plus the run id and status in the heading. An evidence claim is
+text derived from the analysed file and the model's output, so a cell containing `<img src=x onerror=...>` was not
+a rendering defect but a script executing in a panel whose `postMessage` bridge is the extension host -- which has
+filesystem and process access. Only `report_markdown` was touched at all, and only by
+`.replace(/</g, '&lt;')`.
+
+Fix: one `esc()` (ampersand, angle brackets, both quote forms) applied to every interpolation, including the
+report -- so the rule is a function rather than a per-field judgement about which of these strings "might" be
+hostile. `dataset` is a path the user picked and `status` is a closed enum; both are escaped anyway, because the
+question "is this value safe to interpolate" is the one that gets answered wrongly.
+
+Proven at runtime rather than by reading the template: `tests/vscode/test_vscode_extension.py` compiles the
+package, calls the compiled `getHtml` with `vscode` stubbed (the function touches none of it) and feeds an
+`<img onerror>` payload into every field. It asserts the rendered document contains no raw `<img `, no `onerror="`
+attribute, and at least as many escaped forms as fields -- and it first asserts that the *same* payload, put
+through the interpolation the code used before, does produce a live `<img `, so a green cannot be explained by a
+payload that was never markup. Falsified by reverting one site: `rawInHtml: 1, rawOnerrorAttr: True`, red naming
+the injection; restored byte-exact, green (8 passed).
+
+## 244. The gate this lane added reddened CI one commit after passing it, because its preflight asked from the wrong directory
+
+`acf8f1c` ran `web-chrome` and `web-live-gates` green on the runner. The next push added a browser preflight to the
+same script (`cd apps/web && node -e 'require("playwright")…'`) and the gate then refused with "Playwright's chromium
+is not installed" while the browser was installed and usable -- the previous run had launched it. Cause: the probe
+asked from the caller's context. The instruments are `node apps/web/scripts/*.mjs`, so Node resolves Playwright from
+`apps/web/node_modules`; the `ci` job installs `apps/vscode` and `apps/web` and never performs a root npm install, so
+a root-context `require` throws for a *missing package* and the script reported it as a *missing browser*.
+
+That distinction is the whole content of the check -- one cause is fixed by `npm --prefix apps/web ci`, the other by
+`npx playwright install` -- so a conflated reason both reddened a green build and pointed the reader at the wrong
+remedy, which is how a useful gate gets deleted. The fix is structural rather than a remembered `cd`: the probe is
+now `apps/web/scripts/browser-state.mjs`, beside the instruments, printing `INSTALLED` / `MISSING` / `UNRESOLVABLE`
+from a file-relative resolution the caller cannot change. All three states were produced locally; the last by copying
+the file out of the package, which is also the assertion that keeps it that way.
+
+## 245. The Jupyter magic rendered a CSV's own header into the notebook unsanitised, and no test had ever sent markup through it
+
+The same question that surfaced the VS Code defect -- which surface renders data it did not author, and who looks at
+it? -- landed on `apps/jupyter`. CI lints and type-checks that package, and two test modules run its magic, but no
+test ever put an HTML metacharacter into it, so its 15 `display(HTML(f"..."))` sinks were unverified in the one way
+that matters. A notebook frontend inserts `text/html` without sanitising it.
+
+The reachable source was the analysed file itself: `pl.read_csv` keeps the header row verbatim
+(`packages/datasets/src/dsa_datasets/loader.py:66`), the SDK publishes it as `"columns"`
+(`src/data_science_agent/sdk.py:444`), and `%dsa profile` interpolated the joined column list into a heading. A CSV
+whose header is `<img src=x onerror=alert(1)>` therefore reached the notebook as a live tag. A dataset path the user
+typed and an exception message quoting the offending file reached the same kind of sink. `dsa_jupyter/display.py`
+escaped every field it renders; `magic.py` escaped none.
+
+Fixed by making the package's escaper one function with one contract: `display.escape_html` now coerces
+(`None` -> empty, non-strings via `str`) because `html.escape` is `str`-only and the values most worth escaping here
+-- a path, a column name, an error -- are not strings. All 15 sinks call it. The plugin table renders through
+`Markdown`, whose frontends sanitise, so it is left alone rather than "fixed" without a sink.
+
+`tests/jupyter/test_magic_html_escaping.py` drives the real magic through IPython and asserts on the captured HTML
+only: a mixed payload in a header must appear escaped in both the rich and `--json` views, a missing-file failure
+must print its path escaped, and each test first asserts the payload *is* markup when interpolated raw so the green
+cannot come from an inert fixture. Two earlier drafts of this test were wrong in ways worth recording: it first
+asserted over every displayed object and failed on a polars table whose plain-text repr legitimately quotes a column
+name (the medium, not the defect), and it then looked for a `dict` payload where `IPython.display.HTML` carries its
+markup in `.data` as a string, which made "displayed nothing" look like a passing escape. Falsified by unescaping one
+sink: `a CSV header reached the notebook document verbatim`; restored byte-exact, 21 tests green, `ruff check`,
+`ruff format --check` and `mypy apps/jupyter` clean, `sync_vendor.py --check` showing no `dsa_jupyter` drift.
+
+Recorded rather than changed: the magic validates only a dataset path's extension (`detect_format`), so unlike an
+upload it never runs `packages/datasets`' filename validator -- which is why a name carrying markup reaches a sink at
+all. Escaping makes that harmless; rejecting such names would change what a user can open, so it is left as an
+observation, not half-implemented from a security fix.
+
+## 246. The MCP App page interpolated wire text into `innerHTML`, and no instrument had ever opened it
+
+Found the way §243 was found: not by reading for a bug but by asking which surface renders data it did not author
+and had no instrument pointed at it. `/mcp-app` is the flagship page of `packages/mcp`, `scripts/run_web_live_gates.sh`
+covers the web app, the VS Code panel and the notebook each got their own guard -- and this page's own script built
+two HTML fragments by template interpolation and assigned both to `innerHTML`: the dataset `<option>` list from a
+resource's `name` and `description`, and the evidence table from `id`, `claim` and `source_type`. The claim is the
+interesting one: it quotes the question the client typed and the analysed file's header row, and `pl.read_csv` keeps
+a header verbatim, so the same payload that §245 sealed in the notebook was reachable here. The embedded report was
+already safe because it comes from `export_html`, the single renderer -- which is exactly how this stayed invisible:
+the one part of the page that shows the most data was the part with an owner.
+
+Fixed by giving the page one escaper, `esc()`, and hoisting both fragments into named renders so something can call
+them from a probe. While touching the option list a second, smaller defect showed up: `x.description.slice(0,60)`
+threw on any resource that omits `description`, the `try` swallowed it, and the whole dropdown fell back to a single
+hard-coded `dataset://sales` option -- so one sparse resource hid every dataset on the page with no error anywhere.
+That is the same shape as the §245 finding about `html.escape` being `str`-only: the escaper's owner now accepts what
+the sinks pass.
+
+`tests/mcp/test_app_page_escaping.py` loads the script out of `dsa_mcp.app.HTML` -- the bytes the route actually
+returns -- evaluates it with the four browser globals it touches at load time passed as parameters, and calls both
+renderers on `<img src=x onerror="alert(1)">`. It asserts the payload's own liveness first, then that neither
+fragment carries a raw `<img ` or an `onerror="` handler, that `esc()`'s exact output is the expected entity string,
+and that the fragments are still the table and option list they are supposed to be. A second guard pins the page to
+three `innerHTML` sinks, which is a ceiling rather than a description: adding a fourth makes it red, so a new HTML
+sink has to be adjudicated instead of slipping through.
+
+Both guards were falsified before being cited. Dropping `esc()` from the claim cell alone -- one token, the rest of
+the page untouched -- puts a live `<img ` in the evidence fragment and leaves the options clean, which is the
+discrimination the assertion needs. Appending one more `innerHTML` assignment trips the census at the count.
+35 tests green across `tests/mcp` and `tests/vscode`; `ruff check`, `ruff format --check`, `mypy` and
+`sync_vendor.py --check --package` clean with the vendored twin re-synced after formatting.
+
+Self-inflicted, and worth the note: this batch's push was blocked by the claims gate, and the finding was mine.
+`apps/vscode/README.md` counted the VS Code suite at seven tests, and the escaping guard §243 added made the tree
+define eight -- so a gate that had never run against my own prose redded the commit that wired the two web
+instruments. It also means the runner never reached them: in `ci.yml` the claims step precedes the live-gates step,
+so on that head the two new gates were reported `skipped`, and the witness that they pass on the runner is still
+owed. The count stays a count, because the gate is what makes it self-healing; the alternative -- prose that refuses
+to be checked -- is the rot this repo already decided against.
+
+## 247. The API's `default-src 'none'` made its own HTML pages inert, and no test could see it because none runs JavaScript
+
+The instrumentation this thread bought it a browser for the App page is what found the next defect, and the shape of
+the discovery is the lesson: I added a guard for HTML injection, went to look at the page in a real browser to prove
+the guard, and the browser reported that the page could not run at all. `/mcp-app/` answers HTTP 200. Chromium logged
+`Executing inline script violates the following Content Security Policy directive 'default-src 'none''`, and after
+15 seconds the dataset dropdown held zero options while the same process answered `resources/list` with its whole
+catalogue. Three separate consequences followed from one header: the inline script was refused, `connect-src` fell
+back to `default-src` so the page's own `fetch('/mcp')` would have been refused even with the script running, and
+`X-Frame-Options: DENY` plus `frame-ancestors 'none'` meant the report the page embeds could not have been framed by
+it. The App page was therefore a picture of a page -- styled markup that does nothing -- for every real client, since
+the browser never got further than the static text.
+
+Why it survived: every test of that surface drives it with `TestClient` (and the acceptance note in §R-14c was written
+from a 200 and a substring). `TestClient` never executes JavaScript, so a CSP that forbids JavaScript is invisible to
+it. The route census in `docs/hosted-demo.md` matches paths, and a path match says nothing about whether the document
+at that path works. This is the phantom-capability class again, arrived at from the opposite direction from the usual
+one: not a capability the code claims that the product lacks, but a security control sized for a JSON API that
+silently revoked the product's own HTML routes.
+
+Fixed by making the policy a function of the document. `report_export.document_security_headers` keeps
+`default-src 'none'`, then names every `<script>` and `<style>` block the served bytes actually contain by
+`sha256-` hash, sets `connect-src 'self'` (the App calls its own origin), `img-src 'self' data:` (the charts travel
+inside the file as data URIs), `base-uri 'none'`, `form-action 'none'`, and adds `frame-src 'self'` only when the
+document embeds a frame. `'unsafe-inline'` is nowhere in the answer, which is the point: a page that later gains an
+unnamed block stops working rather than quietly gaining reach. The report route passes `allow_self_frame` so it can
+be framed by its own product; the App page keeps `frame-ancestors 'none'` and `X-Frame-Options: DENY` because nothing
+should embed it. `SecurityHeadersMiddleware` now uses `setdefault`, so a route that set its own policy is not
+overwritten -- and the strict default still covers every JSON answer, including the App's own 404. One inline
+`style="…"` attribute on the App's iframe moved into the page's stylesheet, because a style *attribute* cannot be
+admitted by hash at all and keeping it would have forced exactly the wildcard the design avoids.
+
+Two guards, neither of which is satisfied by the fix alone. `tests/contract/test_served_html_security.py` counts
+blocks with `html.parser` -- not a line scan, so a `<script>` inside a string literal would not be mistaken for one --
+refuses any policy whose hash count differs from the document's block count, asserts the report says
+`script-src 'none'`, asserts the App page names its script and permits its own `connect-src` and `frame-src`, asserts
+that zero `style` attributes survive in either document (the reason no wildcard is needed), and reads the headers the
+host app returns through `TestClient`. Falsified by restoring the clobbering assignment:
+`test_the_host_middleware_leaves_a_route_set_policy_alone` went red, then the file was restored byte-exact.
+`apps/web/scripts/mcp-app-page.mjs` is the third instrument on the booted stack and the first thing in this repo's
+history to load an API-served HTML route in a browser: it compares the `<option>` set the page built against
+`resources/list` from the same server, then opens `/mcp-app/?run_id=<stored run>` and reads the embedded report from
+inside the frame -- heading text, disclosure count, and the h1's *computed* `24px`, because `1.5rem` in the report's
+own CSS is what a browser shows when the stylesheet applied and `32px` is the UA default it falls back to when a
+`<style>` block is refused. Falsified by removing `allow_self_frame` from the report route: the frame check fails
+with `reportFrameHoldsTheRenderedDocument`, so the passing run is an assertion that can miss.
+
+Added after that first pass, because "the page renders" and "the page works" are different claims: the same
+instrument now drives the flow the way an MCP client drives it -- select a dataset, type the question, click
+`▶ Run Analysis`, and wait for the page's own progress line. Measured on a booted stack the run completed
+(`button-driven run run-66a97105ab`), the evidence table arrived with rows and zero elements inside it, and the
+report card revealed itself pointing at `/mcp-app/report/`. Falsified by making the button call a tool that does not
+exist: the page's own error text came back as the failure, `Error: Unknown MCP tool: analyse_typo`, exit 1, restored
+byte-exact. Until this round no test had ever pressed that button. Every `analyze` test in `tests/mcp` called the
+tool through `TestClient`, which is the right way to test a tool and no way at all to test a page: the click handler,
+the dataset path it derives, the progress line, the two `innerHTML` sinks and the frame reveal were a single
+unmeasured stretch between the button and the evidence.
+
+Recorded as an open question rather than a finding: the App's `Open evidence:// resource` and `Open report://
+resource` buttons deliver their content through `window.alert`, which blocks the script thread and truncates at 2000
+characters, and MCP App hosts put the UI in a sandboxed iframe. Whether `allow-modals` is granted there decides if
+those buttons do anything at all in a real client. The specification text was fetched twice and returned
+paraphrase rather than the verbatim `sandbox="..."` attribute list, so the claim is not filed; the falsifiable
+version of it is an experiment -- embed the page in an iframe with a chosen sandbox value and see whether the dialog
+fires -- and an in-page disclosure region would make the question moot.
+
+## 248. The §247 open question dissolved into a bigger one: no client can find the App page, because nothing advertises it
+
+The `alert()` question was worth measuring only if a host would ever load that page into a frame. It went to the
+protocol surface to check, and the answer came back as a measurement rather than an argument:
+`dsa_mcp.resources.list_resources()` returns 34 resources whose distinct `mimeType` set is
+`application/json, application/octet-stream, text/csv, text/markdown` -- no HTML, and a grep over `packages/mcp`
+finds no `_meta`, no `ui/resourceUri`, no `text/html` anywhere. So the sandbox flag list is moot for the real clients:
+a capable chat client enumerating this server sees tools and data resources, and has no protocol hook from which to
+discover `/mcp-app/` at all. The page is reachable by a human who knows the URL of a running server. It is not a
+distribution surface through the protocol.
+
+What this contradicts is the product's own plan, not a customer-facing document. `WEB_PRODUCT_MASTER_PROMPT.md` R-14
+states the user consequence as "users already inside a capable chat client can reach DSA's tools without installing
+anything" and then requires, as Accept, "a rendered capture from at least one real client, or an explicit statement
+that no client was available to test and the requirement's verification is therefore incomplete". The first half of
+that sentence is true and measured -- the tools are reachable, which is what `tests/mcp` has always driven. The
+Accept clause has never been met, and §189's "R-14 shipped" recorded the *single-renderer* requirement (shipped,
+byte-for-byte, and now browser-verified in §247) as if it also closed the distribution claim. The current docs do not
+overstate it: `README.md` carries no MCP App claim, and `docs/v4_3/V4_2_FINAL_TRUTH.md` labels the surface
+**Experimental** and cites the acceptance test by name. The gap is in the plan's status line, which is where a future
+reader looks for what is left.
+
+The honest split, so the two halves stop being confused: the report a client opens is one renderer's bytes and is now
+proved to arrive styled with its drill-downs; whether the App should be *advertised* as a UI resource so a client can
+render it in-conversation is a product fork, not an implementation detail -- it adds a spec-dependent capability, it
+would need the draft's exact field names (the two fetches of the specification text returned paraphrase, not the
+verbatim attribute and metadata names, so filing code against them would be guessing), and it changes what users see
+in their client. Recorded as the open decision with its options, not half-implemented from an audit.
+
+## 249. The App page handed a resource to `alert()` and cut it at 2,000 characters without saying so
+
+`openResource()` was `alert(uri + '\n\n' + text.slice(0,2000))`. Two defects fit in that one line, and the second is
+the one a reviewer would care about. Measured against a run the local instance actually stores: its `report://`
+resource is 2,354 characters, so the dialog showed 2,000 and hid 354 with no mark indicating a cut -- on the surface
+whose entire claim is that the conclusion comes with its complete evidence. Separately, a modal is a blocking call:
+while it is open the page's own script cannot run, which is the wrong property for a page whose purpose is to be read
+while an analysis is still being explored. The empty-question validation used the same channel.
+
+Fixed by putting the content where the page already keeps the rest of the run: a sixth card, "Resource read", whose
+`<pre>` is filled through `textContent` -- so a resource's own bytes cannot become markup, which matters because
+`evidence://` and `report://` carry text derived from the analysed file -- and a note line that states what it
+showed: `<uri> — N characters, shown in full.` or, on a failed read, that the server refused it and what follows is
+the error rather than the resource. Nothing is trimmed any more, so the completeness claim is the number itself. The
+validation message moved to the progress line the page already owns.
+
+Guarded by counting dialogs, not by hoping: `mcp-app-page.mjs` now fails on `noNativeDialogWasRaised` if a dialog
+fires at any point, so reintroducing `alert()` anywhere on this page is a red gate rather than something a reviewer
+has to notice again. It also clicks the evidence button and reads the region back, asserting visibility, content, and
+the `shown in full` note. Falsified by leaving the region hidden -- the check failed carrying the payload in its own
+diagnostic (`{"hidden":true,"length":607,"head":"[\n {\n \"id\": \"E-e77495ef\"…`) -- and the file was restored
+byte-exact. On a passing run the gate log now prints `evidence resource: 607 chars, no dialog`, because an assertion
+whose success is silence cannot be told apart from one that never ran.
+
+Incidental, recorded rather than changed: `POST /mcp` returns `307` and redirects to `/mcp/`. A browser re-sends the
+method and body, so the page is unaffected and the instrument passes; a hand-written client that does not follow
+redirects reads an empty 307 and concludes the endpoint returned nothing. That was discovered by `curl` without `-L`,
+which is the same way a future integrator will find it, so the fact is worth a line somewhere even though the
+behavior is correct per HTTP.
+
+Then the instrument found a bug in itself, which is the reason to run it rather than reason about it. The first
+version of the fault injection used `route("**/mcp**")` to abort the JSON-RPC endpoint, and that pattern also matched
+the page's own URL, so the navigation was aborted and the gate reported `mcpAppPageLoaded -- net::ERR_FAILED`. A
+glob that matches more than the thing you meant to break is the same class of error as a name-pattern metric
+absorbing someone else's files; the fix is a predicate on the pathname, not a narrower guess.
+
+With that corrected, the two failure branches are now covered, and one of them was a real defect worth naming.
+`openResource` had no `try`, and no caller awaited it, so a request that never landed left card 6 at
+`reading <uri> …` with an empty note -- permanently, silently, and with the appearance of a slow load. Fixed by
+catching and saying what happened. `fetchProfile`'s `catch(e){}` swallowed every profile failure; it now writes the
+failure into the same line the user is reading. Falsified by emptying the transport note -- the check failed with
+`(empty note -- the page stayed in the reading state)` -- and the file was restored byte-exact, with the scratch
+listener proven gone before and after (`listeners: 0`). The refused-read branch needed no mutation: it is reached
+by asking for a run the server never stored, which is the actual user-visible case.
+
+## 250. `tools/list` published its schemas under the Python field name, and the stdio loop had no door
+
+Two discoveries in the same place, found by asking what a client would actually parse rather than what the code
+produces.
+
+**The schemas existed and were unreadable.** `_tool_input_schema` derives each tool's JSON Schema from the backend
+tool's own pydantic `input_model` -- `run_sql` really does advertise `sql`, `dataset_path`, `max_rows` inside the
+process -- and `MCPToolDef.input_schema` holds it. Every boundary then serialized with pydantic's default aliases,
+so the wire key was `input_schema` while MCP defines `inputSchema`. Measured from `POST /mcp` `tools/list` before the
+fix: all 19 tools returned `"inputSchema": {}`. A client doing the conformant thing -- read `inputSchema`, render the
+argument form, or let a model decide what to pass -- received "these tools take nothing" for the whole surface,
+`analyze` included. The two existing tests assert `t.input_schema is not None` on the Python object, which is the
+side that was never wrong; nothing looked at the bytes. Fixed by one owner function, `tools_for_wire()`, that dumps
+`by_alias=True`, called by the REST route, the JSON-RPC handler, the stdio loop and `dsa mcp`, so the shape cannot
+drift per boundary again.
+
+**The stdio transport was documented, implemented and unreachable.** `docs/MCP_DESIGN.md` says clients connect "via
+stdio / HTTP+SSE", and `stdio_main()` is a working line-delimited loop. But the only console script is `dsa`, the
+`mcp` subcommand printed a list and returned, and nothing else called it -- so the transport existed for an importer,
+which no MCP client is. Four tests were named `*_stdio_*`; every one of them drove the HTTP app through
+`TestClient`, which opens no stdin. One asserted `status_code in (200, 404, 405)` -- a guard that passes whatever
+happens, and the reason a green suite told no lie here. Added `dsa mcp --stdio` and
+`tests/mcp/test_stdio_transport.py`, which spawns the installed script and conducts four real exchanges: discovery
+carrying `inputSchema`, a `profile_dataset` call returning rows, a malformed line answered with `-32700` and then a
+working next request (the loop survives rather than crashing), and a missing-required argument reported as an error.
+The vacuous assertion in `tests/unit/test_generate_report_coverage.py` is left in place and named here rather than
+silently rewritten: its file is a coverage-oriented suite and changing its meaning belongs to whoever owns it.
+
+**The doc table had drifted silently.** `## Tools Exposed (13)` matched its 13 rows, so it looked self-consistent
+while `tools/list` published 19 -- `analyze`, the product's whole loop, among the six undocumented. The heading's
+numeral is removed, the six rows are added with argument subsets read from each backend's model, and
+`test_the_documented_table_is_the_served_surface` now compares the served set to the table, so a future tool without
+a row is red rather than invisible. Falsified by deleting one row: the guard names it (`['forecast']`).
+
+Two mistakes of my own, recorded because they are the interesting part. First, an Edit whose `old_string` was the
+next test's `def` line silently merged two tests into one, and the merged test still passed -- so a guard I believed
+was two was one, and the only reason I found out is that a deliberate mutation failed a test whose body did not
+match its name. That is the same swallow-the-heading failure mode already noted in memory; anchoring on a line one
+intends to keep is how it happens. Second, `sync_vendor.py --package dsa_evaluation` -- the remedy the tool's own
+error message recommends -- copied a peer session's uncommitted `external_validation.py` into `_vendor`, because a
+package-scoped repair re-copies the whole package. Reverted from HEAD, verified the peer's source untouched, and the
+hint now names `--file` per path first and says plainly that `--package` also copies another session's edits. A tool
+whose advice is the coarse option is a tool that will be misused by a careful person.
+
+## 251. The JSON-RPC surface answered with fields no MCP client is specified to read
+
+Same method as §250 -- ask what a client would parse, not what the code produced -- and the answer was worse than the
+`inputSchema` case, because this one affects every result, not just discovery. `CallToolResult` in the reference SDK's
+types module declares `content: list[ContentBlock]` with no default and `is_error: bool = False`;
+`ReadResourceResult` declares `contents: list[TextResourceContents | BlobResourceContents]`. This server returned the
+tool's internal dict as the JSON-RPC `result` -- `{isError, tool, mcp_tool, call_id, output}` -- and the resource item
+bare, so a conformant client received neither required field, for all 19 tools and every resource URI. Measured
+directly: `call_mcp_tool('run_sql', …)` has keys `['call_id','isError','mcp_tool','output','tool']` and `'content' in
+result` is False.
+
+Why nothing noticed, again: the product's own client is the App page, and it reads the non-standard keys
+(`r.result.output`, `r.result.text`), so the whole product was self-consistent. The conformance suite in
+`tests/mcp/conformance/` asserted `"error" in r.json()` and `status_code == 200` -- presence and transport, never the
+result shape -- and the acceptance test read `["result"]["output"]["run_id"]`, i.e. it pinned the deviation. A test
+that asserts the bug's own shape is the strongest kind of lock-in, and it is why six assertions had to change here
+rather than zero.
+
+The error channel was wrong in the same way. The reference docstring is explicit: an error originating in the tool
+SHOULD be inside the result with `is_error` true, "not as an MCP protocol-level error, so the LLM can see and
+self-correct", while errors in *finding* the tool go at the protocol level. `tools/call` mapped any `isError` to
+`-32602`, so a client's model never saw a validation complaint to fix -- it saw an RPC failure. Now the boundary
+consults `MCP_TOOL_MAP` and answers `-32601` for an unknown tool, and everything else arrives as
+`isError: true` with the text in a content block. The conformance test had asserted the unknown-tool case as an error
+all along, and it failed when the first cut of this fix swept it in with the rest -- the suite catching the author is
+the receipt that these guards were not written to pass.
+
+Two owners were added, `tool_result_for_wire` and `resource_result_for_wire`, used by the HTTP handler and the stdio
+loop alike. The internal object travels unchanged as `structuredContent`, so nothing is lost by the wrapping, and the
+App page was moved to the protocol fields in the same commit rather than left on a compat alias: a boundary that emits
+two shapes is exactly the drift that produced this entry. Evidence for the required fields was fetched over the
+GitHub API from `src/mcp-types/mcp_types/_types.py` and read verbatim, not recalled -- the same file names
+2026-07-28, the revision this repository already pins, so no reinterpretation was needed to know the shape is wrong.
+
+Falsified by deleting the required `content` from `tool_result_for_wire`: the conformance guard and the analyze guard
+both went red, and the file was restored byte-exact. One guard deliberately did not fail, and that is worth its own
+line: `tests/mcp/test_stdio_transport.py` spawns the installed `dsa` script, which imports `data_science_agent` and
+therefore executes the *vendored mirror* -- and only `packages/mcp/src/dsa_mcp/adapter.py` had been mutated, so the
+subprocess answered from a copy that was still correct. That is §1b's import-order trap showing up inside a
+falsification attempt rather than a fix, and it is the clearest possible reason this repository commits the mirror in
+the same change as the source: a test that drives the console script is measuring the artifact, not the edit.
+
+## 252. `/mcp` dispatches `run_python`, and the design document told the operator it was token-gated
+
+`docs/MCP_DESIGN.md` carried one line about auth -- "bearer token optional (env `DSA_MCP_TOKEN`), otherwise
+local-only" -- and `docs/mcp.md` put Authorization among the compatibility rows "verified live … headers all pass".
+Both were measured rather than argued:
+
+- `DSA_MCP_TOKEN` exists in no source file. The only occurrences in this repository were the two doc lines; the grep
+  also hit `data-science-agent/docs/MCP_DESIGN.md`, the second clone described in the vendor-sync note, which is not
+  this repository's surface and was left alone.
+- `AuthMiddleware` returns `call_next(request)` unchanged for any path that does not start with `/api/`, and `/mcp`
+  plus `/mcp-app` are mounted outside that prefix. So both answer unauthenticated at every value of
+  `DSA_AUTH_TOKEN`.
+
+The consequence is not cosmetic: `tools/call` reaches `run_python` and `run_sql`. The sentence was the only thing an
+operator had to go on before exposing the endpoint, and it described a control that does not exist -- a documented
+capability whose implementation is absent, arrived at from the documentation side for once.
+
+Corrected in the same style as the other stale claims in this lane: the docs now say there is no auth on that surface
+at any token setting and to run it as one would run an unauthenticated shell, and the compatibility paragraph names
+the rows that are not capabilities (Authorization absent, Tasks a stub) instead of marking them pass.
+
+Not implemented, deliberately, because this one is the owner's fork rather than a defect repair: a real gate has to
+answer what the App page does, since `/mcp-app` is mounted in the same process and its client script calls `/mcp` on
+its own origin without a credential. Gating the endpoint either breaks that page or reintroduces a browser-held
+secret, which is the thing R-05 exists to keep out. The options, with cost:
+
+1. Document and accept: bind the MCP HTTP surface to loopback wherever it is deployed and say so in
+   `docs/hosted-demo.md` too. No code, no behavior change, an honest boundary.
+2. Gate `/mcp` on `DSA_MCP_TOKEN` when set, exempting nothing, and give the App page a clear "this endpoint requires
+   a token" state instead of a silent failure -- the browser never holds the secret, so the page stops working for
+   token-gated deployments.
+3. Gate `/mcp` and add a host-injected credential path for the App page, which is a larger design and reopens R-05.
+4. Restore the old sentence and build the code to match it. Rejected here: the docs are corrected now, so this only
+   re-creates the gap in the other direction.
+
+## 253. The `/mcp` page copied a call that could not succeed, and the schema it needed arrived the same day
+
+`copyTemplate` emitted `{ jsonrpc, method: "tools/call", params: { name, arguments: {} } }` for all 19 tools. The
+button's whole purpose is a call the user can run, and an empty argument object is rejected by the tools that declare
+required parameters -- `run_sql` (`sql`), `analyze` (`task`), `causal_check` (`dataset_path`, `treatment`,
+`outcome`). The failure was not visible where it was caused: the copy succeeds, the toast says "copied", and the
+error appears in whatever the user pasted the template into.
+
+The prerequisite was §250's fix. `inputSchema` is the field MCP defines and the field the client code would read,
+and until this round the server published `input_schema` while the page's own type declared neither, so there was
+nothing correct to build from. `requiredArguments()` now derives the placeholder object from that schema -- required
+keys only, typed (`"<required>"`, `0`, `true`, `[]`, `{}`) so the shape is right and the placeholder cannot be
+mistaken for a finished value.
+
+Guarded by parsing the component rather than grepping it (`tests/contract/test_mcp_page_template.py`, using the
+TypeScript compiler the web package already ships): the `arguments` property must be a `requiredArguments(...)` call
+rather than an object literal, the template must still name the tool, and the helper must read both `required` and
+`properties` and keep the `<required>` sentinel. Falsified by restoring `arguments: {}` -- the guard failed as
+designed.
+
+The falsification then produced its own lesson, because the restore step was `git checkout HEAD -- <that file>` and
+HEAD's version of the file did not contain the fix: the mutation was undone together with the work, silently, and the
+hash comparison printed two different digests a moment later. Re-applying the three edits and matching the
+pre-mutation digest proved the recovery, and `tsc --noEmit` plus the guard went green again. This repository's own
+memory already says never to `git checkout` in a dirty tree and to restore from a saved copy instead; the rule was
+known, the shortcut was taken anyway, and the cost was a few minutes and the risk of losing an hour. Snapshot before
+mutating, and restore from the snapshot.
+
+## 254. The upload guard was handed the file's first bytes and read only its name
+
+`docs/api.md:39` advertises `upload (multipart, 100MB, MIME sniff, archive bomb guard)`. Three of those four were
+true and one was a parameter. `apps/api/src/dsa_api/routers/datasets.py` captured a head, `save_dataset` threaded
+it into `validate_file(..., head=...)`, and `validate_file` never referenced `head` again -- the only line that
+mentioned it was the comment claiming the heuristic. Measured before touching anything:
+
+```
+REJECT evil.zip  -> ValidationError: Archive files not allowed      # the extension blocklist, which is real
+ACCEPT evil.csv  -> DatasetFormat.csv   (head = b"PK\x03\x04...")    # the same bytes, one rename away
+ACCEPT evil.json -> DatasetFormat.json
+```
+
+So the guard enforced what the *caller said the file was called*, and a container-format upload reached storage and
+polars. The fix makes the bytes answer for themselves: four container signatures (`PK\x03\x04`, `\x1f\x8b`,
+`7z\xbc\xaf\x27\x1c`, `Rar!\x1a\x07`) plus the tar header at its real offset 257, with the one exception the
+specification forces -- `.xlsx` is a zip container, so a `PK` opening is expected there and accepted nowhere else.
+The name-only check remains the documented behaviour for a caller that supplies no bytes, which is the CLI path,
+not the route.
+
+Two more defects lived in the same three lines and only showed up because the claim was checked rather than the
+fix. (1) The capture was `tmp_path.read_bytes()[:4096]` -- four kilobytes kept by loading the entire upload into
+memory a second time, three lines below a comment saying the temp file existed to avoid holding it twice, and
+`MAX_SIZE_BYTES` is 104857600. On the 512 MB free-tier Render instance this is the largest single allocation the
+API makes on behalf of one request. (2) The limit was applied after the body had been streamed to disk in full,
+so an oversized upload cost a full write plus a full read before meeting a 400. Both are gone: the head now comes
+off the chunks that reach the disk, the limit refuses during streaming, and the temp file is unlinked on the
+refusal path -- which also covers a client disconnect, a case the old shape leaked.
+
+`tests/security/test_upload_guard.py`, 17 tests, each rejection paired with an acceptance. Falsified by restoring
+each defect from a snapshot (never from `HEAD`, per §253's lesson):
+
+| mutation | red | green |
+| --- | --- | --- |
+| delete the leading-byte block | the 4 signatures + tar + the route case (6) | the `.xlsx`/csv/parquet acceptances |
+| `_ZIP_IS_EXPECTED = set()` (blanket `PK` ban) | the 2 Excel tests | everything else |
+| size check moved after the loop | the refusal test, which counts the reads the stream saw (4, expected 1) | the head test |
+| `tmp_path.read_bytes()[:HEAD_BYTES]` back in the route | the AST test that walks both functions for whole-file readers | all 16 behavioural tests |
+
+The last row is why the AST test exists: `read_bytes()[:4096]` satisfies every behavioural assertion in the file
+-- correct head, correct length, correct size -- while carrying the memory defect. The structural pin is the only
+thing that can see it.
+
+Residual, stated rather than fixed: rejecting a container is not inspecting one. A valid-zip-with-a-10 GB-csv
+inside is now refused by signature; a 90 MB CSV is still written in full and is still a real problem for a
+free-tier instance, because "supported" for 100 MB is a claim `scripts/run_perf_matrix.py` itself grades
+`degraded`. The docs row now says "extension blocklist plus the file's own leading bytes", and
+`test_the_limit_the_docs_promise_is_the_limit_the_code_enforces` pins the advertised `100MB` to `MAX_SIZE_BYTES`
+so the number in the table cannot drift away from the number in the code.
+
+## 255. One control lived in two lists, and the docs described only one of them
+
+`_DEFAULT_RULES` names the routes the middleware refuses; the `want = {...}[prefix]` literal inside
+`RateLimitMiddleware.dispatch` named the settings attribute that sizes each. Two lists, one control, no relation
+between them, and the failure mode was asymmetric: forgetting the second one is a `KeyError` raised inside the
+request path, so the client sees a 500 on exactly the route the missing rule was meant to protect. Measured the
+way it would have appeared: with the `experiments` entry removed from the map, three posts to
+`/api/v1/experiments/` produced `KeyError: '/api/v1/experiments'`, and the test that only asks for a `429` went
+red on the first request.
+
+`docs/api.md` listed `analysis 60/min, upload 30/min, events 120/min`. Four rules are enforced, so the fourth --
+`/api/v1/experiments`, 60/min -- was an undocumented control, and its undocumented property is the more useful
+half: it has no knob of its own and reads `rate_limit_analysis_per_min`, so `DSA_RATE_LIMIT_ANALYSIS_PER_MIN`
+moves two routes at once. An operator tuning the demo's free tier would have set that variable expecting one
+route to change and gotten a silent second one.
+
+Fix is a hoist plus a sentence: the map is now `_RULE_KNOBS`, a module constant, which is what makes the
+relation inspectable at all (a local literal cannot be imported), and the doc names all four rules by prefix with
+the number each enforces and the environment variable behind it. The borrowed knob stays borrowed -- a dedicated
+`DSA_RATE_LIMIT_EXPERIMENTS_PER_MIN` is a third setting nobody asked for -- but it is now stated where an operator
+will read it.
+
+`tests/contract/test_rate_limit_surface.py`, 6 tests. Three are relation pins: `{prefix for prefix, _, _ in
+_DEFAULT_RULES} == set(_RULE_KNOBS)` in both directions, every knob a real `Settings` attribute, and for every
+rule the doc paragraph contains `` `<prefix>` <n>/min `` with `<n>` read from `settings` at test time rather than
+transcribed -- a changed default therefore cannot leave the documentation behind. Whitespace is folded before
+matching, because the bullet reflows and a literal-space pattern goes blind on a rewrap. Two are behavioural
+because a prose pin cannot show a limit is real: three posts at a monkeypatched ceiling of 2 must end in `429`
+with `Retry-After`, and the same three posts with `rate_limit_enabled = False` must not. The sixth checks the
+switch is actually consulted, by name in the coroutine's `co_names`, so removing the early return cannot pass by
+also removing the assertion that reads it.
+
+Falsification, one mutation at a time, each restoring from a snapshot and verified by digest:
+
+| mutation | red |
+| --- | --- |
+| experiments clause deleted from the doc paragraph | the doc pin |
+| experiments entry deleted from `_RULE_KNOBS` | set equality, doc pin, and the behavioural test (the `KeyError`, surfacing as a request failure) |
+| `if not settings.rate_limit_enabled` early return removed | the switch test and the behavioural switch test |
+| a fifth rule appended with no knob and no doc line | set equality and the doc pin |
+
+The last row is the point of the round: the shape that made a mistake invisible in production is now a red test at
+commit time, and it took the set-equality form deliberately -- a presence assertion on a hard-coded list of names
+would pass for a new member it had never heard of.
+
+## 256. One bullet described three routes as if they were all the lists
+
+`docs/api.md` line 10 read "Lists accept `?limit=` (1–1000, default 100) + `?offset=` (default 0) and return
+`{..., "total": n}` alongside the array". Enumerated from the OpenAPI surface, exactly three GET routes publish
+those parameters -- `/api/v1/datasets/`, `/api/v1/analysis/`, `/api/v1/experiments/`, each with
+`minimum 1, maximum 1000, default 100` -- and a fourth route publishes neither while returning the same shape:
+
+```
+/api/v1/research/experiments   params: None
+  -> {"experiments": names[:RESULTS_LIMIT], "total": len(names)}   # RESULTS_LIMIT = 10
+```
+
+The route's own docstring says "capped the way the page always capped them", so the cap is a decision, not an
+oversight -- what was wrong was the generalisation above it. The failure a reader would hit is quiet: ask for 500,
+get ten, no error, and a `total` larger than the array with no way to reach the rest. The bullet now names the
+three routes by path, and the table row states that this one is not paginated, that both parameters are ignored,
+and that `total` counts every file.
+
+`tests/contract/test_pagination_surface.py`, 5 tests, deliberately built on `app.openapi()` rather than on route
+signatures: the schema is what a client discovers, so it is the surface the documentation has to match. Two pins
+are set equalities in both directions (the documented paths and the paginating paths; the bounds the schema
+publishes and the numbers in the sentence, derived per run so a changed `Query` bound cannot drift alone). One
+pin is behavioural: three refusals and one accepted request per route, the accepted one required to return both a
+`total` and an array -- without it, a route that answered 422 to everything would satisfy the refusal assertions.
+One pin reads `RESULTS_LIMIT` into the doc row, and one builds a twelve-file results directory to prove the
+documented relation (ten returned, twelve counted).
+
+Mutations, each restored from a snapshot and verified by digest:
+
+| mutation | red |
+| --- | --- |
+| bullet reverted to "Lists accept ..." | the extractor's "exactly one pagination promise" assert, then the set equality |
+| "Not paginated" deleted from the row | the row pin |
+| `RESULTS_LIMIT = 12` | the row pin only -- the cap witness measures the relation, not the number |
+| `ge=1` → `ge=0` on the datasets route | the bounds pin and the behavioural refusal test |
+
+Two defects inside the guard's own first draft, both found by running it before trusting it: it assumed FastAPI
+validates a route's query parameters before resolving its dependencies (it does not, so the "must not be 422"
+case reached the service with a stubbed session and raised `AttributeError`), and it located the bullet by its
+opening words, which this round's rewording moved. The chained string replacement that renamed the helper to
+`_pagination_pagination_bullet` is the third, and the cheapest lesson in the set: a substitution whose pattern is
+a substring of its own replacement has to be applied once, to the region that needs it.
+
+Boundary this entry records rather than fixes: `/api/v1/research/experiments` still has no way to reach past the
+tenth file. Adding `limit`/`offset` there would make the generalisation true and the page's own cap configurable,
+but the page asks for ten and nothing else does, so it is a feature request rather than a defect -- and the doc no
+longer claims it exists.
+
+## 257. A fail-closed gate was right about the outage and wrong about who caused it
+
+`2662fc7` went red on `main` at step 14, and the reading was that the npm advisory gate had found something. It
+had not: the registry's audit endpoint was answering `503` / `socket hang up` (`03:10:42` → `03:17:43` in the job
+log), the workflow step is `npm --prefix apps/web audit --json > /tmp/npm-audit-web.json || true`, so the failing
+command wrote its *error* document to the report path and exited happily, and the reader received:
+
+```
+{"message":"request to https://registry.npmjs.org/-/npm/v1/security/advisories/bulk failed,
+ reason: socket hang up","error":{"summary":"","detail":""}}
+INPUT ERROR /tmp/npm-audit-web.json: auditReportVersion is None, this reader implements schema 2.
+npm changed format; re-read its docs before trusting counts.
+```
+
+The refusal is the design working -- the step's `|| true` is exactly the mute this module exists to catch (§91),
+and without it the outage would have read as green. The *attribution* was the defect: the message sends whoever
+is paged to npm's documentation, when the fact is that the registry did not answer and the gate did not run. The
+reader now separates a document that carries npm's failure `message` and no report version from a report on an
+unknown schema, quotes npm's own sentence, and keeps both at exit 2.
+
+Reproduced for free, which is how the branch got written: the same outage locally produced a byte-identical
+176-byte document, and that document is now `tests/fixtures/npm_audit_endpoint_failure_2026-10-22.json` in the
+repo's verbatim-capture convention. Two tests, each asserting the other's wording is absent -- the failure case
+must not say "changed format", a real report moved to `auditReportVersion: 3` must not say "failed request".
+Deleting the new branch reddens only the first; the second staying green is what proves the branch did not
+absorb its neighbour. The endpoint recovered minutes later and the reader, run against a live clean report,
+prints `no high/critical findings` with exit 0 and `vulnerabilities: {}` -- a re-attribution, not a loosening.
+
+The round's second lesson is about a guard from the previous entry. `test_the_limit_the_docs_promise_is_the_limit_the_code_enforces`
+found the upload row by taking the first line of `docs/api.md` containing `` `/api/v1/datasets/` ``, and the
+pagination bullet added in §256 cites that same path in prose -- so the assertion started reading the bullet,
+looked for "100MB" in it, and failed. Nothing was wrong with the ceiling; the lookup had no shape constraint.
+It now requires `| POST | \`/api/v1/datasets/\`` and demands exactly one such row, and the pagination test got
+the same treatment for its row. A first-match search over prose is the list-shaped guard again from the other
+end: it silently changes what it reads when someone adds a sentence.
+
+Left deliberately alone: the workflow's `|| true` on the audit step. Removing it would make the failing command
+red at its own step instead of one step later, which is a clearer signal but a `.github/workflows` edit, and the
+reader already refuses the empty and error-document cases, so nothing is currently hidden. Recorded as an option,
+not applied.
+
+## 258. The token gates `/api/`, and twelve other surfaces were never inside that prefix
+
+`AuthMiddleware` short-circuits on four conditions, one of which is `not request.url.path.startswith("/api/")`.
+`docs/api.md` described the effect as "all `/api/*` routes (`/health`, `/ready`, `/version` stay public)", which
+reads like three exceptions to a service-wide rule. Measured with `DSA_AUTH_TOKEN` set, on the routes the app
+itself publishes:
+
+| side | count | surfaces |
+| --- | --- | --- |
+| refused without a bearer (`401`) | 19 | every `/api/...` route in the OpenAPI document |
+| answered without a bearer | 12 | `/health`, `/ready`, `/version`, `/health/dependencies`, `/metrics`, `/`, `/docs`, `/docs/oauth2-redirect`, `/redoc`, `/openapi.json`, `/mcp`, `/mcp-app` |
+
+The consequence that makes this more than a wording fix is `/mcp`, which sits on the ungated side and dispatches
+`run_python` and `run_sql`. §252 removed a sentence that claimed a token gated that surface; this entry removes
+the complementary misreading -- that a token gates everything else. Neither is a change to the boundary: what
+protects the tool surface remains the owner's decision (#59).
+
+`tests/contract/test_auth_surface.py` enumerates the surface from the app rather than from a list -- OpenAPI
+paths split on the prefix, the framework's own `openapi_url` / `docs_url` / `redoc_url` / OAuth-redirect URLs,
+and the mounted sub-apps -- then (a) requires each gated route to answer 401 with no credential, (b) requires
+each other route to answer at all, (c) admits a correct bearer and refuses a wrong token, an empty
+`Authorization`, and a `Basic` scheme, and (d) requires the auth bullet's backticked paths to equal the measured
+public set in both directions.
+
+The mutations say something about the structure of the guard, which is why they are recorded rather than skipped:
+restoring the old sentence reddened the doc equality and the naming test; blanking the token read reddened the
+three behavioural tests; naming a path in the docs that the service does not publicly serve reddened the
+equality; and **deleting the `/api/` predicate from the middleware reddened only the behavioural test** -- the
+doc equality stayed green, because the public set is derived from the route table, not from observed behaviour.
+That is the intended separation (the docs list what the service exposes; the requests prove what the middleware
+decides), but it also means a tightening that leaves the route table alone will not be caught by the prose pin.
+
+Found while reading the predicate: `_AUTH_PUBLIC_PATHS = {"/health", "/ready", "/version"}` is shadowed today.
+Every one of its members already fails `startswith("/api/")`, so the frozenset changes no outcome unless the
+prefix rule is removed -- and that is exactly what the fourth mutation showed, since deleting the predicate left
+those three public anyway through the set. It is not dead in the sense of unreachable; it is dead in the sense
+that it encodes a decision nothing currently exercises. Left in place: it is the statement of intent for the
+probes, and removing it would make a future tightening harder to read, not easier.
+
+One lint constraint worth remembering: naming the probe constant `TOKEN` trips `S105` (bandit's hardcoded-
+password heuristic) and `tests/**` does not ignore `S105`; the repo's existing convention is
+`AUTH_HEADER_VALUE` (`tests/contract/test_provider_settings.py:44`), which is what this file now uses. Adding a
+per-file ignore would have been the wrong move -- the exemption reachability test counts how often a rule
+actually fires.
+
+## 259. A deferred import, undone three files away
+
+`apps/api/src/dsa_api/services/dataset_service.py:95` reads "Keep the scientific dataframe stack off the API
+import path so lightweight health checks can start reliably on memory-constrained demo instances", above a
+function-local `from dsa_datasets.loader import load_dataframe`. It was decorative: `dsa_datasets/__init__.py`
+re-exported the whole layer eagerly, and importing a submodule executes the package initialiser first, so
+`from dsa_datasets.errors import ValidationError` at `routers/datasets.py:12` brought polars into the process
+anyway. Measured with the meta-path hook the round used elsewhere: the first `polars` import is triggered at
+`dsa_datasets/loader.py:6`, called from `dsa_datasets/__init__.py`, called from `dsa_api.routers.datasets`.
+
+```
+import dsa_api.routers.datasets   eager initialiser : 87.8 MiB, polars loaded
+import dsa_api.routers.datasets   lazy  initialiser : 64.3 MiB, polars absent
+import polars on its own                            : 0.15 s, ~30 MiB
+```
+
+The package resolves its names on first use now (PEP 562, `_EXPORTS` + `__getattr__` + `__dir__`), with `__all__`
+carrying the same eighteen names as before, so `from dsa_datasets import load_dataframe` still works, the
+resolution is cached in module globals, and an unknown attribute is still an `AttributeError` with the standard
+wording. Nothing in the repository imported these names from the package -- every caller uses the submodule path
+-- which is why the eager initialiser could cost 23 MiB and be invisible: it existed for an external reader of
+the surface, not for the code.
+
+The residual is named rather than fixed: `packages/agent/src/dsa_agent/graph.py:30` imports `dsa_datasets.loader`
+at module scope, so `dsa_api.main` still loads polars at boot (93.6 MiB, ~0.5 s of imports). Making the agent's
+graph lazy is a change to the core execution path for a saving the demo does not need -- Render's probe window is
+generous, 0.5 s is not what wakes an operator, and the upload route is where the deferral comment actually
+promised something. The `/health` row in `docs/api.md` now says which half of the promise is about the route and
+which is about the image, and points at the census instead of at numbers that would rot.
+
+`tests/contract/test_probe_promises.py`, 8 tests, covering both this and the claims that prompted it. Two shapes
+of proof matter here: the behavioural ones (broken engine → `/health` still `ok`, `/ready` → `degraded` with the
+sqlite error in `details.db`, working engine → `/ready` `ok`) and the out-of-process ones, because a `sys.modules`
+census inside the test session proves nothing -- polars is already loaded by then. The AST check on the liveness
+handler (`no engine / session / Depends / _database_status` in its names) exists because a database that is
+reachable during a test run hides a newly added dependency from every behavioural variant of that same claim.
+Six mutations, each reddening only what it should; restoring the eager re-export reddened exactly the upload-route
+census.
+
+## 260. "The route never contacts the provider" was a sentence, not a check
+
+`docs/api.md` promises that `PUT /api/v1/provider` is shape-validated only, because a verification call would
+spend the operator's credit or ship their data. Reading the module confirms it imports no HTTP client -- and
+confirming that is not the claim. The claim is about what the request does three calls deeper, through
+`provider_store.write()` and `resolve_llm_mode()`, where a "friendly" validation probe could be added tomorrow
+by someone reading only the docstring of the function they touched.
+
+The witness blocks the escape hatches instead of reading the imports: `socket.socket`,
+`socket.create_connection` and `socket.getaddrinfo` are replaced for the duration of the request by refusals
+that *record* the attempt, and each test asserts the recorded list is empty as well as asserting the response.
+The recording matters: a route that dialled out and happened to fail against port 4 would otherwise look like a
+test that passed. Three paths are covered -- the write, the two reads that report the resolved mode
+(`GET /api/v1/provider`, `/version`), and the erase -- with a distinctive key in the payload, so a call
+that shipped the credential would also be a leak the assertions could see.
+
+Falsification: one inserted line in `save_provider_settings` calling
+`socket.create_connection(("127.0.0.1", 4))` before validation reddened all three tests
+(`tests/contract/test_provider_route_is_offline.py`), while `tests/contract/test_provider_settings.py` stayed
+green with its sixteen tests intact. That gap is the entry's point -- the existing suite covers merge
+semantics, the 0600 file mode, the hosted refusal and the remote-write refusal, and none of it could notice a
+verification call. The route file was restored by digest, unchanged in the commit.
+
+Scope note, said plainly because it is easy to overread: this proves the provider settings path does not leave
+the process. It says nothing about the analysis path, which is supposed to make network calls when a real model
+is configured -- `DSA_LLM_MODE=real` exists precisely for that, and blocking sockets there would be blocking the
+feature.
+
+  Postscript on that commit, because the mechanism is easy to miss: the key it first shipped was copied verbatim
+from `tests/contract/test_provider_settings.py`, whose identical literal is listed in `.gitleaksignore`, and the
+secret scan stopped the push. Copying an ignored literal into a new file does not inherit the ignore -- the
+fingerprint is `commit:file:rule:line`, so that registry line points at the old file only. The first repair took the vendor shape out of the literal and left the random tail, and
+the scan stopped the push a second time on `generic-api-key` with entropy 4.34 -- the rule reads the tail, not
+the prefix. The value is now `probe-not-a-key`: short, dictionary, nothing for the detector to match.
+The test's property is untouched: what the assertions need is a string that would be a leak if it came back, not
+a string that could authenticate.
+
+## 261. A wait budget sized to one measurement, and the same mistake made twice in one day
+
+`apps/web/app/lib/backendProbe.ts` opens by recording what a cold free instance does: `GET /health` answered
+200 after 44.5 s on 2026-10-13. The attempt budget was then sized to clear that number "with margin" -- 4
+attempts x 12 s + 2/4/8 s of backoff = **62 s** -- and `tests/contract/test_web_backend_probe.py` compares the
+computed coverage against `COLD_START_MS_MEASURED = 44_500`. Today the same host, same route, took **92.8 s** to
+first byte (`curl -w time_starttransfer`, connection held open, 200 at the end). So the whole middle of a real
+wake was being reported to a visitor as `API unreachable — nothing answered`, and the guard stayed green because
+the constant it trusted described a single afternoon nine days earlier.
+
+The budget is now 6 attempts x 18 s + 2/4/6 s backoff = **132 s**, with windows opening at 0, 20, 40, 62, 86 and
+112 s so a 92.8 s wake lands inside the fifth request rather than after the give-up. Six attempts is the ceiling
+the module's own guard allows (`1 < attempts <= 6`): past that a bounded retry is not distinguishable from an
+infinite wait, and the length was moved into the per-attempt timeout instead of the count. `PROBE_SILENCE_HINT_MS`
+stays at 1500, which is what makes the waiting state appear while the request is still in flight rather than
+after an attempt dies -- the reason `warming` was once measured arriving at 12.4 s.
+
+Two structural changes so this cannot recur quietly:
+
+- The premise is a dated sample list, `{"2026-10-13": 44_500, "2026-10-22": 92_808}`, and coverage is compared to
+  the maximum. A slower wake raises the requirement instead of being out of date.
+- The reader-facing promise and the budget are now related rather than separately floored. The copy says "up to
+  two minutes" / "两分钟"; the guard parses the longest wait named in either language and requires the computed
+  coverage to clear it. The previous form -- `if the copy mentions minutes then coverage >= 45 s` -- would have
+  passed a two-minute sentence against a 46-second budget, which is the shape of the bug rather than a smaller
+  version of it.
+
+Falsified three ways: copy promising five minutes (red), the Chinese sentence dropping the wait (red, and only
+red because both locales are parsed), `PROBE_TIMEOUT_MS` at 4 s (red). The file's own long-standing plant --
+shrink one constant, the coverage assertion must fail -- stayed green-through-red as designed.
+
+The second half of this entry is about the instrument that found it. Earlier in the day this handoff recorded
+"both Render hosts returned `http=000` after 45 s... nobody can reach the demo", and the correction is that a
+45 s timeout on a 92.8 s wake produces exactly that reading. My own probe made the product's mistake against the
+product: too short a wait, then a confident negative. The lesson is the same in both halves -- a waiter's budget
+has to exceed the thing it waits for, measured at its slowest observed -- and the false claim is corrected in
+place in the twenty-second addendum rather than left standing.
+
+## 262. The same outside word reached two sinks, and only one of them had been fixed
+
+A previous round found run-derived text reaching the extension's webview HTML and fixed the escaping
+(`tests/vscode/test_vscode_extension.py::test_result_webview_escapes_run_derived_text`, the 8-test list in the
+README). The data flow has a second sink in the same three files, and it is worse than an XSS in an isolated
+webview: the dataset path, the typed question and the workspace-settable `dsa.pythonPath` were interpolated into
+a single string and given to `cp.exec`, i.e. to `/bin/sh`.
+
+```
+dataset = "/tmp/a$(touch /tmp/probe_pwn).csv"
+cmd     = `uv run dsa analyze ${JSON.stringify(dataset)} --task ${JSON.stringify(task)} --json`
+exec(cmd)  ->  marker created; the program received "/tmp/a.csv"
+```
+
+That was run with node and nothing but a filename. Two facts in one line: substitution happened, and the
+argument arrived truncated and quiet -- so even a world with no attacker had wrong analyses available from any
+CSV whose name contained `$(`. `JSON.stringify` is the thing that looks like protection and is not: it emits
+double quotes, shell double quotes still substitute `$(…)` and backticks, and it escapes neither.
+
+All six sites are `execFile`/`execFileSync` with argv now. The fixes are mechanical; the two things worth
+recording are:
+
+- The arch guard in the same file asserted `"uv run dsa" in dsa`, which is a claim about the *string shape*. It
+  went red under the fix, and the honest repair was to read the argv call (`execFile('uv', ['run', 'dsa'…`)
+  rather than delete the assertion or leave it satisfied by a comment -- a guard that keys on how a call is
+  spelled will keep breaking, and will keep tempting whoever breaks it to weaken it.
+- The new pair of tests: the shape check proves itself (the pre-fix line must match the predicate, the safe
+  line must not, so the guard cannot be silently blind), and the node probe asserts both halves of the
+  mechanism (`shellSubstituted: True`, `argvIntact: True`). Half of that pair alone would also pass in a world
+  where the string form had never been dangerous, which is the difference between a test and a witness.
+
+Widened while writing it: the predicate runs over every `.ts`/`.tsx`/`.mjs`/`.js` under `apps/` and `packages/`,
+not just the extension, because the fix is one directory's and the sink class is the repository's. Measured: zero
+other offenders. The receiver requirement (`\w+\.exec\(`) exists because `/rgba?\\(([^)]*)\\)/.exec(color)` in the
+web tour is a string method with the same name -- a guard that flags it gets loosened away, so the test asserts the
+false positive is not flagged alongside the true one.
+
+Residual, deliberately not patched: `dsa.pythonPath` still lets a workspace name a program. Without a shell, a
+hostile value can no longer be *parsed* into several commands, but it can still be one path to one binary -- that
+is what the setting means, and it is governed by VS Code workspace trust, not by quoting. The extension README
+says this in one clause so the next reader does not mistake argv for authorisation.
+
+## 263. The sentence about the unauthenticated surface described a shell, and the surface is neither that nor safe
+
+§252 established a fact -- `AuthMiddleware` returns early for any path that does not start with `/api/`, so
+`/mcp` and `/mcp-app` answer without a credential even when `DSA_AUTH_TOKEN` is set -- and `docs/MCP_DESIGN.md`
+carried it one step further than the evidence did: "Run the MCP endpoint only where you would run an
+unauthenticated shell: `run_python` and `run_sql` are among its tools." That step is an inference from *no gate*
+to *no limit*, and both halves of it were wrong in opposite directions. Measured against a local instance on
+2026-10-22:
+
+- `run_python` refuses the obvious thing. `{"code": "import os"}` -- "Import denied: os".
+- `run_sql` refuses the obvious thing. "Disallowed SQL pattern: '\\bread_\\w+'" against a `read_csv` call.
+- `profile_dataset` reads a file outside the repository and hands its contents back. A CSV written to a
+  temporary directory, named nothing the repository contains, returned a column profile whose
+  `sample_values` were the literal cell strings. `/etc/hosts` was refused -- not because of where it is, but
+  because it has no recognised extension.
+
+So the surface is narrower than a shell and worse than the paragraph allowed: the sandboxed tools are fenced
+and the unfenced one is the tool that takes a `path`. The reach is exactly `validate_file`'s extension
+whitelist -- `.csv`, `.json`, `.jsonl`, `.parquet`, `.xls`, `.xlsx` -- applied to a path the caller names.
+
+Two things were done, and one was deliberately not. `docs/MCP_DESIGN.md` and `docs/hosted-demo.md` now say what
+was measured, including that visitor *uploads* are not enumerable through it because stored names are
+`<uuid>_<filename>`, so the exposure is the host's files rather than other visitors' rows. The extension list
+is pinned rather than transcribed: `test_the_extensions_the_mcp_boundary_sentence_lists_are_the_ones_the_loader_accepts`
+compares the sentence to `ALLOWED_EXTS`, read folded because the sentence wraps. Both directions were checked --
+dropping `.json` from the sentence is red, adding a seventh format to `ALLOWED_EXTS` is red -- so the guard
+covers the doc drifting from the code and the code widening past the doc. The decision that was *not* taken is
+the one the ledger has carried since §252 and #59 still holds: authenticate `/mcp`, bind it to loopback, or
+accept it as the price of a public tool endpoint. That changes what a deployed instance offers to anonymous
+callers, so it is the owner's call, and nothing in this round pre-empts it.
+
+The shape worth keeping is the general one: a documented *absence* of enforcement is not evidence about
+capability. It is one fact, and the interesting question is per-tool. The previous sentence felt responsible
+because it was alarming, and alarming prose is easy to leave unmeasured.
