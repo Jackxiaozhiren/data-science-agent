@@ -24,6 +24,9 @@
   satisfy a guard would have re-created the dead-code shape §271 documented.
 - `profile_dataset` stays, and the docs say so: the arbitrary-path read and the path-existence oracle are
   unchanged. Narrower, not closed; the authentication half of #59 stays open.
+- `AUDIT_LEDGER.md` §277, with the numbering note in `HANDOFF-2026-10-19.md`: a peer session took §276 for
+  the dependency queue while this round's section was being written, so the unpublished numbers moved
+  rather than the published one.
 
 ### Changed (post-4.6.0) — secret scanning gained a nightly sweep it cannot lose
 
@@ -38,6 +41,7 @@
   properties (schedule, cron, non-cancellable sweep, `fetch-depth: 0`, pinned `GITLEAKS_VERSION`, `SCOPE=`) and
   was falsified against the previous file: restore the old workflow and it reddens, restore the new one and it is
   green.
+- `AUDIT_LEDGER.md` §278.
 
 ### Fixed (post-4.6.0) — the upload refusal now names the rule it fired instead of alleging traversal
 
