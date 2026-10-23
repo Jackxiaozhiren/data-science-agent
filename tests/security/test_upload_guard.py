@@ -465,3 +465,77 @@ def test_the_mime_sniff_module_is_not_called_by_any_shipped_path() -> None:
     assert callers == [], (
         f"the sniffer gained a caller; update the docs and the differential: {callers}"
     )
+
+
+#: Recorded from the measurement that motivated the change: the accept/reject verdicts are the contract, and
+#: they are written out here rather than recomputed from the old predicate, so a future edit that moves a
+#: verdict shows up as a diff against a fixed list instead of silently agreeing with itself.
+_FILENAME_VERDICTS = [
+    ("a.csv", True),
+    ("my data (1).parquet", True),
+    ("data..v2.csv", False),
+    ("Q1..Q2.csv", False),
+    ("..", False),
+    (".", True),  # accepted by the name rule and stopped one line later, asserted below
+    ("", False),
+    ("x" * 256, False),
+    ("../x.csv", False),
+    ("a/b.csv", False),
+    ("a//b.csv", False),
+    ("a\\b.csv", False),
+    ("./x.csv", False),
+    ("x.csv/", False),
+    ("we$ird.csv", False),
+]
+
+
+def test_the_filename_refusal_says_which_rule_fired() -> None:
+    """`data..v2.csv` was refused and accused of path traversal; the refusal was right, the reason was not.
+
+    The separator check already refuses any `/` or `\\`, and the stored name is
+    `f"{dataset_id}_{filename}"`, so a `..` in a name cannot traverse. That makes the old message a false
+    accusation on ordinary input, and a reader who trusts it will go looking for a traversal that never was
+    possible. The verdicts are unchanged -- `test_the_filename_rule_refuses_what_it_always_refused` pins that --
+    and only which sentence each case gets is fixed.
+    """
+    from dsa_datasets.validate import validate_filename
+
+    for name, reason in (
+        ("data..v2.csv", "must not contain '..'"),
+        ("../x.csv", "must not contain '..'"),
+        ("a/b.csv", "separators"),
+        ("a//b.csv", "separators"),
+    ):
+        with pytest.raises(ValidationError) as exc:
+            validate_filename(name)
+        assert reason in str(exc.value), f"{name!r} got the wrong diagnosis: {exc.value}"
+        assert not str(exc.value).startswith("Path traversal detected"), (
+            f"{name!r} is still being accused before the rule is named: {exc.value}"
+        )
+
+
+def test_a_bare_dot_needs_no_filename_rule_because_no_extension_survives() -> None:
+    """`validate_filename(".")` passes, which reads like a hole until the next check is named.
+
+    The name reaches the format detector before anything touches disk, and an extension-less name has no
+    allowed format, so the upload is refused there. Asserting the pair keeps the recorded verdict table honest
+    about *which* rule is doing the refusing -- the same distinction the message fix is about.
+    """
+    from dsa_datasets.errors import UnsupportedFormatError
+    from dsa_datasets.validate import validate_file, validate_filename
+
+    assert validate_filename(".") == "."
+    with pytest.raises(UnsupportedFormatError):
+        validate_file(".", 12, head=b"whatever")
+
+
+def test_the_filename_rule_refuses_what_it_always_refused() -> None:
+    """The policy question stays the owner's (#71): narrowing `..` to path segments is not this change."""
+    from dsa_datasets.validate import validate_filename
+
+    for name, accepted in _FILENAME_VERDICTS:
+        if accepted:
+            assert validate_filename(name) == name, f"{name!r} must still be accepted"
+        else:
+            with pytest.raises(ValidationError):
+                validate_filename(name)

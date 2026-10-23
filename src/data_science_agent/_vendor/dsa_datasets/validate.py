@@ -17,8 +17,6 @@ ALLOWED_EXTS: dict[str, DatasetFormat] = {
 
 MAX_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB MVP limit per spec §44
 
-_UNSAFE_PATTERNS = re.compile(r"(\.\.|//|\\\\)")
-
 _ARCHIVE_EXTS = {".zip", ".gz", ".tar", ".tgz", ".7z", ".rar"}
 
 #: Leading bytes that identify a container format, checked against the file itself rather than its name.
@@ -36,8 +34,10 @@ _ZIP_IS_EXPECTED = {".xlsx"}
 def validate_filename(filename: str) -> str:
     if not filename or len(filename) > 255:
         raise ValidationError("Invalid filename length")
-    if _UNSAFE_PATTERNS.search(filename):
-        raise ValidationError("Path traversal detected in filename")
+    if ".." in filename:
+        # The rule leads, because that is what the caller broke; the reason it exists is named after it, so a
+        # file genuinely named `Q1..Q2.csv` is not accused of traversal while `../x.csv` still reads as one.
+        raise ValidationError("Filename must not contain '..' (path traversal)")
     if "/" in filename or "\\" in filename:
         raise ValidationError("Filename must not contain path separators")
     # allow alnum, dot, dash, underscore, space, parens

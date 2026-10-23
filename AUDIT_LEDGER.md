@@ -15798,6 +15798,35 @@ Worth naming the general shape next to the existing note that "green does not me
 does not mean the range ran either, and `skipped`/`cancelled` on a check that is not a required status is
 invisible to a reader looking only at the commit badge. The per-step read the handoff now does for CI is the
 same read this finding asks for on the scan workflows.
+
+§274 follow-up, same day -- the message was fixed and the policy was not.
+
+`validate_filename` now refuses with the rule that fired: `'..'` reports `Filename must not contain '..' (path
+traversal)`, a single separator reports `Filename must not contain path separators`. The `_UNSAFE_PATTERNS`
+regex that mixed both -- `..`, `//` and `\` under one traversal sentence -- is gone, and the vendored twin was
+re-synced and compared byte-for-byte.
+
+The accept/reject set did not move, and that is asserted rather than argued: fifteen names were run through both
+the old and the new predicate and the verdicts came out identical for all fifteen. The table now lives in
+`tests/security/test_upload_guard.py` written out as literals rather than recomputed from the old rule, so a
+future shift in one verdict shows up as a diff instead of a self-agreeing test. The first draft of that
+table was written from the probe I remembered rather than the probe I ran, and got `.` wrong -- it landed
+as `False`, the suite went red on `DID NOT RAISE`, and the fix was to re-run both predicates and paste
+the verdicts. A behaviour-preservation table that is itself a transcription is worth nothing; this one is
+now a measurement with the mistake in its history. One row is in it precisely
+because it looks wrong at first glance: `validate_filename(".")` passes. It is stopped one line later by
+`detect_format`, which finds no allowed extension -- and the test asserts that pair, because "which rule
+actually refused this upload" is the same distinction the message fix is about.
+
+Why the wording moved and not the neighbour's assertion: `tests/security/test_adversarial_suite.py:53` matches
+the message against `traversal|separator|path`. Tightening their regex to my new strings would have worked and
+was the wrong trade, editing someone else's contract to fit mine; keeping the reason in parentheses leaves
+theirs passing, keeps the traversal vocabulary greppable in logs, and still stops accusing an ordinary
+filename. Where both needs fit was the message; the regex was where they collided.
+
+What is still the owner's call is the half this change did not take: refusing a name for containing two dots is
+a policy, and narrowing it to `.`/`..` as whole segments would turn a 400 into a 201 for a visitor uploading
+`Q1..Q2.csv`. Open item #71 carries that, and the refusal fires today exactly as it did before.
 ## 276. The dependency queue had three causes, and my own waiter invented a fourth
 The queue looked like one job -- land the open Dependabot bumps -- and turned out to be three different
 failures wearing the same clothes, plus one I built myself.
