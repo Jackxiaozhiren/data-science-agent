@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the upload refusal now names the rule it fired instead of alleging traversal
+
+- `validate_filename` mixed `..`, `//` and `\` into one regex behind one sentence, "Path traversal detected in
+  filename", so an ordinary name like `Q1..Q2.csv` was refused and accused of an attack that the surrounding
+  rules make impossible: separators are refused on their own, and the stored name is `<uuid>_<filename>`
+  (`dataset_service.py:90`), which puts the uuid in front of anything a caller spells.
+- Each rule now reports itself -- `Filename must not contain '..' (path traversal)`, `Filename must not contain
+  path separators` -- and the mixed pattern is gone, with the vendored twin re-synced and compared byte-for-byte.
+  The reason stays in parentheses rather than being dropped: `tests/security/test_adversarial_suite.py:53` greps
+  the message for `traversal|separator|path`, and tightening someone else's contract to fit a new string is the
+  wrong direction for a wording change.
+- **No policy moved.** Fifteen names were run through both the old and the new predicate and the verdicts are
+  identical, so nothing that uploaded before fails now and nothing that failed before uploads now. The recorded
+  verdict table in `tests/security/test_upload_guard.py` is literal rather than recomputed, and it includes
+  `validate_filename(".")` passing -- refused one line later by `detect_format`, which finds no allowed extension
+  -- because "which rule actually stopped this" is the distinction the whole change is about. Whether to narrow
+  `..` to whole path segments, turning a 400 into a 201 for such names, stays the owner's call (#71).
+- `AUDIT_LEDGER.md` 274 with its same-day follow-up.
+
 ### Changed (post-4.6.0) — the sandbox's wall-clock timeout bounds reported time, not occupied time
 
 - Measured at both ends with `timeout_ms=300`: `while True: n += 1` stopped at 331 ms of wall clock (inside a
