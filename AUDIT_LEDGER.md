@@ -15695,3 +15695,27 @@ contains the string `mime_sniff` in the very comment that explains why it does n
 would report that comment as a caller. The first is falsified by tightening the sniffer's `.xls` entry to an
 empty set, which makes the live rule the looser one and reddens it naming that case; the second by planting a
 temporary module that imports it, then removing it and proving it is gone.
+
+## 272. The sandbox's wall-clock timeout bounds reported time, not occupied time -- measured at both ends
+
+`docs/security.md` listed "wall-clock timeout" among the Python guard's controls. `_LoopDeadline` documents its
+own coverage honestly -- pure-Python iteration is interruptible at loop heads, "a single long call into C still
+runs to completion and is only reported afterwards" -- so the check was not whether the code lies, but whether
+the sentence around it carries the caveat. Measured on 2026-10-23 with `timeout_ms=300`:
+
+- `while True: n += 1` -- wall clock 0.33 s, reported 312 ms, `TimeoutError`. The deadline fires, within one
+  frame of the budget.
+- `np.matmul(np.ones((3200, 3200)), np.ones((3200, 3200)))` -- wall clock 0.34 s, reported 331 ms,
+  `TimeoutError`. The matrix multiply ran to its natural end; the budget was noticed afterwards. Same code at a
+  1000 ms budget: 0.37 s, no error, which is the control that says the first answer was not just a slow machine.
+
+So the timeout is a *reporting* bound for C calls and only an *execution* bound for interpreted loops. That is
+worth one sentence in a security document because the two behave differently under the only threat that matters
+here: an anonymous caller who can reach `/mcp` can occupy an API worker for as long as one call takes, and on a
+0.5-vCPU free instance the cheapest way to make the demo slow is not exfiltration but arithmetic. No plant was
+run that deliberately outlasted tens of seconds -- the 331 ms case is enough to show the mechanism, and the
+matmul size is a knob a reader can turn in their own head rather than on their own CPU.
+
+The doc line now says which half is enforced, cites the module's own docstring, and names the availability
+consequence next to #59. The loop case and the C-call case are both in the sentence because a claim about a
+mechanism needs both directions, and the second one is what stops the reader assuming the budget is a wall.

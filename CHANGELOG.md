@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the sandbox's wall-clock timeout bounds reported time, not occupied time
+
+- Measured at both ends with `timeout_ms=300`: `while True: n += 1` stopped at 331 ms of wall clock (inside a
+  frame of the budget), while `np.matmul` on a 3200x3200 ran to its natural end at 331 ms and *then* reported
+  `TimeoutError` -- the same code at a 1000 ms budget completed with no error, which is the control that says
+  the first case was not a slow machine.
+- `_LoopDeadline`'s own docstring already says this; the sentence around it did not. `docs/security.md` now
+  names which half is enforced, and the consequence: an anonymous caller who can reach `/mcp` can occupy a
+  worker for as long as one C call takes, and on a 0.5-vCPU free instance the cheapest attack on the demo is
+  arithmetic, not exfiltration. Stated beside #59. No deliberately long-running plant was executed.
+- Ledger §272.
+
 ### Fixed (post-4.6.0) — the doc-citation guard went red in CI on its own first run, and the failure was the finding
 
 - `tests/contract/test_doc_code_paths.py` passed on the machine that wrote it and failed `ci` for `143896c`:
