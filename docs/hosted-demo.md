@@ -216,7 +216,28 @@ curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/datasets/
 `/version` reports the version of the distribution actually installed in the running container, read from
 its package metadata, plus the effective reasoning mode (`/health` stays import-free and I/O-free, so the
 mode is not published there). A first request may take tens of seconds: the free instance spins down when
-idle.
+idle -- measured at 44.5 s and at 92.8 s on the two days this was checked, from the same service.
+
+Three answers decide whether a redeploy did its job, and none of them needs a credential:
+
+```bash
+curl -s https://data-science-agent-api-h43i.onrender.com/version | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"
+curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/research/experiments \
+  | python3 -c "import json,sys; print('deployed', json.load(sys.stdin)['total'], 'tracked', $(git ls-files research/results | wc -l | tr -d ' '))"
+```
+
+The first has to name the tag that was just built, not the one before it. The second has to carry a
+`script-src 'sha256-…'` for the page being served: a policy of `default-src 'none'` on an HTML document is the
+browser refusing to run that document's own script, which is a page that looks present and does nothing. The
+third compares the deployment against the repository rather than against a number written into this file -- as
+measured on 2026-10-22 the hosted answer was 3 and `git ls-files research/results` counts 3, which is the shape
+a passing check has: two independent counts that are allowed to disagree.
+
+The web side is checked the same way, from wherever you are:
+`curl -sI https://data-science-agent-web.vercel.app/datasets`. A healthy answer is an HTTP `200` with the app
+shell; a TCP connect that never completes says about your path what a 62-second probe said about the API last
+round, which is why the timeout on the command matters as much as its status code.
 
 What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
 published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance
@@ -326,6 +347,21 @@ Consequences an operator should state rather than imply: the public demo runs on
 credentials belong to a private instance started with `dsa ui`, where the key is stored 0600 in that user's own
 data directory. `GET /version`'s `reasoning_mode.source` tells a reader which knob decided the mode on the
 instance they are talking to.
+
+One more, because it is measured rather than inferred: the `/mcp` surface on the same host takes no credential at
+all (`AuthMiddleware` is `/api/*`-only), and `profile_dataset` accepts any path whose extension it recognises, so
+a caller can have a file outside the repository read back to them as a profile -- including the literal first
+values of its columns. `run_python` refuses `import os` and `run_sql` refuses `read_*`, so this is not an
+arbitrary-code path and not a general file *reader*: it reads files ending in `.csv`, `.json`, `.jsonl`,
+`.parquet`, `.xls` or `.xlsx`, which on a deployed container includes configuration and credential files that
+happen to carry those extensions. It is however a host-wide path oracle, and that half is wider than the six
+extensions: the tool checks that a path exists before it checks the suffix, so an existing file answers
+`Unsupported file extension` and an absent one answers `File not found`, and any path on the container can be
+confirmed or denied by name even when it can never be read. Visitor uploads are not enumerable through it (the
+stored names are `<uuid>_<filename>`), so the exposure is the host's files rather than other visitors' rows. What
+to do about it -- authenticate that surface, restrict it to loopback, or accept it as the price of a public tool
+endpoint -- is an open owner decision, recorded in `AUDIT_LEDGER.md`; the sentence is here so nobody has to read
+the code to learn the boundary.
 
 ## Required configuration
 

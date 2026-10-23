@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the `/mcp` boundary sentence was measured instead of inferred, and both halves moved
+
+- `docs/MCP_DESIGN.md` told the operator to run the MCP endpoint "only where you would run an unauthenticated
+  shell". §252 had proved the surface takes no credential, and the sentence generalised that into a claim about
+  capability. Measured on a local instance: `run_python` answers `Import denied: os`, `run_sql` answers
+  `Disallowed SQL pattern: '\bread_\w+'`, so the surface is *not* a shell -- and it is also not what the
+  paragraph worried about, because the tool with no fence is `profile_dataset`. It takes any `path` the caller
+  names, checks only the extension, and returns the file: a CSV in a temporary directory came back with its
+  literal cell values in `sample_values`, and `/etc/hosts` was refused for lacking a recognised suffix rather
+  than for being outside the repository.
+- Both documents now state the measured boundary, including the part that bounds it: stored visitor uploads are
+  named `<uuid>_<filename>` and are not enumerable through the surface, so what an anonymous caller reaches is
+  the host's files, not other visitors' rows. `docs/hosted-demo.md` carries the same paragraph for whoever
+  operates the demo, and `AUDIT_LEDGER.md` §263 keeps the measurements.
+- The extension list in the new sentence is a transcription of `ALLOWED_EXTS`, so it is now checked rather than
+  trusted: `test_the_extensions_the_mcp_boundary_sentence_lists_are_the_ones_the_loader_accepts` compares the
+  two sets over whitespace-folded text, because the sentence wraps. Dropping `.json` from the doc is red and
+  adding a seventh format to the loader is red, which is the whole point -- the readable set and the documented
+  set are one fact, and the code decides it.
+- Follow-up, same day, and it widened the finding: `profile_dataset` checks that the path exists *before* it
+  checks the extension, which is a second disclosure and a broader one. Measured with a matched pair in one
+  directory, differing only in whether the file is there -- an existing extensionless path answers
+  `Unsupported file extension`, an absent one answers `File not found` -- the unauthenticated surface is a
+  host-wide path-existence oracle over every path, including the ones it can never read. `docs/hosted-demo.md`
+  had said the opposite in one clause ("not a general file-system oracle"), written from the earlier partial
+  measurement, so that sentence was replaced rather than softened, and the extension guard now reads both
+  documents -- two anchored clauses, each compared to `ALLOWED_EXTS`, and dropping one extension from either
+  document is red. New pin: `test_profile_dataset_answers_differ_only_by_whether_the_path_exists`, which goes
+  red if the two errors ever collapse -- by reordering the checks or by confining the tool to a data root.
+- Left open on purpose: whether to authenticate `/mcp`, bind it to loopback, or accept it as the price of a
+  public tool endpoint. That changes what a deployed instance offers to anonymous callers, so it is the owner's
+  decision (open item #59), and correcting the prose deliberately does not pre-empt it.
+
 ### Changed (post-4.6.0) — the hosted-demo census gained a third probe and a re-run
 
 - `docs/hosted-demo.md` already carried two credential-free currency probes: an OpenAPI path census and a
@@ -42,6 +75,29 @@
   wait (promise pin red, which is the half a single-language check would have missed), a 4 s per-attempt
   timeout (coverage pin red). 8 tests in `tests/contract/test_web_backend_probe.py` green, including the plant
   that has always been there -- shrink one constant and the guard must fail.
+
+### Security (post-4.6.0) — the VS Code extension handed the shell a filename
+
+- Every CLI call in `apps/vscode/src/dsa.ts` was one interpolated string passed to `cp.exec`, which runs it
+  through `/bin/sh`. The interpolated words were the dataset path (taken from the file picker or the workspace
+  tree the extension itself lists), the typed question, and `dsa.pythonPath` -- a setting a repository can ship
+  in `.vscode/settings.json`. `JSON.stringify` was used as quoting, and it is not: its quotes are shell double
+  quotes, which still expand `$(…)` and backticks.
+- Measured, not inferred: a path shaped like `/tmp/a$(touch /tmp/probe_pwn).csv` built into the same string and
+  handed to `exec` created the marker and reached the receiving program as `/tmp/a.csv` -- code ran, and the
+  argument arrived silently truncated. Both halves matter: the second one means a *benign* file named with `$(`
+  already produced wrong analyses before there was any attacker.
+- All six call sites now use `execFile`/`execFileSync` with an argv array; `extension.ts`'s `execSync` came with
+  them. The arch guard in `tests/vscode/test_vscode_extension.py` that asserted the literal `"uv run dsa"` was
+  reading the old string shape and now matches the argv call, so no assertion was loosened to accommodate the fix.
+- Guards: a shape check for `execSync(`, `<receiver>.exec(` and `promisify(x.exec)` over **every** `.ts`, `.tsx`, `.mjs` and `.js` file under `apps/` and `packages/` (measured: the extension was the only offender, so the guard now locks the class rather than one directory), and it proves *itself*
+  -- `cp.exec(cmd, …)` must be caught, `execFile('uv', argv)` and a regular expression's own `.exec()` must not
+  be, because a predicate with false positives gets loosened away within a week -- plus a node probe that runs the pair and asserts `shellSubstituted: True, argvIntact: True`. A
+  test that showed only the argv half would still pass in a world where the string half was safe.
+- Residual, named rather than fixed: `dsa.pythonPath` still names a program the workspace can choose, which is a
+  trust decision VS Code mediates with workspace trust; removing the shell means a value there is no longer
+  *parsed*, but a hostile value could still name a binary to run. That is the setting's meaning, not a bug to
+  patch here, and it is why the extension README says the argv form is what changed.
 
 ### Verified (post-4.6.0) — the settings route's promise to stay offline is now enforced
 
