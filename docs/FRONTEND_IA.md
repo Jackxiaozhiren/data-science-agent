@@ -265,8 +265,10 @@ Deliberately not built, each with the reason, so the next reader finds a decisio
   default language. The header looked translated because it takes `locale` as a prop, which is what made the
   screen read as half-done rather than broken. No source guard and no single-page browser check could see it:
   the parity guards read the dictionary and the page files, and the tour asserts layout rather than language.
-  `test_the_provider_wraps_the_shell_not_just_the_route` now pins the nesting, and the live navigation check
-  (`build/r13f-nav-acceptance.mjs`) reads header, sidebar and footer text in both languages.
+  `test_the_provider_wraps_the_shell_not_just_the_route` now pins the nesting, and the live chrome acceptance
+  (`apps/web/scripts/locale-chrome-acceptance.mjs`) reads the shell's own text -- its selector covers `nav a`,
+  `header a` and `footer a`, so the sidebar, header and footer are all in scope -- on every route in both
+  languages.
 - **The regression tour reads English.** `apps/web/scripts/regression.mjs` asserts or locates on nine English
   strings (measured 2026-10-19: `Browse files`, `Waking… n/n`, `Attempt n of n`, `waking up`, `API unreachable`,
   `nothing answered`, `Checking API`, `Loading table`, `Loading page`) and every one of them is a dictionary
