@@ -519,7 +519,9 @@ def test_the_filename_refusal_says_which_rule_fired() -> None:
         )
 
     for name in ("data..v2.csv", "Q1..Q2.csv", "....csv"):
-        assert validate_filename(name) == name, f"{name!r} carries no '..' segment and must be accepted"
+        assert validate_filename(name) == name, (
+            f"{name!r} carries no '..' segment and must be accepted"
+        )
 
 
 def test_a_bare_dot_needs_no_filename_rule_because_no_extension_survives() -> None:
@@ -578,5 +580,7 @@ def test_an_accepted_name_cannot_climb_out_of_the_dataset_directory(tmp_path) ->
         validated = validate_filename(name)
         stored = datasets / f"0f6c4b6a-1c2d-4e3f-8a9b-0c1d2e3f4a5b_{validated}"
         resolved = stored.resolve()
-        assert resolved.is_relative_to(datasets.resolve()), f"{name!r} resolves outside its root: {resolved}"
+        assert resolved.is_relative_to(datasets.resolve()), (
+            f"{name!r} resolves outside its root: {resolved}"
+        )
         assert outside not in resolved.parents and resolved != outside / "victim.csv", name

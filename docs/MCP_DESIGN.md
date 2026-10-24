@@ -49,14 +49,21 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
   unaffected: `dsa mcp` is launched by whoever owns that machine and publishes the whole registry.
 - What a credential-less caller can still do over HTTP after that: read and probe through `profile_dataset`, with
   the reach and the path-existence oracle described two bullets up, plus the analysis and reporting tools that
-  operate on data the caller supplies. Narrower, not closed -- authenticating the surface or binding it to
-  loopback remains the owner's open decision (`AUDIT_LEDGER.md` §265).
+  operate on data the caller supplies. Narrower, not closed -- and the owner decided on 2026-10-24 to leave it
+  closed no further **for the free public demo** (`AUDIT_LEDGER.md` §265, §289): the demo holds no user data, its
+  container's disk is ephemeral, and the alternative that would seal the surface -- `DSA_AUTH_TOKEN` -- gates
+  `/api/*`, so setting it turns every anonymous visitor's page into a wall of 401s. That is a decision about this
+  deployment, not a safety property of the code. Anywhere else, the boundary is still the one this file names:
+  authenticate `/mcp`, bind it to loopback, or do not expose it.
 - One limit this file cannot express: what a running instance publishes is decided by the build it was made
   from, not by the paragraph above. The Render demo was redeployed from `main` on 2026-10-24 and its
   credential-free `tools/list` then omitted both names, with a call to either answered by `-32000`; that is the
   check, and it is worth running before repeating any sentence from this file about a live host. The command is
   in `docs/hosted-demo.md`.
 - MCP surface mirrors the Tool Layer with friendly names.
+- The `/mcp-app/` page is a browser document this process serves, not a protocol surface: it is advertised in no
+  `resources/list` entry, so a client discovers tools and resources without ever learning it exists. The wording and
+  the reason for choosing it live in `docs/mcp.md`, which owns that claim.
 
 ## Tools Exposed
 The table is the surface; `dsa mcp` prints what `tools/list` publishes, and a client reads the parameters from each

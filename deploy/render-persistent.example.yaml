@@ -45,6 +45,6 @@ services:
       # Kept identical to the live root render.yaml: the explicit production
       # origin plus the regex that covers Vercel preview hostnames.
       - key: DSA_CORS_ORIGINS
-        value: https://data-science-agent-web-rr93.vercel.app
+        value: https://data-science-agent-web.vercel.app
       - key: DSA_CORS_ORIGIN_REGEX
         value: https://.*\.vercel\.app

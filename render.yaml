@@ -29,11 +29,12 @@ services:
         value: /tmp/artifacts
       - key: PYTHONUNBUFFERED
         value: "1"
-      # Browser origins allowed to call the API. Explicit production origin
-      # plus a regex covering Vercel preview deployments (hostnames churn
-      # per build, so they cannot be enumerated). Demo API carries no
-      # credentials; CORS here is browser UX, not access control.
+      # Browser origins allowed to call the API. Explicit production origin --
+      # the host README links -- plus a regex covering every other
+      # `*.vercel.app`, which is how the second live hostname and each
+      # preview keep working without being enumerated here. Demo API carries
+      # no credentials; CORS here is browser UX, not access control.
       - key: DSA_CORS_ORIGINS
-        value: https://data-science-agent-web-rr93.vercel.app
+        value: https://data-science-agent-web.vercel.app
       - key: DSA_CORS_ORIGIN_REGEX
         value: https://.*\.vercel\.app

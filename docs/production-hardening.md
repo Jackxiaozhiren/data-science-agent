@@ -79,7 +79,7 @@ Set these environment variables:
 DSA_DATASET_DIR=/var/data/datasets
 DSA_DATABASE_URL=sqlite+aiosqlite:////var/data/dsa.db
 DSA_ARTIFACT_ROOT=/var/data/artifacts
-DSA_CORS_ORIGINS=https://data-science-agent-web-rr93.vercel.app
+DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
 DSA_CORS_ORIGIN_REGEX=https://.*\.vercel\.app
 DSA_LLM_MODE=heuristic
 DSA_LLM_FALLBACK=heuristic
