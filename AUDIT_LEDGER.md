@@ -16365,7 +16365,7 @@ canonical host and must *not* carry the second one, `render.yaml` is read as a c
 its comment, and the census assertion still refuses a third project. Falsified by the shape of the failure it
 prevents -- putting the suffixed host back into a copy-paste block reddens both the list test and the blueprint
 assertion.
-## 289. The mechanical batch landed clean, and the claim I wrote into §279 turned out to be unsupported
+## 292. The mechanical batch landed clean, and the claim I wrote into §279 turned out to be unsupported
 
 Four Dependabot PRs (#114 #115 #116 #117) landed as #122; one main-red unblock went in as #123; #119 is
 held, and holding it is the entry's real content because the reason I first gave for holding it was wrong.
