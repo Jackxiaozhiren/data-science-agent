@@ -91,6 +91,11 @@
   backstop cannot be interrupted while push/PR runs keep their fast-feedback cancellation.
 - Every run prints its own `SCOPE=`, so the log answers "what was covered" instead of leaving it to be inferred
   from a green tick.
+- Follow-up measured 2026-10-24: the scheduled branch has not produced a run yet (`event=schedule` returns zero),
+  2 h 37 min past its first slot. Scheduling itself works here -- `stale.yml` fires daily, arriving ~5 h 17 min
+  after its cron minute -- so this records the sweep as *configured and non-cancellable*, not yet witnessed
+  firing. `AUDIT_LEDGER.md` §284 carries the check and the fallback.
+
 - `tests/security/test_w7_supply_chain.py::test_secret_scan_workflow` went from one substring check to six named
   properties (schedule, cron, non-cancellable sweep, `fetch-depth: 0`, pinned `GITLEAKS_VERSION`, `SCOPE=`) and
   was falsified against the previous file: restore the old workflow and it reddens, restore the new one and it is
