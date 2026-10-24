@@ -473,8 +473,12 @@ def test_the_mime_sniff_module_is_not_called_by_any_shipped_path() -> None:
 _FILENAME_VERDICTS = [
     ("a.csv", True),
     ("my data (1).parquet", True),
-    ("data..v2.csv", False),
-    ("Q1..Q2.csv", False),
+    # Two dots inside a name are not a path segment. Widened 2026-10-24 on the owner's decision (#71): the
+    # separator rule below refuses every `/` and `\`, and the stored name is `<uuid>_<filename>`, so a name
+    # carrying `..` cannot climb. `Q1..Q2.csv` is a filename someone typed, not an attack.
+    ("data..v2.csv", True),
+    ("Q1..Q2.csv", True),
+    ("....csv", True),
     ("..", False),
     (".", True),  # accepted by the name rule and stopped one line later, asserted below
     ("", False),
@@ -490,19 +494,20 @@ _FILENAME_VERDICTS = [
 
 
 def test_the_filename_refusal_says_which_rule_fired() -> None:
-    """`data..v2.csv` was refused and accused of path traversal; the refusal was right, the reason was not.
+    """A refusal names the rule that fired, and only the names that actually climb are refused at all.
 
-    The separator check already refuses any `/` or `\\`, and the stored name is
-    `f"{dataset_id}_{filename}"`, so a `..` in a name cannot traverse. That makes the old message a false
-    accusation on ordinary input, and a reader who trusts it will go looking for a traversal that never was
-    possible. The verdicts are unchanged -- `test_the_filename_rule_refuses_what_it_always_refused` pins that --
-    and only which sentence each case gets is fixed.
+    `data..v2.csv` used to be refused and accused of path traversal; the accusation was false because the
+    separator rule refuses every `/` and `\\` and the stored name is `f"{dataset_id}_{filename}"`, so nothing in
+    such a name can traverse. The owner's decision on 2026-10-24 (#71) took the next step and narrowed the rule
+    to whole path segments, so that name is now accepted and the traversal sentence is reserved for names that do
+    carry a `..` segment.
     """
     from dsa_datasets.validate import validate_filename
 
     for name, reason in (
-        ("data..v2.csv", "must not contain '..'"),
-        ("../x.csv", "must not contain '..'"),
+        ("../x.csv", "a '..' path segment"),
+        ("..", "a '..' path segment"),
+        ("a/..", "a '..' path segment"),
         ("a/b.csv", "separators"),
         ("a//b.csv", "separators"),
     ):
@@ -512,6 +517,9 @@ def test_the_filename_refusal_says_which_rule_fired() -> None:
         assert not str(exc.value).startswith("Path traversal detected"), (
             f"{name!r} is still being accused before the rule is named: {exc.value}"
         )
+
+    for name in ("data..v2.csv", "Q1..Q2.csv", "....csv"):
+        assert validate_filename(name) == name, f"{name!r} carries no '..' segment and must be accepted"
 
 
 def test_a_bare_dot_needs_no_filename_rule_because_no_extension_survives() -> None:
@@ -529,8 +537,13 @@ def test_a_bare_dot_needs_no_filename_rule_because_no_extension_survives() -> No
         validate_file(".", 12, head=b"whatever")
 
 
-def test_the_filename_rule_refuses_what_it_always_refused() -> None:
-    """The policy question stays the owner's (#71): narrowing `..` to path segments is not this change."""
+def test_the_filename_verdict_table_holds_after_the_narrowing() -> None:
+    """Every verdict the rule produces, in one table, read against the function rather than from memory.
+
+    This table was the owner's open question (#71) until 2026-10-24: three of its rows changed value when `..`
+    stopped being a substring match and became a path segment. Keeping the whole set in one list -- including the
+    rows that did *not* move -- is what makes a future widening a visible edit rather than a silent one.
+    """
     from dsa_datasets.validate import validate_filename
 
     for name, accepted in _FILENAME_VERDICTS:
@@ -539,3 +552,31 @@ def test_the_filename_rule_refuses_what_it_always_refused() -> None:
         else:
             with pytest.raises(ValidationError):
                 validate_filename(name)
+
+
+def test_an_accepted_name_cannot_climb_out_of_the_dataset_directory(tmp_path) -> None:
+    """The claim the narrowing rests on, asserted on paths instead of argued in a comment.
+
+    Storage joins `f"{dataset_id}_{filename}"` under the dataset directory, so the only way an accepted name
+    reaches outside it is by containing a separator or resolving upward. Every accepted row of the verdict table
+    is run through that join and resolved, with a pre-created sibling directory as the target a climb would land
+    in -- without it, POSIX left-to-right resolution would refuse `..` on absence rather than on policy, and the
+    assertion would pass for the wrong reason.
+    """
+    from dsa_datasets.validate import validate_filename
+
+    datasets = tmp_path / "datasets"
+    datasets.mkdir()
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (outside / "victim.csv").write_text("secret\n", encoding="utf-8")
+
+    accepted = [name for name, ok in _FILENAME_VERDICTS if ok and name != "."]
+    assert len(accepted) >= 4, accepted
+
+    for name in accepted:
+        validated = validate_filename(name)
+        stored = datasets / f"0f6c4b6a-1c2d-4e3f-8a9b-0c1d2e3f4a5b_{validated}"
+        resolved = stored.resolve()
+        assert resolved.is_relative_to(datasets.resolve()), f"{name!r} resolves outside its root: {resolved}"
+        assert outside not in resolved.parents and resolved != outside / "victim.csv", name

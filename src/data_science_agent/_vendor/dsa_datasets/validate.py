@@ -34,10 +34,11 @@ _ZIP_IS_EXPECTED = {".xlsx"}
 def validate_filename(filename: str) -> str:
     if not filename or len(filename) > 255:
         raise ValidationError("Invalid filename length")
-    if ".." in filename:
-        # The rule leads, because that is what the caller broke; the reason it exists is named after it, so a
-        # file genuinely named `Q1..Q2.csv` is not accused of traversal while `../x.csv` still reads as one.
-        raise ValidationError("Filename must not contain '..' (path traversal)")
+    if ".." in re.split(r"[/\\]", filename):
+        # Whole segments, not substrings. The separator rule below refuses any `/` or `\` and the stored name is
+        # `<uuid>_<filename>`, so `Q1..Q2.csv` cannot climb while `../x.csv` can; checking segments is what lets
+        # the refusal accuse the name that actually traverses instead of every name holding two dots.
+        raise ValidationError("Filename must not contain a '..' path segment (path traversal)")
     if "/" in filename or "\\" in filename:
         raise ValidationError("Filename must not contain path separators")
     # allow alnum, dot, dash, underscore, space, parens
