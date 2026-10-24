@@ -13,6 +13,35 @@ The verified deployment shape is:
 
 The full DSA Python package is intentionally not treated as a lightweight serverless function: the scientific stack is substantially larger than typical function bundles. The Web and API remain independently deployable and are connected with the public API URL.
 
+### Which web hostname is the demo
+
+Two `*.vercel.app` hostnames answer, and they are not the same deployment. `data-science-agent-web-rr93.vercel.app`
+is the one named above and in `docs/production-hardening.md`; `data-science-agent-web.vercel.app` is the one
+`README.md` links as the live demo. Searching the Vercel dashboard for either project name finds the other one as
+well, so treat both as live until a measurement says otherwise, and say which one you measured.
+
+Measured on 2026-10-24 from the same machine, they are two builds of this repository rather than a current one and
+a stale one: every route the app has (`/`, `/datasets`, `/analysis`, `/settings`, `/benchmarks`, `/evaluations`,
+`/failures`, `/mcp`, `/reports`, `/research`, `/runs`) answered `200` on both, and both bake the same API origin:
+
+```bash
+for h in data-science-agent-web.vercel.app data-science-agent-web-rr93.vercel.app; do
+  printf '%s ' "$h"
+  curl -s "https://$h/datasets" | grep -o '/_next/static/[^"]*\.js' | sort -u | while read -r s; do
+    curl -s "https://$h$s" | grep -o 'https://[a-z0-9.-]*\.onrender\.com' | sort -u
+  done | sort -u | tr '\n' ' '; echo
+done
+```
+
+Both print `https://data-science-agent-api-h43i.onrender.com`, the Render service above. CORS is not what
+distinguishes them either: `render.yaml` allows one origin explicitly and every `*.vercel.app` preview by regex.
+Their chunk inventories do differ by one file each, which is what two builds of one commit look like once a
+per-project value is baked in -- so a difference in *chunk names* is not evidence that a deployment is behind, and
+the loop in the next section is the check that actually answers that question.
+
+If the two ever disagree about behaviour rather than filenames, that is a real finding and the owner has to choose
+which hostname is the demo; nothing in this repository currently makes that choice for them.
+
 The repository includes a root `render.yaml` Blueprint so the API can be provisioned from GitHub without recreating Docker, health-check, port, or demo-mode settings by hand.
 
 ### Which Render object is the live one

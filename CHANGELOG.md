@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the demo has two live web hostnames, and the docs now say so
+
+- `docs/hosted-demo.md` and `docs/production-hardening.md` name `…-rr93.vercel.app` while `README.md` links
+  `data-science-agent-web.vercel.app`. Both answer, so the split was invisible -- and neither document said there
+  were two Vercel projects to reconcile.
+- Measured 2026-10-24: every route the app has answers `200` on both, and a command printed in the document shows
+  each bundle baking the same API origin, `https://data-science-agent-api-h43i.onrender.com`. So the one differing
+  chunk per project is two builds of one commit, **not** evidence that a deployment is behind -- the inference the
+  document explicitly warns against now, having made that mistake twice this round (§281).
+- Choosing which hostname is *the* demo changes where a visitor is sent, so it stays the owner's call; what is
+  pinned is the arrangement described. `tests/contract/test_demo_url_citations.py` enumerates the hostnames across
+  the three documents, requires the README to hold only the plain one and the deployment list only the suffixed
+  one, and fails if a third project joins the set without a word about it. `AUDIT_LEDGER.md` §285.
+
 ### Fixed (post-4.6.0) — the page probe printed nothing for three different facts
 
 - `docs/hosted-demo.md` checked the MCP App page by grepping its response headers for

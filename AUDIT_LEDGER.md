@@ -16192,3 +16192,27 @@ and the verdict a scheduled run owes is the same `SCOPE=whole history at <sha>` 
 with `gh run view <id> --log-steps`. If the count is still zero after tomorrow's slot, the sweep is not delivering
 what §278 claims, and the next step is a manual trigger rather than another day of waiting -- which needs
 `workflow_dispatch` added to `secret-scan.yml`, so it is the owner's call, not this ledger's.
+
+## 285. Two live demo hostnames, and no document said they were two
+
+`docs/hosted-demo.md` and `docs/production-hardening.md` send a reader to `data-science-agent-web-rr93.vercel.app`,
+while `README.md` -- the document a reviewer actually clicks -- links `data-science-agent-web.vercel.app`. Both
+answer, so nothing looked broken, and the difference is invisible until someone compares them and finds the chunk
+inventories disagree. Two Vercel projects, then, or one project and a stale alias? Measured 2026-10-24: every route
+the app has returns `200` on both, and a command now printed in the document extracts the API origin each bundle
+baked -- both print `https://data-science-agent-api-h43i.onrender.com`. Same repository, same backend, one
+different chunk per project, which is what two builds of one commit look like once a per-project value is compiled
+in.
+
+So this is not a staleness finding, and saying that out loud is the point: **a difference in chunk names is not
+evidence that a deployment is behind**, and the reader who reaches for it as evidence ends up where §281 ended up.
+The document now names both hostnames, says which document links which, and points at the loop that does answer
+the currency question.
+
+What is unresolved is a decision, not a defect: nothing in the repository says which hostname *is* the demo, and
+choosing one changes what a visitor is sent to, so it is the owner's call. What is pinned is the arrangement the
+document now describes -- `tests/contract/test_demo_url_citations.py` enumerates the hostnames across the three
+documents and requires the README to hold only the plain one, the deployment list to hold only the suffixed one,
+and the whole set to stay two. Falsified in both directions: pointing the README at `…-rr93` reddens the first
+assertion, and inventing `…-new77` in the hardening doc reddens the census one -- so a fourth project cannot join
+the fleet without a document being rewritten on purpose. Both mutations restored and re-hashed in the same command.
