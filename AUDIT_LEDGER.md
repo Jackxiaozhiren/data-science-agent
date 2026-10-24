@@ -15979,7 +15979,64 @@ pinned `GITLEAKS_VERSION`, and the `SCOPE=` line. Falsified against the previous
 workflow, the test reddens; put the new one back, green. A guard that would also pass on the broken state is the
 thing this repository keeps having to discover.
 
-## 279. The Render demo is current, and four credential-free answers are what said so
+## 279. The licence half of the queue was never a dependency problem, and clearing it grew a different risk class
+
+§276 left #91 and #102 to the owner because extending a licence allowlist is a policy call. That call has now
+been made and landed (#120), and the interesting part is not the versions -- it is that the gate was red for a
+reason the gate itself cannot see, and that clearing the queue immediately produced work of a different kind.
+
+**The blocker was an artefact of what `dependency-review` inspects.** The action looks only at lock lines a PR
+*changes*. A dependency that already ships is never asked about, so the first bump to touch it reports a
+pre-existing state as if it were newly introduced. Measured against main before the change:
+`release/sbom.json` already recorded `certifi@2026.7.22` with license `MPL-2.0` -- the project's own published
+SBOM had been asserting that licence for weeks -- and `matplotlib@3.11.1` already stored the free text
+"License agreement for matplotlib versions 1.3.0 and later", which is what scancode turns into
+`LicenseRef-scancode-matplotlib-1.3.0`. PyPI reports the same `license_expression` for pillow 12.3.0 as for
+13.0.0. So all three identifiers describe licences already shipped; the PRs surfaced them, they did not add
+them. That distinction is the whole reason `allow-licenses` grew from seven names to ten while
+`fail-on-severity: high` and `fail-on-scopes: runtime` were left exactly alone -- widening which names count as
+known is not the same change as weakening what is checked.
+
+**The policy change is its own commit.** `0738d5c` carries the four bumps and the SBOM; `a5f7e28` carries the
+allowlist and nothing else. Bundling them would have made the licence decision revertible only by unpicking
+dependency versions, and it would have removed the independent witness: with both in one commit, the gate goes
+green for a reason a reader cannot separate from the bump itself.
+
+**One claim in that PR was explicitly not verifiable locally, and CI settled it.** `allow-licenses` matching is
+exact, and the scancode label came from the action's own failure text rather than from a registry of permitted
+names. Stated as an open risk before merging, with the commitment that a wrong spelling would be corrected or
+reported -- not quietly deleted to force the check green. CI's `dependency-review` then passed with the label
+verbatim. `dependency-review` is not a required context here (branch protection requires only `ci`), so the
+guess was cheap to make and cheap to be wrong about; that is why it was allowed to be a guess at all.
+
+**pillow 12 -> 13 was the only real risk in the change**, being matplotlib's runtime image dependency and a major
+version. It was installed and exercised rather than argued with: `uv sync --frozen` confirming all four versions,
+then `uv run pytest -q --cov` at 84.21% coverage against the 79% floor with exactly two failures --
+`test_currency_claims.py` and `test_announcement_currency.py`, both asserting "no tags readable from this
+checkout", the linked-worktree `.git`-pointer condition from §276 again. Control in a tree whose `.git` is a
+directory: those two files pass, 29 tests. The SBOM rebuild kept the same discipline as the previous bump:
+assert zero rows erased to `Unknown` and zero unchanged rows whose licence moved *before* writing, and `Unknown`
+went 133 -> 131 because pillow and langgraph-sdk now carry real identifiers.
+
+**Then the queue refilled, with different risk.** Eight new Dependabot PRs appeared within the hour (#112-#119),
+and four of them are not maintenance: `typescript 5.9.3 -> 7.0.2`, `tailwind-merge 2.6.1 -> 3.7.0`,
+`@types/node 20.19.43 -> 26.6.5`, `statsmodels 0.14.6 -> 0.15.0`. They were left open deliberately. A toolchain
+major version is a migration with its own blast radius -- Tailwind 3 -> 4 in this same round was its own PR
+(#103, `fix(web): Tailwind 3 -> 4, removing the last reason the npm advisory list existed`, recorded at
+`CHANGELOG.md:799`), and it still reads in the tree today: `apps/web/postcss.config.js` wires
+`@tailwindcss/postcss`, `apps/web/app/globals.css` opens with `@import "tailwindcss"` and a `@config` line for
+the legacy JS theme, `braces` is absent from both npm locks, and `docs/audit/npm-advisory-exceptions.json`
+carries an empty `advisories` list. And this project's product is auditable statistical output, so a
+statsmodels bump that could move a p-value is not "clearing a queue". "Handle the dependency queue" ends where
+the risk class changes, and saying so is part of handling it.
+
+Corroboration that #107 was worth landing: five of those eight npm PRs touch only the root
+`package-lock.json`, never the member lock that `npm --prefix apps/web ci` reads. Before #107 that half-PR shape
+was caught late, at the install step, with a message about lockfile satisfaction. Now the dedicated member-lock
+guard names the field and both values at the gate -- the failure mode it was written for, observed again the same
+day it merged.
+
+## 280. The Render demo is current, and four credential-free answers are what said so
 
 The owner ran **Manual Deploy → Deploy latest commit code** on the service whose External URL reads
 `https://data-science-agent-api-h43i.onrender.com` on 2026-10-24, which closes #44 -- the item that had been
@@ -15999,14 +16056,14 @@ What changed for a visitor, each half measured rather than read off the dashboar
 - `/mcp-app/` carries a per-document `script-src 'sha256-…'` instead of the API-wide `default-src 'none'`, so
   the page the browser used to render as a dead picture runs (§254).
 - The route census still agrees (`hosted 25 / local 25`, no difference either way), as it did on 2026-10-21 and
-  2026-10-22 when the deployment *was* behind. That is §280's subject.
+  2026-10-22 when the deployment *was* behind. That is §281's subject.
 
 `/version` reports `4.6.0` on both the old and the new image, so it is not a currency signal, and the web half
 needed no deploy at all: Vercel builds `main` on push, and the cold-start copy loop names the chunk that carries
 it. The remaining `/mcp` exposure is the one §265 describes and §277 leaves open -- `profile_dataset`'s read and
 its path-existence oracle -- which a deploy does not touch.
 
-## 280. The report-currency probe could not have said what this ledger read from it
+## 281. The report-currency probe could not have said what this ledger read from it
 
 `docs/hosted-demo.md` told the reader to fetch a published run's HTML report and search it for
 `<strong>[a-z]+_[a-z_]+</strong>`, treating a hit as proof that the running container predated the localization
@@ -16026,7 +16083,7 @@ Two properties made the reading worthless, and both are now pinned by
 - **Its output was not attributable.** `True` is what the Tool Calls section alone produces on a current build, so
   it cannot distinguish that from the pre-localization shape it was written to catch; whether the 2026-10-21 and
   2026-10-22 containers actually carried raw validation keys is not recoverable from the record either way. The two
-  entries stand as measurements of the grep, and the redeploy's currency is now decided by the four answers in §279
+  entries stand as measurements of the grep, and the redeploy's currency is now decided by the four answers in §280
   instead.
 
 The fix is a different *section*, not a different word list: the exporter writes validation last, so the probe

@@ -136,7 +136,7 @@
     },
     {
       "name": "certifi",
-      "version": "2026.7.22",
+      "version": "2026.10.19",
       "licenses": [
         {
           "license": {
@@ -144,7 +144,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/certifi@2026.7.22",
+      "purl": "pkg:pypi/certifi@2026.10.19",
       "source": "https://pypi.org/simple"
     },
     {
@@ -804,9 +804,15 @@
     },
     {
       "name": "langgraph-sdk",
-      "version": "0.4.2",
-      "licenses": [],
-      "purl": "pkg:pypi/langgraph-sdk@0.4.2",
+      "version": "0.4.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/langgraph-sdk@0.4.4",
       "source": "https://pypi.org/simple"
     },
     {
@@ -852,7 +858,7 @@
     },
     {
       "name": "matplotlib",
-      "version": "3.11.1",
+      "version": "3.11.2",
       "licenses": [
         {
           "license": {
@@ -860,7 +866,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/matplotlib@3.11.1",
+      "purl": "pkg:pypi/matplotlib@3.11.2",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1103,9 +1109,15 @@
     },
     {
       "name": "pillow",
-      "version": "12.3.0",
-      "licenses": [],
-      "purl": "pkg:pypi/pillow@12.3.0",
+      "version": "13.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT-CMU"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/pillow@13.0.0",
       "source": "https://pypi.org/simple"
     },
     {

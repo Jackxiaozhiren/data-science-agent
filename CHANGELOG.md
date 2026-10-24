@@ -20,7 +20,7 @@
   `tests/contract/test_report_currency_probe.py` pins the positional precondition, the empty answer in both
   languages, a planted raw key that must be caught, and the unscoped pattern's continued match outside the
   validation section -- so the widened grep cannot silently come back.
-- `AUDIT_LEDGER.md` §279 and §280. What the deploy did *not* change is §265's open half: `profile_dataset` still
+- `AUDIT_LEDGER.md` §280 and §281. What the deploy did *not* change is §265's open half: `profile_dataset` still
   reads any recognised extension and still distinguishes "absent" from "wrong suffix", so the path-existence
   oracle is untouched and the authentication decision stays with the owner.
 
