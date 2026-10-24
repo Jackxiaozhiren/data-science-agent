@@ -1249,9 +1249,15 @@
     },
     {
       "name": "pydantic-settings",
-      "version": "2.15.0",
-      "licenses": [],
-      "purl": "pkg:pypi/pydantic-settings@2.15.0",
+      "version": "2.16.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/pydantic-settings@2.16.1",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1446,9 +1452,15 @@
     },
     {
       "name": "scikit-learn",
-      "version": "1.9.0",
-      "licenses": [],
-      "purl": "pkg:pypi/scikit-learn@1.9.0",
+      "version": "1.9.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/scikit-learn@1.9.1",
       "source": "https://pypi.org/simple"
     },
     {
