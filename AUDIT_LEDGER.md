@@ -16272,3 +16272,32 @@ above came from a manual dispatch. The cron line and the non-cancellable concurr
 is configured; whether GitHub actually fires it here is a question about the platform's scheduler, not about this
 file, and it stays open until a run appears with `event: schedule`. Until then this ledger describes the sweep as
 *dispatch-witnessed*, not schedule-witnessed, and the check that would settle it is the one in §284.
+
+## 288. The `..` rule stopped accusing filenames that cannot climb, and the ordering claim got its teeth
+
+The owner's decision on #71, taken 2026-10-24: `validate_filename` matches `..` against **whole path segments**
+instead of as a substring. `Q1..Q2.csv`, `data..v2.csv` and `....csv` are accepted; `..`, `../x.csv` and `a/..`
+still refuse, and the sentence now reads `Filename must not contain a '..' path segment (path traversal)`. The
+security argument is the one §272 wrote when it fixed the message and left the policy alone: separators are refused
+on their own line, storage joins `f"{dataset_id}_{filename}"`, so a name holding two dots in the middle has no way
+to reach outside the dataset directory. What was new here is asserting that rather than restating it --
+`test_an_accepted_name_cannot_climb_out_of_the_dataset_directory` resolves every accepted row of the verdict table
+through the real join and requires the result to stay under the root, with a sibling directory pre-created so a
+climb would land somewhere rather than fail on absence.
+
+Test-first, and red before green in the way that matters: the three affected tests failed against the old rule
+(`data..v2.csv` refused, the diagnosis table wrong, the climb test unable to run its accepted rows), then passed
+after the narrowing. The vendor twin was re-copied with `sync_vendor.py --file` after formatting, and the only
+remaining drift is the peer's `dsa_evaluation` file, which this session does not touch.
+
+The falsification is also worth keeping, because the first attempt was wrong. To show the *ordering* claim has
+teeth -- traversal checked before separators, so `../x.csv` is told the truth -- the mutation had to swap the two
+blocks. The first swap was written as string surgery and produced a file containing **both** checks twice: the
+suite stayed green and the reading would have been "this assertion cannot fail", which was an artifact of the
+mutation script rather than of the test. Rewritten by line index, with an assertion that the order actually
+flipped, the mutation reddens the diagnosis test exactly once: `'../x.csv' got the wrong diagnosis: Filename must
+not contain path separators`. Restored and re-hashed inside the same command both times.
+
+A rule widening that changes a refusal a visitor can see is the owner's call, and it was taken explicitly; the
+`_FILENAME_VERDICTS` table keeps every row -- the ones that moved and the ones that did not -- so a future
+widening is a visible diff rather than a silent behaviour change.

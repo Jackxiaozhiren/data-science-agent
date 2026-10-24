@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — a filename holding two dots is no longer accused of path traversal
+
+- Owner decision on #71: `validate_filename` matches `..` against whole **path segments**, not as a substring.
+  `Q1..Q2.csv`, `data..v2.csv` and `....csv` now upload; `..`, `../x.csv` and `a/..` still refuse with
+  `Filename must not contain a '..' path segment (path traversal)`.
+- Nothing about containment changed, and it is now asserted instead of argued: separators are refused on their own,
+  storage joins `f"{dataset_id}_{filename}"`, and
+  `tests/security/test_upload_guard.py` resolves every accepted name through that real join to require it to stay
+  under the dataset directory -- against a pre-created sibling, so a climb lands somewhere instead of failing on
+  absence.
+- `docs/security.md`'s gatekeeper paragraph moved with the rule, and the vendor twin was re-copied with
+  `sync_vendor.py --file` after formatting. Falsified by reverting the rule (3 tests redden) and by swapping the
+  check order (`'../x.csv' got the wrong diagnosis`), the latter after the first mutation script turned out to
+  duplicate both blocks and read as an innocent green. `AUDIT_LEDGER.md` §288.
+
 ### Security (post-4.6.0) — the first whole-history sweep ran, and found two findings no range scan ever covered
 
 - The dispatch trigger added the same day was used once: run 40075000071 scanned `844 commits` (~31.7 MB) and
