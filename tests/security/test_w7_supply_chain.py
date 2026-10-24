@@ -70,7 +70,10 @@ def test_secret_scan_workflow() -> None:
     assert re.search(r"(?m)^\s*schedule\)\s+echo \"SCOPE=whole history", txt), (
         "the scheduled sweep lost the message that says what it covers"
     )
-    assert 'DSA_EVENT_NAME: ${{ github.event_name }}' in txt and '"${{ github.event_name }}"' not in txt, (
+    assert (
+        "DSA_EVENT_NAME: ${{ github.event_name }}" in txt
+        and '"${{ github.event_name }}"' not in txt
+    ), (
         "event fields are interpolated into the shell line instead of travelling through the environment"
     )
 
