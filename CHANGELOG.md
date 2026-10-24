@@ -17,6 +17,12 @@
   which is how a gate turns into noise; with them the sweep still covers all 844 commits.
 - `tests/security/test_gitleaks_ignore_registry.py` was run against these entries, not trusted: a stale
   `head_marker` and an expired `review_by` each redden it. `AUDIT_LEDGER.md` §286.
+- Witnessed red-then-green on the same path: the re-dispatch against `1c320cc` reports `SCOPE=whole history`,
+  `845 commits scanned`, `No leaks detected`, and completes successfully, where the run before it reported
+  `844 commits scanned` and `leaks found: 2` and failed. The scheduled branch is still unwitnessed -- no
+  `event: schedule` run exists -- so the sweep is dispatch-witnessed, not schedule-witnessed (`AUDIT_LEDGER.md`
+  §287).
+
 
 ### Changed (post-4.6.0) — the demo has two live web hostnames, and the docs now say so
 

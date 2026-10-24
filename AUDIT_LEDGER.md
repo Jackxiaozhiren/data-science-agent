@@ -16249,3 +16249,26 @@ channel. (The first restore attempt at that mutation restored from a pre-entry s
 and the registry disagreeing, which the gate caught as an orphan fingerprint -- the check working, and a reminder
 to take the backup from the moment being falsified.) and remind the reader that a sweep that has never gone green has not yet been shown to be a gate. The exemptions
 are on `main` before the second dispatch runs, so §287 carries that verdict rather than this entry predicting it.
+
+## 287. The sweep answers green, and the gap it closes is now a measured one
+
+The second dispatch, run against `main` at `1c320cc` -- the commit that carries the exemptions -- completed
+successfully. Its own log states the coverage rather than leaving it to be inferred from a green tick:
+`SCOPE=whole history at 1c320cc… (manual dispatch)`, `845 commits scanned`, `scanned ~31712698 bytes (31.71 MB)
+in 3.51s`, `No leaks detected`. The run before it, against the same history without the exemptions, had reported
+`844 commits scanned` and `leaks found: 2` and exited failure. Red then green, on the same path, one variable
+changed: that is what makes §286's exemptions evidence rather than a mute button.
+
+So three claims now hold with witnesses behind them, none of which held yesterday:
+
+- the whole-history scan runs and says so in its own log (§286, §287);
+- it covers commits no event range reaches -- proved not by arguing but by two findings appearing there that had
+  never appeared anywhere else in this repository's CI history;
+- the sweep is not currently red, and the reason it is not red is written, review-dated, and guarded by a test
+  that reddens if the exempted text stops existing in the file it describes.
+
+What is still not established is the scheduled branch. The first slot passed with no run (§284), and every verdict
+above came from a manual dispatch. The cron line and the non-cancellable concurrency remain, so the daily backstop
+is configured; whether GitHub actually fires it here is a question about the platform's scheduler, not about this
+file, and it stays open until a run appears with `event: schedule`. Until then this ledger describes the sweep as
+*dispatch-witnessed*, not schedule-witnessed, and the check that would settle it is the one in §284.
