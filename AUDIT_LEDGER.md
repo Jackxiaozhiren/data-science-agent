@@ -16158,3 +16158,37 @@ The same reading also corrected a claim in that block's prose: it told the reade
 the tag that was just built, not the one before it". `/version` answered `4.6.0` on the stale image and on the one
 that replaced it on 2026-10-24, because no release has been cut since. The route says which wheel is installed and
 nothing about whether the deployment is current, which is the one thing a reader was most likely to want from it.
+
+## 284. The nightly sweep has not fired yet, and the one schedule that does fire here arrives five hours late
+
+§278 shipped the sweep and recorded the runner-level `SCOPE=` witness for a *push* run, leaving the scheduled
+branch unverified. Checking it at 07:14 UTC on 2026-10-24: `GET /repos/…/actions/workflows/<secret-scan>/runs?
+event=schedule` returns `total_count: 0`, 2 h 37 min after its first slot (`37 4 * * *`, and the commit that adds
+it reached `main` at 08:50 UTC on 2026-10-23). Nothing has run for that workflow under the `schedule` event at all.
+
+Two facts keep this from being a panic:
+
+- **Scheduling works on this repository.** `stale.yml` declares `37 2 * * *` and has produced a `schedule` run on
+  each of the five days 2026-10-19 through 10-23 -- at 08:03, 07:54, 07:57, 07:55 and 07:54 UTC. `secret-scan.yml`
+  reports `state: active`, which rules out the workflow having been disabled or marked unhealthy; it says nothing
+  about whether the trigger was registered, and no endpoint here exposes that, so the absence of a run stays
+  unexplained rather than explained away.
+- **Those arrivals are ~5 h 17 min after the cron minute, every day, to within four minutes.** A lag that
+  consistent is not queue contention, and no timezone reading explains it (`+05:17` is not a zone; the account
+  renders timestamps at `+08:00`, which would put 02:37 UTC at 10:37, not 07:54). The cause is unknown to this
+  ledger, and saying so is the point: whatever it is, it is a property of the platform this repository runs on,
+  not of the YAML.
+
+So the sweep's expected first appearance, if the same offset holds, is around 09:54 UTC today. Until one exists,
+read §278's title as what the YAML guarantees -- a run that cannot be cancelled -- and not as evidence that the
+run happens. The check is one command:
+
+```bash
+gh api "repos/Jackxiaozhiren/data-science-agent/actions/workflows/secret-scan.yml/runs?event=schedule&per_page=5" \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print('scheduled runs:', d['total_count'])"
+```
+
+and the verdict a scheduled run owes is the same `SCOPE=whole history at <sha>` line the push run printed, read
+with `gh run view <id> --log-steps`. If the count is still zero after tomorrow's slot, the sweep is not delivering
+what §278 claims, and the next step is a manual trigger rather than another day of waiting -- which needs
+`workflow_dispatch` added to `secret-scan.yml`, so it is the owner's call, not this ledger's.
