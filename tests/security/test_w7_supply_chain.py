@@ -34,7 +34,9 @@ def test_secret_scan_workflow() -> None:
     Each was earned by an incident: the version pin, because an unpinned action re-resolves gitleaks' rule set
     behind a green badge; the nightly sweep, because a push run scans only its own payload range and
     `cancel-in-progress` can leave a cancelled range never scanned at all -- three heads did on 2026-10-23,
-    `AUDIT_LEDGER.md` 275.
+    `AUDIT_LEDGER.md` 275; and the dispatch trigger, because the sweep's first scheduled slot produced no run at
+    all on 2026-10-24 and the whole-history path therefore had no way to be witnessed (`AUDIT_LEDGER.md` 284)
+    other than waiting for a schedule this repository's runner is visibly late on.
     """
     p = Path(".github/workflows/secret-scan.yml")
     assert p.exists(), "Secret scan workflow missing (§44)"
@@ -46,14 +48,31 @@ def test_secret_scan_workflow() -> None:
     assert re.search(r"(?m)^\s*-\s+cron:\s*[\"'][^\"']+[\"']\s*(#.*)?$", txt), (
         "the sweep has no cron line to run on"
     )
+    assert re.search(r"(?m)^\s*workflow_dispatch:\s*$", txt), (
+        "no manual trigger: a whole-history scan that has not fired on schedule cannot be witnessed at all"
+    )
     assert re.search(
-        r"(?m)^\s*cancel-in-progress:\s*\$\{\{[^}]*!=\s*'schedule'[^}]*\}\}\s*$", txt
-    ), "the backstop must not be cancellable, or an interrupted sweep recreates the gap it closes"
+        r"(?m)^\s*cancel-in-progress:\s*\$\{\{[^}]*!=\s*'schedule'[^}]*!=\s*'workflow_dispatch'[^}]*\}\}\s*$",
+        txt,
+    ), (
+        "neither the sweep nor a manual whole-history run may be cancellable, or an interrupted run recreates the "
+        "gap the backstop closes"
+    )
     assert "fetch-depth: 0" in txt, "history is not fetched, so a sweep has nothing to walk"
     assert re.search(r'GITLEAKS_VERSION:\s*["\'][0-9.]+["\']', txt), (
         "gitleaks is unpinned, so the rule set can move without a commit"
     )
     assert "SCOPE=" in txt, "the run never states which range it actually covered"
+    # The SCOPE line has to be true for the event asking, or the log says something the run did not do.
+    assert re.search(r"(?m)^\s*workflow_dispatch\)\s+echo \"SCOPE=whole history", txt), (
+        "a dispatched run would print the push-range message while walking the whole history"
+    )
+    assert re.search(r"(?m)^\s*schedule\)\s+echo \"SCOPE=whole history", txt), (
+        "the scheduled sweep lost the message that says what it covers"
+    )
+    assert 'DSA_EVENT_NAME: ${{ github.event_name }}' in txt and '"${{ github.event_name }}"' not in txt, (
+        "event fields are interpolated into the shell line instead of travelling through the environment"
+    )
 
 
 def test_dependabot_exists() -> None:
