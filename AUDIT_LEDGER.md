@@ -16130,3 +16130,31 @@ Also here, because it is the same rot: `tests/contract/test_web_fetch_outcome_vo
 `docs/hosted-demo.md:175` for a promise this round's edits moved to line 481. A line number in a docstring is a
 citation that cannot be checked by anything, so the pointer now names the section (*Troubleshooting the browser
 demo*) instead.
+
+## 283. A header that is present and wrong looked like a clean check, in two places in one document
+
+§282's family, found by taking its question to the next block in the same file: *what does this command print
+when the thing it warns about is absent?* The MCP App page probe grepped the response headers for
+`^content-security-policy` and printed the line when present. Three facts shared one output -- the per-document
+policy the fix ships, the API-wide `default-src 'none'` that makes the page's own script refuse to run, and no
+header at all because the request never reached the service. The middle one is the defect the section documents,
+and it was indistinguishable from success except by reading the header's text while the prose told the reader to
+look for a line.
+
+Rewritten as a three-branch probe that names each outcome, and run against the live host: the deployed page prints
+`per-document policy: the page may run the script block it actually shipped`, and a host that answers without the
+header prints the absence branch, so both directions are exercised on real traffic rather than asserted. The same
+grep existed a second time in the "four answers" block, which is what two copies of an instrument do to each other
+over time, so the copy now carries the same branches.
+
+`tests/contract/test_hosted_demo_bundle_probe.py` grew two guards. It enumerates the document's CSP blocks rather
+than taking one of them, requires each to hold all three branches, and reads the discriminator out of the document
+to demand that `document_security_headers()` still emits it for a script-bearing document -- the string is owned
+by the producer, not by the prose. Falsified both ways: pointing the probe at a digest prefix the producer never
+emits reddens the discriminator guard, and restoring the old silent one-liner in the copied block reddens the
+branch test too. Both mutations restored and re-hashed in the same command.
+
+The same reading also corrected a claim in that block's prose: it told the reader the version check "has to name
+the tag that was just built, not the one before it". `/version` answered `4.6.0` on the stale image and on the one
+that replaced it on 2026-10-24, because no release has been cut since. The route says which wheel is installed and
+nothing about whether the deployment is current, which is the one thing a reader was most likely to want from it.

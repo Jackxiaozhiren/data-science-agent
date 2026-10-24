@@ -1,4 +1,4 @@
-"""The bundle probe in `docs/hosted-demo.md` has to answer in both directions, and its marker has an owner.
+"""The probes `docs/hosted-demo.md` hands a reader answer in every direction, and their literals have owners.
 
 Which web bundle the demo serves is decided by reading the deployed JavaScript chunks, because `/version` on the
 API says `4.6.0` whether the image is current or a month old. The check is a loop that greps each chunk for a
@@ -10,14 +10,22 @@ phrase from the cold-start copy. Two ways it was not an instrument:
 * the phrase it searched for lived only in the prose. `apps/web/lib/locale.ts` owns that sentence, and the day it
   changes the loop stops matching for everyone, forever, with no check to say so.
 
-Both are pinned here, and the marker is read out of the document rather than restated, so a writer who edits one
-side has to be told about the other by a failing test instead of by this comment.
+The page probe in the same document had the first hole in a three-way form: it grepped the response headers for
+`^content-security-policy` and printed nothing otherwise, which collapsed a per-document policy, an API-wide
+policy on an HTML page, and no header because the request never arrived into one absence. The middle one is the
+case the section exists to catch, and it looked like a clean check.
+
+Every literal either probe searches for now has an owner in the code -- the cold-start phrase in the locale file,
+the CSP discriminator in `document_security_headers()` -- and both are read out of the document rather than
+restated here, so a writer who edits one side is told about the other by a failing test instead of by this comment.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
+
+from dsa_agent.report_export import document_security_headers
 
 ROOT = Path(__file__).resolve().parents[2]
 DOC = ROOT / "docs" / "hosted-demo.md"
@@ -56,4 +64,45 @@ def test_the_loop_keeps_its_counters_in_the_printing_shell() -> None:
     assert "| while read -r" not in block
     assert re.search(r"for s in \$\(", block), (
         "the loop must iterate in the shell that prints the counts"
+    )
+
+
+def _csp_probe_blocks() -> list[str]:
+    """Every block in the document that inspects the MCP App page's Content-Security-Policy."""
+    blocks = re.findall(r"```bash\n(.*?)```", DOC.read_text(encoding="utf-8"), re.DOTALL)
+    hits = [b for b in blocks if "content-security-policy:" in b]
+    assert len(hits) == 2, (
+        f"expected the page probe and its copy in the four-answer block, found {len(hits)}"
+    )
+    return hits
+
+
+def test_every_csp_probe_names_all_three_outcomes() -> None:
+    """A header that is present and wrong, and one that is absent, are different facts.
+
+    The bare `grep -i '^content-security-policy'` this replaced printed a line only in the middle case, so "the
+    container predates the per-document fix" and "this request never reached the service" both read as no output --
+    and the first of those is the case the section exists to catch.
+    """
+    for block in _csp_probe_blocks():
+        assert '[ -z "$H" ]' in block, "the probe must say what a missing header means"
+        assert "elif" in block and "else" in block, (
+            "each outcome needs its own branch and its own words"
+        )
+
+
+def test_the_csp_discriminator_is_what_the_producer_actually_emits() -> None:
+    """The string the document branches on is owned by `document_security_headers`, not by the document."""
+    needles = {
+        m.group(1)
+        for block in _csp_probe_blocks()
+        for m in re.finditer(r'grep -q "([^"]+)"', block)
+    }
+    assert needles == {"script-src 'sha256-"}, needles
+    emitted = document_security_headers(
+        "<!DOCTYPE html><html><body><script>const a = 1;</script></body></html>"
+    )["Content-Security-Policy"]
+    (needle,) = needles
+    assert needle in emitted, (
+        f"docs/hosted-demo.md branches on {needle!r}, which document_security_headers no longer emits: {emitted}"
     )

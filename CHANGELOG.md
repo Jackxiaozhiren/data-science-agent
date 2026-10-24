@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the page probe printed nothing for three different facts
+
+- `docs/hosted-demo.md` checked the MCP App page by grepping its response headers for
+  `^content-security-policy` and showing the line when present. A per-document policy, the API-wide
+  `default-src 'none'` that makes the page's own script refuse to run, and no header because the request never
+  reached the service all produced output-or-silence the same way, and the middle case is the defect the section
+  documents.
+- Both copies of the check -- the page probe and its duplicate in the four-answer block -- now branch three ways
+  and name each outcome. Run against the live host on 2026-10-24 it reports the per-document branch; a host with
+  no such header reports the absence branch, so both directions are exercised on real traffic.
+- `tests/contract/test_hosted_demo_bundle_probe.py` enumerates the document's CSP blocks instead of picking one,
+  requires all three branches in each, and reads the discriminator out of the document to demand that
+  `document_security_headers()` still emits it -- the string belongs to the producer, not the prose.
+- Corrected prose the same reading produced: the four-answer block told readers `/version` "has to name the tag
+  that was just built". It answered `4.6.0` on the stale image and the current one, so it names the installed
+  wheel and says nothing about currency. `AUDIT_LEDGER.md` §283.
+
 ### Fixed (post-4.6.0) — the bundle probe answered in one direction only, and its search string had no owner
 
 - `docs/hosted-demo.md` decides which web bundle the demo serves by grepping the deployed chunks for a phrase

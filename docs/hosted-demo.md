@@ -203,16 +203,31 @@ A third probe, cheaper than both, answers the same currency question for the MCP
 if the browser can run it:
 
 ```bash
-curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+U=https://data-science-agent-api-h43i.onrender.com
+H=$(curl -s -o /dev/null -D - $U/mcp-app/ | tr -d '\r' | grep -i '^content-security-policy:')
+if [ -z "$H" ]; then
+  echo "no CSP header in the response -- either the service does not set one or this request never reached it"
+elif printf '%s' "$H" | grep -q "script-src 'sha256-"; then
+  echo "per-document policy: the page may run the script block it actually shipped"
+else
+  echo "one policy for every route: this HTML's own inline script is refused -- the page renders and does nothing"
+  echo "$H"
+fi
 ```
+
+Three answers, each named, because the bare `grep` this replaces printed a header only in the middle case and
+nothing in the other two: a missing header and an unbuilt page looked alike, and so did the strict policy and a
+request that never arrived. The middle branch's discriminator is not prose either --
+`tests/contract/test_hosted_demo_bundle_probe.py` requires the string this block greps for to be what
+`document_security_headers()` actually emits for a script-bearing document.
 
 A response whose policy is the API-wide `default-src 'none'; frame-ancestors 'none'` is serving an HTML document
 whose own inline script that policy forbids, so the visitor gets a picture of the page with dead buttons; the
-fixed build answers a per-document policy that names the script block it actually sent (`script-src
-'sha256-...'`). Measured on 2026-10-22 the hosted answer was the strict default, i.e. the deployed container
-predates that fix too, while `/version` on both hosts reported `4.6.0`. Re-measured on 2026-10-24 after the
-redeploy: the answer is a `script-src 'sha256-…'` per document, so that reading was about the deployment and not
-about the grep -- which is the difference this block is here to teach.
+fixed build answers a per-document policy that names the script block it actually sent. Measured on 2026-10-22 the
+hosted answer was the strict default, i.e. the deployed container predated that fix, while `/version` reported
+`4.6.0` -- a header that is present and wrong, which is exactly the case a silent probe cannot tell from a header
+that is absent. Re-measured on 2026-10-24 after the redeploy: the per-document branch, as the loop above now
+reports rather than leaves to be inferred.
 
 The web side could not be censused from the same machine on 2026-10-22: both `*.vercel.app` URLs timed out at
 TCP connect while Render answered, and that observation cannot distinguish a paused deployment from this network
@@ -239,7 +254,10 @@ Four answers decide whether a redeploy did its job, and none of them needs a cre
 
 ```bash
 curl -s https://data-science-agent-api-h43i.onrender.com/version | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"
-curl -s -o /dev/null -D - https://data-science-agent-api-h43i.onrender.com/mcp-app/ | grep -i '^content-security-policy'
+# the per-document header probe from the section above, with its three named answers
+U=https://data-science-agent-api-h43i.onrender.com
+H=$(curl -s -o /dev/null -D - $U/mcp-app/ | tr -d '\r' | grep -i '^content-security-policy:')
+if [ -z "$H" ]; then echo "no CSP header in the response"; elif printf '%s' "$H" | grep -q "script-src 'sha256-"; then echo "per-document policy"; else echo "API-wide policy on an HTML page -- dead buttons"; fi
 curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/research/experiments \
   | python3 -c "import json,sys; print('deployed', json.load(sys.stdin)['total'], 'tracked', $(git ls-files research/results | wc -l | tr -d ' '))"
 curl -s -X POST https://data-science-agent-api-h43i.onrender.com/mcp/ -H 'Content-Type: application/json' \
@@ -247,7 +265,10 @@ curl -s -X POST https://data-science-agent-api-h43i.onrender.com/mcp/ -H 'Conten
   | python3 -c "import json,sys; t=json.load(sys.stdin)['result']['tools']; print(len(t), 'tools;', 'current' if 'inputSchema' in t[0] else 'input_schema: image predates the discovery-field fix')"
 ```
 
-The first has to name the tag that was just built, not the one before it. The second has to carry a
+The first is a fact about the container, not about currency: `/version` read `4.6.0` on the stale image and on the
+one that replaced it on 2026-10-24, because it reports the installed distribution's metadata and no release has
+been cut since. Read it to learn which tag the wheel came from; do not use it to decide whether to deploy. The
+second has to carry a
 `script-src 'sha256-…'` for the page being served: a policy of `default-src 'none'` on an HTML document is the
 browser refusing to run that document's own script, which is a page that looks present and does nothing. The
 third compares the deployment against the repository rather than against a number written into this file -- as
