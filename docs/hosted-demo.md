@@ -259,9 +259,10 @@ The fourth is the one that caught a stale deployment without asking for a versio
 published every tool the surface has -- `run_python` and `run_sql` among them, the count printed by the command
 rather than owned by this file -- and named its schemas `input_schema`, the field name this repository stopped
 publishing when the discovery shape was fixed. A spec-compliant client reads `inputSchema` and nothing else, so
-what it sees today is a list of tools that appear to take no arguments. That one request says three things at
+what it saw that day was a list of tools that appeared to take no arguments. That one request says three things at
 once: which image is running, that the MCP surface takes no credential, and how many tools it will accept a
-call to. It is the cheapest way to learn that the demo is behind `main`.
+call to. On that day it was the cheapest way to learn that the demo was behind `main`, and the paragraph below is
+what the same request answers now.
 
 Re-measured on 2026-10-24, after the Render service was redeployed from `main`: the same request prints the
 shortened HTTP list and `current`, neither withheld name appears in it, and a `tools/call` for either comes back
