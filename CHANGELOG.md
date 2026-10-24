@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the bundle probe answered in one direction only, and its search string had no owner
+
+- `docs/hosted-demo.md` decides which web bundle the demo serves by grepping the deployed chunks for a phrase
+  from the cold-start copy. It printed nothing unless a chunk matched, so a reworded sentence and a stale
+  deployment looked identical; and it kept its running totals inside a pipeline-fed `while read -r s`, whose body
+  runs in a subshell, so the totals could never reach the print after `done`.
+- The loop now iterates with `for s in $(...)` and answers on both branches. Measured on the live web demo
+  2026-10-24: `chunks scanned: 12, carrying the marker: 1`.
+- `tests/contract/test_hosted_demo_bundle_probe.py` reads the marker out of the document and requires it to be
+  live in `apps/web/lib/locale.ts`, asserts the negative branch and the denominator, and pins the loop shape --
+  so rewording the copy is a failing test instead of a permanently blinded check. Falsified both ways: a reworded
+  locale string reddens the marker test, the old loop shape reddens all three.
+- Same rot, same round: a docstring cited `docs/hosted-demo.md:175` for a sentence this round's edits moved; it
+  now names the section. `AUDIT_LEDGER.md` §282.
+
 ### Fixed (post-4.6.0) — the demo was finally redeployed, and the probe that said "stale" could not have said anything else
 
 - The owner ran **Manual Deploy → Deploy latest commit code** on the Render service on 2026-10-24, closing #44.
