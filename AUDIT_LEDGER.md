@@ -16365,3 +16365,65 @@ canonical host and must *not* carry the second one, `render.yaml` is read as a c
 its comment, and the census assertion still refuses a third project. Falsified by the shape of the failure it
 prevents -- putting the suffixed host back into a copy-paste block reddens both the list test and the blueprint
 assertion.
+## 292. The mechanical batch landed clean, and the claim I wrote into §279 turned out to be unsupported
+
+Four Dependabot PRs (#114 #115 #116 #117) landed as #122; one main-red unblock went in as #123; #119 is
+held, and holding it is the entry's real content because the reason I first gave for holding it was wrong.
+
+**The batch was mechanical, and the trap inside it was silent rather than loud.** All four touched a workspace
+manifest and the ROOT lock only, never the member lock that `npm --prefix apps/web ci` installs from, so each
+failed at CI step 10 -- `check_npm_workspace_lock.py`, the member-lock guard #107 had merged hours earlier.
+Reproduced before fixing: `apps/web/package-lock.json dependencies.framer-motion: manifest='^14.4.0',
+lock='^14.0.0'`. That guard paying for itself inside a day is worth noting, but the interesting failure was mine.
+Regenerating a member lock from a standalone directory with **no seed lock** re-resolves everything to the
+newest in range: measured on that first attempt, `apps/web/package-lock.json` floated **20 unrelated packages**
+-- playwright 1.63.0 -> 1.64.1, caniuse-lite, baseline-browser-mapping, postcss, the whole micromark/remark
+chain, @reduxjs/toolkit, immer. Only the browser tour caught it, and it caught it as a *harness* error
+(`Executable doesn't exist at .../chromium_headless_shell-1248/...`), i.e. the read of the environment, not the
+lock, revealed that the environment had changed. Seeding each regeneration from main's own lock plus an explicit
+`pkg@version` and then asserting the delta contains only the intended rows (3 / 0 / 3 entries) is now the
+routine. Neither Dependabot diff was taken wholesale either: #115/#117 also carried `revision = 3 -> 5` and
+rewrote 34 `sys_platform != 'emscripten'` markers -- a newer uv's lock *format*, not part of either bump.
+
+**`npm install -w <workspace>` also edits manifests.** It re-sorted `apps/vscode/package.json`'s
+devDependencies alphabetically and expanded `"categories": ["Other"]` across three lines. Caught by
+`git diff --numstat` reading 6/4 where 1/1 was expected -- reading the stat instead of assuming the edit.
+
+**A gap #122 happened to close but does not police:** the root lock and the apps/vscode member lock disagreed on
+`@types/vscode` (1.134.0 vs 1.140.0) with nothing objecting, because `check_npm_workspace_lock.py` compares the
+declared RANGE in a manifest against the RANGE recorded in a lock and never compares two locks' RESOLVED
+versions. No test covers that comparison. Stated, not widened into a dependency PR.
+
+**§279 said #119 was held because "a statsmodels bump that could move a p-value is not clearing a queue". That
+sentence is not supported by this repository.** statsmodels appears in exactly three places: the
+`time-series = ["statsmodels>=0.14"]` optional extra in `pyproject.toml:54`, the two SBOM artifacts, and my own
+prose. Zero source files import it; zero tests exercise it; CI runs `uv sync --dev` with no extra, so it is not
+even installed. The test files a keyword grep appeared to match were `HANDLED_TOOLS` matching the substring `OLS`.
+So "could move statistical output" was a plausible-sounding risk that no measurement backed -- and the honest
+correction is that unconsumed means *untestable*, not verified-compatible.
+
+**What actually made #119 worth stopping for is different, and it is a real gate question:** statsmodels 0.15.0
+pulls in three packages that are not in the dependency set today -- formulaic 1.2.2 (MIT), interface-meta 2.0.1
+(MIT) and **wrapt 2.5.1, which PyPI reports as `BSD-2-Clause`**, and the allowlist at
+`.github/workflows/dependency-review.yml:34` carries `BSD-3-Clause` but not `BSD-2-Clause`. Unlike #91/#102,
+where the identifiers were proven to be already shipped, this one would introduce a genuinely new licence term
+into what the project declares acceptable. 196 -> 199 packages. Held rather than resolved by me, and recorded
+with the option set: add `BSD-2-Clause`, or land it knowing `dependency-review` is non-required so "can merge"
+and "should merge" diverge, or retire the `time-series` extra outright since nothing imports what it installs --
+the last being the same judgement call §276 recorded for `@vscode/test-electron`, and not mine to make.
+
+**#123 was main being red for someone else's reason, and the cost of leaving it.** `ci` fails on
+`ruff format --check` -- a step separate from `ruff check`, so a lint-clean tree can still redden it -- because
+`01295ce` changed 25 lines (+22/-3) of `tests/security/test_w7_supply_chain.py` without a formatter pass. My batch was not
+it: #122 merged 15:30 with `ci` green, the complaint names one file, and the failure reproduces on a clean
+export of main. The fix is 4/1 whitespace (one long assert parenthesised, two string literals normalised),
+verified in both directions -- pre-fix `ruff format --check` rc 1, post-fix rc 0, `1 file would be reformatted,
+323 already formatted` -> `324 files already formatted`, 17 tests still passing. Worth a PR rather than waiting
+because `ci` is the only required context, so a red format step on main blocks every merge in the repository --
+exactly the stall this round already paid for once over a dangling citation.
+
+Finally, a self-correction of the same species as §279's: the first draft of this section cited "#239" for the
+Tailwind 3 -> 4 work. §239 is the Secret Scan range record and says nothing about Tailwind -- no heading in this
+file mentions Tailwind at all. Corrected to #103 and `CHANGELOG.md:799`, with each supporting fact re-read from
+the tree. Writing a citation from recall rather than from the artifact is the failure mode, and it is now the
+second time in one round.
