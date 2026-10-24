@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Security (post-4.6.0) — the first whole-history sweep ran, and found two findings no range scan ever covered
+
+- The dispatch trigger added the same day was used once: run 40075000071 scanned `844 commits` (~31.7 MB) and
+  reported `leaks found: 2`, exiting failure. Both are earlier spellings of one test fixture in
+  `tests/contract/test_provider_route_is_offline.py` (`…:generic-api-key:23` at `128327f`, `…:24` at `e05602e`),
+  in commits no push or PR event range ever included -- the gap §275 described, measured four days later.
+- The current tree contains neither string: HEAD declares `PROBE_MARKER`, a short dictionary value. The fixtures
+  were invented in this workspace, the suites that plant them block every socket and assert absence, so nothing
+  here was transmitted or issued.
+- Handled with the mechanism that already exists, not a new one: the two fingerprints copied from the run log into
+  `.gitleaksignore`, with registry entries naming `PROBE_MARKER` as the marker whose continued presence keeps the
+  exemption meaningful, and a `review_by` of 2027-04-01. Without them the backstop is red on every run forever,
+  which is how a gate turns into noise; with them the sweep still covers all 844 commits.
+- `tests/security/test_gitleaks_ignore_registry.py` was run against these entries, not trusted: a stale
+  `head_marker` and an expired `review_by` each redden it. `AUDIT_LEDGER.md` §286.
+
 ### Changed (post-4.6.0) — the demo has two live web hostnames, and the docs now say so
 
 - `docs/hosted-demo.md` and `docs/production-hardening.md` name `…-rr93.vercel.app` while `README.md` links

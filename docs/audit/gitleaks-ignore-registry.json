@@ -2,7 +2,7 @@
   "_purpose": "Findings that `.gitleaksignore` tells gitleaks to forgive, and the reason each one deserves forgiving. This is not a mute button: `tests/security/test_gitleaks_ignore_registry.py` refuses a fingerprint with no entry here, an entry whose marker has left the file it describes, an entry past its review date, and any descriptive field that carries a credential of its own.",
   "_format": "A gitleaks fingerprint is `<40-hex commit>:<path>:<rule-id>:<line>`, the shape upstream documents and the shape the gate prints into its own log -- `gh run view <id> --log | grep Fingerprint`. Copy the fingerprint from that log; do not construct one, because the commit is part of the key and a made-up sha matches nothing.",
   "_how_to_add": "Only when the matched text is provably not a credential: a fixture deliberately shaped like one, or prose the rule reads as an assignment. Say what it is, name the test or paragraph that makes it non-secret, and give it a review date. If the line moves or the text is renamed, the fingerprint stops matching, the finding returns on its own, and this list says why -- that is the point of keying to a fingerprint rather than to a path.",
-  "_verified_by": "The two entries were verified by reading, not assumed: the first is `CREDENTIAL_CANARY`, whose own preceding comment declares it \"A credential shaped like a real one. Not a placeholder\", and the second is a sentence naming two environment variables, read with every run of 13+ characters masked. `sk-or-v1-` is an OpenRouter-style prefix; the value after it is invented and matches no account. Neither was ever issued, and neither was reported to a provider.",
+  "_verified_by": "Four entries, each read rather than assumed. The first is `CREDENTIAL_CANARY`, whose own preceding comment declares it a credential shaped like a real one and not a placeholder; the second is a sentence naming two environment variables, read with every run of 13+ characters masked. The pair on `tests/contract/test_provider_route_is_offline.py` are earlier spellings of the same fixture, both written in this workspace: the vendor-style prefix in the first is a shape, the value after it is invented and matches no account, and the second kept only the random tail that the rule keys on. None of the four was ever issued by a provider, and none was reported to one, because none of them authenticates anything -- the suites that plant them assert the value never leaves the process, with sockets blocked to make that assertion physical rather than rhetorical.",
   "entries": [
     {
       "fingerprint": "8535e14812ec338ab67718d4daad42a7c4164b35:tests/contract/test_provider_settings.py:generic-api-key:38",
@@ -27,6 +27,30 @@
       "exposure": "Documentation. Rewriting a sentence to dodge a scanner would teach the reader less, so the finding is registered instead of silenced.",
       "added_on": "2026-10-21",
       "review_by": "2027-01-15"
+    },
+    {
+      "fingerprint": "128327f20c1f4113cf04feb39edb9c05e33ed95d:tests/contract/test_provider_route_is_offline.py:generic-api-key:23",
+      "rule_id": "generic-api-key",
+      "file": "tests/contract/test_provider_route_is_offline.py",
+      "line_at_commit": "23",
+      "found_in_commit": "128327f20c1f4113cf04feb39edb9c05e33ed95d",
+      "head_marker": "PROBE_MARKER",
+      "why_not_a_secret": "A fabricated canary in a provider-offline test, not an issued key. The suite's method is to set this value, drive the provider-settings route with every socket blocked, and then assert the value appears nowhere -- not in a response body, not in a log line, not in a stored setting. The shape is the point: a placeholder cannot prove that a string the product never plants is absent, and the comment above the literal said it was credential-shaped before the literal existed. The text at this line is gone from the tree: `PROBE_MARKER` now holds a short dictionary string, so this entry forgives history, not the checked-in code.",
+      "exposure": "Test corpus only, and only in that commit. The route under test is proven never to reach a provider, so the value was never sent anywhere; it was never registered with any service, and nothing in the repository reads it as configuration.",
+      "added_on": "2026-10-24",
+      "review_by": "2027-04-01"
+    },
+    {
+      "fingerprint": "e05602e4392b663025f79bf078018ed55eafd77a:tests/contract/test_provider_route_is_offline.py:generic-api-key:24",
+      "rule_id": "generic-api-key",
+      "file": "tests/contract/test_provider_route_is_offline.py",
+      "line_at_commit": "24",
+      "found_in_commit": "e05602e4392b663025f79bf078018ed55eafd77a",
+      "head_marker": "PROBE_MARKER",
+      "why_not_a_secret": "The intermediate spelling of the same fixture. The vendor-shaped prefix was replaced by a neutral one, but `generic-api-key` matches a long random tail behind any key-shaped prefix, however benign the prefix, so the rename alone did not clear it -- the file's own comment records that this rule stopped it twice. What stands at HEAD is `PROBE_MARKER`, a dictionary string with no random tail, which the scanner does not report; this entry forgives only the historical commit.",
+      "exposure": "Test corpus only, in that commit. Same reasoning as the earlier spelling: invented, never issued, never transmitted, and the assertions around it are about absence.",
+      "added_on": "2026-10-24",
+      "review_by": "2027-04-01"
     }
   ]
 }

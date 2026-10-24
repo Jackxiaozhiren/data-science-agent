@@ -16216,3 +16216,36 @@ documents and requires the README to hold only the plain one, the deployment lis
 and the whole set to stay two. Falsified in both directions: pointing the README at `…-rr93` reddens the first
 assertion, and inventing `…-new77` in the hardening doc reddens the census one -- so a fourth project cannot join
 the fleet without a document being rewritten on purpose. Both mutations restored and re-hashed in the same command.
+
+## 286. The first whole-history sweep ran because it was dispatched, and it found two things every range scan missed
+
+The dispatch trigger paid for itself the day it landed. `gh workflow run secret-scan.yml` on 2026-10-24 produced
+run 40075000071, whose log states what it actually did -- `844 commits scanned`, `scanned ~31.70 MB in 3.5s`, and
+`leaks found: 2` -- and the job exited failure. No push or PR run in this repository's history had ever looked at
+those two findings, because each one lives in a commit no event range covered: they are the earlier spellings of a
+test fixture in `tests/contract/test_provider_route_is_offline.py`, at `…:generic-api-key:23` in `128327f` and
+`…:generic-api-key:24` in `e05602e`. The current file holds neither string -- it declares `PROBE_MARKER`, a short
+dictionary value, and its own comment records that the rule had stopped the file twice.
+
+So the sweep works, and the sweep is red. Both halves matter: the backstop closes a real coverage gap, and a
+backstop that fails on two historical fabrications fails forever, which is how a gate becomes noise. The response
+is the mechanism this repository already has rather than a new one: the two fingerprints copied from the run log
+(not constructed -- the commit is part of the key) went into `.gitleaksignore` with entries in
+`docs/audit/gitleaks-ignore-registry.json` saying what each one is, naming `PROBE_MARKER` as the marker that must
+still exist in the file for the exemption to keep meaning something, and giving `review_by: 2027-04-01`.
+
+Why these are forgivable and what is not claimed: the values were invented in this workspace as canaries, the
+suites that plant them block every socket and assert the planted string appears nowhere, so nothing was transmitted
+and nothing was ever issued by a provider. What cannot be established from here is the counterfactual -- that no
+one ever pasted that shape into a real OpenRouter field -- and the entry does not assert it; it says what the
+fixture is and why its presence cannot authenticate anything. The old spellings stay in git history and stay
+publicly readable there; deleting history is not available on a shared branch, so the honest options were
+exemption with a reason, or a permanently red sweep.
+
+`tests/security/test_gitleaks_ignore_registry.py` was exercised against these entries rather than trusted: pointing
+an entry's `head_marker` at the value that no longer exists in the file produced `no longer appears in
+tests/contract/test_provider_route_is_offline.py`, and moving a `review_by` into the past reddened the expired
+channel. (The first restore attempt at that mutation restored from a pre-entry snapshot and left the ignore list
+and the registry disagreeing, which the gate caught as an orphan fingerprint -- the check working, and a reminder
+to take the backup from the moment being falsified.) and remind the reader that a sweep that has never gone green has not yet been shown to be a gate. The exemptions
+are on `main` before the second dispatch runs, so §287 carries that verdict rather than this entry predicting it.
