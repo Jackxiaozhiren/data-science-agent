@@ -16301,3 +16301,67 @@ not contain path separators`. Restored and re-hashed inside the same command bot
 A rule widening that changes a refusal a visitor can see is the owner's call, and it was taken explicitly; the
 `_FILENAME_VERDICTS` table keeps every row -- the ones that moved and the ones that did not -- so a future
 widening is a visible diff rather than a silent behaviour change.
+
+## 289. The unauthenticated `/mcp` was decided, not deferred: the free demo accepts its own residual
+
+§265 opened three options for the credential-less MCP surface and §277 executed one of them (the exec pair is off
+HTTP). The owner decided the rest on 2026-10-24: **this deployment keeps no credential**, and the decision is
+written into `docs/MCP_DESIGN.md` and `docs/hosted-demo.md` instead of remaining a TODO. The reasoning that makes it
+a decision rather than a shrug:
+
+- what is left after §277 is `profile_dataset`'s read of any path with a recognised extension and its
+  path-existence oracle, plus the analysis tools operating on data the caller supplies;
+- the demo stores nothing that belongs to anyone -- the three writable roots are on `/tmp`, cleared by any restart,
+  and visitor uploads are not enumerable through the surface because stored names are `<uuid>_<filename>`;
+- the switch that would seal it is `DSA_AUTH_TOKEN`, and `AuthMiddleware` guards `/api/*`, so setting it answers
+  every anonymous visitor's request with 401 and ends the thing the page exists to demonstrate. That is the cost
+  the option list understated, and measuring it (the early return on
+  `not request.url.path.startswith("/api/")`) is what turned "authenticate the surface" from a default-safety
+  answer into a product decision.
+
+What the entry refuses to write is a generalisation. The docs now say the boundary in two sentences with the
+deployment named: accepted *here*, and anywhere else the instruction is still authenticate `/mcp`, bind it to
+loopback, or do not expose it. The residual is a property of a throwaway container on a free plan, and a reader
+who copies this repository into a machine they care about inherits none of the reasons.
+
+## 290. `/mcp-app/` is labelled as a page, because advertising it as a UI resource would be an untested claim
+
+R-14's open half (#56) asked whether to advertise the MCP App page as a UI resource or re-label the surface. The
+re-label was taken, and `docs/mcp.md` now owns the claim in one paragraph: every item `resources/list` publishes is
+data under a scheme the server owns, nothing carries `ui://`, nothing declares `text/html;profile=mcp-app`, no
+`_meta` points a client at the page -- so a conformant client cannot discover the page, and knowing its URL is the
+only way in. `docs/MCP_DESIGN.md` points at that paragraph rather than restating it, so there is one owner.
+
+The reason for not advertising is the same reason the last six rounds of this audit keep rediscovering: a
+capability claim needs a witness outside your own code. Publishing a UI resource asserts that some client will load
+and run it, and nothing here has one -- §250 is the local record of what "verified live" meant when the only witness
+was the product's own client agreeing with the product's own server, in the same module, in the same round that
+every tool turned out to publish `input_schema`.
+
+`tests/mcp/test_app_page_labeling.py` pins the paragraph to the server instead of to patience: no resource may carry
+a UI scheme or an HTML UI profile; the schemes the paragraph enumerates are compared against the set
+`list_resources()` actually produces, so a sixth scheme reddens the document's own words; the negations have to
+stay in the same clause; and the paragraph may not also *count* the enumeration, because a spelled-out number is a
+second owner for a value that moves whenever `resources.py` grows. Falsified both ways: appending a `ui://` item to
+the resource list reddens two tests, and putting "one of five schemes" back into the prose reddens the count rule.
+
+## 291. One hostname is the demo now, and the second one is documented as what it is
+
+§285 left the choice open. The owner took it on 2026-10-24: `data-science-agent-web.vercel.app` -- the host
+`README.md` has always linked, and therefore the one a visitor has always arrived at -- is canonical. The
+deployment list, the CORS examples in `docs/hosted-demo.md` and `docs/production-hardening.md`, `render.yaml`'s
+explicit origin and the persistent-disk example all moved to it; the suffixed host survives only in the section
+that explains two projects exist, both live, both baking the same API origin, with the `*.vercel.app` regex as the
+reason neither can 401 the other.
+
+Nothing about a visitor's experience changes, which is the point of measuring before deciding: every route answers
+`200` on both hosts and both bundles call the same API. What was ambiguous was the documentation's own voice, and an
+ambiguous voice is how a reviewer ends up debugging the wrong deployment. The running container still carries the
+pre-choice explicit origin until the next deploy, and the regex admits both anyway, so even that difference is
+invisible from outside.
+
+`tests/contract/test_demo_url_citations.py` was re-aimed rather than deleted: the config files must carry the
+canonical host and must *not* carry the second one, `render.yaml` is read as a config file rather than trusted from
+its comment, and the census assertion still refuses a third project. Falsified by the shape of the failure it
+prevents -- putting the suffixed host back into a copy-paste block reddens both the list test and the blueprint
+assertion.

@@ -6,6 +6,17 @@
 
 - Stateless core: no `Mcp-Session-Id` as protocol state; no `initialize/initialized` state (stateless `tools/list` + `tools/call` via `MCP_TOOL_MAP`).
 - Endpoints: `GET /mcp/tools` + `POST /mcp/call` + stateless JSON-RPC `POST /mcp` (`tools/list`, `tools/call`), mounted at `app.mount("/mcp", mcp_app)`.
+- `/mcp-app/` is a browser page this server serves, **not** an MCP UI resource. Every item `resources/list`
+  publishes is data under a scheme the server owns (`dataset://`, `evidence://`, `report://`, `analysis://`,
+  `artifact://`): nothing carries a `ui://` scheme, nothing declares `text/html;profile=mcp-app`, and no `_meta`
+  points a client at the page -- so a conformant client cannot discover it, and reaching it means knowing the URL.
+  That is the honest labelling of what R-14 shipped, chosen over advertising it, because publishing a UI resource
+  is a capability claim about client behaviour nothing here has tested: the last time this file said "verified
+  live", the only witness was the product's own client agreeing with the product's own server, and the same round
+  found every tool publishing `input_schema` where the protocol reads `inputSchema` (`AUDIT_LEDGER.md` §250).
+  Making the claim real needs a real client on the other end, not a resource entry.
+  `tests/mcp/test_app_page_labeling.py` pins both halves -- the resource list holds no UI scheme, and this
+  sentence still exists.
 - Transport asymmetry (2026-10-23): `run_python` and `run_sql` are withheld from the HTTP endpoints -- not listed, refused before dispatch with JSON-RPC `-32000` -- while `dsa mcp` (stdio) publishes the whole registry. See `MCP_DESIGN.md` for why.
 
 ## Tool Discovery / Schemas / Calls / Errors

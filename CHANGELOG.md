@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — three open owner decisions were taken and written down
+
+- **`/mcp` keeps no credential on this demo (#59, ledger §289).** What survives §277 is `profile_dataset`'s read
+  and its path-existence oracle; the demo holds no user data and its disks are `/tmp`, while the switch that would
+  seal the surface guards `/api/*` and would answer every anonymous visitor with 401. `docs/MCP_DESIGN.md` and
+  `docs/hosted-demo.md` now state the accepted residual *for this deployment* and keep the operator instruction
+  for any other: authenticate `/mcp`, bind it to loopback, or do not expose it.
+- **`/mcp-app/` is labelled as a page, not advertised as a UI resource (#56, ledger §290).** Nothing in
+  `resources/list` carries a `ui://` scheme, a `text/html;profile=mcp-app` MIME type, or `_meta` pointing at the
+  page, so a conformant client cannot discover it; publishing one would claim client behaviour nothing here has
+  tested (`AUDIT_LEDGER.md` §250 is the local record of that mistake).
+  `tests/mcp/test_app_page_labeling.py` compares the paragraph's scheme enumeration against what the server
+  actually emits and forbids the prose from counting it.
+- **One hostname is the demo (#285 -> §291).** `data-science-agent-web.vercel.app`, the host `README.md` links, is
+  now canonical in the deployment list, both CORS examples, `render.yaml` and the persistent-disk example;
+  `…-rr93.vercel.app` is documented as the second live deployment, admitted by the `*.vercel.app` regex. Measured
+  first: every route is `200` on both and both bundles bake the same API origin, so the choice changes which URL
+  the documentation says, not what a visitor can reach.
+
 ### Changed (post-4.6.0) — a filename holding two dots is no longer accused of path traversal
 
 - Owner decision on #71: `validate_filename` matches `..` against whole **path segments**, not as a substring.

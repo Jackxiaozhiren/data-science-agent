@@ -6,8 +6,9 @@ The repository contains a Next.js web app (`apps/web`) and FastAPI service (`app
 
 The verified deployment shape is:
 
-- **Web:** Vercel — `https://data-science-agent-web-rr93.vercel.app`
-- **Try DSA:** `https://data-science-agent-web-rr93.vercel.app/datasets`
+- **Web:** Vercel — `https://data-science-agent-web.vercel.app` (the host `README.md` links; see "Which web
+  hostname is the demo" for the second one that also answers)
+- **Try DSA:** `https://data-science-agent-web.vercel.app/datasets`
 - **API:** Render Web Service — `https://data-science-agent-api-h43i.onrender.com`
 - **API health:** `https://data-science-agent-api-h43i.onrender.com/health`
 
@@ -15,9 +16,13 @@ The full DSA Python package is intentionally not treated as a lightweight server
 
 ### Which web hostname is the demo
 
-Two `*.vercel.app` hostnames answer, and they are not the same deployment. `data-science-agent-web-rr93.vercel.app`
-is the one named above and in `docs/production-hardening.md`; `data-science-agent-web.vercel.app` is the one
-`README.md` links as the live demo. Searching the Vercel dashboard for either project name finds the other one as
+Two `*.vercel.app` hostnames answer, and they are not the same deployment. `data-science-agent-web.vercel.app` is
+the one this document names above and `README.md` links as the live demo; `data-science-agent-web-rr93.vercel.app`
+is the second, which the deployment list stopped leading with on 2026-10-24 when the owner chose the canonical host
+(`AUDIT_LEDGER.md` §291). Both are allowed by CORS -- one explicitly, the second through the preview regex -- so
+nothing about the choice changes what a visitor can reach, only which URL the documentation sends them to. The
+running container still carries the pre-choice explicit origin until the next deploy, and the regex already admits
+both, which is why no visitor can tell the difference either way. Searching the Vercel dashboard for either project name finds the other one as
 well, so treat both as live until a measurement says otherwise, and say which one you measured.
 
 Measured on 2026-10-24 from the same machine, they are two builds of this repository rather than a current one and
@@ -134,7 +139,7 @@ No model credential or CORS value is required to get the API itself healthy. Fir
 For the current public deployment:
 
 ```bash
-DSA_CORS_ORIGINS=https://data-science-agent-web-rr93.vercel.app
+DSA_CORS_ORIGINS=https://data-science-agent-web.vercel.app
 DSA_DATABASE_URL=sqlite+aiosqlite:////tmp/dsa.db
 DSA_DATASET_DIR=/tmp/datasets
 DSA_ARTIFACT_ROOT=/tmp/artifacts
@@ -500,9 +505,16 @@ either withheld name was refused before dispatch. On any host where `/mcp` is re
 still listed -- an older image, a differently configured instance -- treat it as a remote shell on that host.
 Visitor uploads are still not
 enumerable through it -- stored names are `<uuid>_<filename>` -- so the exposure is the machine, not other
-visitors' rows. What to do about that is the open owner decision recorded in `AUDIT_LEDGER.md` §265:
-authenticate the surface, bind it to loopback, or keep `run_python` and `run_sql` off the HTTP endpoint. The
-sentence is here so nobody has to read the code, or this ledger, to learn the boundary before deploying.
+visitors' rows. The owner decided on 2026-10-24 how to live with that **on this demo**: nothing further (`AUDIT_LEDGER.md`
+§265, §289). The demo keeps no user data, its container's three writable roots are on `/tmp` and cleared by any
+restart, and the switch that would seal the surface -- `DSA_AUTH_TOKEN` -- guards `/api/*`, so setting it would
+answer every anonymous visitor with 401 and end the thing this page exists to demonstrate. Two of the three options
+the decision was written against are already in force regardless: `run_python` and `run_sql` are off the HTTP
+endpoint (§277), and the remaining reach is `profile_dataset`'s read and its path oracle.
+
+That is a decision about this deployment, not a property of the code. Fork it, point it at real data, or run it on
+a machine you care about, and the instruction flips: authenticate `/mcp` or bind it to loopback. The sentence is
+here so nobody has to read the code, or this ledger, to learn the boundary before deploying.
 
 ## Required configuration
 
