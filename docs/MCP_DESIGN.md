@@ -51,9 +51,11 @@ methods over line-delimited stdin/stdout, which is what a client config that lau
   the reach and the path-existence oracle described two bullets up, plus the analysis and reporting tools that
   operate on data the caller supplies. Narrower, not closed -- authenticating the surface or binding it to
   loopback remains the owner's open decision (`AUDIT_LEDGER.md` §265).
-- One limit this file cannot express: a deployment serves the tools it shipped with. Until the Render service is
-  redeployed (open item #44), a live instance still advertises the two withheld names. Check it with the
-  credential-free `tools/list` in `docs/hosted-demo.md` instead of trusting the sentence above.
+- One limit this file cannot express: what a running instance publishes is decided by the build it was made
+  from, not by the paragraph above. The Render demo was redeployed from `main` on 2026-10-24 and its
+  credential-free `tools/list` then omitted both names, with a call to either answered by `-32000`; that is the
+  check, and it is worth running before repeating any sentence from this file about a live host. The command is
+  in `docs/hosted-demo.md`.
 - MCP surface mirrors the Tool Layer with friendly names.
 
 ## Tools Exposed

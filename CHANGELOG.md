@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the demo was finally redeployed, and the probe that said "stale" could not have said anything else
+
+- The owner ran **Manual Deploy → Deploy latest commit code** on the Render service on 2026-10-24, closing #44.
+  Four credential-free answers, read back the same day: the anonymous `tools/list` publishes the HTTP list with
+  `inputSchema` on every entry, a call to `run_python` or `run_sql` is refused as JSON-RPC `-32000` naming
+  `dsa mcp`, `GET /mcp/tools`'s `count` equals the length of the list beside it, and `/mcp-app/` carries a
+  per-document `script-src 'sha256-…'`. `/version` says `4.6.0` on the old image and the new one, so it is not a
+  currency signal; the web half needed nothing, because Vercel builds `main`.
+- `docs/hosted-demo.md` also carried a content probe that had been deciding deploys on a false reading. It grepped
+  the whole HTML report for `<strong>[a-z]+_[a-z_]+</strong>` and called a hit "this container predates the
+  validation-label localization" -- and the hits were the **Tool Calls** section naming each tool by its wire
+  identifier, which every current build does. The `False` the document told readers to wait for was unreachable.
+  The 2026-10-21 and 2026-10-22 "still `True`" entries in that file are now marked as instrument readings.
+- The probe reads a *section* instead: the exporter writes validation last, so the command looks only after the
+  final `<h2>`, which is language-independent (`Validation` / `校验`) and returns `[]` on a current build.
+  `tests/contract/test_report_currency_probe.py` pins the positional precondition, the empty answer in both
+  languages, a planted raw key that must be caught, and the unscoped pattern's continued match outside the
+  validation section -- so the widened grep cannot silently come back.
+- `AUDIT_LEDGER.md` §279 and §280. What the deploy did *not* change is §265's open half: `profile_dataset` still
+  reads any recognised extension and still distinguishes "absent" from "wrong suffix", so the path-existence
+  oracle is untouched and the authentication decision stays with the owner.
+
 ### Changed (post-4.6.0) — the HTTP MCP surface no longer offers the tools that could run code
 
 - Owner decision from 2026-10-23, option 1 of #59: `run_python` and `run_sql` are withheld from every HTTP

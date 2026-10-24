@@ -72,7 +72,10 @@ in Chinese (no English-then-Chinese re-paint), the landing's primary action carr
 gate, not a screenshot: `apps/web/scripts/regression.mjs` walks the analyst's routes and requires a visible focus
 indicator on every tab stop and that each `<details>` drill-down opens on Enter.
 
-The public deployment above has not been redeployed since, so what it serves is still the earlier build.
+Those local measurements were made against a `dsa ui` build; the public API was redeployed from `main` on
+2026-10-24, and the checks under "Verify a deploy from the outside" are what say so. Before that deploy the two
+halves of the demo served different code, which is why the documentation keeps its readings dated rather than in
+present tense.
 
 ## Product capture (30 s, recorded 2026-09-11 against the live deployment)
 
@@ -166,7 +169,9 @@ print('hosted', len(h), 'local', len(l), '| hosted-only', sorted(h-l), '| local-
 ```
 
 Both sides answered the same path set when measured on 2026-10-21 and again on 2026-10-22 (25 paths each, no
-difference either way), so the deployed API is not behind the repository at the route level. It can still be
+difference either way), and again after the 2026-10-24 redeploy. So the deployed API is not behind the repository
+at the route level -- and note what that does *not* say: it was not behind on 2026-10-22 either, while the MCP
+surface was publishing the pre-fix discovery shape. A route census measures routes, not currency. It can still be
 behind at the *content* level, and that is the half a path census
 cannot see: a route that exists in both may render differently. The content check needs no credentials either --
 ask a published run for its report and look at what the product itself says:
@@ -175,14 +180,24 @@ ask a published run for its report and look at what the product itself says:
 RID=$(curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/ \
   | python3 -c "import json,sys; a=json.load(sys.stdin)['analyses']; print(a[0]['id'])")
 curl -s "https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/$RID/report?format=html" \
-  | python3 -c "import re,sys; h=sys.stdin.read(); print(re.findall(r'<h2>(.*?)</h2>', h)); print(bool(re.search(r'<strong>[a-z]+_[a-z_]+</strong>', h)))"
+  | python3 -c "
+import re,sys
+h=sys.stdin.read()
+tail=h.rsplit('<h2>',1)[-1]   # the exporter writes the validation section last
+print([s for s in re.findall(r'<strong>(.*?)</strong>', tail) if re.fullmatch(r'[a-z][a-z0-9_]*', s)])"
 ```
 
-The second line prints whether any validation check is being named by the engine's identifier instead of by the
-word the report owns (`Evidence coverage`, 证据覆盖率). Measured on 2026-10-21 the answer was `True`: the running
-container predates that change, which is the evidence a redeploy is owed -- and the reason `identical: True` above
-is a route claim, not a currency claim. Run the same probe again after a deploy; when it prints `False`, the
-artifact the visitors download matches the repository. Re-measured on 2026-10-22: still `True`.
+An empty list means every validation check is named by the word the report owns (`Evidence coverage`, 证据覆盖率);
+a non-empty one lists the engine's keys that reached the document instead. Measured on 2026-10-24 on the
+redeployed instance the answer was `[]`.
+
+The section is the whole instruction, because until that date this block grepped `<strong>[a-z]+_[a-z_]+</strong>`
+anywhere in the file and read a hit as staleness. That command cannot clear a build: the Tool Calls section names
+each tool by its wire identifier -- `correlation_analysis`, `profile_dataset` -- on every build, current included,
+so the answer is `True` whether or not the validation wording was localized, and which of the two the
+2026-10-21 and 2026-10-22 readings were reporting cannot be recovered from the record. `tests/contract/test_report_currency_probe.py`
+pins both halves: the scoped probe is empty in either language and catches a planted raw key, and the unscoped
+pattern still matches only outside the validation section.
 
 A third probe, cheaper than both, answers the same currency question for the MCP App page -- a page is only real
 if the browser can run it:
@@ -195,7 +210,9 @@ A response whose policy is the API-wide `default-src 'none'; frame-ancestors 'no
 whose own inline script that policy forbids, so the visitor gets a picture of the page with dead buttons; the
 fixed build answers a per-document policy that names the script block it actually sent (`script-src
 'sha256-...'`). Measured on 2026-10-22 the hosted answer was the strict default, i.e. the deployed container
-predates that fix too, while `/version` on both hosts reported `4.6.0`.
+predates that fix too, while `/version` on both hosts reported `4.6.0`. Re-measured on 2026-10-24 after the
+redeploy: the answer is a `script-src 'sha256-…'` per document, so that reading was about the deployment and not
+about the grep -- which is the difference this block is here to teach.
 
 The web side could not be censused from the same machine on 2026-10-22: both `*.vercel.app` URLs timed out at
 TCP connect while Render answered, and that observation cannot distinguish a paused deployment from this network
@@ -246,6 +263,12 @@ what it sees today is a list of tools that appear to take no arguments. That one
 once: which image is running, that the MCP surface takes no credential, and how many tools it will accept a
 call to. It is the cheapest way to learn that the demo is behind `main`.
 
+Re-measured on 2026-10-24, after the Render service was redeployed from `main`: the same request prints the
+shortened HTTP list and `current`, neither withheld name appears in it, and a `tools/call` for either comes back
+as a JSON-RPC error with `code: -32000` naming `dsa mcp` rather than as a tool result. `GET /mcp/tools` reports a
+`count` equal to the length of the list it returned. The list's length is owned by `adapter.HTTP_WITHHELD_TOOLS`
+and recomputed by `tests/security/test_mcp_http_surface.py`, not by this file.
+
 The web side is checked the same way, from wherever you are:
 `curl -sI https://data-science-agent-web.vercel.app/datasets`. A healthy answer is an HTTP `200` with the app
 shell; a TCP connect that never completes says about your path what a 62-second probe said about the API last
@@ -267,9 +290,11 @@ curl -s $W/datasets | grep -o '/_next/static/[^"]*\.js' | sort -u | while read -
 done
 ```
 
--- and it names the chunk rather than a claim, while the API's `/mcp` still publishes the pre-fix
-`input_schema`. So Vercel is tracking `main` and the Render service is not, and the remaining deploy work is
-one service rather than two. That is worth knowing before spending the token a redeploy needs.
+-- and it names the chunk rather than a claim, while the API's `/mcp` on 2026-10-23 still published the pre-fix
+`input_schema`. So Vercel was tracking `main` and the Render service was not, and the remaining deploy work was
+one service rather than two. That is worth knowing before spending the token a redeploy needs. Measured again on
+2026-10-24, after the Render deploy: both halves answer current, so this asymmetry is the thing to re-check
+rather than assume -- `autoDeploy` is off on the API, so any future gap will again be one service, not two.
 
 What the two listings contain depends on who owns the rows, and this changed when the demo grew its own
 published content, so the old "expect an empty list" note is gone. As measured on 2026-10-21, the instance
@@ -405,10 +430,11 @@ what to do about it. The `/mcp` surface on the same host takes no credential at 
   same checker, measured without executing them. A child process makes the rest of that list beside the point,
   because the child can read the environment and open the file the parent refused to spell.
 
-Until this deployment is redeployed -- open item #44, and the Render service is the one still behind -- an
-instance you are reading about advertises what it shipped with, not what `main` withholds, so the
-credential-free `tools/list` above is the check. On a host where `/mcp` is reachable with the exec pair
-still listed, treat it as a remote shell on that host. Visitor uploads are still not
+What a deployment actually offers depends on what it was built from, so the sentence above is checked, not
+trusted: on 2026-10-24 the credential-free `tools/list` on this host returned the shortened list and a call to
+either withheld name was refused before dispatch. On any host where `/mcp` is reachable with the exec pair
+still listed -- an older image, a differently configured instance -- treat it as a remote shell on that host.
+Visitor uploads are still not
 enumerable through it -- stored names are `<uuid>_<filename>` -- so the exposure is the machine, not other
 visitors' rows. What to do about that is the open owner decision recorded in `AUDIT_LEDGER.md` §265:
 authenticate the surface, bind it to loopback, or keep `run_python` and `run_sql` off the HTTP endpoint. The

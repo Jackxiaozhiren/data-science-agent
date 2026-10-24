@@ -15978,3 +15978,66 @@ six named properties -- schedule present, parseable cron, the non-cancellable sw
 pinned `GITLEAKS_VERSION`, and the `SCOPE=` line. Falsified against the previous file: restored the old
 workflow, the test reddens; put the new one back, green. A guard that would also pass on the broken state is the
 thing this repository keeps having to discover.
+
+## 279. The Render demo is current, and four credential-free answers are what said so
+
+The owner ran **Manual Deploy → Deploy latest commit code** on the service whose External URL reads
+`https://data-science-agent-api-h43i.onrender.com` on 2026-10-24, which closes #44 -- the item that had been
+carrying two different weights in this ledger: cosmetic while the fixes were only in the repository, load-bearing
+from the day `run_python` was shown to be unbounded, because until that deploy the public surface still listed the
+exec pair to any anonymous caller.
+
+What changed for a visitor, each half measured rather than read off the dashboard:
+
+- `tools/list` for an unauthenticated caller now publishes the HTTP list rather than the whole registry, and
+  `inputSchema` is present on every entry (the pre-fix image published `input_schema`, so a spec-conformant
+  client saw tools that looked argument-less).
+- A `tools/call` for `run_python` or `run_sql` answers a JSON-RPC `error` with `code: -32000` naming `dsa mcp`;
+  the REST shape answers `isError` with the same sentence and a `hint`. Neither reaches the dispatcher.
+- `GET /mcp/tools` returns a `count` equal to the length of the list it returned -- the boundary that used to
+  count the registry and publish a shorter list.
+- `/mcp-app/` carries a per-document `script-src 'sha256-…'` instead of the API-wide `default-src 'none'`, so
+  the page the browser used to render as a dead picture runs (§254).
+- The route census still agrees (`hosted 25 / local 25`, no difference either way), as it did on 2026-10-21 and
+  2026-10-22 when the deployment *was* behind. That is §280's subject.
+
+`/version` reports `4.6.0` on both the old and the new image, so it is not a currency signal, and the web half
+needed no deploy at all: Vercel builds `main` on push, and the cold-start copy loop names the chunk that carries
+it. The remaining `/mcp` exposure is the one §265 describes and §277 leaves open -- `profile_dataset`'s read and
+its path-existence oracle -- which a deploy does not touch.
+
+## 280. The report-currency probe could not have said what this ledger read from it
+
+`docs/hosted-demo.md` told the reader to fetch a published run's HTML report and search it for
+`<strong>[a-z]+_[a-z_]+</strong>`, treating a hit as proof that the running container predated the localization
+that names validation checks in words a reviewer knows. On 2026-10-21 and again on 2026-10-22 it hit, and both
+entries recorded "the deployed container predates that change". Verifying the redeploy is what showed the
+instrument, not the deployment, was the problem: the pattern matches the **Tool Calls** section, which names each
+tool by its wire identifier on every build, current included. Five hits, all five from that section, and on this
+build the section the instruction was about printed its checks as `Evidence coverage` and `Causal language`.
+
+Two properties made the reading worthless, and both are now pinned by
+`tests/contract/test_report_currency_probe.py`:
+
+- **The value it demanded was unreachable.** A correct, localized report still matches, so the doc's
+  "run it again; when it prints `False`, the artifact matches the repository" could never be satisfied. A probe
+  with one reachable outcome is not a test of anything, and this one was being used to decide whether to spend a
+  deploy.
+- **Its output was not attributable.** `True` is what the Tool Calls section alone produces on a current build, so
+  it cannot distinguish that from the pre-localization shape it was written to catch; whether the 2026-10-21 and
+  2026-10-22 containers actually carried raw validation keys is not recoverable from the record either way. The two
+  entries stand as measurements of the grep, and the redeploy's currency is now decided by the four answers in §279
+  instead.
+
+The fix is a different *section*, not a different word list: the exporter writes validation last, so the probe
+reads everything after the final `<h2>`. Position rather than heading text is what lets the same one-liner answer
+the question on an English report and a Chinese one (`Validation` / `校验`), and the test asserts that positional
+precondition directly, so a future edit that appends a section behind validation reddens the test instead of
+quieting the probe. Both directions are planted: the scoped probe returns `[]` on the current rendering in either
+language, catches `<strong>evidence_coverage</strong>` when it is put back, and the unscoped pattern is asserted
+still to match -- outside the validation section only.
+
+The general form, for the next time a document prescribes a grep: ask what the command prints when the thing it
+warns about is *absent*. If that answer is the same as when it is present, the document is not measuring, and any
+conclusion already drawn from it -- including this ledger's two dated entries, which now read as instrument
+readings rather than deployment ones -- is about the grep.
