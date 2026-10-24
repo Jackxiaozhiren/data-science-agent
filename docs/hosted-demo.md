@@ -286,12 +286,25 @@ which is checkable in one loop --
 
 ```bash
 W=https://data-science-agent-web.vercel.app
-curl -s $W/datasets | grep -o '/_next/static/[^"]*\.js' | sort -u | while read -r s; do
-  curl -s "$W$s" | grep -q "two minutes" && echo "current cold-start copy in $s"
+MARK="two minutes"   # a literal that must survive in apps/web/lib/locale.ts; a guard checks that
+N=0; HIT=0
+for s in $(curl -s $W/datasets | grep -o '/_next/static/[^"]*\.js' | sort -u); do
+  N=$((N + 1))
+  curl -s "$W$s" | grep -q "$MARK" && { echo "cold-start copy in $s"; HIT=$((HIT + 1)); }
 done
+echo "chunks scanned: $N, carrying the marker: $HIT"
+[ "$HIT" -gt 0 ] || echo "marker absent -- either this bundle predates the copy, or the copy was reworded"
 ```
 
--- and it names the chunk rather than a claim, while the API's `/mcp` on 2026-10-23 still published the pre-fix
+It prints an answer in both directions on purpose. The loop this replaces echoed nothing unless a chunk matched,
+so a reworded sentence and a stale deployment produced the same silence, and `... | while read -r s` ran the body
+in a subshell where the running totals could not survive to be printed. `for s in $(...)` keeps the counters in
+the shell that prints them. The marker itself is pinned by
+`tests/contract/test_hosted_demo_bundle_probe.py`, which reads the string out of this block and requires it to be
+live in the locale file -- reword the cold-start copy without telling the probe and the gate reddens rather than
+quietly blinding the only check that says which bundle is deployed.
+
+The loop names the chunk rather than a claim, while the API's `/mcp` on 2026-10-23 still published the pre-fix
 `input_schema`. So Vercel was tracking `main` and the Render service was not, and the remaining deploy work was
 one service rather than two. That is worth knowing before spending the token a redeploy needs. Measured again on
 2026-10-24, after the Render deploy: both halves answer current, so this asymmetry is the thing to re-check

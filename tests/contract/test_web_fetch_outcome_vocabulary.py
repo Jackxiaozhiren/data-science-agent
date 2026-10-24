@@ -4,8 +4,8 @@ Audit §160 item 6, §164 (the maintainer picked option (i)) and §166. The defe
 response rendered as "there is no data", while `docs/api.md:13-15` tells operators to set
 `DSA_AUTH_TOKEN` -- which makes `/api/*` answer 401 and leaves `/health` public, so
 `apps/web/app/components/layout/ApiStatusDot.tsx` painted "API connected" beside pages claiming the
-product was empty. `docs/hosted-demo.md:175` already promised transport failures and 4xx/5xx would be
-told apart from absence.
+product was empty. The closing paragraph of *Troubleshooting the browser demo* in `docs/hosted-demo.md`
+already promised transport failures and 4xx/5xx would be told apart from absence.
 
 Two properties are pinned, in both directions, for the reason
 `tests/contract/test_web_analysis_status_vocabulary.py` pins the run-status vocabulary: the kinds are owned in

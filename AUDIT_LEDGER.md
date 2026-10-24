@@ -16098,3 +16098,35 @@ The general form, for the next time a document prescribes a grep: ask what the c
 warns about is *absent*. If that answer is the same as when it is present, the document is not measuring, and any
 conclusion already drawn from it -- including this ledger's two dated entries, which now read as instrument
 readings rather than deployment ones -- is about the grep.
+
+## 282. The bundle probe printed silence, and the phrase it searched for had no owner
+
+§281 was about one document's grep; the same file carried a second instrument with the same shape, found by
+reading it instead of running it. The check for *which web bundle the demo serves* greps each deployed chunk for
+a phrase from the cold-start copy and echoed a chunk name only on a match. Two holes:
+
+- **No answer on the negative branch.** A reworded sentence and a stale deployment produced identical silence, so
+  the reader could not tell "the bundle predates the copy" from "the copy no longer says that". The loop now
+  prints its own denominator -- `chunks scanned: 12, carrying the marker: 1`, measured on the live
+  `data-science-agent-web.vercel.app` on 2026-10-24 -- and the miss branch states which of the two readings it is.
+- **The search string lived only in prose.** `apps/web/lib/locale.ts` owns that sentence, and nothing connected
+  the two. The marker is now read out of the document by `tests/contract/test_hosted_demo_bundle_probe.py` and
+  required to be live in the locale file, so rewording the copy without telling the probe is a failing test
+  rather than a permanently blinded check.
+
+A third defect was in the shell, not the claim: the loop was
+`curl ... | grep -o ... | while read -r s`, and a pipeline's `while` body runs in a subshell, so any running
+total it kept could not reach the `echo` after `done`. The rewrite iterates with `for s in $(...)` in the shell
+that prints. The test asserts both the absence of the pipe-fed `while` and the presence of the in-shell loop, and
+it counts the candidate blocks rather than taking the first -- restoring the old block shape made its own
+census assertion fail, which is what keeps the three checks from passing on a file that no longer contains the
+probe they describe.
+
+Falsified from both sides: rewording `two minutes` to `ninety seconds` in the locale file reddens the marker test
+alone, and restoring the old silent loop reddens all three. Both files were restored and re-hashed inside the same
+command, and the suite is green on the restored tree.
+
+Also here, because it is the same rot: `tests/contract/test_web_fetch_outcome_vocabulary.py` cited
+`docs/hosted-demo.md:175` for a promise this round's edits moved to line 481. A line number in a docstring is a
+citation that cannot be checked by anything, so the pointer now names the section (*Troubleshooting the browser
+demo*) instead.
