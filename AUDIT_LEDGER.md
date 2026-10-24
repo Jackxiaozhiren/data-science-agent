@@ -16302,6 +16302,11 @@ A rule widening that changes a refusal a visitor can see is the owner's call, an
 `_FILENAME_VERDICTS` table keeps every row -- the ones that moved and the ones that did not -- so a future
 widening is a visible diff rather than a silent behaviour change.
 
+One consequence of §280's rule, stated so nobody has to rediscover it: the deployed API still refuses
+`Q1..Q2.csv`, because it was built before this change and `autoDeploy` is off. The narrowing reaches a visitor only
+at the next **Manual Deploy -> Deploy latest commit code**, and nothing about it is urgent -- it widens what people
+may upload, it does not loosen a boundary.
+
 ## 289. The unauthenticated `/mcp` was decided, not deferred: the free demo accepts its own residual
 
 §265 opened three options for the credential-less MCP surface and §277 executed one of them (the exec pair is off
