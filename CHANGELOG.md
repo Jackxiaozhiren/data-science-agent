@@ -26,7 +26,7 @@
   now that delivery is a pull request, because the keyword suppresses the `ci` workflow branch protection waits
   for. The two requests built from that commit had no checks at all: an absence, not a failure. The keyword is gone
   and `test_the_publish_message_carries_no_skip_keyword` asserts on the message the API would receive; forged red by
-  restoring it. `AUDIT_LEDGER.md` §298.
+  restoring it. `AUDIT_LEDGER.md` §299 (§298 was taken by the npm-migrations entry while this was in flight).
 ### Changed (post-4.6.0) — the local formatter hook is now a real opt-in
 
 - `pre-commit` is a dev dependency (resolves 4.7.0), `CONTRIBUTING.md` and `docs/contributing.md` document
