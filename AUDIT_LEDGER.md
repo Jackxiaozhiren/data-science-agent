@@ -16595,3 +16595,51 @@ it at any version. That is §294's shape applied to a dependency instead of a ga
 metadata that nothing installs, and therefore nothing observes. The difference is that §294's was thirteen months
 stale and fixable in one commit; this one is a scope choice, and the honest statement is that #125 certifies the
 re-resolution, not the package. 0.14.6 had the same property, so the hole is not new -- it is now named.
+
+## 297. The weekly contributor job has been failing since 2026-09-07, and it was retrying a rule instead of reading it
+
+Chasing the schedule-lag question (§293) produced a table instead of a cause, and the table produced a finding.
+Every scheduled workflow on this repository arrives 4.5 to 8.5 hours after its cron minute -- `stale.yml` at
+`37 2 * * *` has landed between 07:10 and 09:42 UTC over 20 consecutive days, drifting by roughly two hours across
+the month, so it is neither a fixed offset nor a whole-hour timezone reading. `contributors.yml` (`17 3 * * 1`)
+showed the same shape, and next to it sat something nobody had opened: **seven consecutive failures**, 2026-09-07
+through 2026-10-19.
+
+The job's own log gives the reason verbatim, twice, five weeks apart, byte-identical:
+
+```
+GitHubAPIError: GitHub API request failed (409): {"message":"Could not update file: Required status check \"ci\"
+is expected.","documentation_url":"…/about-protected-branches","status":"409"}
+```
+
+`main` requires the `ci` status check with `strict: true`, and `enforce_admins` is off. A commit created through the
+Contents API cannot already carry a check that has not run yet, so the weekly publisher was refused *by
+construction*: it asked the default branch to accept a commit whose required check could only exist after the
+commit landed. The last successful run was 2026-08-31, and `CONTRIBUTORS.md` has not moved since -- read today
+against the live API, the file under-reports the owner's commit count by 64 and is missing a contributor entirely.
+
+The second defect is the one that kept it invisible. `publish()` retried **every** 409 as a SHA conflict, printing
+`Concurrent update detected; retrying (n/3)`, so seven weeks of a structural rejection were reported as a race
+nobody was having, and the reason -- sitting in the response body the retry loop discarded -- never reached the
+log line a reader would scan. A retry is an assertion that the condition is transient; when it is a rule, the retry
+is what launders it into noise.
+
+Fixed in the script rather than in the settings, because the settings are the owner's: the refresh now renders,
+resets a working branch to the default branch's head, publishes there (no protection rule applies to an ordinary
+branch), and opens or reuses a pull request on `chore/contributor-recognition`. Two states are handled as
+outcomes rather than errors: content already matching base writes nothing and opens nothing, and a token that may
+write files but not open pull requests publishes the branch, prints the compare URL, and exits 0 -- the current
+`contents: write` permission is exactly that case, so the job stops failing today and a one-line
+`pull-requests: write` would let it finish the job itself.
+
+`tests/test_automation_scripts.py` grew five guards, and the classifier is exercised from both sides: the copied
+protection body raises on the **first** attempt and reports `is_retryable_conflict(...) is False`, while a real
+`Sha could not be updated` conflict still gets its second attempt; `refresh()` is asserted never to PUT to the base
+branch; up-to-date content is asserted to issue no `PUT` and no `POST` at all; and the 403 path is asserted to print
+`compare/main...`. One of those tests was itself wrong first -- it sampled the call log before calling the code
+under test, which is a vacuous 0 == 1 rather than a proof -- caught by reading the failure instead of re-running it.
+
+Also worth naming plainly: a scheduled job that fails weekly and blocks nothing has no audience. The reason this
+one survived eight weeks is that nothing routes a schedule failure to a human, and the fix that would be durable
+here is the same one that made the secret-sweep trustworthy -- make the run state what it did, and give it a
+trigger a person can pull (`workflow_dispatch`) so a red path can be witnessed rather than waited for.

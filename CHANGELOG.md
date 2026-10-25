@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the weekly contributor refresh stopped trying to push to a protected branch
+
+- `Contributor Recognition` failed on 2026-09-07, 09-14, 09-21, 09-28, 10-05, 10-12 and 10-19 — seven straight
+  scheduled runs, identical in the log: `409 … Could not update file: Required status check "ci" is expected.`
+  `main` requires the `ci` check with `strict: true`, and a Contents-API commit cannot pre-carry a check that has
+  not run yet, so publishing to the default branch was refused by construction. The last success was 2026-08-31,
+  and `CONTRIBUTORS.md` has not refreshed since: read against the live API today it under-reports the owner's
+  commit count by 64 and omits one contributor entirely.
+- The retry made it unreadable: `publish()` treated **every** 409 as a SHA conflict and printed
+  `Concurrent update detected`, so a rule was reported as a race for eight weeks and the reason in the response
+  body was discarded.
+- The refresh now targets a working branch (`chore/contributor-recognition`, reset to the default head each run)
+  and opens or reuses a pull request; already-current content writes nothing, and a token that cannot open pull
+  requests publishes the branch and prints the compare URL instead of failing. `contents: write` alone therefore
+  stops the red today; adding `pull-requests: write` to the workflow — an owner decision, since it is a
+  `.github/workflows` edit — lets it land the PR itself.
+- `tests/test_automation_scripts.py` gained five guards, including both sides of the classifier (protection body:
+  raise on attempt one, `is_retryable_conflict` False; `Sha could not be updated`: second attempt still happens)
+  and the assertion that no write ever targets the base branch. `AUDIT_LEDGER.md` §297 (their §296 was taken by the statsmodels entry while this one was in flight).
+
 ### Changed (post-4.6.0) — the local formatter hook is now a real opt-in
 
 - `pre-commit` is a dev dependency (resolves 4.7.0), `CONTRIBUTING.md` and `docs/contributing.md` document
