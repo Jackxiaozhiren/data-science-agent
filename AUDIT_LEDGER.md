@@ -16432,3 +16432,24 @@ Tailwind 3 -> 4 work. §239 is the Secret Scan range record and says nothing abo
 file mentions Tailwind at all. Corrected to #103 and `CHANGELOG.md:799`, with each supporting fact re-read from
 the tree. Writing a citation from recall rather than from the artifact is the failure mode, and it is now the
 second time in one round.
+
+## 293. The scheduled sweep fired: four and a half hours late, whole history, and clean
+
+§287 left one claim unfinished -- every sweep verdict so far had come from a manual dispatch. On 2026-10-24 at
+09:05:21 UTC GitHub produced the repository's first `event: schedule` run for `secret-scan.yml`, and it is the real
+thing end to end: `SCOPE=whole history at 1c6d61d8e524eea8dc36ce4b84e24efa792fc555`, `852 commits scanned`,
+`No leaks detected`, job success. 4 h 28 min after the `37 4 * * *` minute it was scheduled for.
+
+Two things this settles, and one it does not:
+
+- **The backstop runs.** A cancelled or narrow push range is now provably covered by something that fires without a
+  human, which is the property §275 asked for and §278 could only configure. The exemptions written in §286 held
+  under a scheduled run too -- the two historical fingerprints stayed forgiven rather than resurfacing as a red
+  nightly job, which is the failure mode that would have made the whole mechanism noise.
+- **§284's estimate was the right shape and the wrong number.** It predicted ~09:54 UTC from `stale.yml`'s observed
+  5 h 17 m lag; the actual arrival was 4 h 28 m after the cron minute. So the lag is real and recurring across two
+  different workflows, and it is not constant. Treat any scheduled time in this repository's CI as a lower bound
+  with a few hours of slack, and read the run's own `SCOPE=` line rather than the badge to learn what it covered.
+- **Still unexplained is the cause.** Nothing in this ledger claims to know why schedules arrive late here; what it
+  claims is that they arrive, that the log states its coverage, and that the outcome is checked rather than
+  assumed. A future reader who finds the platform reason should replace this sentence, not append to it.
