@@ -16660,18 +16660,21 @@ What is established here, and what is not:
   sends as `message`), the two pull requests built from that commit showed no `ci` run while other workflows on the
   same head did, and other pull requests in the same window -- including a peer's dependency bump an hour later --
   produced `ci` runs normally.
-- not established: the exact field GitHub scans. The earlier claim written into the #127 comment -- that pushing a
-  second, keyword-free commit did not help, so the skip is evaluated over the request's commits rather than the head
-  alone -- is an inference from one observation, and the documentation that would settle it was unreachable from
-  this machine at the time (the docs fetch failed on the network that also flaked the git pushes). The entry says
-  "inferred" and leaves it there.
+- measured the same hour, and it corrects this entry: the field that matters is the **head commit's message**. A
+  second commit without the keyword, pushed to the same PR branch, made every workflow run -- `ci`,
+  `web-regression`, Secret Scan, CodeQL and dependency-review all completed successfully on that head -- so the
+  claim first written into the #127 comment ("the skip is evaluated over the request's commits, so another commit
+  will not help") was wrong, and the comment has been edited to say so. The documentation page that would have
+  answered it was unreachable at the moment it was needed, which is why the wrong inference reached a comment
+  before the observation did; the cheap test was always to push one more commit and read the checks list.
 
 The durable lesson is about half-taken migrations: **a flag baked into an artifact outlives the design that needed
 it.** When a job's delivery path changes, grep the message and metadata templates it writes for the switches they
 encode -- skip keywords, `--no-verify`, `[skip deploy]`, path filters -- and ask what each one assumes. Nothing in
 the tests or the docs said "this commit lands directly on the default branch"; only the empty checks list could.
 
-Fixed by removing the keyword from the template, with a comment naming the assumption it used to encode, and
+Fixed by removing the keyword from the template -- so the weekly job's own pull request can be checked at all --
+and by naming the assumption the flag used to encode in a comment, plus
 `tests/test_automation_scripts.py::test_the_publish_message_carries_no_skip_keyword` asserting on the payload the
 API would receive rather than on the source text -- GitHub reads the message, so that is the surface worth
 policing. Forged red by putting the token back: the guard fails on the exact message string, restored and re-hashed
