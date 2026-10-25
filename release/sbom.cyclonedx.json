@@ -155,6 +155,19 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "cfgv",
+      "version": "3.5.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/cfgv@3.5.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "charset-normalizer",
       "version": "3.5.1",
       "licenses": [
@@ -251,6 +264,19 @@
       "version": "0.7.1",
       "licenses": [],
       "purl": "pkg:pypi/defusedxml@0.7.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "distlib",
+      "version": "0.4.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "PSF-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/distlib@0.4.4",
       "source": "https://pypi.org/simple"
     },
     {
@@ -419,6 +445,13 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "filelock",
+      "version": "4.2.4",
+      "licenses": [],
+      "purl": "pkg:pypi/filelock@4.2.4",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "fonttools",
       "version": "4.63.0",
       "licenses": [
@@ -535,6 +568,19 @@
         }
       ],
       "purl": "pkg:pypi/httpx2-jsfetch@1.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "identify",
+      "version": "2.6.20",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/identify@2.6.20",
       "source": "https://pypi.org/simple"
     },
     {
@@ -993,6 +1039,19 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "nodeenv",
+      "version": "1.11.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/nodeenv@1.11.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "notebook-shim",
       "version": "0.2.4",
       "licenses": [],
@@ -1167,6 +1226,19 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "pre-commit",
+      "version": "4.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/pre-commit@4.7.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "prometheus-client",
       "version": "0.26.0",
       "licenses": [],
@@ -1313,6 +1385,19 @@
         }
       ],
       "purl": "pkg:pypi/python-dateutil@2.9.0.post0",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "python-discovery",
+      "version": "1.6.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "Permission is hereby granted, free of charge, to any person obtaining a\ncopy of ..."
+          }
+        }
+      ],
+      "purl": "pkg:pypi/python-discovery@1.6.4",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1695,6 +1780,13 @@
         }
       ],
       "purl": "pkg:pypi/uvloop@0.22.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "virtualenv",
+      "version": "21.14.13",
+      "licenses": [],
+      "purl": "pkg:pypi/virtualenv@21.14.13",
       "source": "https://pypi.org/simple"
     },
     {

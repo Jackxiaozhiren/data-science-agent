@@ -1,12 +1,15 @@
-# Advisory, not enforced: nothing in this repository installs these hooks. `pre-commit` is not a dependency
-# (pyproject lists ruff directly), `.git/hooks/pre-commit` is absent, and no contributing document tells anyone to
-# run `pre-commit install`. The copies that actually gate a change are the CI steps `ruff check ...` and
-# `ruff format --check ...` in `.github/workflows/ci.yml`, and they are what a contributor's green locally must
-# agree with. This file exists for someone who opts in on their own machine.
+# Opt-in local copies of the two formatter gates CI enforces. Install them with `uv run pre-commit install`;
+# `pre-commit` is a dev dependency, so `uv sync --dev` provides it. Nothing here installs the hook for you, and a
+# shared worktree is the place not to: `.git/hooks` is one file for every session in the checkout, so installing
+# would start enforcing on commits this session did not author.
+#
+# The enforced copies are the CI steps `ruff check ...` and `ruff format --check ...` in
+# `.github/workflows/ci.yml`; a contributor's local green has to agree with those, not with this file.
 #
 # The rev therefore has to track the version CI resolves, not drift behind it: an old ruff here would auto-fix
-# files in a shape the current formatter rejects, turning a local "it passed" into a CI red.
-# `tests/test_pre_commit_rev_tracks_lock.py` compares this line against uv.lock and reddens on disagreement.
+# files in the shape of a superseded formatter, turning "my hooks passed" into a CI red.
+# `tests/test_pre_commit_rev_tracks_lock.py` compares this line against uv.lock, requires the guides below to
+# document the install step, and pins the two hook ids to the two CI commands.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.1

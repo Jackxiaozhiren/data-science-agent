@@ -6,6 +6,20 @@
 
 - Python `3.12` + `uv`, Node `20` (web).
 
+## Local formatter hooks (opt-in, and not for a shared worktree)
+
+`pre-commit` is a dev dependency, so `uv sync --dev` gives you the tool, and
+`uv run pre-commit install` wires `.pre-commit-config.yaml` into your next commits: the two hooks are local copies
+of the `ruff check` and `ruff format --check` steps that CI runs, so what you stage matches what the gate will say.
+It is opt-in because **the enforced copies are the CI steps**, and because `.git/hooks` is one directory shared by
+every session working in the same checkout -- installing there starts enforcing on commits you did not author. On a
+worktree with more than one agent or human in it, do not install the hook; run the two commands from the checklist
+below instead.
+
+`tests/test_pre_commit_rev_tracks_lock.py` keeps the arrangement honest: the config's ruff revision must equal the
+one `uv.lock` resolves, the hook ids must still match the CI commands they copy, and this page must still document
+the install step.
+
 ## Start with a focused contribution
 
 If you want to learn the evaluation system without changing the agent runtime, [Contribute a Benchmark Task](benchmark-task-contribution.md) walks through one task end to end: catalog schema, measurable criteria, single-task execution, evidence checks, and dataset licensing.

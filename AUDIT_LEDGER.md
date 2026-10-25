@@ -16487,3 +16487,44 @@ Finally, the earlier addenda of this round called `README.md` one of the "peer's
 and `tests/evals/…` are backed by ledger lines recording another session's uncommitted work; `README.md` has no such
 line anywhere, so the honest statement is dirty and unattributed. Guessing an owner for a file is the same error
 this ledger keeps naming -- an assumption recorded as a measurement.
+
+## 295. The opt-in hook is now actually optional: provided, documented, proven, and not forced on the shared tree
+
+§294 fixed the version and the wording; the owner then said to take the next step, which meant answering a question
+the previous entry had deliberately left open -- is `pre-commit` available at all? It is now a dev dependency
+(`uv sync --dev` resolves `pre-commit==4.7.0` plus its seven transitive packages), both contributing guides document
+`uv run pre-commit install`, and the config header names the same command instead of describing a step nobody could
+take.
+
+Three things were verified rather than assumed, because each is a place this repository has been wrong before:
+
+- **The pinned revision resolves.** `v0.17.1` exists upstream as both a tag and a release (published 2026-10-15),
+  checked with `git ls-remote --tags` against `astral-sh/ruff-pre-commit` rather than by trusting a version number
+  copied from `uv.lock` -- the two are not the same namespace and a nonexistent rev fails only when someone
+  installs.
+- **The documented step works.** Proved in a throwaway `git init` repo under `/tmp` with `PRE_COMMIT_HOME` pointed
+  outside the user's cache: the hook installed and both hooks fired on a deliberately misformatted file -- `ruff`
+  fixed two errors, `ruff-format` reformatted the file -- then the scratch repo was deleted. The exit status of that
+  run is not quoted as a pass, because pre-commit exits non-zero precisely when it modifies files; the evidence is
+  the two hook outcomes.
+- **This worktree's `.git/hooks/pre-commit` is still absent**, checked after the sandbox run. Installing there was
+  refused on purpose: `.git/hooks` is one directory for every session sharing the checkout, so an install performed
+  by this session would start enforcing on commits authored by others -- the kind of side effect that is invisible
+  to its cause and belongs to nobody. The guides now say the same thing in the reader's words.
+
+The dependency change pulled the SBOM along, exactly as §47's rule says it must: `generate_sbom.py --check` went
+from 196 components on disk to 204 derived, naming the eight new ones. Regeneration is where licenses get quietly
+erased -- `--check` deliberately does not compare the license field -- so the new files were written to a scratch
+directory first, and the diff was read entry by entry: nine pre-existing packages (`ruff`, `pillow`, `scikit-learn`,
+`pydantic-settings`, `truststore`, `httpcore2`, `httpx2`, `httpx2-jsfetch`, `langgraph-sdk`) would have lost a real
+license to `Unknown`, and the same nine lost their `licenses` array in the CycloneDX copy. Both sets were carried
+over from `HEAD` verbatim, so the committed change is `+8 components, -0, 0 existing entries touched` in both files,
+plus the `generated` stamp that `--check` ignores by design.
+
+`tests/test_pre_commit_rev_tracks_lock.py` grew a fourth property and lost its blind spot on the way. The first
+version asserted `"pre-commit" in <the dev group's text>`, which passed after a mutation deleted the requirement,
+because the comment left in the same list mentions `.pre-commit-config.yaml` -- a presence check on prose is not a
+check on a requirement. It now parses the quoted requirement specs, normalises each to its package name, and asserts
+membership in that set; with the requirement removed and the comment still present, the guard fails and prints what
+the group actually declares. Falsified across all four properties (rev, hook ids, header, guides and dev group),
+each mutation restored and re-hashed inside its own command.
