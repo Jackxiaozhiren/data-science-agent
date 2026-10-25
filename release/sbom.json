@@ -367,6 +367,13 @@
       "purl": "pkg:pypi/fonttools@4.63.0"
     },
     {
+      "package": "formulaic",
+      "version": "1.2.2",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/formulaic@1.2.2"
+    },
+    {
       "package": "fqdn",
       "version": "1.5.1",
       "license": "Unknown",
@@ -456,6 +463,13 @@
       "license": "Unknown",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/iniconfig@2.3.0"
+    },
+    {
+      "package": "interface-meta",
+      "version": "2.0.1",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/interface-meta@2.0.1"
     },
     {
       "package": "ipykernel",
@@ -1250,10 +1264,10 @@
     },
     {
       "package": "statsmodels",
-      "version": "0.14.6",
-      "license": "Unknown",
+      "version": "0.15.0",
+      "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/statsmodels@0.14.6"
+      "purl": "pkg:pypi/statsmodels@0.15.0"
     },
     {
       "package": "tenacity",
@@ -1415,6 +1429,13 @@
       "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/websockets@15.0.1"
+    },
+    {
+      "package": "wrapt",
+      "version": "2.5.1",
+      "license": "BSD-2-Clause",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/wrapt@2.5.1"
     },
     {
       "package": "xxhash",
