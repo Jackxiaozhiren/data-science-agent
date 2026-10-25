@@ -16643,3 +16643,114 @@ Also worth naming plainly: a scheduled job that fails weekly and blocks nothing 
 one survived eight weeks is that nothing routes a schedule failure to a human, and the fix that would be durable
 here is the same one that made the secret-sweep trustworthy -- make the run state what it did, and give it a
 trigger a person can pull (`workflow_dispatch`) so a red path can be witnessed rather than waited for.
+
+## 298. Two npm migrations taken together, and the rendered DOM was asked instead of the changelog
+
+The owner cleared the remaining queue except the compiler: `tailwind-merge 2.6.1 -> 3.7.0` (#113) and
+`@types/node 20 -> 26` (#118) were authorized, `typescript 5.9.3 -> 7.0.2` (#112) was not. Both landed on one
+branch (#128) because **both must rewrite the same root workspace lock** -- two branches doing that collide by
+construction, and the price was paid earlier the same day when `1e6625e` moved under #125 mid-CI. Each change is
+still its own commit (`87b64af`, `f67be6c`) so either stays individually revertible. Both Dependabot PRs were the
+half-PR shape again -- #113 edited the root lock and never `apps/web/package-lock.json`, #118 edited the root lock
+and never `apps/vscode/package-lock.json` -- which is the third and fourth observation of what #107's guard now
+names at the gate.
+
+**A v2 -> v3 major in this library rewrites the table, so "one file imports it" is not evidence.** The default
+config census: 280 class groups -> 379, **105 added** (masks, container queries, logical properties, 3d
+transforms, `text-shadow`, `inset-shadow`, `zoom`, `field-sizing`, scrollbar), 6 deleted (the `*-opacity-*` groups
+Tailwind v4 dropped), 210 of the 274 shared groups redefined, and the theme scales rekeyed to the v4 spelling
+(`colors` -> `color`, `borderRadius` -> `radius`). The bump is also corrective: apps/web has been generating CSS
+with Tailwind 4.3.3 while merging class names against v3-era definitions.
+
+**My own number was wrong, and the way it was wrong is the lesson.** `87b64af`'s message says 99 added groups. It
+was read off a printed list; counting it is 105, which the arithmetic in the same message already implied
+(379 - 274 = 105, 280 - 274 = 6). The correction lives in the PR body rather than in an amend of a pushed commit,
+and the durable rule is the derivation: a count comes from `.length` on the collection, never from eyeballing the
+rendering of it.
+
+**What was measured instead.** The app's vocabulary was extracted from source -- 715 distinct utility tokens across
+67 files, plus the 41 real `cn(...)` call-site inputs -- and every pair was merged by both versions.
+511,225 ordered pairs, **50 differences, all one rule**: v3 parses `bg-gradient-to-*` as a background colour token,
+so it now conflicts with `bg-<color>` where 2.x kept both. That class occurs once in the repository
+(`apps/web/app/page.tsx:88`, the hero beam) and sits in a plain `className`, never inside `cn()`, so no merge can
+reach it; zero tokens use any deleted `*-opacity-*` group; all 41 production inputs merge identically. The harness
+was proved able to fail first -- 8 of 30 crafted pairs across the added and deleted groups were reported as
+different -- otherwise a zero would have meant nothing.
+
+**The instrument had to be fixed before it could be trusted.** Serving both builds and dumping every `class`
+attribute of 13 routes at 1280 and 390 first gave 3038 (v3) against 3031 (v2) attributes with 43 content lines
+differing -- all of them on `/datasets/compare` at 1280, where one dump held skeleton markup and the other the
+settled state. That was not a migration effect: two captures of the *same* build differed by 111 lines, because
+each page polls the API and the capture read the DOM while some pages were still showing skeletons. Aborting the API
+requests (the state the offline tour is already written for) rather than waiting them out made it deterministic --
+and same-build byte identity was required as a precondition before any cross-build claim was allowed. Result: 2726
+attributes, **identical between the v2 and v3 builds**, and the built stylesheet identical by sha256 as well.
+
+**@types/node: one declared Node per repository instead of two.** `ci.yml:27` builds on `node-version: 26` and
+apps/web already pinned 26.6.5; apps/vscode was typing itself against Node 20. All three locks now agree on
+`@types/node 26.6.5` with `undici-types` 6.21.0 -> 8.9.0, which is the `fetch`/`Response` typing `@types/node`
+declares. Root delta = those two moves plus a dedupe (apps/web's exact pin is satisfied by the hoisted copy, so its
+two nested entries disappear; install 239 -> 237 packages), 295 entries untouched. The one line of #118 deliberately
+not taken was its `26.6.5` -> `^26.6.5` relaxation in apps/web: that manifest pins its whole toolchain exactly, and
+apps/web already sits on the target version, so a caret buys nothing today and widens future drift silently. Pin
+style is a decision of its own, not a by-product of a bump.
+
+**Two limits worth keeping.** The extension does not run in Node 26 -- `engines.vscode: ^1.85.0` puts it in VS
+Code's Electron Node, and types for 26 permit APIs that host may not have. The gap is pre-existing (global `fetch`
+needs 18+ and the source uses it), nothing here runs the extension inside Electron, and locally the compiled
+`out/*.js` executes under whichever Node the machine has (v24.15.0 here, 26 in CI). What the bump buys is
+consistency, not a compatibility guarantee.
+
+**Gates and a route around a dead host.** `scripts/run_gates.sh` in full: 19 gates, 2 failures, both the
+linked-worktree tag blindness of §276/§295 (`no tags readable from this checkout`), with `pytest` at 1222 passed /
+84.22% coverage, `regression.mjs` at 73/73, and the live seeded gates at 18 disclosure toggles and zero console
+errors. Beyond that list, because it only installs apps/web: root `npm ci`, `npm --prefix apps/vscode ci`,
+`npm --prefix apps/vscode run compile`, apps/web `tsc --noEmit`, and `pytest tests/vscode` at 10 passed including
+the webview escaping test that drives the compiled `getHtml`. Mid-run, `github.com` became unreachable (75 s connect
+timeout) while `api.github.com` kept answering 200, so the refresh onto new main was done with
+`gh pr update-branch` -- server-side, no git transport -- after a compare-API census showed the incoming commits
+touching four files (`AUDIT_LEDGER.md`, `CHANGELOG.md`, `scripts/update_contributors.py`,
+`tests/test_automation_scripts.py`) entirely disjoint from this branch's five. The refreshed head was then
+re-verified as ahead-of-main by exactly those five paths before the merge was allowed to wait on CI.
+
+## 299. §297's fix was incomplete: the commit it writes still carried the flag the old delivery needed
+
+The weekly job now publishes to a branch and the refresh arrives as a pull request, and the first pull request had
+**no checks at all** -- not a red run, an absence. The cause was in the script, not in GitHub: `publish()` has
+always written the message `docs: refresh contributor recognition [skip ci]`. That token was right while the job
+pushed a generated table straight to the default branch, where a contributor count cannot break a test and a full CI
+run per week was waste. It is wrong the moment delivery is a pull request, because the keyword suppresses the very
+`ci` workflow that this repository's branch protection requires -- so the change could never be merged, and nothing
+about the request looked broken.
+
+What is established here, and what is not:
+
+- established: the commit template carried the keyword (a `grep` over `scripts/` found it on the line the job
+  sends as `message`), the two pull requests built from that commit showed no `ci` run while other workflows on the
+  same head did, and other pull requests in the same window -- including a peer's dependency bump an hour later --
+  produced `ci` runs normally.
+- measured the same hour, and it corrects this entry: the field that matters is the **head commit's message**. A
+  second commit without the keyword, pushed to the same PR branch, made every workflow run -- `ci`,
+  `web-regression`, Secret Scan, CodeQL and dependency-review all completed successfully on that head -- so the
+  claim first written into the #127 comment ("the skip is evaluated over the request's commits, so another commit
+  will not help") was wrong, and the comment has been edited to say so. The documentation page that would have
+  answered it was unreachable at the moment it was needed, which is why the wrong inference reached a comment
+  before the observation did; the cheap test was always to push one more commit and read the checks list.
+
+The durable lesson is about half-taken migrations: **a flag baked into an artifact outlives the design that needed
+it.** When a job's delivery path changes, grep the message and metadata templates it writes for the switches they
+encode -- skip keywords, `--no-verify`, `[skip deploy]`, path filters -- and ask what each one assumes. Nothing in
+the tests or the docs said "this commit lands directly on the default branch"; only the empty checks list could.
+
+Fixed by removing the keyword from the template -- so the weekly job's own pull request can be checked at all --
+and by naming the assumption the flag used to encode in a comment, plus
+`tests/test_automation_scripts.py::test_the_publish_message_carries_no_skip_keyword` asserting on the payload the
+API would receive rather than on the source text -- GitHub reads the message, so that is the surface worth
+policing. Forged red by putting the token back: the guard fails on the exact message string, restored and re-hashed
+in the same command.
+
+The collision in the same window is the familiar one, recorded so the numbering is not mysterious later: the
+peer's §296 (statsmodels) was published on `main` while this session's §296 sat in an unpushed commit, so their
+number stayed, this session's moved to §297, and the CHANGELOG pointer was re-aimed in the merge commit -- the
+published number wins, and a renumbered section whose citations still say the old number is a fresh dangling
+reference rather than a fixed one.
