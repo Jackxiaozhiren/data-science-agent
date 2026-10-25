@@ -1,6 +1,15 @@
+# Advisory, not enforced: nothing in this repository installs these hooks. `pre-commit` is not a dependency
+# (pyproject lists ruff directly), `.git/hooks/pre-commit` is absent, and no contributing document tells anyone to
+# run `pre-commit install`. The copies that actually gate a change are the CI steps `ruff check ...` and
+# `ruff format --check ...` in `.github/workflows/ci.yml`, and they are what a contributor's green locally must
+# agree with. This file exists for someone who opts in on their own machine.
+#
+# The rev therefore has to track the version CI resolves, not drift behind it: an old ruff here would auto-fix
+# files in a shape the current formatter rejects, turning a local "it passed" into a CI red.
+# `tests/test_pre_commit_rev_tracks_lock.py` compares this line against uv.lock and reddens on disagreement.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.9
+    rev: v0.17.1
     hooks:
       - id: ruff
         args: [--fix]
