@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — a local gate nobody installs, pinned thirteen months behind CI
+
+- `.pre-commit-config.yaml` asked for ruff 0.4.9 while `uv.lock` resolves 0.17.1 and CI enforces the current one,
+  and nothing wires the hook: no `pre-commit` dependency, no installed `.git/hooks/pre-commit`, no contributing
+  page telling anyone to `pre-commit install`. A reader who did install it would auto-fix into shapes CI rejects.
+- The rev now matches the lock, the header says the enforced copies are the CI steps, and
+  `tests/test_pre_commit_rev_tracks_lock.py` compares `rev:` against `uv.lock`, requires the header to name the
+  missing step and the enforcing workflow, and pins the two hook ids to the two CI commands -- so the next
+  toolchain bump reddens the config instead of quietly out-dating it. Falsified both ways.
+- Also recorded, in `AUDIT_LEDGER.md` §294: the first scheduled `secret-scan.yml` run (`2026-10-24T09:05:21Z`,
+  4 h 28 min after its cron minute, `SCOPE=whole history at 1c6d61d8e5…`, 852 commits scanned, no leaks, success),
+  the mis-titled commit `6bf446f`, and that `README.md` is dirty and **unattributed** rather than a peer's.
+
 ### Changed (post-4.6.0) — three open owner decisions were taken and written down
 
 - **`/mcp` keeps no credential on this demo (#59, ledger §289).** What survives §277 is `profile_dataset`'s read
