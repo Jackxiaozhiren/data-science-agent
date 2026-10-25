@@ -16529,7 +16529,74 @@ membership in that set; with the requirement removed and the comment still prese
 the group actually declares. Falsified across all four properties (rev, hook ids, header, guides and dev group),
 each mutation restored and re-hashed inside its own command.
 
-## 296. The weekly contributor job has been failing since 2026-09-07, and it was retrying a rule instead of reading it
+## 296. The statsmodels bump landed on an owner decision, and the licence gate needed one word it had never been shown
+
+§279 put four of the eight refilled Dependabot PRs outside "clearing a queue" and left them open, `statsmodels
+0.14.6 -> 0.15.0` (#119) among them. The owner has now decided that one: land it, and add `BSD-2-Clause` to the
+allowlist as a one-word change. Landed as #125, merge commit `9662f0f`, in two substantive commits in the same
+split §279 recorded for #120 -- `92b6ec8` carries the policy and nothing else, `3ce28cc` carries the dependency and
+its SBOM pair -- so the licence decision stays revertible without unpicking versions.
+
+**The already-ships argument repeated itself exactly.** wrapt 2.5.1 is the first bearer the gate will be shown,
+reached through `statsmodels -> formulaic -> wrapt`, and its wheel declares `License-Expression: BSD-2-Clause`.
+But `release/sbom.json` has named BSD-2-Clause for `xxhash 4.0.0` since `c27546c` (2026-08-21), and PyPI reports
+that string as xxhash's `license` -- so the licence was already in the shipped set, invisible to the gate only
+because `dependency-review` inspects the lock lines a PR changes. Same shape as MPL-2.0 and MIT-CMU in §279: the
+bump surfaces a pre-existing state, it does not introduce it. `fail-on-severity: high` and `fail-on-scopes:
+runtime` are untouched, and the parsed list is eleven identifiers with no duplicate.
+
+**Two lanes edited the same three generated files mid-flight, and a census is the only readable answer.** `1e6625e`
+landed on main while #125's first CI run was still in progress, and it touches exactly `uv.lock`,
+`release/sbom.json` and `release/sbom.cyclonedx.json` -- `pre-commit` plus seven of its dependencies. The PR went
+`DIRTY`. The refresh merged main with `-X theirs` on the derived files rather than hand-stitching two generated
+artifacts, which is only defensible if the result is re-verified: `uv lock --check` came back **Resolved 207
+packages** (199 on this branch's own head, 204 on main) and `generate_sbom --check` was green. The deletion census
+against main put every `-` line inside the `statsmodels 0.14.6` block or in one of the three
+`python_full_version < '3.14'` resolution-marker entries uv re-partitions into six, with `AUDIT_LEDGER.md` touched
+by 0 lines; named (non-`Unknown`) licences went 73 on main to 77 on the merged head, which is exactly the four rows
+this change names and no other movement. CI then went green on both heads, and `dependency-review` passed with
+`BSD-2-Clause` written as spelled -- §279's lesson about a label that only CI can settle, observed a second time.
+
+**A new cause for the SBOM's blind spot, distinct from the one §279 recorded.** The env-dependence of the licence
+column was known: `generate_sbom.py` fills it by `importlib.metadata` lookup against whichever environment ran.
+This bump exposed a second, quieter reason the same column cannot be trusted to self-fill. Read from the wheels
+themselves:
+
+| package | `License` header | `License-Expression` |
+| --- | --- | --- |
+| wrapt 2.5.1 | absent | `BSD-2-Clause` |
+| statsmodels 0.15.0 | absent | `BSD-3-Clause` |
+| formulaic 1.2.2 | absent | `MIT` |
+| interface-meta 2.0.1 | `MIT` | absent |
+
+`generate_sbom.py:209` reads `meta.get("License", "Unknown")` and nothing else, so three of those four would have
+come back `Unknown` even in an environment where every one of them was installed -- PEP 639 moved the value to
+`License-Expression` and the generator has not followed. Measured consequence, and the reason the two-step rebuild
+stayed: a single-step regeneration on this lock blanks **nine** curated rows to `Unknown` -- httpcore2, httpx2,
+httpx2-jsfetch, langgraph-sdk, pillow, pydantic-settings, ruff, scikit-learn, truststore -- and `--check` cannot
+see any of it because `_pairs` compares `(package, version)` only. The set therefore comes from the generator and
+every carried row's licence bytes from the committed files; asserted before writing, byte-identical carried rows in
+both files, no licence moved, both files describing the same 199 components.
+
+**The control that makes the local reds readable.** Gates at `d10870c`, Python side only (npm/web/docker/mkdocs
+untouched by a lock-and-JSON change): `uv lock --check` Resolved 199, `audit_facts`, `sync_vendor --check`,
+`check_npm_workspace_lock`, `ruff check`, `ruff format --check` (326 files), `mypy` (133 files),
+`find_orphan_reads`, `check_ledger_identifiers`, `generate_sbom --check` all green; `pytest -q --cov` 1222 passed
+and 2 failed, 84.22% against the 79% floor. Both failures and `check_public_claims --require-released-tags` name
+the linked-worktree `.git` pointer from §276 (`git tag` counts 38 where the script reads 0). Control in a tree
+whose `.git` is a directory: those two files pass, 29 tests, and the claims gate reports 0 issues.
+
+**What is still not proven, and §294 is the nearest neighbour.** The manifest pins this dependency as
+`time-series = ["statsmodels>=0.14"]` (`pyproject.toml:54`), so 0.15.0 is a re-resolution inside a range that
+already allowed it -- no declared contract moved. But CI runs `uv sync --dev`, which does not install the
+`time-series` extra, so statsmodels is not in the test environment -- re-measured here as
+`PackageNotFoundError: No package metadata was found for statsmodels` -- and no test in this repository exercises
+it at any version. That is §294's shape applied to a dependency instead of a gate: a control declared in packaging
+metadata that nothing installs, and therefore nothing observes. The difference is that §294's was thirteen months
+stale and fixable in one commit; this one is a scope choice, and the honest statement is that #125 certifies the
+re-resolution, not the package. 0.14.6 had the same property, so the hole is not new -- it is now named.
+
+## 297. The weekly contributor job has been failing since 2026-09-07, and it was retrying a rule instead of reading it
 
 Chasing the schedule-lag question (§293) produced a table instead of a cause, and the table produced a finding.
 Every scheduled workflow on this repository arrives 4.5 to 8.5 hours after its cron minute -- `stale.yml` at

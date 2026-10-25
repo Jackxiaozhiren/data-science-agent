@@ -465,6 +465,19 @@
       "source": "https://pypi.org/simple"
     },
     {
+      "name": "formulaic",
+      "version": "1.2.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/formulaic@1.2.2",
+      "source": "https://pypi.org/simple"
+    },
+    {
       "name": "fqdn",
       "version": "1.5.1",
       "licenses": [],
@@ -595,6 +608,19 @@
       "version": "2.3.0",
       "licenses": [],
       "purl": "pkg:pypi/iniconfig@2.3.0",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "interface-meta",
+      "version": "2.0.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/interface-meta@2.0.1",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1636,9 +1662,15 @@
     },
     {
       "name": "statsmodels",
-      "version": "0.14.6",
-      "licenses": [],
-      "purl": "pkg:pypi/statsmodels@0.14.6",
+      "version": "0.15.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/statsmodels@0.15.0",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1854,6 +1886,19 @@
         }
       ],
       "purl": "pkg:pypi/websockets@15.0.1",
+      "source": "https://pypi.org/simple"
+    },
+    {
+      "name": "wrapt",
+      "version": "2.5.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:pypi/wrapt@2.5.1",
       "source": "https://pypi.org/simple"
     },
     {

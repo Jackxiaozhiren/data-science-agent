@@ -20,7 +20,7 @@
   `.github/workflows` edit — lets it land the PR itself.
 - `tests/test_automation_scripts.py` gained five guards, including both sides of the classifier (protection body:
   raise on attempt one, `is_retryable_conflict` False; `Sha could not be updated`: second attempt still happens)
-  and the assertion that no write ever targets the base branch. `AUDIT_LEDGER.md` §296.
+  and the assertion that no write ever targets the base branch. `AUDIT_LEDGER.md` §297 (their §296 was taken by the statsmodels entry while this one was in flight).
 
 ### Changed (post-4.6.0) — the local formatter hook is now a real opt-in
 
