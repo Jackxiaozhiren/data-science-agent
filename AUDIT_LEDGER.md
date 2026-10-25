@@ -16754,3 +16754,33 @@ peer's §296 (statsmodels) was published on `main` while this session's §296 sa
 number stayed, this session's moved to §297, and the CHANGELOG pointer was re-aimed in the merge commit -- the
 published number wins, and a renumbered section whose citations still say the old number is a fresh dangling
 reference rather than a fixed one.
+
+## 300. The refresh landed as a pull request, and the version of the fix that "succeeded" was the one that hid its own output
+
+`chore/contributor-refresh` merged as #129 at 08:04:37Z with `ci`, `web-regression`, Secret Scan, CodeQL and
+dependency-review all green, and `CONTRIBUTORS.md` on `main` now reads 187 for the owner with `@Jackson913666`
+present -- the first refresh since 2026-10-19's commit, eight weeks after the last one. The delivery change works.
+
+Then the fixed job ran again on a dispatch and reported **success while leaving a stranded artifact**: it wrote
+`Updated CONTRIBUTORS.md on chore/contributor-recognition.` followed by `The token cannot open a pull request (403)
+… open it: <compare url>`, and exited 0. That was my own design from §297 -- treating "branch published, pull request
+refused" as an outcome rather than an error -- and the observation that it is wrong is worth keeping in the same
+place as the observation that the delivery works:
+
+- The failure mode being fixed here was not a red job. It was a job nobody looked at, whose output nobody was told
+  about, for seven weeks. A run that exits 0 after printing a URL into a log that no notification points at is that
+  same failure with a green tick on it. Quiet success is how the eight weeks happened in the first place.
+- So `main()` now returns 2 when the refresh is published but no pull request could be opened, with a message naming
+  the missing `pull-requests: write` as the thing to add. The unit test drives `main()` itself and asserts the code,
+  forged red by turning the 2 back into a 0: the test names the exact function whose contract slipped.
+- The idempotence half is honest about its evidence level: the "already up to date" no-op is proven by
+  `test_current_content_writes_nothing_and_opens_no_pull`, not by a live run. A second dispatch did not exercise it
+  because the underlying numbers had genuinely moved again -- re-rendering against the live API at 08:0xZ returns
+  191 where `main` says 187, four merges later. That is the job being right, and it is why this ledger does not
+  chase the counter with another pull request: the weekly run will carry it.
+
+The standing consequence, stated plainly for whoever reads this next: with today's permissions the job will go red
+every Monday with an instruction in its log. One line in `.github/workflows/contributors.yml` --
+`pull-requests: write` -- turns that red into a pull request opened by the job itself, which is where the design was
+always headed; the branch and request naming, the reuse of an open request, and the checks that gate it are all in
+place and witnessed above. That line is the owner's to approve, because it is a `.github/workflows` edit.

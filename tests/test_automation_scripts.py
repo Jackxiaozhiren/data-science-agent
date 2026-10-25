@@ -536,6 +536,14 @@ def test_missing_pull_permission_still_publishes_and_names_the_url(
     captured = capsys.readouterr().out
     assert "compare/main..." in captured, captured
 
+    # A green job whose artifact nobody is told about is the failure this file was written to end.
+    monkeypatch.setattr(
+        contributors.os, "environ", {**contributors.os.environ, "GITHUB_REPOSITORY": "owner/repo"}
+    )
+    monkeypatch.setattr(contributors, "render", lambda _repository, _people: "new")
+    monkeypatch.setattr(contributors, "fetch_contributors", lambda _repository: [])
+    assert contributors.main() == 2
+
 
 def test_an_already_open_refresh_is_reused_instead_of_multiplying(
     monkeypatch: pytest.MonkeyPatch,

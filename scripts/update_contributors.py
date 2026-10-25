@@ -300,7 +300,15 @@ def main() -> int:
     branch = str(repo.get("default_branch") or "main")
 
     content = render(repository, fetch_contributors(repository))
-    refresh(repository, branch, content)
+    outcome = refresh(repository, branch, content)
+    if outcome["status"] == "published-without-pull":
+        # A branch nobody is told about is the eight-week silence this file exists to end, so a stranded artifact
+        # is reported as the failure it is: the token needs `pull-requests: write` on the workflow.
+        print(
+            "FAILURE: the refresh is published but no pull request could be opened; the job needs "
+            "pull-requests: write, or someone must open the printed compare URL."
+        )
+        return 2
     return 0
 
 

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — a refresh that cannot open its own pull request no longer reports success
+
+- #129 merged the eight-weeks-stale `CONTRIBUTORS.md` (owner 123 → 187, one contributor added) with `ci`,
+  `web-regression`, Secret Scan, CodeQL and dependency-review green, proving the branch-plus-request path.
+- The same job then exited **0** while leaving a stranded artifact: it published the branch, printed `The token
+  cannot open a pull request (403) … open it: <compare url>`, and succeeded. That was this session's own design and
+  it was wrong: the original defect was not a red job, it was a job nobody was told about, so a green run whose
+  output nobody sees is the same failure wearing a tick.
+- `main()` now returns 2 in that case with a message naming the missing `pull-requests: write`, and the test drives
+  `main()`'s exit code -- forged red by turning the 2 back into a 0.
+- The no-op branch ("already up to date") is proven by the unit test rather than by a live run, and the reason is
+  recorded: a second dispatch found real new data (187 → 191 four merges later), which is the job being correct.
+  With today's permissions the weekly run will be red with instructions until one workflow line adds
+  `pull-requests: write` — the owner's call, since it edits `.github/workflows`. `AUDIT_LEDGER.md` §300.
+
 ### Fixed (post-4.6.0) — the weekly contributor refresh stopped trying to push to a protected branch
 
 - `Contributor Recognition` failed on 2026-09-07, 09-14, 09-21, 09-28, 10-05, 10-12 and 10-19 — seven straight
