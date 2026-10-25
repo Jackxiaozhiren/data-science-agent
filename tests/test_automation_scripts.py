@@ -391,3 +391,165 @@ def test_the_widened_net_costs_no_suppression_and_no_finding() -> None:
     assert public_claims.check_measurement_claims() == []
     assert public_claims.check_maturity() == []
     assert public_claims.check_version_consistency() == []
+
+
+#: The message GitHub returned on every scheduled run from 2026-09-07 to 2026-10-19, copied from the job log
+#: rather than paraphrased: `main` requires the `ci` status check, and a commit created through the Contents API
+#: cannot already carry a check that has not run yet.
+PROTECTION_409 = (
+    '{"message":"Could not update file: Required status check \\"ci\\" is expected.",'
+    '"documentation_url":"https://docs.github.com/articles/about-protected-branches","status":"409"}'
+)
+
+
+class _CallLog:
+    """A stand-in transport that records every request, so a test can say what the script actually did."""
+
+    def __init__(
+        self, *, pulls_status: int | None = None, open_pulls: list[dict[str, Any]] | None = None
+    ) -> None:
+        self.calls: list[tuple[str, str, dict[str, Any] | None]] = []
+        self.pulls_status = pulls_status
+        self.open_pulls = open_pulls or []
+        self.branch_exists = False
+
+    def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+        self.calls.append((method, path, payload))
+        if path.startswith("/repos/owner/repo/git/ref/heads/"):
+            if not self.branch_exists:
+                raise contributors.GitHubAPIError(404, '{"message":"Not Found","status":"404"}')
+            return {"object": {"sha": "branch-head"}}
+        if path.startswith("/repos/owner/repo/pulls"):
+            # A token holding only `contents: write` can still read the pull list; it is the create that is
+            # refused. Raising on any /pulls call would hide the path this harness exists to exercise.
+            if method == "POST" and self.pulls_status == 403:
+                raise contributors.GitHubAPIError(
+                    403, '{"message":"Resource not accessible by integration"}'
+                )
+            if method == "GET":
+                return list(self.open_pulls)
+            return {"number": 7, "html_url": "https://github.com/owner/repo/pull/7"}
+        return {}
+
+    def paths(self) -> list[str]:
+        return [c[1] for c in self.calls]
+
+
+def _protection_refusing_publish(monkeypatch: pytest.MonkeyPatch) -> _CallLog:
+    log = _CallLog()
+
+    def refusing(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+        result = log.request(method, path, payload)
+        if method == "PUT":
+            raise contributors.GitHubAPIError(409, PROTECTION_409)
+        return result
+
+    monkeypatch.setattr(contributors, "request_json", refusing)
+    monkeypatch.setattr(contributors, "current_file", lambda _repository, _branch: ("sha", "old"))
+    monkeypatch.setattr(contributors.time, "sleep", lambda _seconds: None)
+    return log
+
+
+def test_a_branch_protection_rejection_is_not_retried_and_its_reason_survives(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A structural refusal retried three times reads like a race, and the log says the wrong thing.
+
+    The old loop retried every 409 and printed `Concurrent update detected`, so seven weekly runs of
+    `Required status check "ci" is expected` were reported as a conflict nobody was having.
+    """
+    log = _protection_refusing_publish(monkeypatch)
+    with pytest.raises(contributors.GitHubAPIError) as exc:
+        contributors.publish("owner/repo", "main", "new")
+    puts = [c for c in log.calls if c[0] == "PUT"]
+    assert len(puts) == 1, "a protection rejection must fail on the first attempt, not the third"
+    assert "Required status check" in str(exc.value)
+    assert contributors.is_retryable_conflict(exc.value) is False
+
+
+def test_a_real_sha_conflict_is_still_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The other half of the same classifier: the genuine race the retry was written for still gets it."""
+    stale = '{"message":"Sha could not be updated","documentation_url":"x","status":"409"}'
+    monkeypatch.setattr(contributors, "current_file", lambda _repository, _branch: ("sha", "old"))
+    monkeypatch.setattr(contributors.time, "sleep", lambda _seconds: None)
+    seen = {"puts": 0}
+
+    def fake(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+        if method == "PUT":
+            seen["puts"] += 1
+            if seen["puts"] == 1:
+                raise contributors.GitHubAPIError(409, stale)
+        return {}
+
+    monkeypatch.setattr(contributors, "request_json", fake)
+    contributors.publish("owner/repo", "chore/x", "new")
+    assert seen["puts"] == 2
+    assert contributors.is_retryable_conflict(contributors.GitHubAPIError(409, stale)) is True
+
+
+def test_the_refresh_writes_a_working_branch_never_the_protected_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    log = _CallLog()
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    created = {"sha": "default-head"}
+    monkeypatch.setattr(
+        contributors,
+        "default_branch_head",
+        lambda _repository: created["sha"],
+    )
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    puts = [c for c in log.calls if c[0] == "PUT" and c[1].endswith("/contents/CONTRIBUTORS.md")]
+    assert puts, "the refresh wrote nothing"
+    assert all(
+        str(p["branch"]) == contributors.WORK_BRANCH for _, _, p in puts for p in [p or {}]
+    ), puts
+    assert outcome["target"] == contributors.WORK_BRANCH
+    assert outcome["pull"] == 7
+
+
+def test_current_content_writes_nothing_and_opens_no_pull(monkeypatch: pytest.MonkeyPatch) -> None:
+    log = _CallLog()
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(contributors, "current_file", lambda _repository, _branch: ("sha", "same"))
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "same")
+    assert outcome["status"] == "current"
+    assert not [c for c in log.calls if c[0] in {"PUT", "POST"}], log.calls
+
+
+def test_missing_pull_permission_still_publishes_and_names_the_url(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`contents: write` alone can still land the work; the job must say what the human has to click."""
+    log = _CallLog(pulls_status=403)
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["status"] == "published-without-pull"
+    captured = capsys.readouterr().out
+    assert "compare/main..." in captured, captured
+
+
+def test_an_already_open_refresh_is_reused_instead_of_multiplying(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The branch is fixed, so a weekly run must refresh one pull request rather than open the eighth.
+
+    Seven stale runs became seven weeks of silence; eight open PRs from one job would become a reason to mute it.
+    """
+    log = _CallLog(open_pulls=[{"number": 12, "html_url": "https://github.com/owner/repo/pull/12"}])
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["pull"] == 12
+    assert not [c for c in log.calls if c[0] == "POST" and c[1].endswith("/pulls")], log.calls
