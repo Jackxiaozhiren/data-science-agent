@@ -178,7 +178,12 @@ def publish(repository: str, branch: str, content: str) -> None:
             return
 
         payload = {
-            "message": "docs: refresh contributor recognition [skip ci]",
+            # No skip keyword here. The token was correct while this job pushed a generated table straight to the
+            # default branch -- and it is still correct that the refresh lands as a pull request whose checks must
+            # run -- but GitHub honours the keyword from a pull request's commit message, so keeping it would mean
+            # the request could never collect the `ci` check that branch protection requires. A flag baked into an
+            # artifact outlives the design that needed it.
+            "message": "docs: refresh contributor recognition",
             "branch": branch,
             "sha": sha,
             "content": encoded,

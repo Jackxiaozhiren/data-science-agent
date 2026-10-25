@@ -16643,3 +16643,42 @@ Also worth naming plainly: a scheduled job that fails weekly and blocks nothing 
 one survived eight weeks is that nothing routes a schedule failure to a human, and the fix that would be durable
 here is the same one that made the secret-sweep trustworthy -- make the run state what it did, and give it a
 trigger a person can pull (`workflow_dispatch`) so a red path can be witnessed rather than waited for.
+
+## 298. §297's fix was incomplete: the commit it writes still carried the flag the old delivery needed
+
+The weekly job now publishes to a branch and the refresh arrives as a pull request, and the first pull request had
+**no checks at all** -- not a red run, an absence. The cause was in the script, not in GitHub: `publish()` has
+always written the message `docs: refresh contributor recognition [skip ci]`. That token was right while the job
+pushed a generated table straight to the default branch, where a contributor count cannot break a test and a full CI
+run per week was waste. It is wrong the moment delivery is a pull request, because the keyword suppresses the very
+`ci` workflow that this repository's branch protection requires -- so the change could never be merged, and nothing
+about the request looked broken.
+
+What is established here, and what is not:
+
+- established: the commit template carried the keyword (a `grep` over `scripts/` found it on the line the job
+  sends as `message`), the two pull requests built from that commit showed no `ci` run while other workflows on the
+  same head did, and other pull requests in the same window -- including a peer's dependency bump an hour later --
+  produced `ci` runs normally.
+- not established: the exact field GitHub scans. The earlier claim written into the #127 comment -- that pushing a
+  second, keyword-free commit did not help, so the skip is evaluated over the request's commits rather than the head
+  alone -- is an inference from one observation, and the documentation that would settle it was unreachable from
+  this machine at the time (the docs fetch failed on the network that also flaked the git pushes). The entry says
+  "inferred" and leaves it there.
+
+The durable lesson is about half-taken migrations: **a flag baked into an artifact outlives the design that needed
+it.** When a job's delivery path changes, grep the message and metadata templates it writes for the switches they
+encode -- skip keywords, `--no-verify`, `[skip deploy]`, path filters -- and ask what each one assumes. Nothing in
+the tests or the docs said "this commit lands directly on the default branch"; only the empty checks list could.
+
+Fixed by removing the keyword from the template, with a comment naming the assumption it used to encode, and
+`tests/test_automation_scripts.py::test_the_publish_message_carries_no_skip_keyword` asserting on the payload the
+API would receive rather than on the source text -- GitHub reads the message, so that is the surface worth
+policing. Forged red by putting the token back: the guard fails on the exact message string, restored and re-hashed
+in the same command.
+
+The collision in the same window is the familiar one, recorded so the numbering is not mysterious later: the
+peer's §296 (statsmodels) was published on `main` while this session's §296 sat in an unpushed commit, so their
+number stayed, this session's moved to §297, and the CHANGELOG pointer was re-aimed in the merge commit -- the
+published number wins, and a renumbered section whose citations still say the old number is a fresh dangling
+reference rather than a fixed one.

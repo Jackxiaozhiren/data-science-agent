@@ -553,3 +553,29 @@ def test_an_already_open_refresh_is_reused_instead_of_multiplying(
     outcome = contributors.refresh("owner/repo", "main", "new")
     assert outcome["pull"] == 12
     assert not [c for c in log.calls if c[0] == "POST" and c[1].endswith("/pulls")], log.calls
+
+
+def test_the_publish_message_carries_no_skip_keyword(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The delivery is a pull request now, so a skip token in the commit message defeats the required check.
+
+    Asserted on the payload rather than on the source text, because the keyword has to survive GitHub's own
+    interpretation: whatever the API receives as `message` is what gets scanned.
+    """
+    log = _CallLog()
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    contributors.refresh("owner/repo", "main", "new")
+    messages = [
+        str((payload or {}).get("message", ""))
+        for _, path, payload in log.calls
+        if path.endswith("/contents/CONTRIBUTORS.md")
+    ]
+    assert messages, "no publish call was made"
+    for message in messages:
+        assert "[skip" not in message.lower(), (
+            f"a skip keyword suppresses the checks this branch now needs: {message!r}"
+        )
+        assert "contributor" in message.lower(), message
