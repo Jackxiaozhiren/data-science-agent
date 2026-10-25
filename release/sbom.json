@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-10-25T02:35:29.348047+00:00",
+  "generated": "2026-10-25T02:49:15.805755+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -129,6 +129,13 @@
       "purl": "pkg:pypi/cffi@2.1.1"
     },
     {
+      "package": "cfgv",
+      "version": "3.5.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/cfgv@3.5.0"
+    },
+    {
       "package": "charset-normalizer",
       "version": "3.5.1",
       "license": "MIT",
@@ -190,6 +197,13 @@
       "license": "Unknown",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/defusedxml@0.7.1"
+    },
+    {
+      "package": "distlib",
+      "version": "0.4.4",
+      "license": "PSF-2.0",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/distlib@0.4.4"
     },
     {
       "package": "distro",
@@ -339,6 +353,13 @@
       "purl": "pkg:pypi/fastjsonschema@2.22.2"
     },
     {
+      "package": "filelock",
+      "version": "4.2.4",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/filelock@4.2.4"
+    },
+    {
       "package": "fonttools",
       "version": "4.63.0",
       "license": "MIT",
@@ -421,6 +442,13 @@
       "license": "BSD-3-Clause",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/httpx2-jsfetch@1.0"
+    },
+    {
+      "package": "identify",
+      "version": "2.6.20",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/identify@2.6.20"
     },
     {
       "package": "idna",
@@ -801,6 +829,13 @@
       "purl": "pkg:pypi/nest-asyncio2@1.7.2"
     },
     {
+      "package": "nodeenv",
+      "version": "1.11.0",
+      "license": "BSD",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/nodeenv@1.11.0"
+    },
+    {
       "package": "notebook-shim",
       "version": "0.2.4",
       "license": "Unknown",
@@ -927,6 +962,13 @@
       "purl": "pkg:pypi/polars-runtime-32@1.43.2"
     },
     {
+      "package": "pre-commit",
+      "version": "4.7.0",
+      "license": "MIT",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/pre-commit@4.7.0"
+    },
+    {
       "package": "prometheus-client",
       "version": "0.26.0",
       "license": "Unknown",
@@ -1044,6 +1086,13 @@
       "license": "Dual License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/python-dateutil@2.9.0.post0"
+    },
+    {
+      "package": "python-discovery",
+      "version": "1.6.4",
+      "license": "Permission is hereby granted, free of charge, to any person obtaining a\ncopy of ...",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/python-discovery@1.6.4"
     },
     {
       "package": "python-dotenv",
@@ -1324,6 +1373,13 @@
       "license": "MIT License",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/uvloop@0.22.1"
+    },
+    {
+      "package": "virtualenv",
+      "version": "21.14.13",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/virtualenv@21.14.13"
     },
     {
       "package": "watchdog",

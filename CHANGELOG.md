@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the local formatter hook is now a real opt-in
+
+- `pre-commit` is a dev dependency (resolves 4.7.0), `CONTRIBUTING.md` and `docs/contributing.md` document
+  `uv run pre-commit install`, and `.pre-commit-config.yaml` names the same command instead of describing a step
+  nobody could take. Its ruff rev was checked to exist upstream (`v0.17.1`, released 2026-10-15) rather than
+  inferred from `uv.lock`, and the whole path was exercised in a throwaway repo under `/tmp`: the hook installed and
+  both hooks fired on a deliberately misformatted file.
+- The hook is deliberately **not** installed in this worktree: `.git/hooks` is one directory shared by every session
+  in the checkout, so installing would enforce on commits this session did not author. Both guides say so, and
+  `ls .git/hooks/pre-commit` after the sandbox run confirms it stayed absent here.
+- The dependency bump moved the SBOM as §47 requires (196 → 204 components). Regenerating would have erased nine
+  real license fields in `release/sbom.json` and nine `licenses` arrays in the CycloneDX copy -- `--check` does not
+  compare licenses -- so the files were generated to a scratch directory, diffed entry by entry, and carried over
+  from `HEAD`: the committed change is +8 components, no existing entry touched, plus the ignored stamp.
+- `tests/test_pre_commit_rev_tracks_lock.py` gained a fourth property, and its first version was broken in a way
+  worth naming: `"pre-commit" in <dev group text>` still passed after the requirement was deleted, because a comment
+  in the same list mentions `.pre-commit-config.yaml`. It now normalises the quoted requirement specs to package
+  names and asserts membership. All four properties were falsified; mutations restored and re-hashed.
+  `AUDIT_LEDGER.md` §295.
+
 ### Fixed (post-4.6.0) — a local gate nobody installs, pinned thirteen months behind CI
 
 - `.pre-commit-config.yaml` asked for ruff 0.4.9 while `uv.lock` resolves 0.17.1 and CI enforces the current one,

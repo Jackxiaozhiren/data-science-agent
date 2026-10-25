@@ -1,15 +1,22 @@
-"""`.pre-commit-config.yaml` must not enforce a different ruff than CI does.
+"""The opt-in formatter hooks must agree with CI in version, in commands, and in where they are documented.
 
-The file shipped `rev: v0.4.9` while `uv.lock` resolves ruff 0.17.1 and `pyproject.toml` asks for `ruff>=0.4`, and
-nothing installs the hook -- no `pre-commit` dependency, no `.git/hooks/pre-commit`, no contributing page telling a
-reader to run `pre-commit install`. So it was a declared control with no wiring *and* a stale pin: someone who did
-opt in would have `ruff --fix` rewriting their files in the shape of a thirteen-month-old formatter, and CI's
-`ruff format --check` would then refuse the result. The gap between "my hooks passed" and "the gate is green" is
-exactly the thing this repository keeps having to measure rather than assume.
+The file shipped `rev: v0.4.9` while `uv.lock` resolves ruff 0.17.1 and CI runs `ruff check` / `ruff format --check`
+with it, and nothing wired it: no `pre-commit` dependency, no installed `.git/hooks/pre-commit`, and no contributing
+page mentioning `pre-commit install`. A declared control with no wiring and a stale pin is the worst combination --
+a reader assumes enforcement that never happens, and the one person who does opt in gets `ruff --fix` rewriting
+files in the shape of a superseded formatter that CI then refuses.
 
-Two properties, checked in both directions: the rev equals the version the lock resolves, and the config's own
-header says plainly that the enforced copies are the CI steps -- because the comment is the only part of this file
-a reader can act on without installing anything.
+It is now a real opt-in: `pre-commit` is a dev dependency, both contributing guides document
+`uv run pre-commit install`, and the config says plainly that the enforced copies are the CI steps and that a shared
+worktree should not install the hook (`.git/hooks` is one directory for every session in the checkout). Four
+properties, each able to fail:
+
+* the config's rev equals the version `uv.lock` resolves;
+* the two hook ids still correspond to the two CI commands they copy;
+* the header names both the install step and the workflow that enforces;
+* the guides that promise the step still mention it, and `pyproject.toml` still provides the tool.
+
+A "green" here means the copy and the gate agree, not that either ran.
 """
 
 from __future__ import annotations
@@ -22,6 +29,7 @@ CONFIG = ROOT / ".pre-commit-config.yaml"
 LOCK = ROOT / "uv.lock"
 PYPROJECT = ROOT / "pyproject.toml"
 CI = ROOT / ".github" / "workflows" / "ci.yml"
+GUIDES = (ROOT / "CONTRIBUTING.md", ROOT / "docs" / "contributing.md")
 
 
 def _locked_ruff_version() -> str:
@@ -71,3 +79,27 @@ def test_ci_still_runs_both_gates_the_config_claims_to_mirror() -> None:
     assert floor and tuple(int(n) for n in floor.group(1).split(".")) <= tuple(
         int(n) for n in _locked_ruff_version().split(".")
     ), "pyproject's ruff floor is above the locked version"
+
+
+def test_the_install_step_is_documented_and_the_tool_is_provided() -> None:
+    """The config offers `pre-commit install`; that offer is only honest if both halves behind it exist."""
+    for guide in GUIDES:
+        text = guide.read_text(encoding="utf-8")
+        assert "pre-commit install" in text, (
+            f"{guide.relative_to(ROOT)} no longer documents the opt-in it advertises"
+        )
+        assert "shared worktree" in text or "more than one session" in text, (
+            f"{guide.relative_to(ROOT)} must still warn against installing the hook where .git/hooks is shared"
+        )
+    text = PYPROJECT.read_text(encoding="utf-8")
+    group = text[text.index("[dependency-groups]") :]
+    boundary = group.index("\n[", 1)
+    specs = re.findall(r'"([^"]+)"', group[:boundary])
+    # Match the requirement's name, not the substring: a comment in the same list mentioning
+    # `.pre-commit-config.yaml` would otherwise satisfy a bare `"pre-commit" in group` check, and the guard would
+    # keep passing on a tree where `uv sync --dev` no longer provides the tool the guides tell you to run.
+    names = {re.split(r"[<>=!\[]", s, maxsplit=1)[0].strip().lower() for s in specs}
+    assert "pre-commit" in names, (
+        "pre-commit is documented as installable but is not in the dev group, so `uv sync --dev` would not "
+        f"provide it -- the group declares {sorted(names)}"
+    )

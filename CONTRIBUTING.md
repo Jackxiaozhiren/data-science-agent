@@ -42,6 +42,13 @@ One command for the whole list: `scripts/run_gates.sh` (add `--list` to print th
 without running them). `tests/test_command_surface.py` fails if that runner and `ci.yml` ever
 cover different gates, which is what keeps this list from becoming a second, smaller truth.
 
+Optional, and deliberately not installed for you: `pre-commit` is a dev dependency, so after `uv sync --dev`
+you can run `uv run pre-commit install` to get local copies of the two ruff steps above. `.pre-commit-config.yaml`
+is the file that defines them and `tests/test_pre_commit_rev_tracks_lock.py` keeps its ruff revision equal to the
+one `uv.lock` resolves -- an unmaintained copy of a formatter gate is how "green on my machine" and "red in CI"
+start disagreeing. Do not install the hook in a worktree more than one session commits in: `.git/hooks` is shared,
+and installing would enforce on commits you did not author. The list above stays the source of truth either way.
+
 Run the list, do not sample it. `scripts/run_gates.sh` runs `scripts/sync_vendor.py --check` third -- before its
 own `ruff format --check`, and a format pass rewrites the sources the `_vendor` mirrors were copied from: mirror
 **after** formatting, and re-run that check before you commit, because the one in the list has already passed by
