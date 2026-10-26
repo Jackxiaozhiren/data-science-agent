@@ -330,3 +330,85 @@ def test_the_badge_still_answers_from_the_declared_version_with_no_refs(tmp_path
     assert not any("README.md" in line for line in _degradations(root)), (
         "the badge went dark instead of answering from the declared version"
     )
+
+
+def _module():
+    return _load(Path.cwd())
+
+
+def _linked_checkout(
+    base: Path,
+    *,
+    tags: list[str],
+    loose: list[str] = (),
+    relative_pointer: bool = False,
+    emit_commondir: bool = True,
+) -> Path:
+    """A repository layout where `.git` is a `gitdir:` pointer, as in a linked worktree.
+
+    `common` plays the part of the shared `$GIT_DIR` the tags live in; `common/worktrees/wt1` is the
+    per-worktree directory the pointer names, which holds no refs of its own.
+    """
+    import os
+
+    common = base / "common"
+    (common / "refs" / "tags").mkdir(parents=True)
+    (common / "worktrees" / "wt1").mkdir(parents=True)
+    if tags:
+        (common / "packed-refs").write_text(
+            "".join(f"{'0' * 40} refs/tags/{t}\n" for t in tags), encoding="utf-8"
+        )
+    for name in loose:
+        (common / "refs" / "tags" / name).write_text("0" * 40, encoding="utf-8")
+    gitdir = common / "worktrees" / "wt1"
+    if emit_commondir:
+        (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    root = base / "checkout"
+    root.mkdir()
+    target = os.path.relpath(gitdir, root) if relative_pointer else str(gitdir)
+    (root / ".git").write_text(f"gitdir: {target}\n", encoding="utf-8")
+    return root
+
+
+def test_a_linked_checkout_reads_packed_refs_from_the_common_directory(tmp_path: Path) -> None:
+    """The shape this repository has in every task worktree: a pointer `.git`, refs shared with the main one.
+
+    Before the pointer was followed this returned the empty set here, and `--require-released-tags`
+    refused the run -- so the rule was unverifiable anywhere a contributor actually worked.
+    """
+    module = _module()
+    root = _linked_checkout(tmp_path, tags=["v4.4.0", "v4.5.0"])
+    assert module.released_versions(root) == {"4.4.0", "4.5.0"}
+
+
+def test_loose_refs_in_the_common_directory_are_read_too(tmp_path: Path) -> None:
+    """Packed and loose tags arrive through one path, so a half-followed pointer would show up here."""
+    module = _module()
+    root = _linked_checkout(tmp_path, tags=["v4.4.0"], loose=["v4.6.0"])
+    assert module.released_versions(root) == {"4.4.0", "4.6.0"}
+
+
+def test_a_relative_gitdir_pointer_resolves_against_the_checkout(tmp_path: Path) -> None:
+    module = _module()
+    root = _linked_checkout(tmp_path, tags=["v1.2.3"], relative_pointer=True)
+    assert module.released_versions(root) == {"1.2.3"}
+
+
+def test_a_pointer_without_a_commondir_falls_back_to_the_named_directory(tmp_path: Path) -> None:
+    """The refusal stays reachable: a checkout whose refs are genuinely absent reads as empty.
+
+    This is the state `--require-released-tags` is written for, so the fix must not quietly make
+    "no tags" impossible to express.
+    """
+    module = _module()
+    root = _linked_checkout(tmp_path, tags=["v9.9.9"], emit_commondir=False)
+    assert module.released_versions(root) == set()
+
+
+def test_a_plain_checkout_still_reads_its_own_dot_git(tmp_path: Path) -> None:
+    module = _module()
+    root = tmp_path / "plain"
+    (root / ".git" / "refs" / "tags").mkdir(parents=True)
+    (root / ".git" / "packed-refs").write_text(f"{'0' * 40} refs/tags/v3.1.4\n", encoding="utf-8")
+    assert module.released_versions(root) == {"3.1.4"}
+    assert module.git_directory(root) == root / ".git"
