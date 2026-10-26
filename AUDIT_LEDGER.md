@@ -17088,6 +17088,44 @@ separation the two directions are meant to have.
 (`AUDIT_LEDGER.md` 276, §295) and nothing new -- the gate's own test file is inside the pytest set, so CI
 re-derives the ledger on every run from here.
 
+## 306. The refresh opened its own pull request, and the gate that then stopped it was not branch protection
+
+§304's permission line worked on the first dispatch: run 40287523611 on `4349cdf` logged
+`Updated CONTRIBUTORS.md on chore/contributor-recognition; pull request #132: <url>` and exited 0, with the table
+moving 187 -> 192 in a one-line diff. The stranded-artifact path §300 built is no longer the routine outcome, and it
+stayed honest: the job's own log names the request it opened.
+
+What the design had not accounted for is what happens to that request. `ci` reported
+`conclusion: action_required` -- not failing, not passing, *held* -- along with CodeQL, Secret Scan and Dependency
+Review, so the PR could never satisfy its own required check and no merge state could be reached. The measured cause
+is the repository's workflow-approval policy for a public repo: the PR author is `app/github-actions`, which is not a
+collaborator, so every run it triggers on that PR waits for a human "Approve and run". Branch protection was not
+involved: `main` requires the `ci` context with `strict: true`, no review requirement, `enforce_admins` off.
+
+Two facts worth having, because they change what a fix looks like:
+
+- Approving the four held runs (`POST /repos/.../actions/runs/{id}/approve`) unblocked the path -- `ci` completed
+  success and `mergeState` went `CLEAN` -- so the automation is correct and what is missing is only the trigger
+  authority.
+- The gate keys on the head commit's author, not on the PR's author. `gh pr update-branch` (needed anyway, because
+  strict protection requires the branch to be current, and `mergeState` reads `BEHIND` otherwise) put a
+  collaborator-authored merge commit on top; the re-run of all four workflows on `42b0f5c` started
+  immediately, with no approval. That is the difference between a weekly human click and no human click.
+
+Merged as `e6478ef` at 08:19:00Z, and the steady state is therefore: the job opens the request, the request is green
+and mergeable, and a collaborator -- today me, structurally whoever clicks -- approves the first run of each weekly
+PR. The alternatives are not equivalent, and they are not mine to pick silently:
+
+| option | what it costs |
+|---|---|
+| keep as is | one "Approve and run" per week; nothing else changes; the failure mode is a PR nobody notices, which is what §297's eight weeks actually were |
+| a fine-grained PAT as a repo secret, used by the job to commit | no human click, PR authored by the owner account so runs start; costs a credential the owner must create and paste only into their own shell (never chat, per the standing rule), plus rotation |
+| allow the app to create runs without approval in the repo's Actions settings | no human click and no new secret; it is a repository *settings* change, not a file, and it widens what an automated commit can trigger -- the owner's decision in the GitHub UI |
+| revert to publishing the branch and printing a compare URL | removes the PR, restores §300's exit-2 as the weekly state; strictly worse, listed only for completeness |
+
+The recommendation is the settings option: it is free, adds no credential to manage, and it narrows nothing -- but it
+is an Actions-policy change on a public repository, which is exactly why it is written here as an ask rather than done
+from the CLI.
 ## 306. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
 
 §305's gate went green carrying seven named divergences. They are now zero and the ledger is an empty list, so
