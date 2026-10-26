@@ -16978,6 +16978,64 @@ That last sentence is the reason this section ends with an ask instead of a fix.
 wrong export into either the right export or a visible error, and that changes what a user downloads. It is a §19.1
 halt, the owner's call; the options are written up in `HANDOFF-2026-10-19.md`.
 
+## 304. The owner ruled "follow your recommendation", so both parked decisions landed: the refresh opens its own pull request, and a reference can no longer slide past a failure
+
+Two decisions were sitting on the owner's desk -- `pull-requests: write` for the contributor job, and the `$from_step`
+semantics from §303. The answer was "我都听你的，请按照你的思路建议进行", so this section records what was done with
+it, and one thing the recommendation had to be corrected for on the way.
+
+**The contributor job now lands its own refresh.** `.github/workflows/contributors.yml` carries
+`permissions: {contents: write, pull-requests: write}` with the reason in a comment above it: `main` requires the `ci`
+status check, a Contents-API commit cannot pre-carry a check that has not run yet, so the work has to arrive as a
+branch plus a pull request (§297). Nothing else in the file changed, and the two `${{ }}` interpolations in it are
+`secrets.GITHUB_TOKEN` and `github.repository` mapped to env -- a schedule/dispatch workflow with no event payload
+reaching a shell, which is what the workflow-security reflex checks for. `§300`'s exit-2-on-stranded-artifact stays as
+the regression detector: if the scope is ever removed, the job goes red naming the missing permission, instead of
+quietly publishing a branch nobody is told about.
+
+**The semantics turned out to need more than the option I wrote down.** The ask was framed as "make `$from_step`
+address plan positions and fail loudly". Measuring what a position actually means before implementing it found two
+more ways the index lies, neither of which the loud-failure-alone version would have fixed:
+
+- a validation retry appends a second record for the same step (`graph.py`'s retry loop), so any later position moves;
+- the leading independent batch runs under `asyncio.gather`, so a position is not a plan step either.
+
+So the fix is the refusal **plus an unambiguous form**. `$from_step` now addresses records in execution order with
+failures included, and a reference whose target did not succeed comes back as its own key plus `$reference_reason`,
+which `export_artifact` refuses under that reason -- it cannot slide onward to the next successful call, because the
+slide is exactly how a run exported a table nobody asked for and still reported clean. The form a plan should use is
+new: `{"$from_step_id": "s03"}`, resolved against a `step_id` field added to `ToolCallRecord` and written by both
+executors' record sites, including the retry's. `$from_tool` is unchanged (latest successful call by name), which is
+what the heuristic planner emits and why the hosted demo never met this. Persisted runs are unaffected: the resolver
+has exactly two callers, both at dispatch time, so no stored state is ever re-resolved.
+
+**Re-aiming my own pinned tests, deliberately.** §303's guard file asserted the shift as behaviour --
+`test_from_step_counts_only_the_calls_that_succeeded` and the export test that pinned the wrong table being written.
+Those assertions encoded the defect three sections ago, the same shape as `test_export_artifact.py:143-144` in §53,
+and they are replaced rather than caveated: the position test now expects a refusal naming `create_chart`, the export
+test expects `ToolExecutionError` and an empty workspace, and a positive control keeps the successful path asserting
+the written CSV bytes. `tests/unit/test_export_artifact.py::test_resolve_refs_step_tool_missing` passed unchanged,
+which is the check that the re-aim did not quietly move semantics the older suite depends on.
+
+**Falsification, including two failures of the instrument.** Ten planted mutations, each restored byte-identical with
+the hash compared in the same process: old successful-only counting, retry/graph/langgraph record losing `step_id`,
+tool dropping the reason, prompt and schema rewordings, and a valid silent-slide implementation -- all RED. Three of
+those attempts were worthless as first written, and they are the interesting part of this record:
+
+1. one anchor did not exist after `ruff format` re-wrapped the literal, so the mutation silently no-op'd and reported
+   a green I nearly read as a vacuous guard;
+2. the silent-slide mutation produced invalid Python, so its "RED" was a syntax error rather than a caught defect --
+   it was redone with `compile()` asserted first, and then failed with `AssertionError: {'columns': ['sex'], ...}`,
+   which is the actual defect being caught;
+3. the schema guard passed a description that keeps every token and recommends the wrong form, because it was a
+   keyword census. It now asserts the two directional claims ("the form to prefer", "cannot be known before the run")
+   and reddens on that mutation.
+
+Offline: 1311 passed, two known environment reds in `test_mcp_page_template.py` (no `ts-parser-legacy` in this
+worktree's `node_modules`; documented in §303's addendum and not fixed by touching a tree other sessions share), mypy
+clean on 133 source files, ruff/format/ratchet/claims/SBOM/orphan gates green, vendor mirrors regenerated per file.
+
+Issue #70 is now closed on both halves: the source-shape selection by §54, the reference contract by this section.
 ## 304. The three npm locks now read each other, and the first thing they said was that seven versions already disagree
 
 §298 and §302 both record the same recurring shape from the human side: a Dependabot PR moves a manifest and

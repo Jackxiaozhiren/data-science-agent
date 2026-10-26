@@ -1,18 +1,18 @@
-"""``$from_step`` means "i-th call that succeeded", and three surfaces have to say so.
+"""How an ``export_artifact`` source reference resolves, and what it must never do silently.
 
-Found by reproducing GitHub issue #70 rather than re-reading it. The planner-side half of that defect was fixed in
-§54 (``_TABULAR_TOOLS`` shrank to what really emits ``columns``+``rows``), but the reference contract itself was
-written down in exactly one place -- ``_resolve_refs``'s docstring -- and what it said there was false: it promised
-"0-based among *executed* calls" while the code filters ``status == "ok"``. Measured over
-``[run_sql ok, create_chart failed, run_sql ok]``, ``{"$from_step": 1}`` returns the **third** call's table, so an
-export asked for one result silently relocates a different one, succeeds, and records a sha256 for a file nobody
-requested. A wrong artifact that never errors is worse than the failure issue #70 described, and this project's whole
-claim is that a produced number can be traced back to what made it.
+Found by reproducing GitHub issue #70 rather than re-reading it. Its planner half was already fixed in §54
+(``_TABULAR_TOOLS`` shrank to what really emits ``columns``+``rows``); what remained was the reference contract,
+which was written down in exactly one place -- ``_resolve_refs``'s docstring -- and what it said there was false. It
+promised "0-based among *executed* calls" while the code filtered ``status == "ok"``, so over
+``[run_sql ok, create_chart failed, run_sql ok]`` the reference ``{"$from_step": 1}`` returned the **third** call's
+table, the export succeeded, wrote ``sex\\nfemale``, recorded a sha256, and reported nothing. A wrong artifact that
+never errors is the failure mode this project's inspectability claim exists to make impossible.
 
-So the contract is now stated where its three readers actually look: the executor's docstring, the
-``export_artifact`` schema a REST or MCP client is handed, and the prompt the real-mode planner sends. These tests
-pin the behaviour, then pin that all three statements describe *that* behaviour -- wording drift reddens here, not in
-a report the user downloads.
+The behaviour now is: positions include failures, a failed target is refused **with the reason** instead of sliding
+on, and the exact form is ``{"$from_step_id": "s03"}`` -- the plan step, which survives both a retry (which appends
+a second record) and the leading parallel batch (which is executed with ``gather``). These tests pin the behaviour
+first and the wording of the three places that state it second, so drift reddens here rather than in a report a user
+downloads. ``AUDIT_LEDGER.md`` §303 and §304.
 """
 
 from __future__ import annotations
@@ -26,41 +26,114 @@ from dsa_agent.graph import _resolve_refs
 from dsa_agent.planner import _TABULAR_TOOLS, _validate_real_plan
 from dsa_agent.state import AnalysisPlan, AnalysisStep
 
-# The measured shift: a failed call in the middle moves every later index down by one.
+# The history that used to be survivable in silence: a failed call between two tables.
 _ONE_FAILURE = [
-    {"tool": "run_sql", "status": "ok", "output": {"columns": ["region"], "rows": [["north"]]}},
-    {"tool": "create_chart", "status": "error", "output": {}},
-    {"tool": "run_sql", "status": "ok", "output": {"columns": ["sex"], "rows": [["female"]]}},
+    {
+        "step_id": "s01",
+        "tool": "run_sql",
+        "status": "ok",
+        "output": {"columns": ["region"], "rows": [["north"]]},
+    },
+    {"step_id": "s02", "tool": "create_chart", "status": "error", "output": None},
+    {
+        "step_id": "s03",
+        "tool": "run_sql",
+        "status": "ok",
+        "output": {"columns": ["sex"], "rows": [["female"]]},
+    },
 ]
 
 
-def _resolved(source: dict[str, Any]) -> dict[str, Any]:
+def _resolve(source: dict[str, Any]) -> dict[str, Any]:
     return _resolve_refs({"source": source}, _ONE_FAILURE)["source"]  # type: ignore[no-any-return]
 
 
-def test_from_step_counts_only_the_calls_that_succeeded() -> None:
-    """The behaviour the contract now promises, pinned rather than paraphrased.
+def test_a_failed_position_is_refused_by_reason_instead_of_returning_the_next_table() -> None:
+    """The silent slide is gone: index 1 is the failed chart call, and saying so is the only answer.
 
-    Index 1 is the second *successful* call -- the third executed one -- because the failed chart call is not
-    counted. If counting ever becomes position-based this assertion is where it becomes visible.
+    Before this change the same reference returned record #3's rows and the export succeeded.
     """
-    assert _resolved({"$from_step": 1}) == {"columns": ["sex"], "rows": [["female"]]}
-    assert _resolved({"$from_step": 0}) == {"columns": ["region"], "rows": [["north"]]}
+    resolved = _resolve({"$from_step": 1})
+    assert "$reference_reason" in resolved, resolved
+    reason = str(resolved["$reference_reason"])
+    assert "create_chart" in reason and "did not succeed" in reason, reason
+    # The original key survives, so a refusal cannot be mistaken for a payload.
+    assert resolved["$from_step"] == 1
 
 
-def test_from_tool_is_immune_to_the_shift_because_it_selects_by_name() -> None:
-    """``$from_tool`` takes the latest successful call of that tool, so a failure cannot move it."""
-    assert _resolved({"$from_tool": "run_sql"}) == {"columns": ["sex"], "rows": [["female"]]}
-    # ...and the shape of an unresolved reference stays honest rather than becoming a guessed payload.
-    assert _resolved({"$from_step": 9}) == {"$from_step": 9}
+def test_positions_count_executed_records_failures_included() -> None:
+    """Position 0 and 2 still reach the two tables, and an out-of-range index stays an honest non-resolution."""
+    assert _resolve({"$from_step": 0}) == {"columns": ["region"], "rows": [["north"]]}
+    assert _resolve({"$from_step": 2}) == {"columns": ["sex"], "rows": [["female"]]}
+    assert _resolve({"$from_step": 9}) == {"$from_step": 9}
 
 
-def test_the_resolved_source_is_what_the_export_actually_relocates(tmp_path: Any) -> None:
-    """The shift is not a trivia fact: a csv export of index 1 writes the other table and reports no error.
+def test_from_step_id_names_the_step_and_ignores_where_it_landed() -> None:
+    """The exact form: a step id selects its own successful result no matter how many records moved."""
+    assert _resolve({"$from_step_id": "s01"}) == {"columns": ["region"], "rows": [["north"]]}
+    assert _resolve({"$from_step_id": "s03"}) == {"columns": ["sex"], "rows": [["female"]]}
+    missing = _resolve({"$from_step_id": "s02"})
+    # Key presence asserted first: a resolution that slides to another call answers with no reason at all, and the
+    # red should name that guarantee rather than die on a KeyError.
+    assert "$reference_reason" in missing, missing
+    assert "no successful result" in str(missing["$reference_reason"]), missing
+    assert missing["$from_step_id"] == "s02"
 
-    Nothing below raises. That is the point -- a wrong artifact that succeeds is what a reader of the old
-    docstring would have got, and no validation check would have named it.
-    """
+
+def test_a_retry_appends_a_record_without_moving_a_step_id_selection() -> None:
+    """Retries are the second way positions lie: a re-run step adds a record, its step id does not shift."""
+    history = [
+        {
+            "step_id": "s01",
+            "tool": "run_sql",
+            "status": "ok",
+            "output": {"columns": ["a"], "rows": [[1]]},
+        },
+        {"step_id": "s02", "tool": "hypothesis_test", "status": "error", "output": None},
+        {
+            "step_id": "s02",
+            "tool": "hypothesis_test",
+            "status": "ok",
+            "output": {"columns": ["p"], "rows": [[0.04]]},
+        },
+    ]
+    out = _resolve_refs({"source": {"$from_step_id": "s02"}}, history)["source"]
+    assert out == {"columns": ["p"], "rows": [[0.04]]}
+    # ...while the positional form now refuses record 1 rather than quietly resolving to record 2.
+    positional = _resolve_refs({"source": {"$from_step": 1}}, history)["source"]
+    assert "$reference_reason" in positional, positional
+
+
+def test_from_tool_still_takes_the_latest_successful_call_of_that_name() -> None:
+    """Unchanged: name selection is position-independent, which is why the heuristic planner emits it."""
+    assert _resolve({"$from_tool": "run_sql"}) == {"columns": ["sex"], "rows": [["female"]]}
+    assert _resolve({"$from_tool": "create_chart"}) == {"$from_tool": "create_chart"}
+
+
+def test_the_export_refuses_a_reasoned_reference_and_writes_nothing(tmp_path: Any) -> None:
+    """The refusal has to survive the tool boundary: an error, a reason, and no file on disk."""
+    import asyncio
+
+    from dsa_tools.base import ToolExecutionError
+    from dsa_tools.tools.export_artifact import ExportArtifactInput, ExportArtifactTool
+
+    with pytest.raises(ToolExecutionError) as exc:
+        asyncio.run(
+            ExportArtifactTool().execute(
+                ExportArtifactInput(
+                    source=_resolve({"$from_step": 1}),
+                    filename="result_table.csv",
+                    format="csv",
+                    workspace=str(tmp_path),
+                )
+            )
+        )
+    assert "create_chart" in str(exc.value) and "did not succeed" in str(exc.value), exc.value
+    assert list(tmp_path.iterdir()) == [], "the refused export still wrote a file"
+
+
+def test_the_export_still_relocates_the_step_named_by_id(tmp_path: Any) -> None:
+    """Positive control for the test above: the same history exports the table step s03 named, bytes included."""
     import asyncio
 
     from dsa_tools.tools.export_artifact import ExportArtifactInput, ExportArtifactTool
@@ -68,55 +141,82 @@ def test_the_resolved_source_is_what_the_export_actually_relocates(tmp_path: Any
     out = asyncio.run(
         ExportArtifactTool().execute(
             ExportArtifactInput(
-                source=_resolved({"$from_step": 1}),
+                source=_resolve({"$from_step_id": "s03"}),
                 filename="result_table.csv",
                 format="csv",
                 workspace=str(tmp_path),
             )
         )
     )
-    assert out.columns == ["sex"], "the export followed the resolved payload, not the requested one"
+    assert out.columns == ["sex"]
     assert (tmp_path / "result_table.csv").read_text(encoding="utf-8").strip() == "sex\nfemale"
 
 
-def _schema_description() -> str:
-    import dsa_tools
+def test_records_carry_the_plan_step_id_in_both_executors() -> None:
+    """`$from_step_id` is only true if every executor records which step produced a call.
 
-    dsa_tools.bootstrap()
-    tool = dsa_tools.get("export_artifact")
-    assert tool is not None
-    schema = tool.input_model.model_json_schema()
-    return str(schema["properties"]["source"]["description"])
-
-
-def test_the_executor_docstring_no_longer_promises_the_false_counting() -> None:
-    """The only place the rule was written down used to state the opposite of what the code does.
-
-    "0-based among *executed* calls" described a counting the implementation never had, so a reader who trusted it
-    got a different table than the one they named. Pinning the wording against the behaviour is the cheap half of
-    the fix; the semantics themselves belong to ``test_from_step_counts_only_the_calls_that_succeeded``.
+    Parsed rather than grepped: a record built without the key would leave every step-id reference unresolvable
+    while the resolver itself still looked correct in a unit test. The counts are asserted too, so a construction
+    site added later cannot slip past the walk.
     """
-    doc = " ".join((inspect.getdoc(_resolve_refs) or "").split()).lower()
-    assert "succeeded" in doc and "0-based" in doc, doc
-    assert "executed calls" not in doc, doc
+    import ast
+    import pathlib
+
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    graph_src = (repo / "packages/agent/src/dsa_agent/graph.py").read_text(encoding="utf-8")
+    record_calls = [
+        node
+        for node in ast.walk(ast.parse(graph_src))
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "ToolCallRecord"
+    ]
+    assert len(record_calls) >= 2, (
+        f"expected the initial and the retry construction, saw {len(record_calls)}"
+    )
+    for node in record_calls:
+        assert any(k.arg == "step_id" for k in node.keywords), ast.unparse(node)[:90]
+
+    lang_src = (repo / "packages/agent/src/dsa_agent/langgraph_graph.py").read_text(
+        encoding="utf-8"
+    )
+    dicts = [
+        node
+        for node in ast.walk(ast.parse(lang_src))
+        if isinstance(node, ast.Dict)
+        and {k.value for k in node.keys if isinstance(k, ast.Constant)}
+        >= {"call_id", "tool", "status"}
+    ]
+    assert dicts, "the langgraph tool node no longer builds a record literal -- re-read this test"
+    for node in dicts:
+        keys = {k.value for k in node.keys if isinstance(k, ast.Constant)}
+        assert "step_id" in keys, sorted(keys)
 
 
-def test_the_published_schema_states_the_index_rule_a_client_would_need() -> None:
-    """A REST or MCP caller sees the schema and nothing else; the rule has to be in it."""
+def test_the_published_schema_states_the_three_forms_and_the_no_slide_rule() -> None:
+    """A REST or MCP caller sees the schema and nothing else.
+
+    Keywords alone are a weak check: a description naming all three forms while recommending the positional one
+    would pass a token census. So the assertions include the two directional claims a reader needs -- which form to
+    prefer, and why the positional one cannot be authored from a plan.
+    """
     raw = _schema_description()
-    text = raw.lower()
-    assert "succeeded" in text and "0-based" in text, raw
-    assert "not the plan" in text, raw
-    assert "failed calls are not counted" in text, raw
-    # The old description said only "resolved by the executor", which is what let a wrong-but-successful
-    # export look like correct behaviour to whoever wrote the plan.
-    assert "resolved by the executor" not in text
+    for marker in (
+        "$from_step_id",
+        "$from_tool",
+        "$from_step",
+        "execution order",
+        "never resolved onward",
+        "the form to prefer",
+        "cannot be known before the run",
+    ):
+        assert marker in raw, (marker, raw)
+    # The pre-fix description promised only that the executor resolved something.
+    assert "reference resolved by the executor" not in raw
 
 
-def test_the_real_mode_prompt_tells_the_planner_the_same_thing(
+def test_the_real_mode_prompt_sends_the_model_the_exact_form(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The model is asked in prose; assert on the prose it actually receives, not on a source-string grep."""
+    """Assert on the prose the provider actually receives, not on a grep of the source file."""
     import asyncio
 
     import dsa_agent.planner as planner
@@ -152,18 +252,13 @@ def test_the_real_mode_prompt_tells_the_planner_the_same_thing(
     monkeypatch.setattr("dsa_llm.providers.auto_provider", lambda: _EchoProvider())
     plan = asyncio.run(planner.plan_analysis("export the table", "/tmp/d.csv", ["a"]))
     assert plan.steps
-    prompt = captured["prompt"].lower()
-    for marker in ("succeeded", "0-based", "$from_tool"):
-        assert marker in prompt, f"the prompt never tells the model about {marker!r}"
+    prompt = captured["prompt"]
+    assert "$from_step_id" in prompt and "$from_step" in prompt, prompt
+    assert "cannot know which record position" in prompt, prompt
 
 
-def test_the_heuristic_planner_still_emits_the_shift_immune_reference() -> None:
-    """The shipped demo path selects by name, which is why the shift never showed up there.
-
-    ``_terminal_export_steps`` is called directly because the heuristic planner only emits ``run_sql`` for a
-    narrow set of preprocessing intents; routing through ``heuristics_plan`` would leave the tabular branch
-    unexecuted and the assertion silently unrun -- the vacuous-guard shape §54 recorded.
-    """
+def test_the_heuristic_planner_still_emits_the_position_independent_reference() -> None:
+    """The shipped demo path selects by name, so a run of the hosted demo never depended on this."""
     from dsa_agent.planner import _terminal_export_steps
 
     steps = [AnalysisStep(id="s01", name="Q", description="q", tool="run_sql", inputs={})]
@@ -172,13 +267,8 @@ def test_the_heuristic_planner_still_emits_the_shift_immune_reference() -> None:
     assert specs[0][2] in _TABULAR_TOOLS, specs
 
 
-def test_the_validator_passes_a_name_selected_export_reference_through_untouched() -> None:
-    """Plan validation checks structure, not payload shape: the reference is resolved only at execution.
-
-    Naming which step produced a table is the executor's job (`_resolve_refs`), so what the validator must not do
-    is rewrite or reject a well-formed reference -- that is where a shape rule for real-mode plans would have to
-    be added, and issue #70's remaining half stays open pending that decision.
-    """
+def test_the_validator_passes_a_step_id_reference_through_untouched() -> None:
+    """Plan validation checks structure, not payload shape: the reference resolves only at execution."""
     plan = AnalysisPlan(
         objective="o",
         assumptions=[],
@@ -203,10 +293,20 @@ def test_the_validator_passes_a_name_selected_export_reference_through_untouched
                 name="Export result table",
                 description="Export",
                 tool="export_artifact",
-                inputs={"source": {"$from_tool": "run_sql"}, "format": "csv"},
+                inputs={"source": {"$from_step_id": "s02"}, "format": "csv"},
                 depends_on=["s02"],
             ),
         ],
     )
     checked = _validate_real_plan(plan, "export the table", "p")
-    assert checked.steps[2].inputs["source"] == {"$from_tool": "run_sql"}
+    assert checked.steps[2].inputs["source"] == {"$from_step_id": "s02"}
+
+
+def _schema_description() -> str:
+    import dsa_tools
+
+    dsa_tools.bootstrap()
+    tool = dsa_tools.get("export_artifact")
+    assert tool is not None
+    schema = tool.input_model.model_json_schema()
+    return str(schema["properties"]["source"]["description"])

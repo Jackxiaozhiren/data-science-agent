@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — an export reference can no longer slide past a failed call
+
+Supersedes the "counting is unchanged, no run produces a different artifact" framing of the entry below: the owner
+ruled that the silent-wrong download should be removed rather than only documented, and measuring what a "position"
+means found two more ways the index lies.
+
+- `$from_step` now addresses records in execution order **with failures included**, and a reference whose target did
+  not succeed is refused with a reason naming it (`call 1 (create_chart) did not succeed, so it has no result to
+  relocate`). Before this, a failed call in the middle made index 1 resolve to a later call's table, the export
+  succeeded, recorded a sha256, and reported nothing.
+- A plan can now name its source exactly: `{"$from_step_id": "s03"}`, resolved against a new optional `step_id` on
+  `ToolCallRecord`, written by both executors and by the validation retry. Positions were never trustworthy -- a
+  retry appends a record, and the leading independent batch runs under `gather`.
+- `$from_tool` and the heuristic planner are unchanged, which is why the hosted demo never met this; persisted runs
+  are unaffected because the resolver only runs at dispatch time (two callers, both in the executors).
+- `tests/contract/test_export_source_contract.py` was re-aimed rather than caveated -- its §303 assertions pinned the
+  shift as behaviour -- and the guard suite is now 12 tests. Ten planted mutations each make their named test fail;
+  three first attempts were rejected as evidence (a no-op anchor after `ruff format`, a mutation that was a syntax
+  error, and a keyword census that passed a schema description recommending the wrong form) and redone properly.
+  Offline: 1311 passed, mypy clean. `AUDIT_LEDGER.md` §304. Closes issue #70, whose other half §54 fixed.
+
+### Changed (post-4.6.0) — the weekly contributor refresh opens its own pull request
+
+- `.github/workflows/contributors.yml` gains `pull-requests: write` beside `contents: write`, with the reason in a
+  comment: `main` requires the `ci` status check, so the refresh arrives as a branch plus a request rather than a
+  Contents-API commit to a protected branch (§297). The job's exit-2-on-stranded-artifact path (§300) stays as the
+  regression detector -- remove the scope and the run goes red naming it.
+- Owner decision executed on their instruction to proceed with the recommendation; this was previously held because a
+  `.github/workflows` edit is not mine to make unprompted. `AUDIT_LEDGER.md` §304.
+
 ### Fixed (post-4.6.0) — the `export_artifact` reference contract is stated where its three readers look
 
 - Reproducing issue #70 found its planner half already fixed (§54 shrank the declared tabular sources to `run_sql`)

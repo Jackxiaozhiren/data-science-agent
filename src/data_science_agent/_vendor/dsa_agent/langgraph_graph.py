@@ -103,6 +103,7 @@ async def _node_exec_step(state: LGState) -> dict[str, Any]:
     rec = {
         "call_id": call_id,
         "tool": tool,
+        "step_id": step.get("id"),
         "input": inputs,
         "output": output.model_dump(mode="json")
         if hasattr(output, "model_dump")

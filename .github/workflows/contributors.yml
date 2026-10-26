@@ -9,6 +9,10 @@ on:
 
 permissions:
   contents: write
+  # The refresh lands as a pull request because `main` requires the `ci` check, and a Contents-API commit cannot
+  # pre-carry a check that has not run yet (§297). Without this scope the job publishes the branch and stops at
+  # 403, which §300 made a loud exit-2 rather than a silent success.
+  pull-requests: write
 
 concurrency:
   group: contributor-recognition
