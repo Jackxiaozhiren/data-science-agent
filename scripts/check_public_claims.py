@@ -126,13 +126,38 @@ def scan_scope(root: Path = ROOT) -> tuple[list[Path], list[Path]]:
 # which is the honest cost of having no false positives.
 
 
+def git_directory(root: Path = ROOT) -> Path:
+    """Where the refs live, for a plain checkout or a linked worktree.
+
+    `.git` is a `gitdir: ...` pointer file in a linked worktree, and the tags are not in the directory it
+    names: a worktree keeps its own HEAD/index, while refs it shares with the repository -- tags included --
+    live in the common directory that the pointer's `commondir` file names. Reading `root/.git` directly
+    therefore finds nothing at all in a worktree, which this script used to report as "no tags readable from
+    this checkout" and refuse on. Refusing was the honest verdict for an unreadable checkout, but it was
+    never the truth about this one, and a rule that cannot be tested in the place a contributor works is a
+    rule waiting to be believed rather than checked.
+    """
+    dot = root / ".git"
+    if not dot.is_file():
+        return dot
+    pointer = dot.read_text(encoding="utf-8").strip()
+    if not pointer.startswith("gitdir:"):
+        return dot
+    target = Path(pointer.split(":", 1)[1].strip())
+    gitdir = (target if target.is_absolute() else root / target).resolve()
+    common = gitdir / "commondir"
+    if common.is_file():
+        return (gitdir / common.read_text(encoding="utf-8").strip()).resolve()
+    return gitdir
+
+
 def released_versions(root: Path = ROOT) -> set[str]:
     """Release-line versions from git refs, normalised and without peeled duplicates.
 
     Read from the ref files directly: `scripts/` is under bandit's S rules, so shelling out to
     git is not available here.
     """
-    git = root / ".git"
+    git = git_directory(root)
     packed = git / "packed-refs"
     refs: set[str] = set()
     if packed.is_file():

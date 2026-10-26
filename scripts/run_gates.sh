@@ -88,7 +88,13 @@ for cmd in "${GATES[@]}"; do
 done
 
 printf '\n%d gate(s) run, %d failed.\n' "${#GATES[@]}" "${#failed[@]}"
-for cmd in "${failed[@]}"; do
-  printf '  - %s\n' "$cmd"
-done
-[[ "${#failed[@]}" -eq 0 ]] || exit 1
+# macOS ships bash 3.2, where expanding an empty array under `set -u` is an unbound variable -- so the
+# all-green path, the one this script exists to reach, died on its own summary line. Measured on
+# 2026-10-26: `19 gate(s) run, 0 failed.` followed by `line 93: failed[@]: unbound variable`. Guard the
+# report and the exit on the count, which is what `run_web_live_gates.sh` already does for the same shape.
+if [[ "${#failed[@]}" -gt 0 ]]; then
+  for cmd in "${failed[@]}"; do
+    printf '  - %s\n' "$cmd"
+  done
+  exit 1
+fi
