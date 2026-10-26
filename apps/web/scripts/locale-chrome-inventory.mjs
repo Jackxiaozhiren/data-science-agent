@@ -24,7 +24,10 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..", "..");
 const require = createRequire(join(here, "noop.js"));
-const ts = require("typescript");
+// `ts-parser-legacy` is an npm alias for typescript@5.9.3: TypeScript 7 is a native binary whose root export is
+// {version, versionMajorMinor}, so the AST this walk needs is not merely unexported there, it is absent from the
+// package. The compiler apps/web builds with is 7; the parser this inventory reads with stays a real TS parser.
+const ts = require("ts-parser-legacy");
 
 // Two roots, not one: the modules under `lib` word the persistent status area, the footer and the run badge, and
 // a literal that reaches the page through `describeStorage()` is as reader-facing as one in a `.tsx`. The old

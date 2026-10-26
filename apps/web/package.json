@@ -31,6 +31,7 @@
     "playwright": "^1.55.1",
     "postcss": "^8.5.30",
     "tailwindcss": "^4.3",
-    "typescript": "5.9.3"
+    "ts-parser-legacy": "npm:typescript@5.9.3",
+    "typescript": "7.0.2"
   }
 }
