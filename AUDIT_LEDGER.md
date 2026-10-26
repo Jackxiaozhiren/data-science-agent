@@ -17036,3 +17036,54 @@ worktree's `node_modules`; documented in §303's addendum and not fixed by touch
 clean on 133 source files, ruff/format/ratchet/claims/SBOM/orphan gates green, vendor mirrors regenerated per file.
 
 Issue #70 is now closed on both halves: the source-shape selection by §54, the reference contract by this section.
+## 305. The three npm locks now read each other, and the first thing they said was that seven versions already disagree
+
+§298 and §302 both record the same recurring shape from the human side: a Dependabot PR moves a manifest and
+the root workspace lock, and never touches the member lock that `npm --prefix <member> ci` installs from, so
+neither half can go green and someone has to notice. `scripts/check_npm_workspace_lock.py` could not notice,
+because everything it compares is a **range** -- manifest versus `packages[""]` in the root lock and in each
+member lock. Two locks can satisfy the same range with different resolved versions all day and every existing
+check stays green. This adds the missing comparison, and its first output was a debt list rather than a clean
+sheet.
+
+**What the comparison found on `origin/main` (six gated pairs across two members, plus one reclassified below):
+`apps/web` `@jridgewell/sourcemap-codec` 1.6.0 / 1.5.5, `playwright` and `playwright-core` 1.63.0 / 1.55.1,
+`postcss` 8.5.30 / 8.5.31; `apps/vscode` `ansi-regex` 6.4.0 / 6.3.0, `get-east-asian-width` 1.7.0 / 1.6.0,
+`jszip` 3.10.2 / 3.10.1** -- member lock first, root lock second. All seven satisfy their manifests, which is
+precisely why nothing saw them. The pair with a proven cost is `playwright`/`playwright-core`: CI installs
+members from the member lock (`ci.yml:30`, `ci.yml:99`), so the tested tree carries 1.63.0 while a root
+`npm ci` builds 1.55.1, and the browser binary that the tour needs is selected by the installed package
+version -- this repository has already watched a tour fail on exactly that. They are recorded in
+`docs/audit/npm-lock-divergences.json`, and the gate is red for any divergence that file does not name.
+
+**The naive version of this check had a false positive, and killing it changed the design.** The first
+comparison reported an eighth item: `apps/web`'s member lock hoists `jiti@2.7.0` to its top level, and the
+root lock appeared not to resolve it at all -- "absent", the most alarming word a gate can print. It is not
+debt: the root resolves it as `node_modules/@tailwindcss/node/node_modules/jiti`, i.e. nested under the one
+package that imports it, which satisfies every import that exists. Matching by name across two independent
+resolutions conflates npm's *layout* choice with the *version* a member's own specifier resolves to, so the
+rule became: compare what each lock puts at the member's top level, ignore nested entries entirely, and treat
+a placement-only difference as information. The script prints it -- `placement-only differences between the
+locks, deliberately not gated: 1` -- because a blind spot nobody reads out loud is how the next person
+"fixes" the gate into noise. A test pins the shape so a future tightening cannot quietly promote it to a
+failure.
+
+**Two directions, so the exemption file cannot decay into permissions.** A divergence that is not listed
+fails; a listed divergence that has been reconciled also fails, with `lists apps/web:react, which no longer
+diverges -- prune the entry`. The second half is the one that matters over time: without it the file accumulates
+coverage for paths that stopped diverging, and the next divergence there walks through a door nobody
+re-checked. There is deliberately no count-based ceiling -- a count leaves slack that a single new divergence
+consumes silently. `tests/test_npm_workspace_lock_guard.py::test_the_committed_ledger_names_exactly_the_committed_divergences`
+re-derives the set from the three committed lockfiles rather than trusting the prose in the JSON, which is the
+same discipline `tests/test_npm_advisory_gate.py` applies to the advisory exemption list.
+
+**Proved able to fail, three ways.** At `952a9af` -- Dependabot's own #113 head -- the comparison names
+`tailwind-merge` member 2.6.1 against root 3.7.0: the exact bug this is for, caught in the artifact instead of
+by a human reading a CI failure. Replacing the detector body with `return findings` on a scratch copy reddens
+five of the new tests, including the admitted-then-pruned arc, so none of them is satisfiable by a check that
+checks nothing. Deleting the ledger file reddens the re-derivation test and nothing else, which is the
+separation the two directions are meant to have.
+
+`scripts/run_gates.sh` at this head: 19 gates, the two known linked-worktree tag failures
+(`AUDIT_LEDGER.md` 276, §295) and nothing new -- the gate's own test file is inside the pytest set, so CI
+re-derives the ledger on every run from here.
