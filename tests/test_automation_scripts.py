@@ -406,19 +406,34 @@ class _CallLog:
     """A stand-in transport that records every request, so a test can say what the script actually did."""
 
     def __init__(
-        self, *, pulls_status: int | None = None, open_pulls: list[dict[str, Any]] | None = None
+        self,
+        *,
+        pulls_status: int | None = None,
+        open_pulls: list[dict[str, Any]] | None = None,
+        branch_exists: bool = False,
     ) -> None:
         self.calls: list[tuple[str, str, dict[str, Any] | None]] = []
         self.pulls_status = pulls_status
         self.open_pulls = open_pulls or []
-        self.branch_exists = False
+        self.branch_exists = branch_exists
 
     def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
         self.calls.append((method, path, payload))
-        if path.startswith("/repos/owner/repo/git/ref/heads/"):
+        # The routes GitHub actually serves, spelled out so a wrong one fails here instead of agreeing with
+        # whatever the script asked for: singular `/git/ref/...` reads a ref, plural `/git/refs` creates one and
+        # `/git/refs/heads/...` moves it. A transport that accepted any path let the update route return 404 on
+        # the first live dispatch.
+        if method == "GET" and path.startswith("/repos/owner/repo/git/ref/heads/"):
             if not self.branch_exists:
                 raise contributors.GitHubAPIError(404, '{"message":"Not Found","status":"404"}')
             return {"object": {"sha": "branch-head"}}
+        if method == "POST" and path == "/repos/owner/repo/git/refs":
+            self.branch_exists = True
+            return {"object": {"sha": "branch-head"}}
+        if method == "PATCH" and path.startswith("/repos/owner/repo/git/refs/heads/"):
+            return {"object": {"sha": "branch-head"}}
+        if method in {"GET", "POST", "PATCH"} and path.startswith("/repos/owner/repo/git/ref"):
+            raise AssertionError(f"unrecognised git-ref route: {method} {path}")
         if path.startswith("/repos/owner/repo/pulls"):
             # A token holding only `contents: write` can still read the pull list; it is the create that is
             # refused. Raising on any /pulls call would hide the path this harness exists to exercise.
@@ -509,6 +524,33 @@ def test_the_refresh_writes_a_working_branch_never_the_protected_default(
     ), puts
     assert outcome["target"] == contributors.WORK_BRANCH
     assert outcome["pull"] == 7
+
+
+def test_a_second_refresh_moves_the_existing_work_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The path every run after the first takes, and the one nothing drove until a live dispatch proved it.
+
+    The work branch now exists, so the refresh must move it with the plural `/git/refs/heads/` route; the
+    singular route is read-only and answers 404. A transport that agreed to any path let that ship.
+    """
+    log = _CallLog(branch_exists=True)
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    moves = [c for c in log.calls if c[0] == "PATCH"]
+    assert moves == [
+        (
+            "PATCH",
+            f"/repos/owner/repo/git/refs/heads/{contributors.WORK_BRANCH}",
+            {"sha": "default-head", "force": True},
+        )
+    ], log.calls
+    assert not [c for c in log.calls if c[0] == "POST" and c[1].endswith("/git/refs")], log.calls
+    assert outcome["status"] == "published"
 
 
 def test_current_content_writes_nothing_and_opens_no_pull(monkeypatch: pytest.MonkeyPatch) -> None:

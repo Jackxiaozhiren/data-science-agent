@@ -16784,3 +16784,48 @@ every Monday with an instruction in its log. One line in `.github/workflows/cont
 `pull-requests: write` -- turns that red into a pull request opened by the job itself, which is where the design was
 always headed; the branch and request naming, the reuse of an open request, and the checks that gate it are all in
 place and witnessed above. That line is the owner's to approve, because it is a `.github/workflows` edit.
+
+## 301. The ref route GitHub does not serve, and the fix that was reported as shipped while it sat in the working tree
+
+The dispatch that followed #129 did not reach the loud failure designed in §300. It died earlier:
+
+    GitHubAPIError: GitHub API request failed (404): {"message": "Not Found", "status": "404"}
+      ... _ensure_branch -> request_json("PATCH", f"/repos/{repo}/git/ref/heads/{WORK_BRANCH}", ...)
+
+`_ensure_branch` takes one of three git-ref endpoints, and only two of them were ever exercised: `GET` a ref
+(singular `/git/ref/heads/<branch>`, which is real), `POST` `/git/refs` to create the branch (real, and what the
+first run did), and `PATCH` to move it -- where the code asked the **singular** route. GitHub's update endpoint is
+`/git/refs/heads/<branch>`. The singular spelling is not a cosmetic variant that happens to work; it is a read-only
+endpoint and it answers 404 to a `PATCH`. From the second weekly run onward the branch already exists, so every run
+after the first was going to hit exactly that line.
+
+Two things are worth recording separately, because they are different defects.
+
+**The instrument hole.** Nothing offline could have caught this. `_CallLog.request` -- the stand-in transport the
+tests monkeypatch over `request_json` -- returned `{}` for any path it did not recognise, so a URL GitHub does not
+serve was answered with exactly what the test expected. The suite was green and the URL was wrong; the tests were
+certifying the script's intent rather than the API's contract. The harness now enumerates the three routes and
+raises `unrecognised git-ref route: <METHOD> <path>` on any other git-ref path, and one test drives the
+branch-already-exists case (`test_a_second_refresh_moves_the_existing_work_branch`), which asserts the plural route,
+the pinned `{"sha": <default head>, "force": True}` payload, and that no `POST /git/refs` was attempted.
+
+- Falsified by pointing the `PATCH` back at the singular route: two tests fail with that message (the new one and
+  `test_missing_pull_permission_still_publishes_and_names_the_url`, which reaches the same call through `main()`),
+  and the suite returns to 29 green after the mutation is reverted in the same command. The revert is checked by
+  hashing the file before the plant and after the restore and requiring the two to match, so no hash value is
+  quoted here to go stale.
+- The direction that matters here is the false green, not the red: a transport that agrees to any path turns
+  "the tests pass" into evidence about the test double. The new branch of the harness is what makes the offline
+  suite able to disagree with the live service.
+
+**The process hole.** This fix existed as a working-tree edit while §300 was written and pushed. The commit that
+carried the exit-code change staged `scripts/update_contributors.py`'s earlier state and left the route edit
+uncommitted, so `main`, CI and this ledger all agreed about a version of the file that still 404s. The 404 above is
+the cost of that, and the remedy is one command: `git status` after committing, not before. Recorded in
+`HANDOFF-2026-10-19.md` addendum 37 alongside the standing rule that an entry is not shipped until it is pushed and
+read back from `origin/main`.
+
+Evidence level after this section: the route change is proven offline and against the 404 that motivated it; the
+live witness is still owed, and its expected shape is now known -- `Updated CONTRIBUTORS.md on
+chore/contributor-recognition.`, then `The token cannot open a pull request (403) ...`, then exit code **2** rather
+than 1, because the branch exists and the token still lacks `pull-requests: write`.
