@@ -17210,3 +17210,55 @@ about the corpus instead of the result: **327 top-level specifiers** are compare
 "zero divergences" means agreement rather than a detector that looked at nothing.
 
 Verification on the reconciled tree: `scripts/run_gates.sh` in full: **19 gates, 2 failures, both the known linked-worktree tag blindness** (§276/§295) and nothing new; `pytest` coverage 84.25% against the 79% floor; `regression.mjs` 73/73 on chromium-1248; the live seeded gates, `locale-chrome-inventory`, `check_npm_workspace_lock` and `generate_sbom --check` all green; `npm ci` from each of the three locks (238 / 198 / 43 packages). The gate script itself reports `0 divergence(s)` with the ledger empty, and `test_the_committed_ledger_names_exactly_the_committed_divergences` still asserts the two sets are equal -- which is now the empty set, checked rather than asserted.
+
+## 309. A rule that could only be tested in someone else's tree -- and what the first all-green local mirror then revealed
+
+Every dependency PR this month carried the same asterisk: "19 gates, 2 failed, both the linked-worktree tag
+blindness of §276". The asterisk was honest -- the refusal was the right verdict for a checkout the script
+could not read -- but repeating it stopped prompting the question of why a repository's own release-currency
+rules were unreadable in the place its contributors work. The fix is about fifteen lines
+(`ci-worktree-tag-reading`, PR #137), and the two "known reds" are now gone rather than explained.
+
+**The cause was one level of indirection.** `released_versions()` read `root/.git/packed-refs` and
+`root/.git/refs/tags`. In a linked worktree `.git` is not a directory: it is a one-line `gitdir: …` pointer, so
+both paths missed silently. The tags are not inside the directory the pointer names either -- a worktree keeps
+its own `HEAD` and index, while refs, tags included, live in the **common** directory that the pointer's
+`commondir` file identifies. Measured here: 38 tag lines in the shared `packed-refs`, 0 loose. `git_directory()`
+now follows that chain, still as a file read because `scripts/` is under bandit's S rules.
+
+**What changed in the tree, before -> after, in a worktree:** `released_versions()` 0 -> 38;
+`check_public_claims --require-released-tags` rc=1 refusal -> rc=0 `0 issues (scanned 47 file(s); 60 skipped as
+historical)`, the same verdict the shared checkout has always returned; `tests/test_currency_claims.py` and
+`tests/test_announcement_currency.py` 2 failures -> 29 passed, which is precisely the number §295 recorded when
+it ran those files in the shared tree as a *control*. The control stopped being a different tree:
+`test_the_real_repository_carries_a_release_line` now depends on the pointer being followed, so a regression
+breaks it in a worktree instead of being excused by the environment.
+
+**Five fixture layouts, and one of them exists to keep a refusal alive.** Packed refs through a pointer, loose
+refs through a pointer, a *relative* `gitdir:` target resolved against the checkout, a plain checkout whose path
+is unchanged, and -- the one worth pointing at -- a pointer whose gitdir has no `commondir`. That last case must
+still read as empty, because "this checkout genuinely has no refs" is the state
+`--require-released-tags` was written to refuse; fixing the common case must not make the honest verdict
+unreachable. Disabling the following reddens three of the new tests plus the real-repo assertion.
+
+**The first all-green local mirror immediately found a second bug, in the reporter itself.**
+`scripts/run_gates.sh` prints its summary and then expands `"${failed[@]}"` -- and macOS ships bash 3.2, where
+an empty array under `set -u` is an unbound variable:
+
+    19 gate(s) run, 0 failed.
+    scripts/run_gates.sh: line 93: failed[@]: unbound variable
+
+So a perfectly green run exited non-zero. The line had been walked before, always with a non-empty array, and
+bash 3.2 only rejects the expansion when the array is empty -- so the bug was reachable exclusively by success,
+which is the branch no one in a worktree had ever reached because some gate always failed. The defect was not in
+the gate set but in the reporting code's success path -- the general shape worth remembering: "0 failures" is
+itself an input nobody tested until the thing making it 2 failures got fixed. The
+report and the exit are now guarded on the count (the convention `run_web_live_gates.sh` already uses), proven
+against `/bin/bash` 3.2.57 in both directions: old form 127, new form 0 with nothing failed and still 1 with a
+failure.
+
+End state measured on the committed head: `scripts/run_gates.sh` -> **19 gates, 0 failed**, in a linked
+worktree. And because the crash lives in the shell rather than the tree, the corollary is a stronger one: the
+runner had never been able to *report* a fully green set -- an all-green mirror in the shared checkout would
+have died on the same line too -- so this branch did not merely stop two test failures, it walked a path of the
+reporting code that no previous run of this script could reach.
