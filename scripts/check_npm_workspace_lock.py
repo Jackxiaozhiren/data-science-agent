@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+DIVERGENCE_LEDGER = Path("docs") / "audit" / "npm-lock-divergences.json"
 MANIFEST_SECTIONS = (
     "dependencies",
     "devDependencies",
@@ -50,6 +51,123 @@ def _compare_manifest(
     return errors
 
 
+def _member_root_specifiers(packages: dict[str, Any]) -> dict[str, str]:
+    """Bare specifiers this member's own install resolves at its top level, with their versions.
+
+    Nested entries (`node_modules/next/node_modules/postcss`) are left out on purpose: matching them
+    by name across two independent resolutions conflates npm's layout choice with the version a
+    member's imports actually see, and the version that matters is the top-level one.
+    """
+    found: dict[str, str] = {}
+    for path, entry in packages.items():
+        if not path.startswith("node_modules/") or path.count("node_modules/") != 1:
+            continue
+        version = entry.get("version")
+        if isinstance(version, str):
+            found[path.removeprefix("node_modules/")] = version
+    return found
+
+
+def _root_resolution(
+    root_packages: dict[str, Any], member: str, name: str
+) -> tuple[str | None, str]:
+    """The version the root workspace lock installs for `member`, and where it came from."""
+    nested = f"{member}/node_modules/{name}"
+    hoisted = f"node_modules/{name}"
+    for key in (nested, hoisted):
+        entry = root_packages.get(key)
+        if isinstance(entry, dict) and isinstance(entry.get("version"), str):
+            return entry["version"], key
+    return None, ""
+
+
+def _cross_lock_divergences(
+    root_packages: dict[str, Any],
+    member: str,
+    member_packages: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Where the member lock and the root lock resolve the same specifier to different versions.
+
+    Every pair here satisfies the manifest's own range -- that is why the range comparison above
+    cannot see them, and why CI (which installs members from the member lock) can verify a tree a
+    root `npm ci` would not reproduce. `kind` separates the two shapes: `version` and `absent` are
+    gated through the ledger; `placement` is npm hoisting the same package to a different depth and
+    is reported without failing, because no import in the tree changes.
+    """
+    findings: list[dict[str, str]] = []
+    for name, member_version in sorted(_member_root_specifiers(member_packages).items()):
+        root_version, root_path = _root_resolution(root_packages, member, name)
+        if root_version is None:
+            elsewhere = next(
+                (key for key in root_packages if key.endswith(f"/node_modules/{name}")),
+                "",
+            )
+            findings.append(
+                {
+                    "member": member,
+                    "package": name,
+                    "kind": "placement" if elsewhere else "absent",
+                    "member_version": member_version,
+                    "root_version": "",
+                    "root_path": elsewhere,
+                }
+            )
+            continue
+        if root_version != member_version:
+            findings.append(
+                {
+                    "member": member,
+                    "package": name,
+                    "kind": "version",
+                    "member_version": member_version,
+                    "root_version": root_version,
+                    "root_path": root_path,
+                }
+            )
+    return findings
+
+
+def _ledger_keys() -> set[str]:
+    path = ROOT / DIVERGENCE_LEDGER
+    if not path.is_file():
+        return set()
+    entries = _load_json(path).get("divergences")
+    if not isinstance(entries, list):
+        return set()
+    return {
+        f"{entry.get('member')}:{entry.get('package')}"
+        for entry in entries
+        if isinstance(entry, dict)
+    }
+
+
+def _reconcile_divergence_ledger(findings: list[dict[str, str]]) -> list[str]:
+    """Fail on a divergence the ledger does not name, and on a ledger entry reality has moved past.
+
+    The second direction is what keeps the file from becoming a pile of permissions: reconcile one
+    of these and the gate asks you to delete its entry, so the next divergence at that path is
+    caught instead of covered.
+    """
+    gated = [found for found in findings if found["kind"] != "placement"]
+    allowed = _ledger_keys()
+    seen = {f"{found['member']}:{found['package']}" for found in gated}
+    errors: list[str] = []
+    for found in gated:
+        key = f"{found['member']}:{found['package']}"
+        if key in allowed:
+            continue
+        errors.append(
+            f"{key} resolves to {found['member_version']} in the member lock but "
+            f"{found['root_version'] or 'not at all'} in the root lock ({found['kind']}) -- "
+            f"regenerate one lock from the other, or name it in {DIVERGENCE_LEDGER.as_posix()}"
+        )
+    for key in sorted(allowed - seen):
+        errors.append(
+            f"{DIVERGENCE_LEDGER.as_posix()} lists {key}, which no longer diverges -- prune the entry"
+        )
+    return errors
+
+
 def main() -> int:
     root_manifest = _load_json(ROOT / "package.json")
     lock = _load_json(ROOT / "package-lock.json")
@@ -59,6 +177,7 @@ def main() -> int:
         return 1
 
     errors = _compare_manifest(ROOT / "package.json", packages.get(""), "")
+    divergences: list[dict[str, str]] = []
 
     workspace_patterns = root_manifest.get("workspaces", [])
     if not isinstance(workspace_patterns, list):
@@ -88,6 +207,19 @@ def main() -> int:
                     errors.extend(
                         _compare_manifest(manifest_path, member_packages.get(""), member_key)
                     )
+                    divergences.extend(_cross_lock_divergences(packages, lock_key, member_packages))
+
+    errors.extend(_reconcile_divergence_ledger(divergences))
+    placement = [found for found in divergences if found["kind"] == "placement"]
+    if placement:
+        print(
+            f"placement-only differences between the locks, deliberately not gated: {len(placement)}"
+        )
+        for found in placement:
+            print(
+                f"- {found['member']}:{found['package']} {found['member_version']} sits at that "
+                f"member's top level while the root lock resolves it at {found['root_path']}"
+            )
 
     if errors:
         print("Root npm workspace lockfile is out of sync:")
@@ -100,6 +232,10 @@ def main() -> int:
         return 1
 
     print("Root npm workspace lockfile matches all workspace manifests.")
+    print(
+        f"Resolved versions across the member locks agree, apart from "
+        f"{len(_ledger_keys())} divergence(s) named in {DIVERGENCE_LEDGER.as_posix()}."
+    )
     return 0
 
 

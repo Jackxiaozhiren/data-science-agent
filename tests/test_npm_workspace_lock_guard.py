@@ -112,3 +112,124 @@ def test_workspace_without_member_lock_uses_root_lock(
 ) -> None:
     (workspace / "apps/web/package-lock.json").unlink()
     assert lock_check.main() == 0
+
+
+def _resolve_both(root: Path, root_version: str, member_version: str) -> None:
+    """Put the same specifier in both locks at two different resolved versions."""
+    root_lock = json.loads((root / "package-lock.json").read_text(encoding="utf-8"))
+    root_lock["packages"]["node_modules/react"] = {"version": root_version}
+    _write(root / "package-lock.json", root_lock)
+    member_lock = json.loads((root / "apps/web/package-lock.json").read_text(encoding="utf-8"))
+    member_lock["packages"]["node_modules/react"] = {"version": member_version}
+    _write(root / "apps/web/package-lock.json", member_lock)
+
+
+def _write_ledger(root: Path, keys: list[tuple[str, str]]) -> None:
+    entries = [
+        {"member": member, "package": package, "note": "test", "reviewed": "2026-10-26"}
+        for member, package in keys
+    ]
+    _write(root / "docs/audit/npm-lock-divergences.json", {"divergences": entries})
+
+
+def test_cross_lock_version_divergence_is_rejected_without_a_ledger_entry(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _resolve_both(workspace, root_version="19.2.7", member_version="19.2.8")
+    assert lock_check.main() == 1
+    output = capsys.readouterr().out
+    assert (
+        "apps/web:react resolves to 19.2.8 in the member lock but 19.2.7 in the root lock" in output
+    )
+    assert "(version)" in output
+    assert "docs/audit/npm-lock-divergences.json" in output
+
+
+def test_ledger_entry_admits_a_measured_divergence(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _resolve_both(workspace, root_version="19.2.7", member_version="19.2.8")
+    _write_ledger(workspace, [("apps/web", "react")])
+    assert lock_check.main() == 0
+    assert (
+        "1 divergence(s) named in docs/audit/npm-lock-divergences.json" in capsys.readouterr().out
+    )
+
+
+def test_reconciling_a_ledger_divergence_without_pruning_the_entry_is_rejected(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The exemption list cannot decay into a pile of permissions.
+
+    Without this direction the file would keep covering a path long after the divergence it recorded
+    was fixed, and the next divergence at that same path would be waved through by an entry nobody
+    re-checked. The first half runs in the same test so the assertion cannot be satisfied by a
+    comparison that never compared anything: admitted-then-pruned is one arc, and a neutralised
+    detector fails the first step.
+    """
+    _resolve_both(workspace, root_version="19.2.7", member_version="19.2.8")
+    _write_ledger(workspace, [("apps/web", "react")])
+    assert lock_check.main() == 0, "the recorded divergence must be admitted first"
+    capsys.readouterr()  # discard, so the assertion below can only see the reconcile step
+
+    _resolve_both(workspace, root_version="19.2.8", member_version="19.2.8")
+    assert lock_check.main() == 1
+    assert (
+        "lists apps/web:react, which no longer diverges -- prune the entry"
+        in capsys.readouterr().out
+    )
+
+
+def test_nested_entries_are_not_compared_by_name(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """npm's layout choice is not a version violation, so the gate does not read it as one."""
+    root_lock = json.loads((workspace / "package-lock.json").read_text(encoding="utf-8"))
+    root_lock["packages"]["node_modules/next/node_modules/postcss"] = {"version": "8.5.31"}
+    _write(workspace / "package-lock.json", root_lock)
+    member_lock = json.loads((workspace / "apps/web/package-lock.json").read_text(encoding="utf-8"))
+    member_lock["packages"]["node_modules/next/node_modules/postcss"] = {"version": "8.5.23"}
+    _write(workspace / "apps/web/package-lock.json", member_lock)
+    assert lock_check.main() == 0
+    assert "divergence(s)" in capsys.readouterr().out
+
+
+def test_placement_only_difference_is_reported_and_not_gated(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The shape `apps/web:jiti` has on main: member top level, root resolves it nested elsewhere.
+
+    Pinned so a later tightening cannot quietly turn a hoisting difference into a red gate -- the
+    reclassification that moved this out of the ledger was measured, not assumed.
+    """
+    member_lock = json.loads((workspace / "apps/web/package-lock.json").read_text(encoding="utf-8"))
+    member_lock["packages"]["node_modules/jiti"] = {"version": "2.7.0"}
+    _write(workspace / "apps/web/package-lock.json", member_lock)
+    root_lock = json.loads((workspace / "package-lock.json").read_text(encoding="utf-8"))
+    root_lock["packages"]["node_modules/@tailwindcss/node/node_modules/jiti"] = {"version": "2.7.0"}
+    _write(workspace / "package-lock.json", root_lock)
+    assert lock_check.main() == 0
+    output = capsys.readouterr().out
+    assert "placement-only differences between the locks, deliberately not gated: 1" in output
+    assert "apps/web:jiti" in output
+
+
+def test_the_committed_ledger_names_exactly_the_committed_divergences() -> None:
+    """`docs/audit/npm-lock-divergences.json` is re-derived from the lockfiles, not trusted.
+
+    Same discipline as the npm advisory gate: the prose in that file is a claim about the tree, and a
+    claim nobody recomputes is how an exemption list starts lying.
+    """
+    root_packages = lock_check._load_json(lock_check.ROOT / "package-lock.json")["packages"]
+    found: set[str] = set()
+    for member in ("apps/web", "apps/vscode"):
+        member_packages = lock_check._load_json(lock_check.ROOT / member / "package-lock.json")[
+            "packages"
+        ]
+        found |= {
+            f"{item['member']}:{item['package']}"
+            for item in lock_check._cross_lock_divergences(root_packages, member, member_packages)
+            if item["kind"] != "placement"
+        }
+    assert found == lock_check._ledger_keys(), sorted(found ^ lock_check._ledger_keys())
+    assert len(found) > 0, "the ledger would be guarding nothing"
