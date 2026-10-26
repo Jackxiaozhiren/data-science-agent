@@ -16852,7 +16852,7 @@ shell that still held them -- equal -- then the suite back to 29 green. The earl
 between commands -- shell state does not persist across separate tool calls -- so the comparison was being read off
 two prints rather than asserted. Same conclusion, weaker instrument; now both the conclusion and the instrument are
 there.
-## 301. TypeScript 7 landed by splitting the two roles one package used to play
+## 302. TypeScript 7 landed by splitting the two roles one package used to play
 
 §298 left `typescript 5.9.3 -> 7.0.2` (#112) to the owner as the one bump no measurement could
 pre-empt; the owner said migrate, and it is done -- in two commits, `5a2205b` (the config truth) and
