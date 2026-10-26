@@ -17036,7 +17036,7 @@ worktree's `node_modules`; documented in §303's addendum and not fixed by touch
 clean on 133 source files, ruff/format/ratchet/claims/SBOM/orphan gates green, vendor mirrors regenerated per file.
 
 Issue #70 is now closed on both halves: the source-shape selection by §54, the reference contract by this section.
-## 304. The three npm locks now read each other, and the first thing they said was that seven versions already disagree
+## 305. The three npm locks now read each other, and the first thing they said was that seven versions already disagree
 
 §298 and §302 both record the same recurring shape from the human side: a Dependabot PR moves a manifest and
 the root workspace lock, and never touches the member lock that `npm --prefix <member> ci` installs from, so
