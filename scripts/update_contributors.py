@@ -222,9 +222,12 @@ def _ensure_branch(repository: str, head_sha: str) -> None:
             {"ref": f"refs/heads/{WORK_BRANCH}", "sha": head_sha},
         )
         return
+    # Plural `refs` here: GitHub reads the singular `/git/ref/...` for a GET and the plural `/git/refs/...` for
+    # the update. Asking the singular route to move a ref answers 404, which is what the first live dispatch after
+    # this change proved -- a stand-in transport that accepts whatever path it was handed cannot catch that.
     request_json(
         "PATCH",
-        f"/repos/{repository}/git/ref/heads/{WORK_BRANCH}",
+        f"/repos/{repository}/git/refs/heads/{WORK_BRANCH}",
         {"sha": head_sha, "force": True},
     )
 

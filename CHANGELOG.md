@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the refresh moves its working branch on the route GitHub actually serves
+
+- The second dispatch of the rewritten job exited 1 on `HTTP Error 404: Not Found` inside `_ensure_branch`: the
+  update asked `/git/ref/heads/<branch>`, which GitHub only reads. Moving a ref is `PATCH /git/refs/heads/<branch>`;
+  creating one is `POST /git/refs`. The singular route is not a typo that works, it is a different endpoint.
+- The reason nothing caught it offline: the test transport answered *any* path it was handed, so a URL GitHub does
+  not serve still returned what the test expected. `_CallLog.request` now enumerates the three git-ref routes and
+  raises `unrecognised git-ref route` on anything else, and a new test drives the branch-already-exists path -- the
+  one every weekly run takes from the second week onward, and the one no test had touched.
+- Forged red: pointing the `PATCH` back at the singular route fails **two** tests with that message, including the
+  pull-request-permission test, which reaches the same call through `main()`. Restored and re-hashed in the same
+  run; the suite is green at 29 tests.
+- Witnessed on the service, 2026-10-26: dispatch 40263031691 moved the existing branch, printed
+  `The token cannot open a pull request (403) … open it: <compare url>`, and exited **2** -- the corrected route and
+  §300's loud failure both confirmed against GitHub rather than against the test double.
+- A process note worth keeping: the route fix was written into the working tree and reported as pushed. It was not
+  -- the tree still held it while `main` and CI agreed happily about the buggy version. The 404 above is what an
+  uncommitted "fix" costs, and `git status` after a commit is the whole remedy. `AUDIT_LEDGER.md` §301.
+
 ### Fixed (post-4.6.0) — a refresh that cannot open its own pull request no longer reports success
 
 - #129 merged the eight-weeks-stale `CONTRIBUTORS.md` (owner 123 → 187, one contributor added) with `ci`,
