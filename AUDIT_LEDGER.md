@@ -17126,7 +17126,7 @@ PR. The alternatives are not equivalent, and they are not mine to pick silently:
 The recommendation is the settings option: it is free, adds no credential to manage, and it narrows nothing -- but it
 is an Actions-policy change on a public repository, which is exactly why it is written here as an ask rather than done
 from the CLI.
-## 306. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
+## 307. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
 
 §305's gate went green carrying seven named divergences. They are now zero and the ledger is an empty list, so
 from here any cross-lock disagreement fails CI with no exemption to hide behind. What is worth recording is not
