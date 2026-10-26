@@ -17126,6 +17126,44 @@ PR. The alternatives are not equivalent, and they are not mine to pick silently:
 The recommendation is the settings option: it is free, adds no credential to manage, and it narrows nothing -- but it
 is an Actions-policy change on a public repository, which is exactly why it is written here as an ask rather than done
 from the CLI.
+
+## 307. Walking the stranger's path on the live demo: three things verified, one defect found, and one inference of mine that was wrong
+
+The last several rounds fixed instruments that read the demo. This round read the demo the way a visitor does, end to
+end, for free (heuristic mode, anonymous, ephemeral SQLite): `POST /api/v1/analysis/` answered `202` in 1.05 s and the
+first poll of the run said `COMPLETED` about a second later; the run's `report` is 5.7 KB with sections Plan / Tool
+Calls / Evidence / Insights / Validation / Limitations, and `/artifacts` lists
+`[markdown, experiment, evidence_graph, reproduce, notebook]`. Three claims the repository makes about itself were
+verified rather than assumed: the dataset list is seeded (2 datasets, so B4's "empty first screen" premise is dead),
+`/ready` really reports the db (`{"db":{"status":"ok"}}` while `/health` says only `process`), and the ablation
+protocol in `docs/real-model-evaluation.md` is honest -- running its documented commands with
+`DSA_EVIDENCE_CRITIC=off DSA_EVALUATION_VARIANT=dsa-no-critic` produced a manifest whose
+`evaluation_variant`, `evidence_critic_enabled` and `evidence_critic_setting` all differ from the on-run, while
+`llm_mode` correctly stayed the same. A single task, `--limit 1`, in heuristic mode: rc=0, `task_success 1.0`.
+
+**A wrong inference of mine, recorded because it nearly became a finding.** The first `?limit=5` response had the same
+byte size as the unparameterised one, and I read that as pagination being ignored. It was not: with 2 datasets both
+return everything. Counting items (`?limit=1` -> 1, `?offset=1` -> 1 of 2) disproved it in one call. Byte-identity is
+not evidence of an ignored parameter when the result set is smaller than the limit -- the measurement has to be the one
+the claim is about.
+
+**The defect: the artifact that travels does not say who reasoned.** `report.md` for that run contains no
+`heuristic`, no `stub`, and no statement that no language model was involved; the only `mode`/`model` matches in the
+rendered text belong to the `train_model` tool lines. `/version` labels the deployment
+(`{"mode":"heuristic","stub":true,"provider":"stub"}`) and the UI reads it, so the honest signal exists on the screen
+and disappears from the file. That matters twice over here: `WEB_PRODUCT_MASTER_PROMPT.md` §2 makes "No unmarked stub
+output presented as agent analysis" an obligation, and §12's paired-blind-review protocol hands a reviewer the
+conclusion-only artifact -- which cannot disclose its own provenance today. Filed as issue #135, with the reason it is
+not a one-line render change: the mode is not in `AnalysisState`. It exists as an analytics event attribute
+(`apps/api/src/dsa_api/routers/analysis.py:91`) and as a live-environment read in `/version`; rendering from either
+would tell a stored run replayed after a configuration change what the deployment does *now*, not what produced it --
+the two-readings defect R-02 removed, one layer further along. The lane is: capture the effective mode into the state
+at run start in both executors, persist it, render one provenance line from the bilingual string owner
+`report_export.py` so the audited report, the conclusion-only export and the web/MCP views read the same field, and
+render "not recorded" explicitly for pre-existing runs.
+
+Evidence level: one live anonymous run plus code reading; no real-model run was performed, since that needs a key.
+Nothing about the demo's behaviour was changed by this section -- no redeploy, no settings, no new service, no cost.
 ## 307. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
 
 §305's gate went green carrying seven named divergences. They are now zero and the ledger is an empty list, so
