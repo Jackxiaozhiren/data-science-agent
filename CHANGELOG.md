@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fixed (post-4.6.0) — the `export_artifact` reference contract is stated where its three readers look
+
+- Reproducing issue #70 found its planner half already fixed (§54 shrank the declared tabular sources to `run_sql`)
+  and its other half still live: what `{"$from_step": i}` resolves to was written down in exactly one place, the
+  executor's docstring, and that place said "0-based among *executed* calls" while the code counts only the calls that
+  **succeeded**.
+- Measured offline, `[run_sql ok, create_chart error, run_sql ok]`: `$from_step=1` returns the **third** call's table,
+  the export then *succeeds*, writes `sex\nfemale`, records a sha256 and reports nothing. A silently wrong artifact is
+  worse than the failing step #70 reported, and it is the exact case "you should be able to inspect how a claim was
+  produced" exists to catch.
+- The counting is unchanged -- no run produces a different file than it does today -- and the rule is now stated in
+  the executor docstring, in the published `source` schema description that REST and MCP clients are handed, and in
+  the real-mode planner prompt. `tests/contract/test_export_source_contract.py` pins the behaviour, then pins that all
+  three statements describe it; falsified four ways (schema text, prompt line, docstring wording, and widening
+  `ok_calls` to executed calls), each red, tree restored byte-identical. 1308 offline tests pass.
+- The semantics themselves are a separate decision, because making `$from_step` address plan positions and fail loudly
+  when that step did not succeed converts a silent wrong download into a visible error: `AUDIT_LEDGER.md` §302, with
+  the three options in `HANDOFF-2026-10-19.md`.
+
 ### Fixed (post-4.6.0) — the refresh moves its working branch on the route GitHub actually serves
 
 - The second dispatch of the rewritten job exited 1 on `HTTP Error 404: Not Found` inside `_ensure_branch`: the

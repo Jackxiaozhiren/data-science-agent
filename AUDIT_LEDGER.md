@@ -16852,3 +16852,62 @@ shell that still held them -- equal -- then the suite back to 29 green. The earl
 between commands -- shell state does not persist across separate tool calls -- so the comparison was being read off
 two prints rather than asserted. Same conclusion, weaker instrument; now both the conclusion and the instrument are
 there.
+
+## 302. Issue #70's remaining half: `$from_step` counts successful calls, and the one place that said so said the opposite
+
+Closing the contributor job led to the last open demo-facing issue, #70 (2026-09-11: two `csv`/`xlsx` exports failed
+in a Titanic run because the planner picked a source with no `columns`+`rows`). Its planner half is already fixed --
+§54 shrank `_TABULAR_TOOLS` to `run_sql` and `test_declared_tabular_sources_really_are_tabular` keeps it honest -- so
+what remains is the other direction the issue named: what a reference actually resolves to. Reproducing it offline
+against the real executor and the real tool, with `[run_sql ok, train_model ok]`:
+
+    $from_step=0 -> columns ['region']        $from_step=1 -> metrics/model/n_rows -> honest shape error
+    $from_step=2 -> left unresolved          (out of range, so the tool reports the reference)
+
+That is the reported behaviour and it is honest. The finding is one step further. Put a **failed** call in the middle,
+`[run_sql ok, create_chart error, run_sql ok]`, and ask for index 1:
+
+    $from_step=1 -> columns ['sex']
+
+Index 1 is the *chart* position under any reading a planner can make from its own plan, and the resolver returns the
+**third** call's table. `export_artifact` then succeeds: it writes `sex\nfemale`, records a sha256, and reports no
+error of any kind. Nothing in `validation.tool_errors` fires, nothing in the report distinguishes this export from the
+one that was asked for. A silently wrong artifact is worse than the failing step #70 described, and it is precisely
+the case this project's differentiator -- a produced number traceable to what made it -- is supposed to cover.
+
+Where did the ambiguity come from? The rule existed in exactly one place, `_resolve_refs`'s docstring, and it read
+"0-based among *executed* calls". The code filters `status == "ok"`. The single written contract described a counting
+the implementation never had, and the tool's published `source` description said only "resolved by the executor" --
+which is what makes a wrong-but-successful export look like correct behaviour to whoever wrote the plan. Neither the
+REST schema a client reads nor the prompt a real-mode model reads mentioned `succeeded`, `0-based`, or the failure
+shift at all.
+
+Landed, with no behaviour change -- the counting stays exactly as measured above, so no run produces a different
+artifact than it does today. The rule is stated in the three places its readers actually look:
+
+- `packages/agent/src/dsa_agent/graph.py` -- the docstring now describes successful-call counting, names the shift,
+  and cites the measurement; the `_vendor` mirrors of the three files were regenerated with `sync_vendor.py --file`
+  one file at a time, so the peer-owned `dsa_evaluation` drift stayed out.
+- `packages/tools/src/dsa_tools/tools/export_artifact.py` -- the `source` field description, which is the schema text
+  REST and MCP clients are handed: `$from_step` is 0-based over calls that **succeeded**, failed calls are not
+  counted, `i` is therefore not the plan's step number, `$from_tool` is the position-independent form.
+- `packages/agent/src/dsa_agent/planner.py` -- one real-mode prompt requirement saying the same thing, so the model is
+  told rather than expected to guess.
+
+`tests/contract/test_export_source_contract.py` (7 tests) pins the behaviour first and the wording second: the shift
+itself, the `$from_tool` path that is immune to it, an export that really relocates the shifted payload (asserting
+the written CSV bytes, not just the returned columns), the docstring against the false promise, the schema text, and
+the prompt text read from what the provider actually receives instead of grepping source. Falsified four ways -- old
+schema description, prompt line removed, docstring restored to "executed calls", and `ok_calls` widened to all
+executed calls -- each RED, each restored byte-identical with the hash compared inside the same process. Offline:
+1308 passed, mypy clean on the touched packages.
+
+Evidence levels, stated honestly. The heuristic planner -- which is what the hosted demo runs -- emits `$from_tool`,
+so the shift never reaches a demo report; the wrong-artifact case above is proven through the executor and the tool
+offline, not by a hosted run, and no run in `reports/` was found carrying it. And the wording fix removes the trap
+without removing it: a model or client that still counts plan positions gets a wrong table with a clean report.
+
+That last sentence is the reason this section ends with an ask instead of a fix. Changing the *semantics* --
+`$from_step` addressing plan positions, and failing loudly when the addressed step did not succeed -- turns a silent
+wrong export into either the right export or a visible error, and that changes what a user downloads. It is a §19.1
+halt, the owner's call; the options are written up in `HANDOFF-2026-10-19.md`.

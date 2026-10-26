@@ -27,8 +27,13 @@ _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 class ExportArtifactInput(BaseModel):
     source: dict[str, Any] = Field(
-        description="Prior tool output payload (columns+rows table or base64 chart), "
-        "or a {$from_step: i} / {$from_tool: name} reference resolved by the executor"
+        description=(
+            "Prior tool output payload (columns+rows table, or base64 chart bytes), or a reference "
+            "the executor resolves: {$from_tool: name} takes the latest successful call of that tool; "
+            "{$from_step: i} takes the i-th prior call that succeeded -- 0-based, failed calls are not "
+            "counted, so i is not the plan's step number whenever a step failed. A left-unresolved "
+            "reference, or a payload without the shape the format needs, is an error: nothing is synthesized."
+        )
     )
     filename: str = Field(description="Target filename, e.g. predictions.csv (no dirs)")
     format: str = Field(description="csv | xlsx | png (must match filename suffix)")

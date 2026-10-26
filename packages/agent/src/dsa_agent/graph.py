@@ -62,10 +62,19 @@ def _resolve_refs(inputs: dict[str, Any], prior_calls: list[dict[str, Any]]) -> 
 
     Generic executor mechanism (ADR-002): a step input of
     ``{"$from_step": i}`` is replaced with the recorded output of the i-th
-    prior call (0-based among *executed* calls); ``{"$from_tool": name}``
-    takes the latest successful call of that tool. Anything else passes
-    through untouched; unresolvable references are left in place so the
-    tool fails honestly instead of inventing content.
+    prior call that **succeeded** -- ``status == "ok"``, 0-based, failed calls
+    not counted. The index is therefore not the plan's step number, and a run
+    with a failed step in the middle resolves one position later than a reader
+    who assumed executed-calls: measured 2026-10-26, over
+    ``[run_sql ok, create_chart failed, run_sql ok]`` the reference
+    ``{"$from_step": 1}`` returns the *third* call's table. The same counting is
+    stated in ``export_artifact``'s published ``source`` description and in the
+    real-mode planner prompt, and the three are pinned to agree by
+    ``tests/contract/test_export_source_contract.py``; ``{"$from_tool": name}``
+    is immune to the shift because it selects by tool name, which is what the
+    heuristic planner emits. Anything else passes through untouched;
+    unresolvable references are left in place so the tool fails honestly instead
+    of inventing content.
     """
     ok_calls = [c for c in prior_calls if isinstance(c, dict) and c.get("status") == "ok"]
 

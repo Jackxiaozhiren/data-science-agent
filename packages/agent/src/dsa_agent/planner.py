@@ -400,6 +400,10 @@ async def _real_llm_plan(
         "- Include profile_dataset as the first step.\n"
         "- Use existing column names exactly when a tool needs a column.\n"
         "- Use step ids s01, s02, ... and valid depends_on ids only.\n"
+        "- export_artifact relocates an earlier result and never creates content: point its "
+        'source at a tool that actually returns that shape, prefer {"$from_tool": name}, and '
+        'remember {"$from_step": i} counts only the calls that succeeded (0-based), so it is '
+        "not the step number once any step has failed.\n"
         "- Use at most 10 steps.\n"
         "- Do not put conclusions, p-values, model scores, or fabricated observations in the plan."
     )
