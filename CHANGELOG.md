@@ -14,6 +14,9 @@
 - Forged red: pointing the `PATCH` back at the singular route fails **two** tests with that message, including the
   pull-request-permission test, which reaches the same call through `main()`. Restored and re-hashed in the same
   run; the suite is green at 29 tests.
+- Witnessed on the service, 2026-10-26: dispatch 40263031691 moved the existing branch, printed
+  `The token cannot open a pull request (403) … open it: <compare url>`, and exited **2** -- the corrected route and
+  §300's loud failure both confirmed against GitHub rather than against the test double.
 - A process note worth keeping: the route fix was written into the working tree and reported as pushed. It was not
   -- the tree still held it while `main` and CI agreed happily about the buggy version. The 404 above is what an
   uncommitted "fix" costs, and `git status` after a commit is the whole remedy. `AUDIT_LEDGER.md` §301.

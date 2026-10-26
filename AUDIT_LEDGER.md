@@ -16829,3 +16829,26 @@ Evidence level after this section: the route change is proven offline and agains
 live witness is still owed, and its expected shape is now known -- `Updated CONTRIBUTORS.md on
 chore/contributor-recognition.`, then `The token cannot open a pull request (403) ...`, then exit code **2** rather
 than 1, because the branch exists and the token still lacks `pull-requests: write`.
+
+2026-10-26, that witness arrived. Run 40263031691, dispatched on `635f2b9` at 03:13:50Z, printed the three expected
+lines in the expected order and exited **2**:
+
+    Updated CONTRIBUTORS.md on chore/contributor-recognition.
+    The token cannot open a pull request (403). Branch chore/contributor-recognition is published; open it: <compare url>
+    FAILURE: the refresh is published but no pull request could be opened; the job needs pull-requests: write, ...
+    ##[error]Process completed with exit code 2.
+
+Two claims in this section are therefore no longer offline-only. The plural `PATCH /git/refs/heads/<branch>` moves a
+ref that already exists, which is the branch state every weekly run meets from the second week onward and the state
+the 404 above came from. And §300's exit-code change fires on the real service rather than in a unit test, so the
+stranded artifact is loud: the job is red, the log names the missing permission, and the compare URL is printed.
+What remains a deliberate red is the permission itself -- `pull-requests: write` in `contributors.yml` is the owner's
+line to add, and until it is there the Monday run goes red on purpose with the instruction in its log.
+
+One correction to the shape of the evidence above, because the falsification paragraph claimed a mechanism it had not
+yet been run under. The plant-red-restore sequence was re-run as a single commanded chain: hash recorded, singular
+route planted, the two named tests red, route restored, hash recorded again, and the two hashes compared in the same
+shell that still held them -- equal -- then the suite back to 29 green. The earlier attempt lost the first hash
+between commands -- shell state does not persist across separate tool calls -- so the comparison was being read off
+two prints rather than asserted. Same conclusion, weaker instrument; now both the conclusion and the instrument are
+there.
