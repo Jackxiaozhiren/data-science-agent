@@ -17164,7 +17164,7 @@ render "not recorded" explicitly for pre-existing runs.
 
 Evidence level: one live anonymous run plus code reading; no real-model run was performed, since that needs a key.
 Nothing about the demo's behaviour was changed by this section -- no redeploy, no settings, no new service, no cost.
-## 307. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
+## 308. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
 
 §305's gate went green carrying seven named divergences. They are now zero and the ledger is an empty list, so
 from here any cross-lock disagreement fails CI with no exemption to hide behind. What is worth recording is not
