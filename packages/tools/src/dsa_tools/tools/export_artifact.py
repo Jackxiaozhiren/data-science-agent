@@ -5,9 +5,12 @@ files inside the run workspace, with a content hash recorded for evidence.
 The tool authors no content: only byte-identical relocation of agent-computed
 results (CSV/XLSX from tabular outputs, PNG from chart bytes).
 
-References to prior calls ({"$from_step": i} / {"$from_tool": name}) are
-resolved by the executor *before* dispatch (graph._resolve_refs); reaching
-execute() unresolved is an honest error, never silent invention.
+References to prior calls ({"$from_step_id": "s03"} / {"$from_tool": name} /
+{"$from_step": i}) are resolved by the executor *before* dispatch
+(graph._resolve_refs); reaching execute() unresolved is an honest error, never
+silent invention. A reference whose target did not succeed arrives with a
+$reference_reason and is refused under that reason rather than resolved to the
+next successful call.
 """
 
 from __future__ import annotations
@@ -28,11 +31,13 @@ _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 class ExportArtifactInput(BaseModel):
     source: dict[str, Any] = Field(
         description=(
-            "Prior tool output payload (columns+rows table, or base64 chart bytes), or a reference "
-            "the executor resolves: {$from_tool: name} takes the latest successful call of that tool; "
-            "{$from_step: i} takes the i-th prior call that succeeded -- 0-based, failed calls are not "
-            "counted, so i is not the plan's step number whenever a step failed. A left-unresolved "
-            "reference, or a payload without the shape the format needs, is an error: nothing is synthesized."
+            "Prior tool output payload (columns+rows table, or base64 chart bytes), or a reference the "
+            "executor resolves: {$from_step_id: 's03'} takes that plan step's successful result and is the "
+            "form to prefer; {$from_tool: name} takes the latest successful call of that tool; "
+            "{$from_step: i} takes the i-th recorded call in execution order (0-based, failed calls "
+            "included) and cannot be known before the run. A reference whose target did not succeed is "
+            "refused with the reason, never resolved onward to a different call. A payload without the "
+            "shape the format needs is an error: nothing is synthesized."
         )
     )
     filename: str = Field(description="Target filename, e.g. predictions.csv (no dirs)")
@@ -75,8 +80,13 @@ class ExportArtifactTool(BaseTool[ExportArtifactInput, ExportArtifactOutput]):
         src = inp.source or {}
         if not isinstance(src, dict):
             raise ToolExecutionError("source must be a tool-output object")
-        if "$from_step" in src or "$from_tool" in src:
-            raise ToolExecutionError("unresolved source reference (executor did not resolve it)")
+        if "$from_step" in src or "$from_tool" in src or "$from_step_id" in src:
+            reason = src.get("$reference_reason")
+            raise ToolExecutionError(
+                str(reason)
+                if isinstance(reason, str) and reason
+                else "unresolved source reference (executor did not resolve it)"
+            )
         root = Path(inp.workspace or "")
         if not str(root):
             raise ToolExecutionError("workspace is required")

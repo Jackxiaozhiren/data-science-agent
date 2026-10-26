@@ -58,36 +58,59 @@ _TOOL_CACHE: dict[tuple[str, str], tuple[Any, bool, str | None]] = {}
 
 
 def _resolve_refs(inputs: dict[str, Any], prior_calls: list[dict[str, Any]]) -> dict[str, Any]:
-    """Resolve cross-step references against already-recorded tool calls.
+    """Resolve cross-step references against already-recorded tool calls (ADR-002).
 
-    Generic executor mechanism (ADR-002): a step input of
-    ``{"$from_step": i}`` is replaced with the recorded output of the i-th
-    prior call that **succeeded** -- ``status == "ok"``, 0-based, failed calls
-    not counted. The index is therefore not the plan's step number, and a run
-    with a failed step in the middle resolves one position later than a reader
-    who assumed executed-calls: measured 2026-10-26, over
-    ``[run_sql ok, create_chart failed, run_sql ok]`` the reference
-    ``{"$from_step": 1}`` returns the *third* call's table. The same counting is
-    stated in ``export_artifact``'s published ``source`` description and in the
-    real-mode planner prompt, and the three are pinned to agree by
-    ``tests/contract/test_export_source_contract.py``; ``{"$from_tool": name}``
-    is immune to the shift because it selects by tool name, which is what the
-    heuristic planner emits. Anything else passes through untouched;
-    unresolvable references are left in place so the tool fails honestly instead
-    of inventing content.
+    Three forms, in order of how much they can be trusted:
+
+    - ``{"$from_step_id": "s03"}`` -- the plan step that produced the result. This is the only form that is
+      unambiguous once the run is not a straight line: a retried step appends a second record, and the leading
+      independent batch is executed with ``gather``, so a position in ``prior_calls`` is not a step number.
+    - ``{"$from_tool": "run_sql"}`` -- the latest successful call of that tool. Position-independent, but two
+      calls of the same tool leave the choice to recency.
+    - ``{"$from_step": i}`` -- the i-th record in execution order, 0-based, failures included. Kept for
+      compatibility; a planner cannot know this index before the run, so it is not recommended.
+
+    A reference whose target did not succeed is not skipped past: it comes back as the original key plus
+    ``$reference_reason``, and ``export_artifact`` refuses it with that reason. Silently moving on to the next
+    successful call is how a run exported a table nobody asked for and still reported clean -- measured
+    2026-10-26 over ``[run_sql ok, create_chart error, run_sql ok]``, where the old successful-only counting made
+    ``{"$from_step": 1}`` return the third call's rows and the export succeed. Anything else passes through
+    untouched; an unresolvable reference is left in place so the tool fails honestly instead of inventing content.
     """
-    ok_calls = [c for c in prior_calls if isinstance(c, dict) and c.get("status") == "ok"]
+    calls = [c for c in prior_calls if isinstance(c, dict)]
+    by_step: dict[str, Any] = {}
+    for c in calls:
+        sid = c.get("step_id")
+        if isinstance(sid, str) and c.get("status") == "ok":
+            by_step[sid] = c.get("output") or {}
 
     def _resolve(value: Any) -> Any:
         if isinstance(value, dict):
+            if set(value.keys()) == {"$from_step_id"} and isinstance(value["$from_step_id"], str):
+                sid = value["$from_step_id"]
+                if sid in by_step:
+                    return by_step[sid]
+                return {
+                    "$from_step_id": sid,
+                    "$reference_reason": f"step {sid} produced no successful result",
+                }
             if set(value.keys()) == {"$from_step"} and isinstance(value["$from_step"], int):
                 i = value["$from_step"]
-                if 0 <= i < len(ok_calls):
-                    return ok_calls[i].get("output") or {}
+                if 0 <= i < len(calls):
+                    target = calls[i]
+                    if target.get("status") != "ok":
+                        return {
+                            "$from_step": i,
+                            "$reference_reason": (
+                                f"call {i} ({target.get('tool', 'unknown tool')}) did not succeed, "
+                                "so it has no result to relocate"
+                            ),
+                        }
+                    return target.get("output") or {}
                 return value
             if set(value.keys()) == {"$from_tool"} and isinstance(value["$from_tool"], str):
-                for c in reversed(ok_calls):
-                    if c.get("tool") == value["$from_tool"]:
+                for c in reversed(calls):
+                    if c.get("tool") == value["$from_tool"] and c.get("status") == "ok":
                         return c.get("output") or {}
                 return value
             return {k: _resolve(v) for k, v in value.items()}
@@ -281,6 +304,7 @@ async def run_analysis(
         rec = ToolCallRecord(
             call_id=call_id,
             tool=step.tool,
+            step_id=getattr(step, "id", None),
             input=inputs,
             output=output.model_dump(mode="json")
             if hasattr(output, "model_dump")
@@ -378,6 +402,7 @@ async def run_analysis(
                     new_rec = ToolCallRecord(
                         call_id=new_id,
                         tool=rec.tool,
+                        step_id=rec.step_id,
                         input=rec.input,
                         output=output.model_dump(mode="json")
                         if hasattr(output, "model_dump")

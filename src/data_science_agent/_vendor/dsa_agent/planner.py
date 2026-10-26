@@ -401,9 +401,9 @@ async def _real_llm_plan(
         "- Use existing column names exactly when a tool needs a column.\n"
         "- Use step ids s01, s02, ... and valid depends_on ids only.\n"
         "- export_artifact relocates an earlier result and never creates content: point its "
-        'source at a tool that actually returns that shape, prefer {"$from_tool": name}, and '
-        'remember {"$from_step": i} counts only the calls that succeeded (0-based), so it is '
-        "not the step number once any step has failed.\n"
+        'source at a step that actually returns that shape, as {"$from_step_id": "s02"} naming the '
+        'step you wrote, or {"$from_tool": name} for the latest successful call of a tool. Do not use '
+        '{"$from_step": i}: a plan cannot know which record position a run will end up with.\n'
         "- Use at most 10 steps.\n"
         "- Do not put conclusions, p-values, model scores, or fabricated observations in the plan."
     )

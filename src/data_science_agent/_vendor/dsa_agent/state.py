@@ -48,6 +48,9 @@ class AgentMessage(BaseModel):
 class ToolCallRecord(BaseModel):
     call_id: str
     tool: str
+    #: The plan step that produced this call, when the executor knew one. `$from_step_id` selects on it, which is
+    #: the only reference form that survives a retry or a parallel batch -- a position in this list does not.
+    step_id: str | None = None
     input: dict[str, Any]
     output: dict[str, Any] | None = None
     status: Literal["ok", "error"] = "ok"
