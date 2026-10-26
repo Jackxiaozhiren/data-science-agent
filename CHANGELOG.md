@@ -18,7 +18,7 @@
   three statements describe it; falsified four ways (schema text, prompt line, docstring wording, and widening
   `ok_calls` to executed calls), each red, tree restored byte-identical. 1308 offline tests pass.
 - The semantics themselves are a separate decision, because making `$from_step` address plan positions and fail loudly
-  when that step did not succeed converts a silent wrong download into a visible error: `AUDIT_LEDGER.md` §302, with
+  when that step did not succeed converts a silent wrong download into a visible error: `AUDIT_LEDGER.md` §303, with
   the three options in `HANDOFF-2026-10-19.md`.
 
 ### Fixed (post-4.6.0) — the refresh moves its working branch on the route GitHub actually serves

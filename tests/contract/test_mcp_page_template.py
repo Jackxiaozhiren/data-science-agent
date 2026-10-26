@@ -25,7 +25,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const require_ = createRequire(path.join(process.argv[2], "noop.js"));
-const ts = require_("typescript");
+// "ts-parser-legacy" is the npm alias for typescript@5.9.3. TypeScript 7 ships a native binary whose root export
+// is {version, versionMajorMinor}: createSourceFile/ScriptTarget/forEachChild are absent from the package, not
+// just unexported, so a structural probe cannot run on it. The compiler is 7; this parser stays 5.9.3.
+const ts = require_("ts-parser-legacy");
 const source = fs.readFileSync(process.argv[3], "utf8");
 const file = ts.createSourceFile("McpTable.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
