@@ -31,6 +31,15 @@ means found two more ways the index lies.
   regression detector -- remove the scope and the run goes red naming it.
 - Owner decision executed on their instruction to proceed with the recommendation; this was previously held because a
   `.github/workflows` edit is not mine to make unprompted. `AUDIT_LEDGER.md` §304.
+- Witnessed on the first dispatch after that commit: run 40287523611 logged
+  `pull request #132: <url>` and exited 0, the diff moved `CONTRIBUTORS.md` 187 -> 192, and the request merged as
+  `e6478ef` with `ci`, `web-regression`, CodeQL, Secret Scan and dependency-review green.
+- The remaining friction is measured, not assumed: because the PR is authored by `app/github-actions` on a public
+  repository, its first run of every workflow sits at `action_required` until a collaborator approves it -- the PR
+  cannot satisfy its own required check until then. After a collaborator-authored commit became the head, all four
+  workflows started on their own. So the weekly steady state is one "Approve and run" click, and the two ways to
+  remove it (an Actions settings change, or a fine-grained PAT as a repo secret) are owner decisions, written up in
+  `AUDIT_LEDGER.md` §306.
 
 ### Fixed (post-4.6.0) — the `export_artifact` reference contract is stated where its three readers look
 
