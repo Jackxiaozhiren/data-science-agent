@@ -17164,3 +17164,49 @@ render "not recorded" explicitly for pre-existing runs.
 
 Evidence level: one live anonymous run plus code reading; no real-model run was performed, since that needs a key.
 Nothing about the demo's behaviour was changed by this section -- no redeploy, no settings, no new service, no cost.
+## 308. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
+
+§305's gate went green carrying seven named divergences. They are now zero and the ledger is an empty list, so
+from here any cross-lock disagreement fails CI with no exemption to hide behind. What is worth recording is not
+that it was reconciled but **which lock had to move, and why the direction was forced rather than chosen**.
+
+**CI never installs from the root workspace lock.** Every browser-facing install in the pipeline is a member
+install -- `npm --prefix apps/web ci` (`ci.yml:30`, `ci.yml:100`, `publish.yml:57`) and
+`npm --prefix apps/vscode ci` (`ci.yml:99`, `publish.yml:56`) -- and `package-lock.json` is read by no `npm ci`
+in any workflow. So aligning the root lock *upward* to what a member already installs moves nothing that CI
+tests, and that is the direction taken wherever it was available: the three `apps/vscode` divergences
+(`ansi-regex` 6.3.0 → 6.4.0, `get-east-asian-width` 1.6.0 → 1.7.0, `jszip` 3.10.1 → 3.10.2) closed with the
+root alone, and `apps/vscode/package-lock.json` is byte-identical afterwards -- 0 entries changed.
+
+**Where newest-in-range passed the member, agreement had to move the tested tree.** `apps/web`'s
+`playwright`/`playwright-core` sat at 1.63.0 against a root 1.55.1, and the manifest range is `^1.55.1`;
+`postcss` sat at 8.5.30 against a root 8.5.31 under `^8.5.30`. npm cannot land a lock on an older in-range
+version without a manifest change, and pinning down to 1.63.0/8.5.30 would be a policy edit dressed as a
+reconciliation, so both locks went to newest-in-range: **`apps/web`'s member lock moved** playwright and
+playwright-core 1.63.0 → 1.64.1 and postcss 8.5.30 → 8.5.31. Root side: 6 versions moved and one entry
+disappeared -- `node_modules/playwright/node_modules/fsevents`, which 1.64.1 no longer declares (318 → 317
+entries). Every change is inside an existing range; no manifest line was edited.
+
+**A CI cache hazard this closed as a side effect.** `ci.yml:34` keys the Playwright download cache on
+`hashFiles('package-lock.json')` -- the **root** lock -- while the browser and the library are installed from the
+**member** lock. Before this change those two disagreed by nine minor versions (key computed from 1.55.1,
+install at 1.63.0), so the cache identity described a tree that was never installed. After it, both name 1.64.1.
+Nobody was bitten by that yet, and the fix is not a reason to keep the divergence.
+
+**The local hazard, named before it was argued with.** 1.64.1 wants chromium **1248**; this machine had
+1187/1194/1243, which is exactly the shape that once failed a tour on a missing browser build. The build was
+installed locally (`npx playwright install chromium`, free, public) *before* any web claim was made, and CI is
+unaffected because it installs per version (`ci.yml:38`, `ci.yml:193`).
+
+**The gate's second direction fired for real, mid-task.** After the root update landed and before the member
+lock moved, the script reported `lists apps/vscode:ansi-regex, which no longer diverges -- prune the entry` for
+the four already-aligned paths. That is the property the two-directional design exists for -- an exemption that
+outlives its divergence is a failure, not a leftover -- and it was observed in anger rather than only in a test.
+
+**The test that would have broken today, and what replaced it.** `test_the_committed_ledger_names_exactly_the_committed_divergences`
+used to end `assert len(found) > 0, "the ledger would be guarding nothing"`. That froze the current debt into an
+invariant and reddened the moment someone reconciled it -- i.e. it punished the goal. The vacuity guard is now
+about the corpus instead of the result: **327 top-level specifiers** are compared across the two member locks, so
+"zero divergences" means agreement rather than a detector that looked at nothing.
+
+Verification on the reconciled tree: `scripts/run_gates.sh` in full: **19 gates, 2 failures, both the known linked-worktree tag blindness** (§276/§295) and nothing new; `pytest` coverage 84.25% against the 79% floor; `regression.mjs` 73/73 on chromium-1248; the live seeded gates, `locale-chrome-inventory`, `check_npm_workspace_lock` and `generate_sbom --check` all green; `npm ci` from each of the three locks (238 / 198 / 43 packages). The gate script itself reports `0 divergence(s)` with the ledger empty, and `test_the_committed_ledger_names_exactly_the_committed_divergences` still asserts the two sets are equal -- which is now the empty set, checked rather than asserted.
