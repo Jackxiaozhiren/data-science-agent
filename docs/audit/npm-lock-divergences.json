@@ -3,49 +3,6 @@
   "_why_this_is_debt": "CI installs members from the member lock (`npm --prefix apps/web ci --legacy-peer-deps`, `ci.yml:30` and `:99`), so the tree that is tested is the member resolution. A `npm ci` from the repository root builds the same workspace from the root resolution. When the two disagree, the artifact that was verified and the artifact a fresh clone produces are different programs wearing the same version number. `playwright`/`playwright-core` is the pair with a proven cost: this repository has already had a tour fail on a missing browser build after one lock floated ahead of the other, and the browser binary is selected by the installed package version.",
   "_how_to_add": "Only for a divergence you have measured in the two committed lockfiles, and only with a `note` naming what clears it (usually: regenerate the lagging lock seeded from the other, in the same PR). Do not add an entry to make a red gate green -- a new divergence is normally the signal that a bump was applied to one lock and not the other, which is the half-PR shape `AUDIT_LEDGER.md` 279 and 298 record for Dependabot here (#113 bumped the root lock and left `apps/web` at the old version; the comparison would have named it instead of a human noticing).",
   "_what_is_not_listed": "Placement differences are not debt and are not gated. When one lock hoists a package to the member's top level and the other resolves it nested under its dependent -- today `apps/web` `jiti`, hoisted in the member lock and present in the root only as `node_modules/@tailwindcss/node/node_modules/jiti` -- both trees satisfy the imports that actually exist, and treating npm's layout choice as a violation would drown the version signal. The script prints these as `placement` lines so the blind spot is named rather than silent.",
-  "_state": "Seven entries, measured against `origin/main` on 2026-10-26: three in `apps/vscode`, four in `apps/web`. `tests/test_npm_workspace_lock_guard.py` re-derives the set from the committed lockfiles rather than trusting this sentence, so reconciling one of them without pruning its entry fails the gate, and a new divergence fails it too.",
-  "divergences": [
-    {
-      "member": "apps/web",
-      "package": "playwright",
-      "note": "Manifest range ^1.55.1 admits both; the member lock floated to a newer minor than the root lock. Clear by regenerating one lock from the other in a dependency PR, and check the installed browser build still matches.",
-      "reviewed": "2026-10-26"
-    },
-    {
-      "member": "apps/web",
-      "package": "playwright-core",
-      "note": "Same chain as playwright and must move with it; a mismatch between these two is what produced a previously observed tour failure on a missing browser build.",
-      "reviewed": "2026-10-26"
-    },
-    {
-      "member": "apps/web",
-      "package": "postcss",
-      "note": "The root lock resolves a newer postcss nested for apps/web than the member lock installs at its top level. Clear with a postcss/tailwind bump that regenerates both locks.",
-      "reviewed": "2026-10-26"
-    },
-    {
-      "member": "apps/web",
-      "package": "@jridgewell/sourcemap-codec",
-      "note": "Transitive; the two resolutions picked different minors inside the same range.",
-      "reviewed": "2026-10-26"
-    },
-    {
-      "member": "apps/vscode",
-      "package": "ansi-regex",
-      "note": "Transitive; the vscode member lock resolves a newer minor than the root workspace lock.",
-      "reviewed": "2026-10-26"
-    },
-    {
-      "member": "apps/vscode",
-      "package": "get-east-asian-width",
-      "note": "Transitive; same cause as the other vscode entries.",
-      "reviewed": "2026-10-26"
-    },
-    {
-      "member": "apps/vscode",
-      "package": "jszip",
-      "note": "Transitive, reached through @vscode/test-electron; same cause.",
-      "reviewed": "2026-10-26"
-    }
-  ]
+  "_state": "Empty as of 2026-10-26: the seven divergences this file was created to record were reconciled in the same change that emptied it, by resolving all three lockfiles to the same version inside each manifest's own range (`npm update --package-lock-only`, root first, then the member lock that lagged). An empty list is not a weakened gate -- with nothing listed, the first divergence in any package fails CI, which is the state the gate exists to reach. `tests/test_npm_workspace_lock_guard.py` re-derives the set from the committed lockfiles, so this sentence is checked rather than trusted.",
+  "divergences": []
 }

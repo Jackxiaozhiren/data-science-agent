@@ -219,17 +219,24 @@ def test_the_committed_ledger_names_exactly_the_committed_divergences() -> None:
 
     Same discipline as the npm advisory gate: the prose in that file is a claim about the tree, and a
     claim nobody recomputes is how an exemption list starts lying.
+
+    The vacuity guard is deliberately about the corpus, not the result. Asserting a non-empty divergence
+    set would freeze today's debt into an invariant and break the day someone reconciles it; asserting
+    that many specifiers were compared is what keeps "zero divergences" meaningful, because a detector
+    that looked at nothing could not produce that number.
     """
     root_packages = lock_check._load_json(lock_check.ROOT / "package-lock.json")["packages"]
     found: set[str] = set()
+    compared = 0
     for member in ("apps/web", "apps/vscode"):
         member_packages = lock_check._load_json(lock_check.ROOT / member / "package-lock.json")[
             "packages"
         ]
+        compared += len(lock_check._member_root_specifiers(member_packages))
         found |= {
             f"{item['member']}:{item['package']}"
             for item in lock_check._cross_lock_divergences(root_packages, member, member_packages)
             if item["kind"] != "placement"
         }
     assert found == lock_check._ledger_keys(), sorted(found ^ lock_check._ledger_keys())
-    assert len(found) > 0, "the ledger would be guarding nothing"
+    assert compared > 100, f"the comparison looked at only {compared} specifiers"
