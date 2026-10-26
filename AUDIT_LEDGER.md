@@ -16785,64 +16785,69 @@ every Monday with an instruction in its log. One line in `.github/workflows/cont
 always headed; the branch and request naming, the reuse of an open request, and the checks that gate it are all in
 place and witnessed above. That line is the owner's to approve, because it is a `.github/workflows` edit.
 
-## 301. TypeScript 7 was started, and stopped at the honest place: the compiler is ready, this repository's two AST guards are not
+## 301. TypeScript 7 landed by splitting the two roles one package used to play
 
-The owner cleared #112 (`typescript 5.9.3 -> 7.0.2`) after the tailwind-merge and @types/node migrations. It
-started as a census and ended on a decision that belongs to the project rather than to a bump: **the compiler
-takes 7 without help, and two of this repository's own guards cannot, because TypeScript 7 has no JavaScript
-compiler API at all.** Nothing was installed at version 7; the one change that landed is the prep commit that
-makes the eventual bump config-only.
+§298 left `typescript 5.9.3 -> 7.0.2` (#112) to the owner as the one bump no measurement could
+pre-empt; the owner said migrate, and it is done -- in two commits, `5a2205b` (the config truth) and
+`6520c26` (the bump). The shape the work took is the interesting part: TypeScript 7 is fast enough and
+clean enough on this repository, but it cannot do one of the two jobs the `typescript` package has been
+doing here, so the two jobs are now named separately -- the compiler is 7.0.2, the AST parser the structural
+guards walk stays 5.9.3 through an npm alias.
 
-**The census found three consumers, not two.** `apps/web/package.json:34` pins `5.9.3` exactly and
-`apps/vscode/package.json:119` declares `^5.9.0`; two tsconfigs. Compiling: `npm --prefix apps/vscode run
-compile` (`tsc -p ./`, run by `ci.yml:99` and `publish.yml:56` and asserted by
-`tests/vscode/test_vscode_extension.py::test_typescript_compiles`) plus apps/web's `tsc --noEmit` and Next's
-own "Running TypeScript" build phase. Then the part a version-string diff hides: **two tools import the compiler
-as a library** -- `apps/web/scripts/locale-chrome-inventory.mjs:27` (`require("typescript")`, then 27 distinct
-`ts.*` symbols) and `tests/contract/test_mcp_page_template.py:28` (`createSourceFile`, `ScriptTarget.Latest`,
-`ScriptKind.TSX`, `forEachChild`, `isPropertyAssignment`, `isFunctionDeclaration` inside a node probe that
-`node_modules/typescript` is resolved into). One is a CI gate, the other a contract guard.
+**The census found three kinds of consumer, not two.** `apps/web/package.json` pinned `5.9.3` exactly and
+`apps/vscode/package.json` declared `^5.9.0`; two tsconfigs. Compiling: `npm --prefix apps/vscode run
+compile` (`tsc -p ./`, the command `ci.yml:99` and `publish.yml:56` run and that
+`tests/vscode/test_vscode_extension.py::test_typescript_compiles` asserts) plus apps/web's `tsc --noEmit` and
+Next's own build-time "Running TypeScript" phase. And then the part no version diff shows: **two guards
+import the compiler as a library** -- `apps/web/scripts/locale-chrome-inventory.mjs`, which resolves
+27 distinct `ts.*` symbols, and `tests/contract/test_mcp_page_template.py`, whose node probe calls
+`createSourceFile`, `ScriptTarget.Latest`, `ScriptKind.TSX`, `forEachChild`, `isPropertyAssignment` and
+`isFunctionDeclaration`. Both resolve from `apps/web`, which is why the alias lives in that manifest.
 
-**What 7.0.2 actually is, read from the artifact rather than a changelog:** its root export is
-`{version, versionMajorMinor}` -- two keys where 5.9.3 exports 2,244. `lib/` holds five files, `vendor/` is
-only `vscode-jsonrpc`, and there is no hidden legacy `typescript.js` anywhere in the package, so the old API is
-not merely unexported, it is absent. The compiler itself ships as platform binaries through 14
-`optionalDependencies` (`@typescript/typescript-darwin-arm64`, `-linux-x64`, ...), which is why #112's lock diff
-is mostly those entries. Only the matching platform installs.
+**What 7.0.2 is, read off the artifact.** Its root export is `{version, versionMajorMinor}` -- two keys where
+5.9.3 exports 2,244 -- `lib/` holds five files, `vendor/` is only `vscode-jsonrpc`, and no legacy
+`typescript.js` exists anywhere in the package, so the JavaScript API is not merely unexported, it is absent.
+Measured across all eight `typescript/unstable/*` subpaths there is no parser: no `createSourceFile`, no
+`parseSourceFile`, no `forEachChild`; the `ast` module does export 409 names including every `is*` predicate
+and `ScriptTarget`/`ScriptKind`/`SyntaxKind`, and constructing the exported `Program({rootNames, options})`
+throws `this.toPath is not a function`. The compiler itself arrives as 20 platform binaries through
+`optionalDependencies`, so the lock now carries `@typescript/typescript-linux-x64` (what the runner
+installs) and its siblings.
 
-**What breaks, proved.** With 7.0.2 in the place apps/web resolves it from:
-`locale-chrome-inventory.mjs` exits 1 at line 70 with `TypeError: Cannot read properties of undefined (reading
-'Latest')`, and `pytest tests/contract/test_mcp_page_template.py` exits 1 with both tests failing on the node
-probe's non-zero exit. A green CI is not available from that starting point, and the fix is not in the lock.
+**The config truth, landed before the bump and correct on both compilers.** TypeScript 5 auto-included every
+package under `node_modules/@types`; 7 stopped. A scratch three-arm project whose only global comes from
+`node_modules/@types/demo` says it plainly: 5.9.3 with no `types` key -> rc=0; 7.0.2 with the same config ->
+rc=1, `error TS2304: Cannot find name 'demoGlobalMarker'`; 7.0.2 with `"types": ["demo"]` -> rc=0. In this
+repository the same gap surfaced as 14 errors on apps/vscode (10 `TS2591` for fs, path, child_process, util,
+process; 2 `TS2304` for fetch and AbortSignal; 2 `TS2584` for console) while `@types/node` was installed the
+whole time. One line, `"types": ["node"]`, fixes it on 5 and on 7 alike -- `import * as vscode from 'vscode'`
+does not travel through the `types` list, which is why naming one package narrows nothing the source uses.
 
-**What does not break, proved with the production call shape and a falsification.** apps/web type-checks clean
-under 7 (rc=0; 0.43 s against 5.9.3's 2.54 s), and `next build` under 7 still runs its type check -- "Running
-TypeScript ... Finished TypeScript in 752ms" -- which on its own is indistinguishable from a silently skipped
-check. So an error was injected: `app/__ts7_probe.tsx` with `const wrong: number = "this string is not a
-number"` made the build exit 1 naming `error TS2322`. The probe file was deleted and `git status` re-checked
-before anything was committed. Next's gate stays alive on 7; it does not need the JS API.
+**Every green here was forged red first, on the new resolution path, and reverted by sha256.** Replacing
+McpTable's `arguments: requiredArguments(...)` with a fixed `arguments: {}` makes the contract guard fail
+(`FAILED ...test_the_copied_template_carries_computed_arguments`); injecting a dictionary key the pages ask
+for but the dictionary does not have makes the inventory fail (`keys referenced=631 unknown=1` against the
+clean 630/0, plus its own "locale inventory is NOT closed" line); injecting `const wrong: number = "not a
+number"` into apps/web makes `next build` exit 1 naming `TS2322` -- which matters because a silently skipped
+type check and a 342 ms one print the same green. `scripts/run_gates.sh` in full on this head: 19 gates, 2
+failures, both the linked-worktree tag blindness of §276/§295 (`git tag` counts 38 where
+`check_public_claims.py:135-141` reads 0; the same two files pass, 29 tests, in a tree whose `.git` is a
+directory), with `pytest` at 1294 passed and 84.22% coverage against the 79% floor, and
+`check_npm_workspace_lock.py` reporting the three locks in step.
 
-**The one truth the config has to carry: 7 stopped auto-including `@types/*`.** Minimal three-arm repro (a
-scratch project whose only global comes from `node_modules/@types/demo`): 5.9.3 with no `types` -> rc=0; 7.0.2
-with no `types` -> rc=1, `error TS2304: Cannot find name 'demoGlobalMarker'`; 7.0.2 with `"types": ["demo"]` ->
-rc=0. In this repository it surfaced as apps/vscode failing under 7 with `TS2591 Cannot find name 'fs' / 'path'
-/ 'child_process' / 'util' / 'process'`, `TS2304 'fetch' / 'AbortSignal'` and `TS2584 'console'` -- while
-`@types/node` was installed the whole time. One line fixes it, and it is correct on both compilers: with
-`"types": ["node"]` in `apps/vscode/tsconfig.json`, 5.9.3 compiles rc=0, 7.0.2 compiles rc=0, and
-`pytest tests/vscode` is 10 passed. apps/web needed nothing (its `lib` is dom/esnext with
-`moduleResolution: bundler` and no Node globals). That line is what landed here -- it removes a dependency on
-behaviour only the old compiler provides, and it cannot break anything that works today. Note also that unlike
-#118, #112 does not try to relax any pin: apps/web stays exact, apps/vscode keeps its caret.
+**The alternatives were measured, not waved away.** A census of all three lockfiles (287 / 249 / 41 packages)
+finds no second TSX-capable JS parser in the tree -- only `@next/swc-*` native binaries and `@swc/helpers` --
+so a rewrite onto a third-party parser means adding `@babel/parser` as a new dependency *and* re-deriving each
+guard's claims against a different AST shape. Downgrading either guard to a line-scan is excluded by this
+ledger's own rule that structural claims get proven with a parser -- the reason the inventory was written
+after a scan proved blind in two directions (§288). And a single-version reading of the bump genuinely was
+blocked: with 7.0.2 as the only `typescript`, the inventory exits 1 at its `ts.ScriptTarget.Latest` line with
+`TypeError: Cannot read properties of undefined (reading 'Latest')`. The alias is also not new upstream code:
+5.9.3 is the exact tarball this repository already installed and compiled with; what changed is its role.
 
-**Why the guard rewrite was stopped rather than done.** TypeScript 7's own answer is the
-`typescript/unstable/*` subpaths, and measured against what these two tools need it does not hold them up:
-`dist/ast/index.js` exports 409 names including every `is*` predicate and `SyntaxKind`/`ScriptTarget`/
-`ScriptKind`, but there is **no parser** -- no `createSourceFile`, no `parseSourceFile`, no `forEachChild` in any
-of the eight subpaths -- and constructing `new Program({rootNames, options})` throws `this.toPath is not a
-function`, the supported entry being an internal LSP-shaped `API` class. Rewriting a structural guard onto an API
-the vendor marks unstable is a trade the project should choose knowingly, and the two alternatives each change
-what the guard's evidence *is*: keep `typescript@5.9.3` aliased as a parser-only devDependency beside 7 (two
-compilers in one repository, needing a differential that proves both extract the same thing), or move both guards
-to a third-party TSX parser (`@babel/parser` with the typescript plugin, a new supply-chain dependency).
-Downgrading either guard to a line-scan is not one of the options -- the standing rule in this ledger is that
-structural claims get proven with a parser. #112 is left open with these measurements attached.
+**The cost, named rather than buried.** Two TypeScript versions now sit in the dependency graph -- one as the
+compiler, one as the parser, pinned and renamed to say so. That is a real maintenance item with a stated
+expiry: the day the native port exposes a JavaScript AST API, the alias and both `require` lines' explanatory
+comments go away in one commit. Meanwhile the honest reading of "TypeScript 7" in this repository is *the
+compiler is 7*, and a reader who assumes the guards parse with 7 will be wrong -- which is why the comment at
+each of the two call sites says it in the first line rather than in the PR.
