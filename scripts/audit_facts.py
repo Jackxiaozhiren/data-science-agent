@@ -278,33 +278,55 @@ def _unparseable_shipped_files(paths: list[Path]) -> list[Path]:
     return _except_shapes(paths)[2]
 
 
-def _git_dir() -> Path:
-    """Locate the git directory, following a worktree-style pointer file."""
-    dot = ROOT / ".git"
+def _git_dir(root: Path = ROOT) -> Path:
+    """The git directory this checkout keeps for itself: where `HEAD` lives.
+
+    A linked worktree's `.git` is a `gitdir:` pointer to its own directory, which holds `HEAD` and the index.
+    """
+    dot = root / ".git"
     if dot.is_dir():
         return dot
     pointer = _read(dot)
-    if pointer.startswith("gitdir:"):
-        return (ROOT / pointer.removeprefix("gitdir:").strip()).resolve()
-    return dot
+    if not pointer.startswith("gitdir:"):
+        return dot
+    target = Path(pointer.removeprefix("gitdir:").strip())
+    return (target if target.is_absolute() else root / target).resolve()
+
+
+def _refs_dir(root: Path = ROOT) -> Path:
+    """Where the refs -- branches and tags -- actually live, which is not the worktree directory.
+
+    A linked worktree keeps its own `HEAD` but shares its refs, so the directory named by `gitdir:` holds no
+    `refs/tags` and no `packed-refs`: those sit in the common directory its `commondir` file points at.
+    Reading tags from the first of these returns none without failing, which is how this file reported
+    `tagCount: 0` in every task worktree while the shared checkout reported 38 -- the same one-hop miss
+    `check_public_claims.released_versions()` had until #137. `tests/test_audit_facts_git_dir.py` pins both
+    hops, and pins that HEAD still comes from the worktree rather than the common directory.
+    """
+    git = _git_dir(root)
+    common = _read(git / "commondir").strip()
+    return (git / common).resolve() if common else git
 
 
 def _git_position() -> dict[str, Any]:
     """Resolve HEAD and branch from plumbing files, and staleness from mtimes."""
     git = _git_dir()
+    refs = _refs_dir()
     raw = _read(git / "HEAD").strip()
     head = ""
     branch = "(detached)"
+    stamp_source: Path | None = None
     if raw.startswith("ref:"):
         ref_name = raw.removeprefix("ref:").strip()
         branch = ref_name.removeprefix("refs/heads/")
-        head = _read(git / ref_name).strip() or _packed_ref(git, ref_name)
+        head = _read(refs / ref_name).strip() or _packed_ref(refs, ref_name)
+        stamp_source = refs / ref_name
     else:
         head = raw
     stamp = 0.0
-    if head:
+    if stamp_source is not None:
         try:
-            stamp = (git / raw.removeprefix("ref:").strip()).stat().st_mtime
+            stamp = stamp_source.stat().st_mtime
         except OSError:
             stamp = 0.0
     touched = 0
@@ -318,7 +340,7 @@ def _git_position() -> dict[str, Any]:
     return {
         "head": head or "(unreadable)",
         "branch": branch,
-        "tagCount": len(_list_tags(git)),
+        "tagCount": len(_list_tags(refs)),
         "commitStampAgeDays": round((time.time() - stamp) / 86400, 1) if stamp else None,
         "filesTouchedSinceLastCommit": touched,
     }

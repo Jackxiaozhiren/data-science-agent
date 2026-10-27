@@ -17262,3 +17262,61 @@ worktree. And because the crash lives in the shell rather than the tree, the cor
 runner had never been able to *report* a fully green set -- an all-green mirror in the shared checkout would
 have died on the same line too -- so this branch did not merely stop two test failures, it walked a path of the
 reporting code that no previous run of this script could reach.
+
+
+## 310. The one-hop git-dir bug had a second home, and closing it opened a trap in the other direction
+
+§309 fixed `check_public_claims.py`, which read `root/.git` and so found no tags in a linked worktree. The
+same miss lived a few files away in `scripts/audit_facts.py`, in its own `_git_dir()`, which followed the
+pointer one hop further than the claims script used to -- and still not far enough. Measured in this worktree
+before the change, `git.*` read `head: "(unreadable)"`, `tagCount: 0`, `commitStampAgeDays: None`,
+`filesTouchedSinceLastCommit: 0`; the shared checkout of the same repository read `head: 14db5157c2e6`,
+`tagCount: 38`. The two trees share their refs, so 38 was the truth for both, and nothing failed: `_read()`
+returns empty for an absent file by design, and an absent `refs/tags` walks to no tags. Same class as §309 --
+a control whose real value was only readable in somebody else's tree.
+
+**The second hop has its own failure.** The first edit made `_git_dir()` follow `commondir`, which is right for
+tags and wrong for everything else: a linked worktree keeps `HEAD` and the index in the directory the
+`gitdir:` pointer names and shares only its *refs*. Following `commondir` for `HEAD` reads the shared
+checkout's branch, and this worktree -- on `ci-audit-facts-gitdir` -- started reporting `branch: main`. The
+file now resolves the two separately, `_git_dir()` for HEAD, `_refs_dir()` for branches, tags and
+`packed-refs`.
+
+**`tests/test_audit_facts_git_dir.py` pins both directions**, 10 tests, built the way §309's fixtures are:
+copy the checker into a sandbox checkout so its own `__file__`-derived `ROOT` lands inside the sandbox, then
+write the plumbing files by hand. No module global is patched, so no test can silently measure the real
+repository. Both broken variants were run against the suite to prove it can fail. HEAD's version of the
+collector: **10 failed**, and measured directly on the same synthetic layout it returns
+`head '(unreadable)', tagCount 0, commitStampAgeDays None`. A single-helper over-correction: **4 failed, 6
+passed**, with `assert 'main' == 'feature'`, `assert <main sha> == <feature sha>`,
+`assert 'main' == '(detached)'` and `assert ['v8.8.8', 'v9.9.9'] == []` among them -- the suite distinguishes
+"no refs here" from "refs in the wrong place", which is the difference between the two bugs.
+
+**What the fix does not buy, stated plainly.** Nothing consumes these readings. `facts.limits.json` has no
+`git.*` ceiling at all; `git.head` and `git.filesTouchedSinceLastCommit` are declared in `EXCLUDED_KEYS`, and
+`tagCount` has no consumer outside this file -- `audit_facts.py --check` prints only the ratchet verdict, so
+the key is read into the snapshot and never compared. So this is not a "red in CI, green here" claim, and the
+falsification above is of assertions in a test file, not of a gate. CI takes the no-op branch too:
+`actions/checkout` makes `.git` a directory, where `_refs_dir() == _git_dir()`. What changes is what a
+contributor or an agent sees when they run the collector in a task worktree -- which is the only place anyone
+has ever read these numbers from.
+
+**One note in the file is now less true than it was.** `filesTouchedSinceLastCommit` reads 499 here where it
+read 0: a fresh worktree's checkout rewrites every scanned file's mtime, and the branch ref this now compares
+against was written 0.7 days earlier. Its `EXCLUDED_KEYS` reason says "always 0 on a clean checkout; can never
+fire in CI" -- still accurate for CI, which takes the no-op branch above, and it is not a ceiling, so nothing
+gates on it. Left as-is deliberately: that dict is the source of truth and `--seed` regenerates the JSON from
+it, so a wording fix means re-seeding ceilings from a worktree, which is a larger and unrelated risk.
+
+**Controls, and one that needed a second look.** Twelve Python-side gates at this revision, all rc 0:
+`uv lock --check`, `audit_facts --check`, `sync_vendor --check`, `check_npm_workspace_lock`, `ruff check`,
+`ruff format --check`, `mypy`, `find_orphan_reads --check`, `check_ledger_identifiers --check`,
+`check_public_claims --require-released-tags` (green in a worktree for the first time, which is §309's fix
+doing its job), `generate_sbom --check`, and pytest -- **1332 tests, no failures, coverage 84.25%** against
+the 79% floor. The first mirror was not: two tests in `tests/contract/test_mcp_page_template.py` failed with
+`Cannot find module 'ts-parser-legacy'`, because this worktree has no `apps/web/node_modules` -- `npm ci` is
+skipped in a mirrored gate set here, since the install is a tree other sessions share (§303's addendum, and the
+same two reds §304 reported as "known environment"). This time the framing was tested rather than accepted. On a
+`git archive HEAD` export without this diff and without node_modules, the same two fail, so my change is not the
+cause; with `NODE_PATH` pointed at a sibling lane's installed tree both pass, and that is how the 1332 was
+measured -- so the count here includes the two that §304 left out.
