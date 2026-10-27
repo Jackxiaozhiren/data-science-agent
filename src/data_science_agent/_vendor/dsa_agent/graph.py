@@ -219,6 +219,8 @@ async def run_analysis(
             provider=resolved_mode.provider,
             model=resolved_mode.model,
             source=resolved_mode.source,
+            stub=resolved_mode.stub,
+            error=resolved_mode.error,
         ),
     )
 

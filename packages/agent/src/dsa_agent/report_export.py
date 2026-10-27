@@ -121,6 +121,27 @@ REPORT_LABELS: dict[str, dict[str, str]] = {
     "generated": {"en": "Generated:", "zh": "生成时间："},
     "dataset": {"en": "Dataset:", "zh": "数据集："},
     "datasetSha256": {"en": "Dataset sha256:", "zh": "数据集 sha256："},
+    "reasoning": {"en": "Reasoning:", "zh": "推理来源："},
+    "reasoningNotRecorded": {"en": "not recorded for this run", "zh": "本次运行未记录"},
+    "reasoningStub": {
+        "en": "{mode} via the {provider} provider — no language model was consulted",
+        "zh": "{mode}（provider 为 {provider}）——未调用任何语言模型",
+    },
+    "reasoningModel": {
+        "en": "{mode} via the {provider} provider, model {model}",
+        "zh": "{mode}（provider 为 {provider}，模型 {model}）",
+    },
+    "reasoningProviderOnly": {
+        "en": "{mode} via the {provider} provider",
+        "zh": "{mode}（provider 为 {provider}）",
+    },
+    # The parenthetical carries its own punctuation, as the other separators here do: English wants a leading
+    # space and ASCII parens, Chinese wants full-width parens and no space after 「）」。
+    "reasoningSource": {"en": " (source: {source})", "zh": "（来源：{source}）"},
+    "reasoningError": {
+        "en": " — and the configured model could not answer: {error}",
+        "zh": "——所配置的模型未能应答：{error}",
+    },
     "plan": {"en": "Plan", "zh": "计划"},
     "toolCalls": {"en": "Tool Calls", "zh": "工具调用"},
     "evidence": {"en": "Evidence", "zh": "证据"},
@@ -319,6 +340,41 @@ def _generated(source: Any) -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _reasoning_line(source: Any, lang: str = "en") -> str:
+    """Who produced this run, read from the record the executor captured when it began.
+
+    The audited report and the standalone HTML carry it because both leave the product: a visitor who downloads
+    ``report.md`` and hands it to a colleague takes the provenance with it, and an unmarked stub result read as an
+    agent analysis is what ``WEB_PRODUCT_MASTER_PROMPT.md`` §2 forbids. The ``findings`` export deliberately does
+    not -- §12's paired-blind review asks a reader to judge the writing without knowing which producer made it, and
+    this line is exactly the cue that would unblind them.
+
+    A row saved before the record existed says "not recorded" instead of resolving the mode from the current
+    environment: ``/version`` answers for the deployment, not for the run, and the two part company the moment the
+    configuration changes.
+    """
+    rec = _field(source, "reasoning")
+    mode = _field(rec, "mode") if rec is not None else None
+    if not isinstance(mode, str) or not mode:
+        return f"**{_lbl(lang, 'reasoning')}** {_lbl(lang, 'reasoningNotRecorded')}"
+    provider = _field(rec, "provider") or "unknown"
+    model = _field(rec, "model")
+    stub = _field(rec, "stub")
+    if stub is True:
+        body = _lbl(lang, "reasoningStub").format(mode=mode, provider=provider)
+    elif isinstance(model, str) and model:
+        body = _lbl(lang, "reasoningModel").format(mode=mode, provider=provider, model=model)
+    else:
+        body = _lbl(lang, "reasoningProviderOnly").format(mode=mode, provider=provider)
+    refusal = _field(rec, "error")
+    if isinstance(refusal, str) and refusal:
+        body += _lbl(lang, "reasoningError").format(error=refusal)
+    origin = _field(rec, "source")
+    if isinstance(origin, str) and origin:
+        body += _lbl(lang, "reasoningSource").format(source=origin)
+    return f"**{_lbl(lang, 'reasoning')}** {body}"
+
+
 def _step_text(step: Any) -> str:
     get = (
         step.get
@@ -419,6 +475,7 @@ def build_sections(source: Any, *, plain: bool) -> list[tuple[str, list[str]]]:
             f"**{_lbl(lang, 'dataset')}** `{_field(source, 'dataset_id', '')}`  |  **{_lbl(lang, 'status')}** {status}"
             f"  |  **{_lbl(lang, 'generated')}** {_generated(source)}"
         )
+        front.append(_reasoning_line(source, lang))
 
     blocks: list[tuple[str, list[str]]] = [("", front)]
 
@@ -618,6 +675,7 @@ def export_html(source: Any) -> str:
         f'<p class="meta"><strong>{_lbl(lang, "dataset")}</strong> <code>{_esc(_field(source, "dataset_id", ""))}</code>'
         f"  |  <strong>{_lbl(lang, 'status')}</strong> {_esc(status)}"
         f"  |  <strong>{_lbl(lang, 'generated')}</strong> {_esc(_generated(source))}</p>",
+        f'<p class="meta">{_inline(_reasoning_line(source, lang))}</p>',
     ]
     if sha256:
         parts.append(

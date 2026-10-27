@@ -233,6 +233,38 @@ so the answer is `True` whether or not the validation wording was localized, and
 pins both halves: the scoped probe is empty in either language and catches a planted raw key, and the unscoped
 pattern still matches only outside the validation section.
 
+### The report names its producer (added 2026-10-26, redeploy owed)
+
+The audited report now states who produced the run, in its front matter:
+
+```bash
+RID=$(curl -s https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/ \
+  | python3 -c "import json,sys; a=json.load(sys.stdin)['analyses']; print(a[0]['id'])")
+curl -s "https://data-science-agent-api-h43i.onrender.com/api/v1/analysis/$RID/report" \
+  | python3 -c "
+import json,sys
+md=json.load(sys.stdin)['markdown']
+line=[l for l in md.splitlines() if l.startswith('**Reasoning:**')]
+print(line[0] if line else 'NO PROVENANCE LINE')"
+```
+
+Expect `**Reasoning:** heuristic via the stub provider — no language model was consulted (source: environment)`
+on this deployment, which runs `DSA_LLM_MODE: heuristic`. Two things the command cannot tell you, and both matter:
+
+- **an old image answers `NO PROVENANCE LINE`.** The rendering ships with the service, so until Render is
+  redeployed from `main` this probe reports the pre-fix build, not a defect in the exporter. `Vercel` tracks `main`;
+  this service does not, so re-check it after a redeploy rather than reading `NO PROVENANCE LINE` as a regression.
+- **the sentence comes from the run, not from the environment.** A row written before the field existed prints
+  `**Reasoning:** not recorded for this run` even while the deployment is `heuristic`; the report never adopts the
+  mode of whatever process is rendering it (`/version` answers for the build, not for the run).
+
+The `findings` export deliberately has no such line: §12's paired-blind review asks a reader to judge the writing
+without knowing which producer made it, and this is exactly the cue that would unblind them.
+`tests/contract/test_report_provenance.py` pins all of it -- the stub wording, the model-named form, the resolver's
+own refusal when a configured model could not answer, `not recorded` under a deliberately different environment,
+the exclusion from `findings`, the Chinese forms, and that the report returned to the client and the `report.md`
+written to disk are byte-identical. `AUDIT_LEDGER.md` §308.
+
 A third probe, cheaper than both, answers the same currency question for the MCP App page -- a page is only real
 if the browser can run it:
 

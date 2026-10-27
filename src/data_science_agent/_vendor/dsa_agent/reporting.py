@@ -29,11 +29,32 @@ def compose_report(state: Mapping[str, Any]) -> dict[str, Any]:
     try:
         from dsa_agent.report import build_markdown_report, write_report_artifacts
         from dsa_agent.state import AnalysisState as AS
-        from dsa_agent.state import Evidence, Insight, ToolCallRecord, ValidationResult
+        from dsa_agent.state import (
+            Evidence,
+            Insight,
+            ReasoningRecord,
+            ToolCallRecord,
+            ValidationResult,
+        )
 
         def _load_list(key: str, model: Any) -> list[Any]:
             return [model.model_validate(x) for x in (analysis.get(key) or [])]
 
+        # The run's provenance is captured at start by the executor and stored with the run; dropping it here
+        # would render a model-produced report and a stub-produced report identically. Resolved once, because
+        # the same record feeds both the returned markdown and the file written to disk -- parsing it twice would
+        # let those two disagree, which is the divergence this module exists to avoid.
+        provenance = analysis.get("reasoning") or state.get("reasoning")
+        record = (
+            ReasoningRecord.model_validate(provenance)
+            if isinstance(provenance, dict) and provenance.get("mode")
+            else None
+        )
+        # `_generated()` reads `created_at`, and a state built without it falls back to `datetime.now()` -- which
+        # made the returned markdown and the written file differ by microseconds, and made re-rendering one run
+        # produce different bytes. Kit T5 compares two runs of one question, so the stamp has to come from the run.
+        stamp = analysis.get("created_at") or state.get("created_at")
+        stamped = {"created_at": stamp} if stamp else {}
         as_obj = AS(
             run_id=run_id,
             dataset_id=dataset_id,
@@ -41,11 +62,13 @@ def compose_report(state: Mapping[str, Any]) -> dict[str, Any]:
             user_query=user_query,
             objective=state.get("objective", user_query[:500]),
             plan=[],
+            reasoning=record,
             tool_calls=_load_list("tool_calls", ToolCallRecord),
             evidence=_load_list("evidence", Evidence),
             insights=_load_list("insights", Insight),
             validation_results=_load_list("validation_results", ValidationResult),
             status=AnalysisStatus.REPORTING,
+            **stamped,
         )
         md = build_markdown_report(as_obj)
         analysis2 = {
@@ -66,12 +89,14 @@ def compose_report(state: Mapping[str, Any]) -> dict[str, Any]:
                 dataset_path=dataset_path,
                 user_query=user_query,
                 objective=state.get("objective", ""),
+                reasoning=record,
                 tool_calls=_load_list("tool_calls", ToolCallRecord),
                 evidence=_load_list("evidence", Evidence),
                 insights=_load_list("insights", Insight),
                 validation_results=_load_list("validation_results", ValidationResult),
                 report_markdown=md,
                 status=AnalysisStatus.REPORTING,
+                **stamped,
             )
             paths = write_report_artifacts(tmp_state)
             arts = list(analysis2.get("artifacts") or [])

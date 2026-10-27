@@ -17164,6 +17164,64 @@ render "not recorded" explicitly for pre-existing runs.
 
 Evidence level: one live anonymous run plus code reading; no real-model run was performed, since that needs a key.
 Nothing about the demo's behaviour was changed by this section -- no redeploy, no settings, no new service, no cost.
+
+## 308. Issue #135 landed, and its stated premise was wrong in one respect -- corrected on the issue itself
+
+The issue I filed an hour earlier said the run state did not carry the reasoning mode. Measured directly, it does:
+a fresh demo run's `GET /api/v1/analysis/{id}` returned
+`"reasoning": {"mode": "heuristic", "provider": "stub", "model": null, "source": "environment"}` -- `ReasoningRecord`
+has been captured at run start since R-02. I had read the API's `reasoning_mode=` occurrences, found the analytics
+event attribute, and generalised from that to the state. The issue body has been corrected rather than left standing,
+because the next reader will act on it. What was actually missing was one layer down: nothing rendered it.
+
+Three defects, all in the deliverable path, all now pinned:
+
+1. **The exporter never said who produced the run.** `report_export.build_sections` wrote the title, objective,
+   dataset, status and timestamp, and stopped. Fixed by `_reasoning_line`, read from the record and routed through the
+   bilingual `REPORT_LABELS` table so a Chinese run says 推理来源 and an English one says Reasoning.
+2. **`reporting.compose_report` dropped the record twice.** It rebuilds an `AnalysisState` from stored dicts -- once
+   for the markdown it returns, once for the file it writes -- and neither carried `reasoning`. So even a run that
+   recorded its provenance lost it on the reporting path. Both now share one parsed record.
+3. **The returned document and the downloaded document were not the same bytes**, for a reason that had nothing to do
+   with provenance: `compose_report` never set `created_at`, so `_generated()` fell through to
+   `datetime.now(UTC)`, and the two renders differed by ~350 microseconds. It surfaced as a failing assertion I had
+   written to prove the file and the response agree -- the assertion is now a guard, and the stamp comes from the run.
+   A report that is not byte-stable is a problem in this repository specifically, because kit T5 compares two renders
+   of one question.
+
+Two deliberate asymmetries, stated rather than left to be guessed. The `findings` export keeps the provenance **out**
+on purpose: §12's paired-blind review asks a reader to rate the writing without knowing which producer made it, and
+this line is the cue that would unblind them; the test asserts absence in `findings` and presence in `audited` in the
+same run, so a regression in either direction is named. And a row written before the field existed prints
+`not recorded` -- it does not resolve the mode from the process rendering it, which is the two-readings defect R-02
+was raised to remove, arriving one layer later. That test sets `DSA_LLM_MODE=real` to make the point unfakeable.
+
+The record got two more fields so the report can be as honest as the resolver already was: `stub` (whether this mode
+answers without a language model -- the claim is only made when the run recorded it, so a legacy row names mode and
+provider but not the absence) and `error` (the resolver's own refusal, so `DSA_LLM_MODE=real` with no key is reported
+as configured-but-unrunnable instead of naming a provider that could not have produced the rows).
+
+Two instrument notes worth keeping. The repository's own no-dead-label guard
+(`test_every_label_is_reachable_and_both_forms_are_rendered`) rejected the new labels at first sight -- correctly,
+they were unreachable -- and extending it for templated strings needed two checks, not one: the module must ask for
+the key (read from its own `_lbl` call sites with a parser, not grepped) and the longest static fragment of the
+sentence must actually appear. Adding a third fixture for the `not recorded` branch was required rather than optional:
+the guard refuses to excuse a conditional label. And after all that, removing only the markdown emission left that
+guard **green**, because the HTML rendering still prints the labels -- so the guard's scope is "printed by some
+rendering", and a markdown-only regression is caught by the new provenance suite instead. That boundary is recorded
+rather than assumed, because it is the difference between a guard and a comfort.
+
+Falsified with eight planted mutations, each restored byte-identical with the hash compared in the same process and
+each mutation syntax-checked before it ran: renderer stops emitting the line; line moved into `findings`; the write
+path drops the record; the write path re-derives the stamp; the executor drops `stub`; the executor drops `error`;
+the helper drops the refusal clause -- all RED on the named test. Offline: 1333 passed with the two known
+`ts-parser-legacy` environment reds, mypy clean on 133 files, vendor mirrors regenerated per file.
+
+Not done, and named as such: the live demo still serves the pre-fix build until Render is redeployed from `main`
+(that service does not track `main` the way Vercel does), so `docs/hosted-demo.md` now carries the probe together with
+the caveat that `NO PROVENANCE LINE` from an old image is not a regression signal. And the web badge reads `/version`
+-- build provenance, which is what it claims to be; making it per-run is a UI change with its own copy and browser
+witness, deliberately left out of this lane rather than quietly widened.
 ## 308. The divergence ledger emptied the same day it was created, and the interesting part is which side moved
 
 §305's gate went green carrying seven named divergences. They are now zero and the ledger is an empty list, so

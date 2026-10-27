@@ -56,6 +56,15 @@ def _run(query: str, **overrides: Any) -> dict[str, Any]:
         "objective": query,
         "status": "COMPLETED",
         "created_at": "2026-10-11T05:17:46+00:00",
+        # A run records who produced it when it begins, and the audited report says so; the label table below
+        # reaches its templated forms through this field, so a fixture without it would certify a dead label.
+        "reasoning": {
+            "mode": "heuristic",
+            "provider": "stub",
+            "model": None,
+            "source": "environment",
+            "stub": True,
+        },
         "plan": [
             {
                 "id": "s01",
@@ -243,6 +252,16 @@ def test_every_label_is_reachable_and_both_forms_are_rendered() -> None:
         base = _run(query)
         base["insights"] = []
         base["error"] = "tool timed out"
+        # The other provenance branch: a named model, and the resolver's own refusal when that model could not
+        # answer. Both are conditional sentences, so reaching them here is what keeps their labels alive.
+        base["reasoning"] = {
+            "mode": "real",
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "source": "stored",
+            "stub": False,
+            "error": "quota exhausted",
+        }
         # A claim carrying the critic's marker is what makes the "rewritten" caveat render, and an empty
         # validation message the fallback -- both branches are conditional, so reaching them is the point.
         base["evidence"] = [
@@ -282,25 +301,57 @@ def test_every_label_is_reachable_and_both_forms_are_rendered() -> None:
         ]
         return base
 
+    def unrecorded(query: str) -> dict[str, Any]:
+        """A run stored before the provenance field existed -- the one case the report must not guess about."""
+        base = _run(query)
+        base["reasoning"] = None
+        return base
+
     both = {
         "en": export_markdown(_run(EN_QUERY))
         + export_html(_run(EN_QUERY))
         + export_markdown(conditional(EN_QUERY))
-        + export_html(conditional(EN_QUERY)),
+        + export_html(conditional(EN_QUERY))
+        + export_markdown(unrecorded(EN_QUERY))
+        + export_html(unrecorded(EN_QUERY)),
         "zh": export_markdown(_run(ZH_QUERY))
         + export_html(_run(ZH_QUERY))
         + export_markdown(conditional(ZH_QUERY))
-        + export_html(conditional(ZH_QUERY)),
+        + export_html(conditional(ZH_QUERY))
+        + export_markdown(unrecorded(ZH_QUERY))
+        + export_html(unrecorded(ZH_QUERY)),
     }
+    # Every label the module can ask for, read from its own `_lbl(lang, "key")` call sites rather than guessed.
+    used_keys: set[str] = set()
+    for node in ast.walk(ast.parse(Path(_module.__file__).read_text(encoding="utf-8"))):
+        if (
+            isinstance(node, ast.Call)
+            and getattr(node.func, "id", "") == "_lbl"
+            and len(node.args) >= 2
+            and isinstance(node.args[1], ast.Constant)
+        ):
+            used_keys.add(str(node.args[1].value))
+
     unread: list[str] = []
     for key, forms in REPORT_LABELS.items():
         for lang in ("en", "zh"):
             text = html_module.unescape(both[lang])
             value = forms[lang]
-            # A markdown italic marker and a trailing colon are formatting around the label, not part of it.
-            needle = value.strip(":._ ")
-            if needle not in text:
-                unread.append(f"{key}[{lang}]={value!r}")
+            if "{" in value:
+                # A templated label never appears verbatim, so it is checked two ways: the module must ask for it,
+                # and the longest static run of the sentence must actually be printed by one of these renderings.
+                assert key in used_keys, (
+                    f"{key}[{lang}] is templated but no `_lbl` call asks for it"
+                )
+                pieces = [
+                    p.strip(":._ ") for p in re.split(r"\{[a-z_]+\}", value) if p.strip(":._ ")
+                ]
+                needle = max(pieces, key=len) if pieces else ""
+            else:
+                # A markdown italic marker and a trailing colon are formatting around the label, not part of it.
+                needle = value.strip(":._ ")
+            if needle and needle not in text:
+                unread.append(f"{key}[{lang}]={value!r} (looked for {needle!r})")
     assert not unread, f"{unread} are in the table but printed by no rendering"
 
 

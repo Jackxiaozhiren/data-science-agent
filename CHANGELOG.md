@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Added (post-4.6.0) — the exported report now names who produced the run
+
+- `report.md` and the standalone HTML say, in the run's own language, which reasoning mode made it: a heuristic
+  run states that no language model was consulted, a real run names the provider and model, and a configured model
+  that could not answer says so in the resolver's own words. Closes issue #135.
+- Finding #1 was worse than the issue I filed claimed and its stated premise was wrong: the run state **did** carry
+  the provenance (`ReasoningRecord`, since R-02); nothing rendered it, and `reporting.compose_report` dropped the
+  record in both of the states it rebuilds from stored dicts -- the returned markdown and the written file.
+- Finding #2 was uncovered by an assertion meant to prove those two agree: `compose_report` never set `created_at`,
+  so the stamp fell through to `datetime.now(UTC)` and the downloaded report differed from the returned one by
+  microseconds. The stamp now comes from the run, and the byte-equality check is the guard.
+- Deliberate asymmetry: the conclusion-only `findings` export keeps provenance **out**, because §12's paired-blind
+  review asks a reader to judge the writing without knowing which producer made it. A run recorded before the field
+  existed prints `not recorded` rather than adopting the rendering process's environment.
+- `tests/contract/test_report_provenance.py` (11 tests) covers the stub wording, the model-named form, the refusal,
+  `not recorded` under a deliberately different `DSA_LLM_MODE`, the `findings` exclusion, the Chinese forms, HTML
+  escaping of stored fields, and the file/response byte identity. Falsified by eight planted mutations (each
+  syntax-checked, each RED, tree restored byte-identical). The repository's no-dead-label guard rejected the new
+  labels until they were reachable, and was extended to check templated labels two ways.
+- The live demo keeps serving the pre-fix build until Render is redeployed from `main`; `docs/hosted-demo.md` now
+  carries the probe with that caveat, so `NO PROVENANCE LINE` from an old image is not read as a regression.
+  `AUDIT_LEDGER.md` §308.
+
 ### Fixed (post-4.6.0) — an export reference can no longer slide past a failed call
 
 Supersedes the "counting is unchanged, no run produces a different artifact" framing of the entry below: the owner

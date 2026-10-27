@@ -115,6 +115,13 @@ class ReasoningRecord(BaseModel):
     provider: str
     model: str | None = None
     source: str = "environment"
+    #: Whether the resolver said this mode answers without a language model. Recorded rather than inferred at
+    #: render time: a report that claims "no model was consulted" needs that claim to come from the run, and a
+    #: row written before this field existed renders without the claim instead of guessing it.
+    stub: bool | None = None
+    #: The resolver's own refusal, recorded rather than re-derived: ``DSA_LLM_MODE=real`` with no key is a run whose
+    #: model could not answer, and a report from that state should say so instead of naming a provider that failed.
+    error: str | None = None
 
 
 class AnalysisState(BaseModel):
