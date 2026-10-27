@@ -263,7 +263,7 @@ without knowing which producer made it, and this is exactly the cue that would u
 `tests/contract/test_report_provenance.py` pins all of it -- the stub wording, the model-named form, the resolver's
 own refusal when a configured model could not answer, `not recorded` under a deliberately different environment,
 the exclusion from `findings`, the Chinese forms, and that the report returned to the client and the `report.md`
-written to disk are byte-identical. `AUDIT_LEDGER.md` §308.
+written to disk are byte-identical. `AUDIT_LEDGER.md` §311.
 
 A third probe, cheaper than both, answers the same currency question for the MCP App page -- a page is only real
 if the browser can run it:

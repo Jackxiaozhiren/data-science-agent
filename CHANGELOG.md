@@ -23,7 +23,7 @@
   labels until they were reachable, and was extended to check templated labels two ways.
 - The live demo keeps serving the pre-fix build until Render is redeployed from `main`; `docs/hosted-demo.md` now
   carries the probe with that caveat, so `NO PROVENANCE LINE` from an old image is not read as a regression.
-  `AUDIT_LEDGER.md` §308.
+  `AUDIT_LEDGER.md` §311.
 
 ### Fixed (post-4.6.0) — an export reference can no longer slide past a failed call
 
