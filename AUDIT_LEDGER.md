@@ -17379,3 +17379,50 @@ Not done, and named as such: the live demo still serves the pre-fix build until 
 the caveat that `NO PROVENANCE LINE` from an old image is not a regression signal. And the web badge reads `/version`
 -- build provenance, which is what it claims to be; making it per-run is a UI change with its own copy and browser
 witness, deliberately left out of this lane rather than quietly widened.
+
+
+## 312. §306's approval gate came due again, and this time the cost was a number nobody was looking at
+
+§306 named this repository's workflow-approval gate precisely: a PR whose head commit is authored by
+`app/github-actions` is not a collaborator, so `ci`, CodeQL, Secret Scan and Dependency Review all sit
+`action_required` -- held, not failing -- until a human approves, and branch protection has nothing to do with
+it. It recommended an Actions-settings change that has still not been made, and closed with the steady state:
+"one 'Approve and run' per week". Measured 2026-10-27, that steady state had a cost §306 did not price.
+
+**The queue read as empty and was not.** After §310 landed, `gh pr list --state open` returned exactly one PR,
+#136, open since 2026-10-26T08:48Z with its four required-or-not checks still parked. Its
+`statusCheckRollup` is what makes such a PR invisible: SonarCloud SUCCESS plus two Vercel
+`StatusContext` entries, no mention of the held `ci`. Nothing about a parked run is red, so a queue sweep that
+looks for failures finds none.
+
+**What ages while it is parked is the content.** `main` carried 192, the parked head proposed 195, and
+`GET /contributors` answered **199** today. So the right response to a stale parked refresh is not "approve and
+merge the stale claim"; it is to re-run the generator and approve *that*. Dispatching the job (run
+40444906470, completed success) reset the working branch to current main and rewrote the table to 192 -> 199,
+and the published figure was then cross-checked against the contributors API rather than trusted from the
+generator. Landed as #136 -> `5f8c87c` on CI green with `mergeStateStatus=CLEAN`; `CONTRIBUTORS.md` on `main`
+now reads 199 and the open-PR count measured back to **0**.
+
+**A corollary of §306's author-keyed rule, measured from the other side.** §306 found that
+`gh pr update-branch` puts a *collaborator*-authored merge commit on top and the re-run starts with no approval.
+Today's refresh went through the job instead, whose Contents-API push is bot-authored -- and the new head
+`3e00d40` arrived parked again, confirming the rule keys on the head author either way. The two levers are not
+interchangeable: refreshing only the **base** needs no human click but leaves the number stale, while refreshing
+the **content** fixes the number and re-arms the gate. Approving run 40444928756 moved it from
+`action_required` to `in_progress` in seconds, re-confirming §306's first bullet on a second PR.
+
+**What still needs someone with authority.** §306's options table stands unchanged, and the recommendation
+there (allow the app to create runs without approval, in the repository's Actions settings) is still not in
+effect -- it is a settings change on a public repository, not a file, so it is not mine to make from the CLI.
+Until then: every new head on `chore/contributor-recognition` needs `gh run approve <id>` before its `ci` check
+exists at all. Also unaffected by this section: the two open issues, #16 (needs paid real-model runs) and #81
+(accept or decline a third-party evidence provider).
+
+**One caveat to keep about the number itself.** The contributors endpoint's `contributions` counts commits on
+the default branch and reports `CommandCodeBot` at 723, which `update_contributors.py` filters out as a bot.
+The table's 199 is therefore a filtered per-actor subset of that API's view, not an independent measure of
+authorship -- which is what the file's own "maintenance signal, not a ranking" line is guarding.
+
+**Transport note from the same hour.** `github.com:443` timed out twice (75 s) while `api.github.com` kept
+answering, so the census, the approvals and the merge above were all API-driven; the recorded HTTP/1.1 retry
+worked once and failed ten minutes later. Environment condition, not a repository defect.
