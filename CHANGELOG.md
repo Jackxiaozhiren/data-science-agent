@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the contributor refresh asks for the check it needs instead of waiting for a human
+
+- The weekly job's pull request is authored by `app/github-actions`, which the repository's workflow-approval
+  policy treats as an outside collaborator: its `ci`, CodeQL, Secret Scan and Dependency Review runs sit in
+  `action_required` until someone clicks "Approve and run", so the required `ci` check is never created. That keys
+  on the author, not on the token's scope, which is why the missing piece was never a permission
+  (`AUDIT_LEDGER.md` §306, §312).
+- `ci.yml` gains a `workflow_dispatch` trigger and `contributors.yml` gains `actions: write`. After publishing,
+  `scripts/update_contributors.py` dispatches `ci.yml` at the refresh branch: a dispatched run is not a
+  pull-request run, it is triggered by a token that already holds write access, and its checks land on the commit
+  the request points at. The `ci` job still runs and the check is still required — only the identity that asks
+  for it changes. §313.
+- A refused dispatch exits 2 naming both preconditions, rather than leaving a request that is open, not red, and
+  never checkable. The earlier exit 2 for a missing pull permission is unchanged and still fires first.
+- Five tests cover the dispatch and its payload, the reuse path (where the branch is rewritten, so last week's
+  checks belong to a deleted commit), the refusal, the two paths that must request nothing, and the two YAML
+  preconditions read out of the workflow files. Five planted mutations were each RED and each restored
+  byte-identical, hash compared in the same process.
+- Evidence level: offline, plus the live witness named in §313 and still owed when this entry was written. If a
+  dispatched run turns out to be held too, §313 is the place it will say so.
+
 ### Added (post-4.6.0) — the exported report now names who produced the run
 
 - `report.md` and the standalone HTML say, in the run's own language, which reasoning mode made it: a heuristic
