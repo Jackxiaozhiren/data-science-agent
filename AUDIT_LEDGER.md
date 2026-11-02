@@ -17478,11 +17478,15 @@ approval returning before the API call, every run approved regardless of state, 
 `actions: write` removed -- were all RED on the named test, all restored byte-identical with the hash compared in
 the same process.
 
-**Evidence level.** The mechanism is live: 201, `queued`, the four checks restored to the request's rollup, and
-`blocked -> clean` on a real pull request. Not yet witnessed: one full cycle starting from nothing -- the job
-opening a *new* request and approving it inside its own five-minute budget. That is what the next dispatch after
-this lands measures; if the 90-second wait is too short for a cold start, the entry that reports it is the one
-that corrects this paragraph rather than letting it age.
+**Evidence level, two cycles deep.** The mechanism is live: 201, `queued`, the four checks restored to the
+request's rollup, and `blocked -> clean` on a real pull request. The cold start is measured as well: run
+41462441121, dispatched on `ffc6f5a` after this section's change had landed, opened **#154** because no request
+existed to reuse, found four parked runs and approved all four inside its own run -- `41462484600 (CodeQL)`,
+`41462484680 (Dependency Review)`, `41462484693 (Secret Scan)`, `41462484722 (CI)` -- and #154 reached
+`mergeable_state=clean` with eleven contexts green and not one approval click anywhere in the sequence. The loop
+then closed by merging #154, the first refresh in this ledger to land that way; the merge itself stays the
+maintainer's, which is the part that should not be automated. What remains unmeasured is a *scheduled* run, which
+differs from this one only in how it is triggered.
 
 Not changed: branch protection is untouched, and the check that gates the merge is still the `pull_request` `ci`
 run, on the same commit, reported by the same app. The job approves runs it created; it does not approve anyone
