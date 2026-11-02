@@ -17487,3 +17487,12 @@ that corrects this paragraph rather than letting it age.
 Not changed: branch protection is untouched, and the check that gates the merge is still the `pull_request` `ci`
 run, on the same commit, reported by the same app. The job approves runs it created; it does not approve anyone
 else's, and it cannot approve a run that is not on its own branch head.
+
+**Transport note, both halves measured.** `github.com:443` answered 502 to every push for the length of this
+session while `api.github.com` kept working, so the commit was written through the Git Data API and the resulting
+tree hash compared against `HEAD^{tree}` before the ref moved -- equal, which is what makes that commit the one
+this checkout holds rather than a near-copy. The same outage is why the PR was brought up to date with
+`gh pr update-branch`, and that produced a head with **zero** workflow runs: the server-side merge emits no
+`pull_request` event, so the request sat `BLOCKED` with no checks at all. A commit written to the branch through
+the ref API does emit one, which is how the checks came back. Both are facts about the platform, not about this
+change, and both cost a cycle to learn.
