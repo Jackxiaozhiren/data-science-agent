@@ -17426,3 +17426,62 @@ authorship -- which is what the file's own "maintenance signal, not a ranking" l
 **Transport note from the same hour.** `github.com:443` timed out twice (75 s) while `api.github.com` kept
 answering, so the census, the approvals and the merge above were all API-driven; the recorded HTTP/1.1 retry
 worked once and failed ten minutes later. Environment condition, not a repository defect.
+
+## 313. The task asked for a pull request that has no diff, and the fix it wanted belonged to a different layer
+
+This round's handoff carried one instruction: open a PR titled `chore(workflows): enable auto PR opening for
+contributor refresh`, adding `pull-requests: write` to `.github/workflows/contributors.yml`, to remove the weekly
+"Approve and run". The line has been on `main` since `4349cdf` (§304). `git blame origin/main` puts it at
+`contributors.yml:15`, `git diff HEAD -- .github/workflows/contributors.yml` is empty, and the behaviour it enables
+has two witnesses: run 40287523611 printed `pull request #132`, and the scheduled run 40294816266 opened #136,
+merged as `5f8c87c`. A pull request cannot add a line that is already there, so the instruction described a change
+that had already shipped -- §311's shape, arriving through a handoff rather than through an issue. This section
+records why it cannot be executed as written, and what was done instead.
+
+**What the weekly click actually is.** Not a permission on the token. §306 measured the cause on PR #132: the
+request is authored by `app/github-actions`, which the repository's workflow-approval policy treats as an outside
+collaborator, so `ci`, CodeQL, Secret Scan and Dependency Review sit in `action_required` until a human approves,
+and the required `ci` check is never created. §312 watched the gate come due a second time and priced it: a request
+that is open, not red, and invisible to any sweep that looks for failures. Branch protection still has nothing to
+do with it.
+
+**The fix is a second route to the same check.** `ci.yml` gains a `workflow_dispatch` trigger, the refresh job
+gains `actions: write`, and `update_contributors.py` calls
+`POST /repos/{owner}/{repo}/actions/workflows/ci.yml/dispatches` with `{"ref": "chore/contributor-recognition"}`
+after it publishes -- on the create path and on the reuse path, because `publish()` rewrites the branch either way.
+The argument is about event type, not about identity: a `workflow_dispatch` run is not a `pull_request` run, it can
+only be triggered by a token that already holds write access, and its check runs attach to the branch head -- the
+same commit the request points at, which is the thing branch protection reads. The `ci` job still runs, the check
+is still required, and nothing about protection moved.
+
+**Two other routes, and why they lost.** §306's recommendation -- let the Actions app create runs without approval
+in the repository settings -- is still the shortest path and is still unmade, because it is a repository-wide policy
+change in the GitHub UI that widens what any automated commit can trigger. Having the job approve its own held run
+(`POST /actions/runs/{id}/approve`) needs the same `actions: write` and asks the token to grant itself exactly the
+authority the policy withholds; that is the one thing this design should not do. Dispatching is narrower than
+either: one workflow becomes dispatchable, by a token that already has write access to the repository.
+
+**Guards, and the mutations that prove they are guards.** Five cases in `tests/test_automation_scripts.py`: the
+dispatch is requested at the branch head with the exact route and payload; a reused request is asked again; a 403
+leaves the request published but exits 2 with `actions: write` named; nothing is dispatched when the file is
+already current or when no request could be opened; and the two file-level preconditions (`actions: write`,
+`workflow_dispatch`) are read out of the workflows, because either being deleted fails only a week later, on a live
+run. The stand-in transport now raises on any `/actions/` route it does not model, for §301's reason -- a transport
+that answers `{}` to a path GitHub does not serve certifies the typo. Five planted mutations, each restored
+byte-identical with the hash compared inside the same process: dispatch path misspelled, reuse path skipping the
+dispatch, `_dispatch_checks` returning before the API call, `actions: write` removed, `workflow_dispatch` removed.
+All RED on the named test, all restored.
+
+**Evidence level.** Offline only. The claim that a dispatched run is not held is a reading of how the approval
+policy is scoped -- it keys on pull-request workflows from non-collaborators -- and readings have been wrong in this
+ledger before. The witness owed is a live dispatch of `Contributor Recognition`: the log must print
+`Requested ci.yml on chore/contributor-recognition`, a `workflow_dispatch` run of `CI` must appear on the branch
+head with no approval click, and the request must reach `mergeStateStatus=CLEAN` while its `pull_request` runs
+remain in `action_required`. If the dispatched run is held instead, this section is wrong and gets corrected in
+place, the way §299 and §300 were.
+
+Not changed, deliberately: the job still opens a pull request rather than pushing to `main` (§297); §300's exit-2
+on a stranded artifact still fires when the pull permission is missing; and the check-request failure is reported
+as that same code with its own message rather than folded into the existing one, because a reader has to know
+which of the two preconditions is absent.
+

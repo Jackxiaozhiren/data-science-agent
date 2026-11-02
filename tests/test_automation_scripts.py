@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -411,11 +412,13 @@ class _CallLog:
         pulls_status: int | None = None,
         open_pulls: list[dict[str, Any]] | None = None,
         branch_exists: bool = False,
+        dispatch_status: int | None = None,
     ) -> None:
         self.calls: list[tuple[str, str, dict[str, Any] | None]] = []
         self.pulls_status = pulls_status
         self.open_pulls = open_pulls or []
         self.branch_exists = branch_exists
+        self.dispatch_status = dispatch_status
 
     def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
         self.calls.append((method, path, payload))
@@ -434,6 +437,18 @@ class _CallLog:
             return {"object": {"sha": "branch-head"}}
         if method in {"GET", "POST", "PATCH"} and path.startswith("/repos/owner/repo/git/ref"):
             raise AssertionError(f"unrecognised git-ref route: {method} {path}")
+        # Same discipline for the one actions route this script may use. Without the explicit refusal, a typo in
+        # the dispatch path would be answered by the `return {}` below and the test would certify the typo.
+        if path == "/repos/owner/repo/actions/workflows/ci.yml/dispatches":
+            if method != "POST":
+                raise AssertionError(f"a dispatch is a POST, not {method} {path}")
+            if self.dispatch_status is not None:
+                raise contributors.GitHubAPIError(
+                    self.dispatch_status, '{"message":"Resource not accessible by integration"}'
+                )
+            return None
+        if "/actions/" in path:
+            raise AssertionError(f"unrecognised actions route: {method} {path}")
         if path.startswith("/repos/owner/repo/pulls"):
             # A token holding only `contents: write` can still read the pull list; it is the create that is
             # refused. Raising on any /pulls call would hide the path this harness exists to exercise.
@@ -561,6 +576,8 @@ def test_current_content_writes_nothing_and_opens_no_pull(monkeypatch: pytest.Mo
     outcome = contributors.refresh("owner/repo", "main", "same")
     assert outcome["status"] == "current"
     assert not [c for c in log.calls if c[0] in {"PUT", "POST"}], log.calls
+    # Nothing was published, so there is no commit for a check to land on and nothing to request.
+    assert not [c for c in log.calls if c[1].endswith("/dispatches")], log.calls
 
 
 def test_missing_pull_permission_still_publishes_and_names_the_url(
@@ -575,6 +592,8 @@ def test_missing_pull_permission_still_publishes_and_names_the_url(
     monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
     outcome = contributors.refresh("owner/repo", "main", "new")
     assert outcome["status"] == "published-without-pull"
+    # No request means no head commit to ask about: asking for checks here would be a call about nothing.
+    assert "checks" not in outcome
     captured = capsys.readouterr().out
     assert "compare/main..." in captured, captured
 
@@ -629,3 +648,87 @@ def test_the_publish_message_carries_no_skip_keyword(monkeypatch: pytest.MonkeyP
             f"a skip keyword suppresses the checks this branch now needs: {message!r}"
         )
         assert "contributor" in message.lower(), message
+
+
+def test_the_refresh_asks_ci_to_run_where_the_request_points(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The request cannot ask for its own checks, so the job asks on its behalf, at the same commit.
+
+    A pull request authored by `app/github-actions` counts as an outside collaborator, so this repository's
+    workflow-approval policy holds its `pull_request` runs in `action_required` and the required `ci` check is
+    never created (§306, §312). A dispatched run is not a pull-request run, and its checks land on the same
+    head commit -- which is the thing branch protection reads.
+    """
+    log = _CallLog()
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert [call for call in log.calls if call[1].endswith("/dispatches")] == [
+        (
+            "POST",
+            "/repos/owner/repo/actions/workflows/ci.yml/dispatches",
+            {"ref": contributors.WORK_BRANCH},
+        )
+    ], log.calls
+    assert outcome["checks"] == "requested"
+
+
+def test_a_reused_request_is_asked_for_checks_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The branch is rewritten before the reuse probe, so last week's checks belong to a commit that is gone."""
+    log = _CallLog(open_pulls=[{"number": 12, "html_url": "https://github.com/owner/repo/pull/12"}])
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["pull"] == 12
+    assert [call for call in log.calls if call[1].endswith("/dispatches")], log.calls
+    assert outcome["checks"] == "requested"
+
+
+def test_a_refused_dispatch_is_loud_rather_than_merely_patient(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A missing `actions: write` leaves a request that is open, not red, and never checkable -- §300's shape."""
+    log = _CallLog(dispatch_status=403)
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["status"] == "published", "the request exists; only the check request failed"
+    assert outcome["checks"] == "refused"
+    printed = capsys.readouterr().out
+    assert "403" in printed, printed
+
+    monkeypatch.setattr(
+        contributors.os, "environ", {**contributors.os.environ, "GITHUB_REPOSITORY": "owner/repo"}
+    )
+    monkeypatch.setattr(contributors, "render", lambda _repository, _people: "new")
+    monkeypatch.setattr(contributors, "fetch_contributors", lambda _repository: [])
+    assert contributors.main() == 2
+    assert "actions: write" in capsys.readouterr().out
+
+
+def test_the_two_file_level_preconditions_of_the_dispatch_are_pinned() -> None:
+    """Neither removal fails until a weekly run is already open, and then only a week later.
+
+    `actions: write` is what lets the job ask at all; `workflow_dispatch` is what makes `ci.yml` reachable
+    that way. Deleting either leaves the job publishing a request that can never be checked -- the §300 shape,
+    which is why the preconditions are a gate here rather than a comment in a YAML file.
+    """
+    workflows = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+    refresh = (workflows / "contributors.yml").read_text(encoding="utf-8")
+    ci = (workflows / "ci.yml").read_text(encoding="utf-8")
+    assert re.search(r"(?m)^  actions: write$", refresh), (
+        "contributors.yml dispatches ci.yml and needs `actions: write` to do it"
+    )
+    assert re.search(r"(?m)^  workflow_dispatch:$", ci), (
+        "ci.yml must be dispatchable, or the refresh can never obtain its required check"
+    )

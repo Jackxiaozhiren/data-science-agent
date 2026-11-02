@@ -24,6 +24,10 @@ TARGET = "CONTRIBUTORS.md"
 #: refused with a 409 every week. A normal branch has no such rule, and the result lands as a pull request.
 WORK_BRANCH = "chore/contributor-recognition"
 
+#: The workflow whose `ci` job is the required status check on `main`. It gained a `workflow_dispatch` trigger so
+#: this job can ask for that check directly -- see `_dispatch_checks` for why the pull request cannot provide it.
+CI_WORKFLOW = "ci.yml"
+
 #: A 409 that will still be true on the third attempt. Measured verbatim from seven consecutive weekly failures:
 #: `Could not update file: Required status check "ci" is expected.`
 UNRETRYABLE_HINTS = (
@@ -258,11 +262,48 @@ def _reuse_open_pull(repository: str) -> dict[str, Any] | None:
     return None
 
 
+def _dispatch_checks(repository: str, branch: str) -> GitHubAPIError | None:
+    """Ask `ci` to run on the refresh branch, because the pull request it just opened cannot ask for itself.
+
+    A request opened by `app/github-actions` is not authored by a collaborator, so this repository's
+    workflow-approval policy holds each `pull_request` run on it in `action_required` until a human approves:
+    the required `ci` check is never created, and the request can never become mergeable (§306, §312). The fix
+    is not another permission on the request -- it is another route to the same check. A `workflow_dispatch` run
+    is not a pull-request run, it is triggered by a token that already holds write access, and its checks land
+    on the same commit the request points at, which is the thing branch protection reads.
+
+    Returns the refusal rather than raising, because the caller has to distinguish "no checks requested" from
+    "nothing published" in its exit code.
+    """
+    _, refused = probe(
+        "POST",
+        f"/repos/{repository}/actions/workflows/{CI_WORKFLOW}/dispatches",
+        {"ref": branch},
+    )
+    return refused
+
+
+def _with_checks(repository: str, branch: str, outcome: dict[str, Any]) -> dict[str, Any]:
+    """Attach the result of asking for checks to a published refresh, without raising on a refusal."""
+    refused = _dispatch_checks(repository, branch)
+    if refused is None:
+        print(
+            f"Requested {CI_WORKFLOW} on {branch}; its checks land on the pull request's head commit."
+        )
+        outcome["checks"] = "requested"
+    else:
+        print(f"Could not request {CI_WORKFLOW} on {branch} ({refused.status}): {refused}")
+        outcome["checks"] = "refused"
+    return outcome
+
+
 def refresh(repository: str, base: str, content: str) -> dict[str, Any]:
     """Put the rendered file on a working branch and land it as a pull request.
 
-    Returns what happened rather than raising for the two states that are not errors: the file already matches,
-    or the token may write a branch but not open a pull request.
+    Returns what happened rather than raising for the states that are not errors: the file already matches, the
+    token may write a branch but not open a pull request, or the pull request exists while the check it needs
+    could not be requested. The first two are reported by `main()`; the third is the one a reader has to be
+    told about, because a published request with no checks looks exactly like a request waiting its turn.
     """
     _, existing = current_file(repository, base)
     if existing == content:
@@ -274,7 +315,11 @@ def refresh(repository: str, base: str, content: str) -> dict[str, Any]:
 
     carried = _reuse_open_pull(repository)
     if carried is not None:
-        return {"status": "published", "target": WORK_BRANCH, "pull": carried["number"]}
+        return _with_checks(
+            repository,
+            WORK_BRANCH,
+            {"status": "published", "target": WORK_BRANCH, "pull": carried["number"]},
+        )
 
     pull, refused = probe("POST", f"/repos/{repository}/pulls", _pull_body(repository, base))
     if refused is not None:
@@ -289,7 +334,11 @@ def refresh(repository: str, base: str, content: str) -> dict[str, Any]:
     print(
         f"Updated {TARGET} on {WORK_BRANCH}; pull request #{pull.get('number')}: {pull.get('html_url')}"
     )
-    return {"status": "published", "target": WORK_BRANCH, "pull": pull.get("number")}
+    return _with_checks(
+        repository,
+        WORK_BRANCH,
+        {"status": "published", "target": WORK_BRANCH, "pull": pull.get("number")},
+    )
 
 
 def main() -> int:
@@ -310,6 +359,15 @@ def main() -> int:
         print(
             "FAILURE: the refresh is published but no pull request could be opened; the job needs "
             "pull-requests: write, or someone must open the printed compare URL."
+        )
+        return 2
+    if outcome.get("checks") == "refused":
+        # A request whose checks were never requested is the §300 failure one layer down: it is on the queue,
+        # it is not red, and its required check will never appear. Loud beats patient.
+        print(
+            "FAILURE: the refresh is published as a pull request, but no ci run could be requested for it, so "
+            "its required check will never appear and it cannot become mergeable; the job needs "
+            "actions: write on the workflow, and ci.yml needs a workflow_dispatch trigger."
         )
         return 2
     return 0

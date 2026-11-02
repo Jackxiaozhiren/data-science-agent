@@ -13,6 +13,11 @@ permissions:
   # pre-carry a check that has not run yet (§297). Without this scope the job publishes the branch and stops at
   # 403, which §300 made a loud exit-2 rather than a silent success.
   pull-requests: write
+  # The request this job opens is authored by `app/github-actions`, which counts as an outside collaborator, so
+  # every `pull_request` run on it waits in `action_required` and its required `ci` check never appears (§306).
+  # Dispatching `ci.yml` at the job's own branch head is not a pull-request run and is not held, so this scope is
+  # what turns the weekly request from "mergeable after a human click" into "mergeable" (§313).
+  actions: write
 
 concurrency:
   group: contributor-recognition

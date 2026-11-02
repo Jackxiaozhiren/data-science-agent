@@ -4,6 +4,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Not a convenience handle. The contributor refresh opens a pull request authored by `app/github-actions`,
+  # which this repository's workflow-approval policy holds in `action_required`, so the required `ci` check is
+  # never created and the request can never become mergeable (§306, §312). That job dispatches this workflow at
+  # its own branch head instead: a dispatched run is not a pull-request run, so it is not held, and its checks
+  # land on the same commit the request points at -- which is the thing branch protection reads (§313).
+  workflow_dispatch:
 
 permissions:
   contents: read
