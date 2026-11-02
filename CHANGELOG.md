@@ -18,9 +18,9 @@
   runs on the refresh branch's head, filters `action_required`, waits up to 90 s for them to appear and approves
   each. A refusal exits 2 naming `actions: write`, instead of leaving a request that is open, not red, and never
   checkable. §313.
-- Six tests cover the approval and both paths, the listing filters, the reuse path, the no-parked-runs case, the
-  refusal and the scope the workflow must hold. Five planted mutations were each RED and each restored
-  byte-identical, hash compared in the same process.
+- Seven tests cover the approval and both paths, the listing filters, the reuse path, the no-parked-runs case, a
+  listing that arrives without its run list, the refusal and the scope the workflow must hold. Six planted
+  mutations were each RED and each restored byte-identical, hash compared in the same process.
 - Evidence level: the mechanism is live (201 → `queued` → `mergeable_state=clean` with all eleven contexts green
   on PR #151). A full cycle starting from a new request is the next dispatch's measurement, and §313 says so.
 

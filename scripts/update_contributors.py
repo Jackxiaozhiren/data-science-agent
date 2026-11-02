@@ -275,8 +275,11 @@ def _parked_runs(repository: str, head: str) -> list[dict[str, Any]]:
         "GET",
         f"/repos/{repository}/actions/runs?head_sha={head}&event=pull_request&per_page=50",
     )
-    runs = listing.get("workflow_runs", []) if isinstance(listing, dict) else []
-    return [run for run in runs if run.get("conclusion") == "action_required"]
+    # No default: an empty list from a response that never carried the key would read as "nothing was parked"
+    # and skip the approval in silence, which is the failure this function exists to end.
+    if not isinstance(listing, dict) or not isinstance(listing.get("workflow_runs"), list):
+        raise RuntimeError("GitHub actions runs endpoint did not return a run list")
+    return [run for run in listing["workflow_runs"] if run.get("conclusion") == "action_required"]
 
 
 def _await_parked_runs(repository: str, head: str) -> list[dict[str, Any]]:

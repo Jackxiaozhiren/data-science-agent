@@ -771,6 +771,26 @@ def test_a_refused_approval_is_loud_rather_than_merely_patient(
     assert "actions: write" in capsys.readouterr().out
 
 
+def test_a_listing_without_a_run_list_fails_rather_than_approving_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A default of `[]` would read as "nothing was parked" and skip the approval in silence."""
+    log = _CallLog()
+
+    def listing_only(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+        if "/actions/runs?" in path:
+            return {"total_count": 0}
+        return log.request(method, path, payload)
+
+    monkeypatch.setattr(contributors, "request_json", listing_only)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    with pytest.raises(RuntimeError, match="did not return a run list"):
+        contributors.refresh("owner/repo", "main", "new")
+
+
 def test_the_workflow_holds_the_scope_the_approval_needs() -> None:
     """Removing it fails only a week later, on a live run that is already open, so it is a gate here.
 

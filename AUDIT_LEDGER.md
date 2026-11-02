@@ -17470,11 +17470,13 @@ green -- including the four it had never been allowed to start.
 the call that does the work. `update_contributors.py` lists the `pull_request` runs on the refresh branch's head,
 filters `action_required`, waits up to 90 s for them to appear (the provider files them a second or two after the
 push), and approves each; a refusal exits 2 naming `actions: write` rather than leaving a request that is open,
-not red, and never checkable. Six tests cover the approval and both of its paths, the listing's `head_sha`/`event`
-filters, the reuse path, the no-parked-runs case (not a failure -- the policy may stop applying), the refusal, and
-the scope the workflow must hold. Five planted mutations -- approval path misspelled, reuse path skipping the
-approval, approval returning before the API call, every run approved regardless of state, `actions: write`
-removed -- were all RED on the named test, all restored byte-identical with the hash compared in the same process.
+not red, and never checkable. Seven tests cover the approval and both of its paths, the listing's
+`head_sha`/`event` filters, the reuse path, the no-parked-runs case (not a failure -- the policy may stop
+applying), a listing that arrives without its run list (an error, not an empty list), the refusal, and the scope
+the workflow must hold. Six planted mutations -- approval path misspelled, reuse path skipping the approval,
+approval returning before the API call, every run approved regardless of state, the listing defaulting to `[]`,
+`actions: write` removed -- were all RED on the named test, all restored byte-identical with the hash compared in
+the same process.
 
 **Evidence level.** The mechanism is live: 201, `queued`, the four checks restored to the request's rollup, and
 `blocked -> clean` on a real pull request. Not yet witnessed: one full cycle starting from nothing -- the job
