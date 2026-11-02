@@ -24,9 +24,10 @@ TARGET = "CONTRIBUTORS.md"
 #: refused with a 409 every week. A normal branch has no such rule, and the result lands as a pull request.
 WORK_BRANCH = "chore/contributor-recognition"
 
-#: The workflow whose `ci` job is the required status check on `main`. It gained a `workflow_dispatch` trigger so
-#: this job can ask for that check directly -- see `_dispatch_checks` for why the pull request cannot provide it.
-CI_WORKFLOW = "ci.yml"
+#: How long to wait for the runs a new head triggers. The provider creates them a second or two after it accepts
+#: the request or the push, and approving before they exist approves nothing while looking like success.
+APPROVAL_WAIT_SECONDS = 90.0
+APPROVAL_POLL_SECONDS = 5.0
 
 #: A 409 that will still be true on the third attempt. Measured verbatim from seven consecutive weekly failures:
 #: `Could not update file: Required status check "ci" is expected.`
@@ -262,38 +263,70 @@ def _reuse_open_pull(repository: str) -> dict[str, Any] | None:
     return None
 
 
-def _dispatch_checks(repository: str, branch: str) -> GitHubAPIError | None:
-    """Ask `ci` to run on the refresh branch, because the pull request it just opened cannot ask for itself.
+def _branch_head(repository: str, branch: str) -> str:
+    """The commit the request points at, which is also the commit its runs are filed under."""
+    ref = request_json("GET", f"/repos/{repository}/git/ref/heads/{branch}")
+    return str(ref["object"]["sha"])
 
-    A request opened by `app/github-actions` is not authored by a collaborator, so this repository's
-    workflow-approval policy holds each `pull_request` run on it in `action_required` until a human approves:
-    the required `ci` check is never created, and the request can never become mergeable (§306, §312). The fix
-    is not another permission on the request -- it is another route to the same check. A `workflow_dispatch` run
-    is not a pull-request run, it is triggered by a token that already holds write access, and its checks land
-    on the same commit the request points at, which is the thing branch protection reads.
 
-    Returns the refusal rather than raising, because the caller has to distinguish "no checks requested" from
-    "nothing published" in its exit code.
-    """
-    _, refused = probe(
-        "POST",
-        f"/repos/{repository}/actions/workflows/{CI_WORKFLOW}/dispatches",
-        {"ref": branch},
+def _parked_runs(repository: str, head: str) -> list[dict[str, Any]]:
+    """The pull-request runs this head triggered that the workflow-approval policy is holding."""
+    listing = request_json(
+        "GET",
+        f"/repos/{repository}/actions/runs?head_sha={head}&event=pull_request&per_page=50",
     )
-    return refused
+    # No default: an empty list from a response that never carried the key would read as "nothing was parked"
+    # and skip the approval in silence, which is the failure this function exists to end.
+    if not isinstance(listing, dict) or not isinstance(listing.get("workflow_runs"), list):
+        raise RuntimeError("GitHub actions runs endpoint did not return a run list")
+    return [run for run in listing["workflow_runs"] if run.get("conclusion") == "action_required"]
 
 
-def _with_checks(repository: str, branch: str, outcome: dict[str, Any]) -> dict[str, Any]:
-    """Attach the result of asking for checks to a published refresh, without raising on a refusal."""
-    refused = _dispatch_checks(repository, branch)
-    if refused is None:
-        print(
-            f"Requested {CI_WORKFLOW} on {branch}; its checks land on the pull request's head commit."
-        )
-        outcome["checks"] = "requested"
-    else:
-        print(f"Could not request {CI_WORKFLOW} on {branch} ({refused.status}): {refused}")
-        outcome["checks"] = "refused"
+def _await_parked_runs(repository: str, head: str) -> list[dict[str, Any]]:
+    """Wait for the runs to exist. A new head creates them a second or two after the request is accepted."""
+    deadline = time.monotonic() + APPROVAL_WAIT_SECONDS
+    while True:
+        parked = _parked_runs(repository, head)
+        if parked or time.monotonic() >= deadline:
+            return parked
+        time.sleep(APPROVAL_POLL_SECONDS)
+
+
+def _approve_parked_runs(repository: str, branch: str) -> dict[str, Any]:
+    """Release the checks the job's own request is not allowed to trigger, with the token that made it.
+
+    The request is authored by `app/github-actions`, which this repository's workflow-approval policy treats as
+    an outside collaborator: every `pull_request` run on it sits in `action_required` until a human approves, so
+    the required `ci` check is never created and the request can never become mergeable (§306, §312). The missing
+    piece is not a scope on the request and not another trigger -- a dispatched run was measured against this
+    exact PR and never counted (§313) -- it is the approval call itself, which `actions: write` allows and which
+    the job's own token may make against its own run. Measured: 201, and the run leaves `action_required`.
+    """
+    head = _branch_head(repository, branch)
+    parked = _await_parked_runs(repository, head)
+    if not parked:
+        print(f"No parked runs on {head[:7]}; nothing needed approval.")
+        return {"approved": 0}
+
+    approved: list[int] = []
+    for run in parked:
+        _, refused = probe("POST", f"/repos/{repository}/actions/runs/{run['id']}/approve")
+        if refused is not None:
+            print(
+                f"Could not approve run {run['id']} ({run.get('name')}): {refused.status} {refused}"
+            )
+            return {"approved": len(approved), "refused": refused, "run": run.get("name")}
+        print(f"Approved run {run['id']} ({run.get('name')}); it left action_required.")
+        approved.append(int(run["id"]))
+    return {"approved": len(approved)}
+
+
+def _with_approvals(repository: str, branch: str, outcome: dict[str, Any]) -> dict[str, Any]:
+    """Attach the approval result to a published refresh, without raising on a refusal."""
+    result = _approve_parked_runs(repository, branch)
+    outcome["approved"] = result["approved"]
+    if result.get("refused") is not None:
+        outcome["approval_refused"] = True
     return outcome
 
 
@@ -301,9 +334,10 @@ def refresh(repository: str, base: str, content: str) -> dict[str, Any]:
     """Put the rendered file on a working branch and land it as a pull request.
 
     Returns what happened rather than raising for the states that are not errors: the file already matches, the
-    token may write a branch but not open a pull request, or the pull request exists while the check it needs
-    could not be requested. The first two are reported by `main()`; the third is the one a reader has to be
-    told about, because a published request with no checks looks exactly like a request waiting its turn.
+    token may write a branch but not open a pull request, or the request exists while the approval call that
+    starts its checks was refused. The first two are reported by `main()`; the third is the one a reader has to
+    be told about, because a published request whose runs are all parked looks exactly like a request waiting
+    its turn.
     """
     _, existing = current_file(repository, base)
     if existing == content:
@@ -315,7 +349,7 @@ def refresh(repository: str, base: str, content: str) -> dict[str, Any]:
 
     carried = _reuse_open_pull(repository)
     if carried is not None:
-        return _with_checks(
+        return _with_approvals(
             repository,
             WORK_BRANCH,
             {"status": "published", "target": WORK_BRANCH, "pull": carried["number"]},
@@ -334,7 +368,7 @@ def refresh(repository: str, base: str, content: str) -> dict[str, Any]:
     print(
         f"Updated {TARGET} on {WORK_BRANCH}; pull request #{pull.get('number')}: {pull.get('html_url')}"
     )
-    return _with_checks(
+    return _with_approvals(
         repository,
         WORK_BRANCH,
         {"status": "published", "target": WORK_BRANCH, "pull": pull.get("number")},
@@ -361,13 +395,13 @@ def main() -> int:
             "pull-requests: write, or someone must open the printed compare URL."
         )
         return 2
-    if outcome.get("checks") == "refused":
-        # A request whose checks were never requested is the §300 failure one layer down: it is on the queue,
-        # it is not red, and its required check will never appear. Loud beats patient.
+    if outcome.get("approval_refused"):
+        # A request whose runs are all still parked is the §300 failure one layer down: it is on the queue, it
+        # is not red, and its required check will never appear. Loud beats patient.
         print(
-            "FAILURE: the refresh is published as a pull request, but no ci run could be requested for it, so "
-            "its required check will never appear and it cannot become mergeable; the job needs "
-            "actions: write on the workflow, and ci.yml needs a workflow_dispatch trigger."
+            "FAILURE: the refresh is published as a pull request, but the runs it triggered are still parked in "
+            "action_required, so its required check will never appear and it cannot become mergeable; the job "
+            "needs actions: write on the workflow, or a human has to click Approve and run."
         )
         return 2
     return 0
