@@ -13,6 +13,11 @@ permissions:
   # pre-carry a check that has not run yet (§297). Without this scope the job publishes the branch and stops at
   # 403, which §300 made a loud exit-2 rather than a silent success.
   pull-requests: write
+  # The request this job opens is authored by `app/github-actions`, which counts as an outside collaborator, so
+  # every `pull_request` run on it waits in `action_required` and the required `ci` check is never created (§306).
+  # One GitHub API call -- `POST /actions/runs/{id}/approve` -- releases them, and it needs this scope. Measured:
+  # the job's own token approving its own parked run answers 201 and the run goes `queued` (§313).
+  actions: write
 
 concurrency:
   group: contributor-recognition
