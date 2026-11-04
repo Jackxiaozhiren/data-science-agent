@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-11-04T15:29:02.097312+00:00",
+  "generated": "2026-11-04T15:39:32.163123+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -480,10 +480,10 @@
     },
     {
       "package": "ipython",
-      "version": "9.16.1",
+      "version": "9.17.1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ipython@9.16.1"
+      "purl": "pkg:pypi/ipython@9.17.1"
     },
     {
       "package": "ipython-pygments-lexers",

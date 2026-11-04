@@ -602,9 +602,9 @@
     },
     {
       "name": "ipython",
-      "version": "9.16.1",
+      "version": "9.17.1",
       "licenses": [],
-      "purl": "pkg:pypi/ipython@9.16.1",
+      "purl": "pkg:pypi/ipython@9.17.1",
       "source": "https://pypi.org/simple"
     },
     {
