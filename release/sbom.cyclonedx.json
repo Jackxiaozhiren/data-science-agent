@@ -399,9 +399,9 @@
     },
     {
       "name": "duckdb",
-      "version": "1.5.5",
+      "version": "2.0.0",
       "licenses": [],
-      "purl": "pkg:pypi/duckdb@1.5.5",
+      "purl": "pkg:pypi/duckdb@2.0.0",
       "source": "https://pypi.org/simple"
     },
     {
