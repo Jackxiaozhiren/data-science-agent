@@ -68,9 +68,9 @@
     },
     {
       "name": "ast-serialize",
-      "version": "0.8.0",
+      "version": "0.13.1",
       "licenses": [],
-      "purl": "pkg:pypi/ast-serialize@0.8.0",
+      "purl": "pkg:pypi/ast-serialize@0.13.1",
       "source": "https://pypi.org/simple"
     },
     {
@@ -873,9 +873,9 @@
     },
     {
       "name": "librt",
-      "version": "0.15.0",
+      "version": "0.16.0",
       "licenses": [],
-      "purl": "pkg:pypi/librt@0.15.0",
+      "purl": "pkg:pypi/librt@0.16.0",
       "source": "https://pypi.org/simple"
     },
     {
@@ -962,9 +962,9 @@
     },
     {
       "name": "mypy",
-      "version": "2.3.1",
+      "version": "2.4.0",
       "licenses": [],
-      "purl": "pkg:pypi/mypy@2.3.1",
+      "purl": "pkg:pypi/mypy@2.4.0",
       "source": "https://pypi.org/simple"
     },
     {
