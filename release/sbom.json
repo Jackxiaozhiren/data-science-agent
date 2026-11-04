@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-11-04T14:27:43.106609+00:00",
+  "generated": "2026-11-04T15:39:32.163123+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -60,10 +60,10 @@
     },
     {
       "package": "ast-serialize",
-      "version": "0.8.0",
+      "version": "0.13.1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ast-serialize@0.8.0"
+      "purl": "pkg:pypi/ast-serialize@0.13.1"
     },
     {
       "package": "asttokens",
@@ -319,10 +319,10 @@
     },
     {
       "package": "duckdb",
-      "version": "1.5.5",
+      "version": "2.0.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/duckdb@1.5.5"
+      "purl": "pkg:pypi/duckdb@2.0.0"
     },
     {
       "package": "et-xmlfile",
@@ -480,10 +480,10 @@
     },
     {
       "package": "ipython",
-      "version": "9.16.1",
+      "version": "9.17.1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ipython@9.16.1"
+      "purl": "pkg:pypi/ipython@9.17.1"
     },
     {
       "package": "ipython-pygments-lexers",
@@ -641,17 +641,17 @@
     },
     {
       "package": "langchain-core",
-      "version": "1.6.12",
+      "version": "1.7.0",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-core@1.6.12"
+      "purl": "pkg:pypi/langchain-core@1.7.0"
     },
     {
       "package": "langchain-protocol",
-      "version": "0.0.18",
+      "version": "0.0.20",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-protocol@0.0.18"
+      "purl": "pkg:pypi/langchain-protocol@0.0.20"
     },
     {
       "package": "langgraph",
@@ -697,10 +697,10 @@
     },
     {
       "package": "librt",
-      "version": "0.15.0",
+      "version": "0.16.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/librt@0.15.0"
+      "purl": "pkg:pypi/librt@0.16.0"
     },
     {
       "package": "markdown",
@@ -774,10 +774,10 @@
     },
     {
       "package": "mypy",
-      "version": "2.3.1",
+      "version": "2.4.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/mypy@2.3.1"
+      "purl": "pkg:pypi/mypy@2.4.0"
     },
     {
       "package": "mypy-extensions",
