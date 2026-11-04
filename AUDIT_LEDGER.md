@@ -17500,3 +17500,39 @@ this checkout holds rather than a near-copy. The same outage is why the PR was b
 `pull_request` event, so the request sat `BLOCKED` with no checks at all. A commit written to the branch through
 the ref API does emit one, which is how the checks came back. Both are facts about the platform, not about this
 change, and both cost a cycle to learn.
+
+## 314. The first-run budget, measured before anything about the first run is changed
+
+Lane A starts with "improve the first-run experience", and §12 asks for a measurement protocol rather than an
+opinion about one. So before touching the interface: what does a stranger actually wait? Measured 2026-11-04
+against the free hosted instance, anonymous, heuristic mode, one cold sample and one warm sample. Six numbers,
+each with the command that produced it:
+
+| step | reading | how |
+|---|---|---|
+| first `/health` after the service slept | **93.497 s** | `curl -w '%{time_total}'`; Render free tier spins down when idle |
+| second `/health` | **1.179 s** | same command, immediately after |
+| `GET /api/v1/datasets/` | 1.48 s, **2 seeded datasets** | 2 rows, so a first screen is not empty (B4's premise stays dead, §307) |
+| `POST /api/v1/analysis/` | **0.91 s** to `202` | `{dataset_id, user_query}`, run `run-8a5a480798` |
+| run to `COMPLETED` | **2.13 s** of polling | heuristic planner, stub provider, no model call |
+| `report?format=markdown` | 3.27 s, **2 721 bytes** | first six lines carry objective, dataset, status, and the §311 provenance line |
+
+**The finding is the ratio.** A visitor who arrives cold waits 93.5 s before the API answers at all, and then
+about 6.3 s to get a report. Warm, the whole productive path is ~6 s: datasets 1.48 + accept 0.91 + run 2.13 +
+report 3.27, which is a sum of separate calls rather than one clock and is labelled that way. So roughly 94% of a
+cold visitor's wait is the service waking up, and any first-run work that tunes the 6% without naming the 94% is
+optimizing the wrong number. §12's pilot should therefore hold two budgets, not one: a *wake* budget (what the
+screen says and when) and a *run* budget (what happens once the API is awake). Only the second is a code
+question; the first is a copy-and-state question, which is why it belongs to this lane at all.
+
+**What this does not measure, stated before it is asked.** The web front-end's own paint is not in the table --
+there is no browser witness in this session, so "first run" here means first *API* answer, not first pixel. The
+cold figure is n=1 and free-tier scheduling varies; treat 93.5 s as an order of magnitude, not a constant. And
+the run used the heuristic planner, which is the hosted default, so a real-model run would move the third and
+fourth rows without moving the argument about the first two.
+
+**Protocol, so the next reading is comparable.** Three clocks, one command each: `curl -w` on `/health` twice
+(cold then warm), then a scripted `POST`/poll/`GET report` that records accept latency, poll-to-terminal latency,
+and report size. Repeat after 15 minutes of idle to reproduce the cold sample. The numbers above are the
+baseline any Lane A change is measured against, and the ledger already knows what happens to claims whose
+baseline was never written down.
