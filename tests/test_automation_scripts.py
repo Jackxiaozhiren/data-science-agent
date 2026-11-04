@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,12 @@ from scripts import check_public_claims as public_claims
 from scripts import generate_release_announcement as announcements
 from scripts import render_leaderboard as leaderboard
 from scripts import update_contributors as contributors
+
+
+@pytest.fixture(autouse=True)
+def _no_approval_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A unit test must not spend the workflow's 90-second budget waiting for runs GitHub is not sending."""
+    monkeypatch.setattr(contributors, "APPROVAL_WAIT_SECONDS", 0.0)
 
 
 @pytest.mark.parametrize(
@@ -411,11 +418,15 @@ class _CallLog:
         pulls_status: int | None = None,
         open_pulls: list[dict[str, Any]] | None = None,
         branch_exists: bool = False,
+        parked_runs: list[dict[str, Any]] | None = None,
+        approve_status: int | None = None,
     ) -> None:
         self.calls: list[tuple[str, str, dict[str, Any] | None]] = []
         self.pulls_status = pulls_status
         self.open_pulls = open_pulls or []
         self.branch_exists = branch_exists
+        self.parked_runs = parked_runs or []
+        self.approve_status = approve_status
 
     def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
         self.calls.append((method, path, payload))
@@ -434,6 +445,23 @@ class _CallLog:
             return {"object": {"sha": "branch-head"}}
         if method in {"GET", "POST", "PATCH"} and path.startswith("/repos/owner/repo/git/ref"):
             raise AssertionError(f"unrecognised git-ref route: {method} {path}")
+        # Same discipline for the actions routes this script may use. Without the explicit refusal, a typo in
+        # the listing or the approval path would be answered by the `return {}` below and the test would
+        # certify the typo -- §301's lesson, applied before it can bite twice.
+        if path.startswith("/repos/owner/repo/actions/runs?"):
+            if method != "GET":
+                raise AssertionError(f"a run listing is a GET, not {method} {path}")
+            return {"workflow_runs": list(self.parked_runs)}
+        if path.startswith("/repos/owner/repo/actions/runs/") and path.endswith("/approve"):
+            if method != "POST":
+                raise AssertionError(f"an approval is a POST, not {method} {path}")
+            if self.approve_status is not None:
+                raise contributors.GitHubAPIError(
+                    self.approve_status, '{"message":"Resource not accessible by integration"}'
+                )
+            return None
+        if "/actions/" in path:
+            raise AssertionError(f"unrecognised actions route: {method} {path}")
         if path.startswith("/repos/owner/repo/pulls"):
             # A token holding only `contents: write` can still read the pull list; it is the create that is
             # refused. Raising on any /pulls call would hide the path this harness exists to exercise.
@@ -561,6 +589,8 @@ def test_current_content_writes_nothing_and_opens_no_pull(monkeypatch: pytest.Mo
     outcome = contributors.refresh("owner/repo", "main", "same")
     assert outcome["status"] == "current"
     assert not [c for c in log.calls if c[0] in {"PUT", "POST"}], log.calls
+    # Nothing was published, so there is no head a parked run could belong to and nothing to approve.
+    assert not [c for c in log.calls if c[1].endswith("/approve")], log.calls
 
 
 def test_missing_pull_permission_still_publishes_and_names_the_url(
@@ -575,6 +605,8 @@ def test_missing_pull_permission_still_publishes_and_names_the_url(
     monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
     outcome = contributors.refresh("owner/repo", "main", "new")
     assert outcome["status"] == "published-without-pull"
+    # No request means no head commit whose runs could be parked: approving here would be a call about nothing.
+    assert "approved" not in outcome
     captured = capsys.readouterr().out
     assert "compare/main..." in captured, captured
 
@@ -629,3 +661,144 @@ def test_the_publish_message_carries_no_skip_keyword(monkeypatch: pytest.MonkeyP
             f"a skip keyword suppresses the checks this branch now needs: {message!r}"
         )
         assert "contributor" in message.lower(), message
+
+
+def test_the_refresh_approves_the_runs_its_own_request_cannot_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The request is authored by `app/github-actions`, which the approval policy treats as an outsider.
+
+    Every `pull_request` run on it waits in `action_required`, so the required `ci` check is never created
+    (§306, §312). The approval call is the click a human makes; `actions: write` is what lets the job make it.
+    """
+    log = _CallLog(
+        parked_runs=[
+            {"id": 11, "name": "CI", "conclusion": "action_required"},
+            {"id": 12, "name": "CodeQL", "conclusion": "action_required"},
+            # A run that already ran is not parked; approving it would be an error the endpoint would reject.
+            {"id": 13, "name": "Secret Scan", "conclusion": "success"},
+        ]
+    )
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert [call for call in log.calls if call[1].endswith("/approve")] == [
+        ("POST", "/repos/owner/repo/actions/runs/11/approve", None),
+        ("POST", "/repos/owner/repo/actions/runs/12/approve", None),
+    ], log.calls
+    assert outcome["approved"] == 2
+
+
+def test_the_listing_asks_only_about_the_head_the_request_points_at(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A week-old head also has parked runs. Approving those starts CI on a commit nobody is merging."""
+    log = _CallLog(parked_runs=[{"id": 11, "name": "CI", "conclusion": "action_required"}])
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    contributors.refresh("owner/repo", "main", "new")
+    listing = [call for call in log.calls if "/actions/runs?" in call[1]]
+    assert len(listing) == 1, log.calls
+    assert "head_sha=branch-head" in listing[0][1], listing
+    assert "event=pull_request" in listing[0][1], listing
+
+
+def test_a_reused_request_is_approved_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The branch is rewritten before the reuse probe, so the head those runs were filed under has changed."""
+    log = _CallLog(
+        open_pulls=[{"number": 12, "html_url": "https://github.com/owner/repo/pull/12"}],
+        parked_runs=[{"id": 21, "name": "CI", "conclusion": "action_required"}],
+    )
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["pull"] == 12
+    assert [call for call in log.calls if call[1].endswith("/approve")] == [
+        ("POST", "/repos/owner/repo/actions/runs/21/approve", None)
+    ], log.calls
+    assert outcome["approved"] == 1
+
+
+def test_no_parked_runs_is_reported_and_is_not_a_failure(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """If the repository stops holding these runs, the job must not invent a red or approve the wrong thing."""
+    log = _CallLog()
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["approved"] == 0
+    assert not [call for call in log.calls if call[1].endswith("/approve")], log.calls
+    assert "No parked runs" in capsys.readouterr().out
+
+
+def test_a_refused_approval_is_loud_rather_than_merely_patient(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A missing `actions: write` leaves a request that is open, not red, and never checkable -- §300's shape."""
+    log = _CallLog(
+        parked_runs=[{"id": 31, "name": "CI", "conclusion": "action_required"}], approve_status=403
+    )
+    monkeypatch.setattr(contributors, "request_json", log.request)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    outcome = contributors.refresh("owner/repo", "main", "new")
+    assert outcome["status"] == "published", "the request exists; only the approval failed"
+    assert outcome["approval_refused"] is True
+    printed = capsys.readouterr().out
+    assert "403" in printed, printed
+
+    monkeypatch.setattr(
+        contributors.os, "environ", {**contributors.os.environ, "GITHUB_REPOSITORY": "owner/repo"}
+    )
+    monkeypatch.setattr(contributors, "render", lambda _repository, _people: "new")
+    monkeypatch.setattr(contributors, "fetch_contributors", lambda _repository: [])
+    assert contributors.main() == 2
+    assert "actions: write" in capsys.readouterr().out
+
+
+def test_a_listing_without_a_run_list_fails_rather_than_approving_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A default of `[]` would read as "nothing was parked" and skip the approval in silence."""
+    log = _CallLog()
+
+    def listing_only(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+        if "/actions/runs?" in path:
+            return {"total_count": 0}
+        return log.request(method, path, payload)
+
+    monkeypatch.setattr(contributors, "request_json", listing_only)
+    monkeypatch.setattr(
+        contributors, "current_file", lambda _repository, _branch: ("sha", "different")
+    )
+    monkeypatch.setattr(contributors, "default_branch_head", lambda _repository: "default-head")
+    with pytest.raises(RuntimeError, match="did not return a run list"):
+        contributors.refresh("owner/repo", "main", "new")
+
+
+def test_the_workflow_holds_the_scope_the_approval_needs() -> None:
+    """Removing it fails only a week later, on a live run that is already open, so it is a gate here.
+
+    `actions: write` is what lets the job call the approval endpoint at all. Deleting it leaves the job
+    publishing a request whose runs stay parked -- the §300 shape, measured twice in §312.
+    """
+    workflows = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+    refresh = (workflows / "contributors.yml").read_text(encoding="utf-8")
+    assert re.search(r"(?m)^  actions: write$", refresh), (
+        "contributors.yml approves its own parked runs and needs `actions: write` to do it"
+    )

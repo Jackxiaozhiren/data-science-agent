@@ -45,12 +45,18 @@ commit whose `ci` had to run while the tag was still missing, and pushing a tag 
 post-publish commit is red by construction and the write is refused -- on every release, not only this one.
 
 Two alternatives were considered and rejected on measured grounds. Having the workflow open a PR instead needs
-`pull-requests: write`, but GitHub documents that *"when you use the repository's GITHUB_TOKEN to perform
-tasks, events triggered by the GITHUB_TOKEN will not create a new workflow run"*
-([docs](https://docs.github.com/en/actions/concepts/security/github_token)), so such a PR carries no `ci`
-check and could only be merged by an admin override -- a manual step in a different place. Relaxing protection
-would remove the gate that §148 showed decides the whole pipeline's shape. So the copy moved upstream in time
-instead of downstream: prepared before the tag, merged with the release PR, verified by the release itself.
+`pull-requests: write`, and GitHub's documented anti-recursion rule -- *"when you use the repository's
+GITHUB_TOKEN to perform tasks, events triggered by the GITHUB_TOKEN will not create a new workflow run"*
+([docs](https://docs.github.com/en/actions/concepts/security/github_token)) -- was read here as "such a PR
+carries no `ci` check and could only be merged by an admin override". Measurement since has narrowed that
+reading: a request opened by `app/github-actions` does trigger `ci`, CodeQL, Secret Scan and Dependency Review,
+they arrive parked in `action_required` because the author is not a collaborator, and they can be released
+through the approval API -- no override involved, and since §313 no human click either. The alternative is
+therefore more available than this paragraph once said; it stays rejected for the reason that outlives the
+correction, which is that preparing the copy before the tag is cheaper than landing it through a second gate.
+Relaxing protection would remove the gate that §148 showed decides the pipeline's shape. So the copy moved
+upstream in time instead of downstream: prepared before the tag, merged with the release PR, verified by the
+release itself.
 
 ## Reading the copies
 
