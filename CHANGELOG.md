@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — the contributor refresh approves the runs its own request cannot start
+
+- The weekly job opens a pull request authored by `app/github-actions`, which the repository's workflow-approval
+  policy treats as an outside collaborator: its `ci`, CodeQL, Secret Scan and Dependency Review runs sit in
+  `action_required`, so the required `ci` check is never created. That keys on the author, not on the token's
+  scope — no permission on the request could remove it (`AUDIT_LEDGER.md` §306, §312).
+- The first attempt shipped and was falsified the same hour: `ci.yml` gained a `workflow_dispatch` trigger and the
+  job dispatched `CI` at its own branch. The dispatched run escaped the gate and even produced green `ci` and
+  `web-regression` check runs on the head — but the pull request's rollup never listed them, and `mergeable_state`
+  stayed `blocked` across two dispatches eleven minutes apart. `ci.yml` is reverted byte-identical.
+- What works was measured before it was written: the job's own token may call `POST /actions/runs/{id}/approve`
+  on its own parked run. It answered 201, the run left `action_required`, and the four held checks returned to the
+  request's rollup. `contributors.yml` keeps `actions: write` for that call; `update_contributors.py` lists the
+  runs on the refresh branch's head, filters `action_required`, waits up to 90 s for them to appear and approves
+  each. A refusal exits 2 naming `actions: write`, instead of leaving a request that is open, not red, and never
+  checkable. §313.
+- Seven tests cover the approval and both paths, the listing filters, the reuse path, the no-parked-runs case, a
+  listing that arrives without its run list, the refusal and the scope the workflow must hold. Six planted
+  mutations were each RED and each restored byte-identical, hash compared in the same process.
+- Evidence level: live twice over — 201 → `queued` → `mergeable_state=clean` with all eleven contexts green on
+  PR #151, and a cold start on #154 where the job opened a new request and approved its four parked runs inside
+  its own run, with no approval click anywhere in the sequence.
+
 ### Added (post-4.6.0) — the exported report now names who produced the run
 
 - `report.md` and the standalone HTML say, in the run's own language, which reasoning mode made it: a heuristic
