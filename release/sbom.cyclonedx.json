@@ -399,9 +399,9 @@
     },
     {
       "name": "duckdb",
-      "version": "1.5.5",
+      "version": "2.0.0",
       "licenses": [],
-      "purl": "pkg:pypi/duckdb@1.5.5",
+      "purl": "pkg:pypi/duckdb@2.0.0",
       "source": "https://pypi.org/simple"
     },
     {
@@ -825,16 +825,16 @@
     },
     {
       "name": "langgraph",
-      "version": "1.2.11",
+      "version": "1.2.19",
       "licenses": [],
-      "purl": "pkg:pypi/langgraph@1.2.11",
+      "purl": "pkg:pypi/langgraph@1.2.19",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "langgraph-checkpoint",
-      "version": "4.2.0",
+      "version": "4.3.1",
       "licenses": [],
-      "purl": "pkg:pypi/langgraph-checkpoint@4.2.0",
+      "purl": "pkg:pypi/langgraph-checkpoint@4.3.1",
       "source": "https://pypi.org/simple"
     },
     {
@@ -846,9 +846,9 @@
     },
     {
       "name": "langgraph-sdk",
-      "version": "0.4.4",
+      "version": "0.4.11",
       "licenses": [],
-      "purl": "pkg:pypi/langgraph-sdk@0.4.4",
+      "purl": "pkg:pypi/langgraph-sdk@0.4.11",
       "source": "https://pypi.org/simple"
     },
     {
@@ -990,9 +990,9 @@
     },
     {
       "name": "nbconvert",
-      "version": "7.17.1",
+      "version": "7.17.2",
       "licenses": [],
-      "purl": "pkg:pypi/nbconvert@7.17.1",
+      "purl": "pkg:pypi/nbconvert@7.17.2",
       "source": "https://pypi.org/simple"
     },
     {
@@ -1649,7 +1649,7 @@
     },
     {
       "name": "tornado",
-      "version": "6.5.9",
+      "version": "6.6",
       "licenses": [
         {
           "license": {
@@ -1657,7 +1657,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/tornado@6.5.9",
+      "purl": "pkg:pypi/tornado@6.6",
       "source": "https://pypi.org/simple"
     },
     {
