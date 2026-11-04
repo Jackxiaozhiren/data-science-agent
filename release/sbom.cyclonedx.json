@@ -799,7 +799,7 @@
     },
     {
       "name": "langchain-core",
-      "version": "1.6.12",
+      "version": "1.7.0",
       "licenses": [
         {
           "license": {
@@ -807,12 +807,12 @@
           }
         }
       ],
-      "purl": "pkg:pypi/langchain-core@1.6.12",
+      "purl": "pkg:pypi/langchain-core@1.7.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "langchain-protocol",
-      "version": "0.0.18",
+      "version": "0.0.20",
       "licenses": [
         {
           "license": {
@@ -820,7 +820,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/langchain-protocol@0.0.18",
+      "purl": "pkg:pypi/langchain-protocol@0.0.20",
       "source": "https://pypi.org/simple"
     },
     {

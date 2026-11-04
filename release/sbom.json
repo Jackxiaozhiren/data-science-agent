@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-11-04T15:20:13.017395+00:00",
+  "generated": "2026-11-04T15:29:02.097312+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -641,17 +641,17 @@
     },
     {
       "package": "langchain-core",
-      "version": "1.6.12",
+      "version": "1.7.0",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-core@1.6.12"
+      "purl": "pkg:pypi/langchain-core@1.7.0"
     },
     {
       "package": "langchain-protocol",
-      "version": "0.0.18",
+      "version": "0.0.20",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-protocol@0.0.18"
+      "purl": "pkg:pypi/langchain-protocol@0.0.20"
     },
     {
       "package": "langgraph",
