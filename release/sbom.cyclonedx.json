@@ -467,13 +467,7 @@
     {
       "name": "formulaic",
       "version": "1.2.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/formulaic@1.2.2",
       "source": "https://pypi.org/simple"
     },
@@ -527,13 +521,7 @@
     {
       "name": "httpcore2",
       "version": "2.16.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-3-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/httpcore2@2.16.0",
       "source": "https://pypi.org/simple"
     },
@@ -560,26 +548,14 @@
     {
       "name": "httpx2",
       "version": "2.16.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-3-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/httpx2@2.16.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "httpx2-jsfetch",
       "version": "1.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-3-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/httpx2-jsfetch@1.0",
       "source": "https://pypi.org/simple"
     },
@@ -613,13 +589,7 @@
     {
       "name": "interface-meta",
       "version": "2.0.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/interface-meta@2.0.1",
       "source": "https://pypi.org/simple"
     },
@@ -829,7 +799,7 @@
     },
     {
       "name": "langchain-core",
-      "version": "1.6.12",
+      "version": "1.7.0",
       "licenses": [
         {
           "license": {
@@ -837,12 +807,12 @@
           }
         }
       ],
-      "purl": "pkg:pypi/langchain-core@1.6.12",
+      "purl": "pkg:pypi/langchain-core@1.7.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "langchain-protocol",
-      "version": "0.0.18",
+      "version": "0.0.20",
       "licenses": [
         {
           "license": {
@@ -850,7 +820,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/langchain-protocol@0.0.18",
+      "purl": "pkg:pypi/langchain-protocol@0.0.20",
       "source": "https://pypi.org/simple"
     },
     {
@@ -877,13 +847,7 @@
     {
       "name": "langgraph-sdk",
       "version": "0.4.4",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/langgraph-sdk@0.4.4",
       "source": "https://pypi.org/simple"
     },
@@ -1195,13 +1159,7 @@
     {
       "name": "pillow",
       "version": "13.0.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT-CMU"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/pillow@13.0.0",
       "source": "https://pypi.org/simple"
     },
@@ -1348,13 +1306,7 @@
     {
       "name": "pydantic-settings",
       "version": "2.16.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/pydantic-settings@2.16.1",
       "source": "https://pypi.org/simple"
     },
@@ -1551,26 +1503,14 @@
     {
       "name": "ruff",
       "version": "0.17.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/ruff@0.17.1",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "scikit-learn",
       "version": "1.9.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-3-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/scikit-learn@1.9.1",
       "source": "https://pypi.org/simple"
     },
@@ -1663,13 +1603,7 @@
     {
       "name": "statsmodels",
       "version": "0.15.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-3-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/statsmodels@0.15.0",
       "source": "https://pypi.org/simple"
     },
@@ -1742,13 +1676,7 @@
     {
       "name": "truststore",
       "version": "0.10.5",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/truststore@0.10.5",
       "source": "https://pypi.org/simple"
     },
@@ -1891,13 +1819,7 @@
     {
       "name": "wrapt",
       "version": "2.5.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "BSD-2-Clause"
-          }
-        }
-      ],
+      "licenses": [],
       "purl": "pkg:pypi/wrapt@2.5.1",
       "source": "https://pypi.org/simple"
     },
