@@ -17580,3 +17580,34 @@ surgical approach. No branch protection setting was changed, no merge queue was 
 configuration was edited -- this section records a cost, not a fix. The obvious next experiment, enabling a
 merge queue or grouping the Python bumps into one SBOM write, is left unmeasured on purpose: both change the
 gate that produced these numbers.
+
+## 316. Grouping the Python bumps, and what the §315 numbers mean now
+
+On 2026-11-05 the `uv` entry in `.github/dependabot.yml` gained one group, `python-runtime`, with
+`patterns: ["*"]` and `update-types: ["minor", "patch"]`. §315 identified why the ten-request batch
+serialised but deliberately left the fix unmeasured; this is the smaller of the two experiments that
+section named, and it changes only the Dependabot configuration.
+
+**Why this experiment and not the other.** Branch protection is untouched: `strict=true`, one required
+context (`ci`), zero required approvals, `enforce_admins=false`, and the merge-queue endpoint still
+returns 404. The cost in §315 came from six Python requests each rewriting `release/sbom.json` and
+`release/sbom.cyclonedx.json`, so every merge left the rest DIRTY. Grouping minor and patch version
+updates makes the next such batch one PR, one `uv.lock` resolution, one SBOM rewrite and one `ci`
+cycle instead of six. Enabling a merge queue was rejected as the first move: `.github/workflows/ci.yml`
+listens only to `push` and `pull_request`, and no workflow declares `merge_group`. A queue's temporary
+branches would therefore never produce the required `ci` context, and merges would deadlock until a
+`merge_group` trigger was added and measured first.
+
+**What the group does not swallow.** `groups` default to `applies-to: version-updates`, so security
+updates still open their own PRs; `update-types` leaves major version bumps outside the group as well.
+The npm half-PR failure §315 records is unaffected: the npm entry already had groups, and its defect
+was a second lockfile that Dependabot never edited, not the number of requests. Local verification was
+`yaml.safe_load` on the resulting file and the 17 tests in `tests/security/test_w7_supply_chain.py`,
+which asserts the declared ecosystem set and the presence of `uv.lock`.
+
+**What this does not claim.** No throughput improvement has been observed. The next weekly Dependabot
+run had not happened when this section was written, so the 9-20 minute cadence and the one-PR-per-CI
+figure in §315 are the *pre-change* baseline and must not be quoted as the current cost. Two or three
+weekly cycles are needed before the SBOM conflict rate can be compared. Branch protection, the merge
+queue, `ci.yml` triggers, the location of the SBOM in the repository, and the npm workspace lock gate
+were not changed. Rollback is deleting the `groups` block; no merged history depends on it.
