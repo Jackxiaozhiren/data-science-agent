@@ -17611,3 +17611,74 @@ figure in §315 are the *pre-change* baseline and must not be quoted as the curr
 weekly cycles are needed before the SBOM conflict rate can be compared. Branch protection, the merge
 queue, `ci.yml` triggers, the location of the SBOM in the repository, and the npm workspace lock gate
 were not changed. Rollback is deleting the `groups` block; no merged history depends on it.
+
+## 317. The Python group's first run: seventeen requests, one PR, three failure classes
+
+§316 grouped `uv` minor and patch updates and said plainly that no improvement had been measured. The
+next Dependabot re-check, triggered by that merge, supplied the first measurement. It also reproduced
+every failure class §315 described, which is the more useful result: the group changes how many PRs
+arrive, not whether they are correct.
+
+**What the group produced.** `#159` merged at 06:19:08Z; Dependabot re-checked and opened `#164`,
+*"bump the python-runtime group with 17 updates"*, at 06:40:24Z — seventeen minor and patch bumps in a
+single request with a single `uv.lock` diff. `polars 1.43.2 -> 2.1.0` arrived separately as `#165` at
+06:40:57Z, because `update-types: ["minor", "patch"]` excludes majors. That is the configured behaviour
+observed, not inferred: one grouped PR plus one ungrouped major, where §315 recorded six ungrouped
+Python requests in the previous batch.
+
+**The npm half did not improve, and was not expected to.** Three npm requests opened in the same
+re-check — `#160` (lucide-react 1.66.0), `#161` (`@types/node` 26.6.6), `#162` (`@types/vscode`
+1.144.0) — and all three failed `ci` and `web-regression` in 13-18 seconds, before any test ran. The
+cause is the one §315 records: Dependabot edits the root `package-lock.json` and the manifests, never
+`apps/web/package-lock.json` or `apps/vscode/package-lock.json`, which are committed and consumed by
+`npm --prefix <workspace> ci`. Rather than serialise three repairs under `strict`, `#163` applied all
+three bumps in one commit across five files and reconciled every workspace specifier with its manifest;
+`npm ci --dry-run --legacy-peer-deps` resolved 308 / 268 / 62 packages at root, `apps/web` and
+`apps/vscode`. The three Dependabot PRs were then closed with a pointer to it.
+
+**Three failure classes recur on every Python bump.** All three were repaired on `#164`; none is the
+group's fault, and none is avoidable by configuration:
+
+1. *The SBOM is not regenerated.* `release/sbom.json` and `release/sbom.cyclonedx.json` are derived from
+   `uv.lock` by `scripts/generate_sbom.py`, and Dependabot does not run it. The check reported 208
+   components derived against 207 on disk, with nineteen `(package, version)` pairs differing. The
+   regeneration is mechanical but must not be done by committing local output: the `license` field is
+   read from `importlib.metadata` of whichever environment runs the script, so a local run imports that
+   environment's noise. Regenerating in a mirror of `main` and then changing only `(package, version)`
+   and `purl` in the committed files keeps the diff to what actually changed. `--check` is the
+   verification, and it is the same call the failing test makes.
+2. *The pre-commit ruff pin is coupled to the lock.* `tests/test_pre_commit_rev_tracks_lock.py` asserts
+   `.pre-commit-config.yaml` names the ruff version `uv.lock` resolves. `#164` moves ruff 0.17.1 ->
+   0.17.3, so the pin has to move in the same commit — and cannot move earlier, because 0.17.3 does not
+   exist on `main`: publishing the pin alone would redden that test on every other branch.
+3. *A licence expression already shipped looks new.* `dependency-review` rejected `greenlet 3.5.6` on
+   `MIT AND PSF-2.0` and `numpy 2.5.4` on `BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0`. PyPI
+   reports the *same* expressions for `greenlet 3.5.5` and `numpy 2.5.2`, which `main` already ships.
+   The gate inspects only the lock lines a PR changes, so a patch bump surfaces a pre-existing state as
+   a violation — the class the workflow file already documents for MPL-2.0, MIT-CMU and BSD-2-Clause.
+   The four identifiers were added to `allow-licenses` on 2026-11-05 with the evidence recorded inline;
+   `fail-on-severity` and `fail-on-scopes` are unchanged, so unknown licences still block.
+
+**A blocked-text file can be merged without re-resolving.** `#164` and `#165` both rewrite `uv.lock`.
+`gh pr update-branch` merged `main` into `#164` textually, and `uv lock --check` then reported 208
+packages resolved with the file unchanged byte for byte. The two PRs changed disjoint `[[package]]`
+blocks, so a three-way merge produced a valid lock without a second `uv lock` pass. This is why the
+17-update group and the separate major did not cost two rounds of conflict resolution — a property of
+the file's structure, not a guarantee that it always holds.
+
+**One failure was infrastructure.** `#165`'s `ci` failed eleven seconds in with
+`curl: (22) The requested URL returned error: 504` while downloading actionlint from GitHub releases.
+Re-running the failed job turned it green; nothing in the repository changed. A `ci` that fails in
+seconds on a dependency PR is worth reading before assuming the bump is bad.
+
+**Enforcement note.** `main` requires exactly one status context, `ci`. `dependency-review` is not
+required, so a PR with it red reports `mergeable_state: unstable` and `mergeable: true` — the licence
+gate is enforced by the operator reading it, not by branch protection. That is a property of the
+current configuration, recorded here rather than changed.
+
+**What this does not claim.** One batch, not a cadence: §315's 9-20 minute figure and its one-PR-per-CI
+rate remain the only multi-request measurements, and a single grouped batch cannot revise them. The gap
+between 06:32Z and 14:29Z on 2026-11-05 is a session boundary, not CI latency, and must not be read as
+throughput. Whether the group keeps seventeen-update PRs reviewable as they age is unknown; this
+section measures one instance. No branch protection, workflow trigger, merge-queue setting or SBOM
+location was changed.
