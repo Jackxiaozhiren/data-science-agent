@@ -7,7 +7,9 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
@@ -114,9 +116,9 @@
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "@types/vscode": "^1.140.0",
-    "@types/node": "26.x",
-    "typescript": "^7.0.2",
-    "@vscode/test-electron": "^3.1.0"
+    "@vscode/test-electron": "^3.1.0",
+    "typescript": "^7.0.2"
   }
 }
