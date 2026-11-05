@@ -17682,3 +17682,59 @@ between 06:32Z and 14:29Z on 2026-11-05 is a session boundary, not CI latency, a
 throughput. Whether the group keeps seventeen-update PRs reviewable as they age is unknown; this
 section measures one instance. No branch protection, workflow trigger, merge-queue setting or SBOM
 location was changed.
+
+## 318. What a wake looks like from a browser, and a guard that keeps the budget above it
+
+§314 recorded a first-screen baseline from server-side timings and said plainly that there was no browser
+witness. This is that witness, taken on 2026-11-05 against `https://data-science-agent-web.vercel.app/`
+(Vercel frontend, Render backend) with Playwright and headless Chromium, plus the guard that turns the
+slowest observation into an assertion.
+
+**What was measured, and how.** Four quantities per sample: first paint from the `paint` performance
+entries, the wall time of each `/health` request as observed from the page, the moment the shared probe
+leaves `probing`, and the network outcome of every attempt. Raw output is
+`/tmp/laneA/results.json` and `results2.json` with the corresponding screenshots; the write-up is
+`output/lane-a-first-screen-witness.md`.
+
+**The cold sample.** After a long idle period the first `/health` request started at 3 992 ms, was
+aborted at 18 s, and three consecutive attempts timed out before the fourth answered 200 at 85 524 ms —
+a wake of 81 532 ms. The gaps between attempt starts were 1 999, 4 002 and 6 017 ms, which is the
+2 000 / 4 000 / 6 000 ms backoff in `PROBE_BACKOFF_MS` observed rather than assumed. The successful
+attempt used 15 524 ms of its 18 s ceiling, so the instance answered 2 476 ms before the sequence would
+have given up on it.
+
+**The warm samples.** Three successive loads reached `ready` at 2 845, 2 904 and 3 042 ms, with the
+probe label itself accounting for 824-950 ms. First paint was 1 468-1 672 ms. A fourth attempt to
+reproduce the cold state after thirteen minutes of silence failed to do so: the backend answered in
+757 ms, so the idle window that triggers a spin-down is longer than thirteen minutes, or unrelated
+traffic kept it awake.
+
+**Three things the numbers settle.** First, there is no blank screen: the static shell reaches first
+paint at 3 872 ms while `/health` is still unanswered — first paint is not gated on the probe. Second,
+the waiting state has room to be seen: the silence hint fires 1.5 s into the first attempt, so a label
+is available from about 5.5 s, roughly 76 s before the answer. Third, the budget is not tight:
+`PROBE_BUDGET_MS` computes to 132 000 ms against a measured 85 524 ms, 46.5 s of headroom.
+
+**Why this needed a guard rather than a paragraph.** The module header records that the first budget was
+sized to clear the 44.5 s wake measured on 2026-10-13 and then gave up during the 92.8 s wake measured on
+2026-10-22 — a sleeping instance reported as a dead one, which is the defect R-11 exists to remove. A
+prose warning did not prevent that, and prose will not prevent the next edit. `tests/test_backend_probe_budget.py`
+now reads the four constants out of `apps/web/app/lib/backendProbe.ts`, recomputes the budget the same
+way the module does, and fails if it drops below either recorded wake — 92 800 ms from 2026-10-22 and
+81 532 ms from the measurement above. It also asserts that `PROBE_BUDGET_MS` is still *computed* from
+`PROBE_ATTEMPTS`, `PROBE_TIMEOUT_MS` and `PROBE_BACKOFF_MS` (a restated literal can disagree with the
+values it claims to follow), that the silence hint stays at or under a quarter of one attempt ceiling,
+and that the sequence keeps at least two attempts. Three mutations were checked: attempts 6 -> 2, hint
+1 500 -> 6 000, and the budget replaced by the literal 132 000 — each reddens the guard, and the source
+file was restored byte for byte afterwards.
+
+**What this does not claim.** One wake was observed, not a distribution; 81 532 ms is a sample, and the
+92.8 s figure from 2026-10-22 remains the slowest on record, which is why the guard is pinned to it
+rather than to the new number. The cold sample's `probing` and `warming` DOM marks were not captured:
+`page.goto` was issued with `waitUntil: 'domcontentloaded'`, which did not resolve until 85 748 ms because
+the document waited on the probe, so the observer was not live during the state change. The claim that a
+label is visible during the wait is therefore derived from the configured 1.5 s threshold and the measured
+probe start, not from an observed label. All timings are page-observed, so they include DNS, TLS and the
+proxy hop and are comparable to each other, not directly to §314's server-side figures. No application
+code was changed: `backendProbe.ts` is unmodified by this work, and the conclusion is that it should stay
+that way.
