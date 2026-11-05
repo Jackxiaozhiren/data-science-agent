@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-11-04T15:39:32.163123+00:00",
+  "generated": "2026-11-05T14:33:03.889613+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -949,17 +949,17 @@
     },
     {
       "package": "polars",
-      "version": "1.43.2",
+      "version": "2.1.0",
       "license": "Copyright (c) 2025 Ritchie Vink\nCopyright (c) 2024 (Some portions) NVIDIA CORPOR...",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/polars@1.43.2"
+      "purl": "pkg:pypi/polars@2.1.0"
     },
     {
       "package": "polars-runtime-32",
-      "version": "1.43.2",
+      "version": "2.1.0",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/polars-runtime-32@1.43.2"
+      "purl": "pkg:pypi/polars-runtime-32@2.1.0"
     },
     {
       "package": "pre-commit",
