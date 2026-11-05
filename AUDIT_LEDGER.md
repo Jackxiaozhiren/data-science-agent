@@ -17536,3 +17536,47 @@ fourth rows without moving the argument about the first two.
 and report size. Repeat after 15 minutes of idle to reproduce the cold sample. The numbers above are the
 baseline any Lane A change is measured against, and the ledger already knows what happens to claims whose
 baseline was never written down.
+
+## 315. What a ten-PR Dependabot queue costs, and why the npm gate fired four times
+
+Between 2026-11-04 14:26Z and 2026-11-05 05:22Z the open Dependabot queue went from ten requests to zero;
+the last two landed at 05:06:40 (#142) and 05:22:18 (#141).
+The constraint was not review capacity: `main` requires one context, `ci`, with
+`required_status_checks.strict=true`, zero required approvals, `enforce_admins=false`, and the merge-queue
+endpoint answers 404. Two mechanisms account for the whole cost, and both are configuration facts rather
+than inference.
+
+**Strict protection without a merge queue serialises the batch.** A strict base means every merge instantly
+invalidates every other open head. The eight contiguous merges on 2026-11-04 are 14:26:29 (#149), 14:41:25
+(#152), 15:01:22 (#145), 15:10:06 (#144), 15:19:55 (#143), 15:28:46 (#148), 15:39:16 (#147) and 15:48:29
+(#146) -- 9 to 20 minutes apart, one `ci` cycle plus the work of bringing the next branch up to date. Six of
+the ten requests in this batch rewrote the same two files, `release/sbom.json` and
+`release/sbom.cyclonedx.json`; after each merge the remaining Python requests were not merely BEHIND but
+DIRTY, and the surviving branch's `uv.lock` had to be read, the SBOM regenerated, and the result written
+through the API before the next cycle could start. Throughput is therefore one PR per green CI run. A merge
+queue would linearise these in one pass; without it, queue length is a scheduling cost, not a review cost.
+
+**The npm requests arrive half-finished.** Four requests in the batch (#145, #144, #142, #141) changed
+`apps/web/package.json` and the root `package-lock.json`; all four needed the member lock
+`apps/web/package-lock.json` brought into line before they could pass, and all four landed with both
+lockfiles in the diff. On #141 the symptom was measurable: `ci` and `web-regression` failed in 18 s and 13 s,
+before any test ran, because `npm --prefix apps/web ci --legacy-peer-deps` refuses a lock whose top-level
+`next` spec is `16.4.2` while the manifest pins `16.4.3`. #142 needed three entries (`framer-motion`,
+`motion-dom`, `motion-utils`); #141 needed ten (`next`, `@next/env`, eight `@next/swc-*`) plus a spec
+alignment, because the root lock recorded `next: ^16.4.3` where the manifest says `16.4.3`.
+`scripts/check_npm_workspace_lock.py` is what makes the divergence visible: `docs/audit/npm-lock-divergences.json`
+is empty, so any resolved-version difference across the two locks fails the gate. Regenerating the root lock
+with `npm install --package-lock-only --legacy-peer-deps` produced a 305-line diff, 28 of them deleting
+`libc` fields from optional platform packages, so each fix was a surgical field edit verified against the
+gate and `npm ci --dry-run --legacy-peer-deps` at both root and member (308 and 268 packages on #141, exit
+0). Dependabot did rebase #141 onto the new `main` by itself after #142 landed; that cleared BEHIND and left
+the lock divergence untouched. Automatic branch maintenance is not lock maintenance.
+
+**What this does not claim.** The roughly 13.5-hour gap between 15:48Z and 05:22Z is a session boundary and
+the transport outage §313 records, not a CI measurement; only the eight contiguous merges support the 9-20
+minute cadence. The `npm ci --dry-run` figures are one local resolution each, not a benchmark, and the
+305-line regeneration diff is measured on this batch's tree rather than the earlier one that motivated the
+surgical approach. No branch protection setting was changed, no merge queue was enabled, and no Dependabot
+configuration was edited -- this section records a cost, not a fix. The obvious next experiment, enabling a
+merge queue or grouping the Python bumps into one SBOM write, is left unmeasured on purpose: both change the
+gate that produced these numbers.
