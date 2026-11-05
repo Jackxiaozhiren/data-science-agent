@@ -3,6 +3,16 @@ updates:
   - package-ecosystem: uv
     directory: "/"
     schedule: { interval: weekly }
+    # Six ungrouped Python bumps each rewrote release/sbom.json and
+    # release/sbom.cyclonedx.json; under strict branch protection every merge
+    # invalidated the rest, costing one CI round per PR (AUDIT_LEDGER §315).
+    # Minor/patch version updates now land in one PR: one uv.lock update, one
+    # SBOM rewrite, one CI round. Security updates do not join this group
+    # (groups default to version-updates), and majors still arrive alone.
+    groups:
+      python-runtime:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     # The repository uses a root npm workspace and root package-lock.json.
     # Tracking /apps/web alone updates a nested lock, leaving the root lock
