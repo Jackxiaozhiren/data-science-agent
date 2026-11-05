@@ -73,4 +73,23 @@ jobs:
           #                                    clause dropped.
           # fail-on-severity and fail-on-scopes are unchanged by this: the gate
           # still blocks unknown licences and still only inspects runtime deps.
-          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0-or-later, CC-BY-4.0, MPL-2.0, MIT-CMU, LicenseRef-scancode-matplotlib-1.3.0, BSD-2-Clause
+          #   PSF-2.0, 0BSD, Zlib, CC0-1.0       greenlet 3.5.6 and numpy 2.5.4, both
+          #                                    reached through patch bumps in the
+          #                                    python-runtime group. PyPI reports
+          #                                    greenlet 3.5.5 and 3.5.6 with the same
+          #                                    expression "MIT AND PSF-2.0", and numpy
+          #                                    2.5.2 and 2.5.4 with the same
+          #                                    "BSD-3-Clause AND 0BSD AND MIT AND Zlib
+          #                                    AND CC0-1.0" -- so no licence changed,
+          #                                    the bump only moved a lock line the gate
+          #                                    had not looked at before. Same class as
+          #                                    BSD-2-Clause above. All four are OSI
+          #                                    approved and strictly less restrictive
+          #                                    than the LGPL-3.0-or-later and MPL-2.0
+          #                                    already allowed here: PSF-2.0 is the
+          #                                    current Python licence whose
+          #                                    predecessor Python-2.0 is already
+          #                                    listed, 0BSD drops the attribution
+          #                                    clause, Zlib and CC0-1.0 are permissive
+          #                                    and public-domain respectively.
+          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0-or-later, CC-BY-4.0, MPL-2.0, MIT-CMU, LicenseRef-scancode-matplotlib-1.3.0, BSD-2-Clause, PSF-2.0, 0BSD, Zlib, CC0-1.0
