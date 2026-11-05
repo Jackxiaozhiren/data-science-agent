@@ -1185,7 +1185,7 @@
     },
     {
       "name": "polars",
-      "version": "1.43.2",
+      "version": "2.1.0",
       "licenses": [
         {
           "license": {
@@ -1193,12 +1193,12 @@
           }
         }
       ],
-      "purl": "pkg:pypi/polars@1.43.2",
+      "purl": "pkg:pypi/polars@2.1.0",
       "source": "https://pypi.org/simple"
     },
     {
       "name": "polars-runtime-32",
-      "version": "1.43.2",
+      "version": "2.1.0",
       "licenses": [
         {
           "license": {
@@ -1206,7 +1206,7 @@
           }
         }
       ],
-      "purl": "pkg:pypi/polars-runtime-32@1.43.2",
+      "purl": "pkg:pypi/polars-runtime-32@2.1.0",
       "source": "https://pypi.org/simple"
     },
     {
