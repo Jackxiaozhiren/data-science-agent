@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-11-05T14:33:03.889613+00:00",
+  "generated": "2026-11-05T14:57:52.596141+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -25,10 +25,10 @@
     },
     {
       "package": "anyio",
-      "version": "4.14.2",
+      "version": "4.16.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/anyio@4.14.2"
+      "purl": "pkg:pypi/anyio@4.16.0"
     },
     {
       "package": "appnope",
@@ -340,10 +340,10 @@
     },
     {
       "package": "fastapi",
-      "version": "0.141.1",
+      "version": "0.162.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/fastapi@0.141.1"
+      "purl": "pkg:pypi/fastapi@0.162.0"
     },
     {
       "package": "fastjsonschema",
@@ -389,10 +389,10 @@
     },
     {
       "package": "greenlet",
-      "version": "3.5.5",
+      "version": "3.5.6",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/greenlet@3.5.5"
+      "purl": "pkg:pypi/greenlet@3.5.6"
     },
     {
       "package": "h11",
@@ -473,17 +473,17 @@
     },
     {
       "package": "ipykernel",
-      "version": "7.3.0",
+      "version": "7.4.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ipykernel@7.3.0"
+      "purl": "pkg:pypi/ipykernel@7.4.0"
     },
     {
       "package": "ipython",
-      "version": "9.17.1",
+      "version": "9.18.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ipython@9.17.1"
+      "purl": "pkg:pypi/ipython@9.18.0"
     },
     {
       "package": "ipython-pygments-lexers",
@@ -613,10 +613,10 @@
     },
     {
       "package": "jupyterlab",
-      "version": "4.6.4",
+      "version": "4.6.5",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/jupyterlab@4.6.4"
+      "purl": "pkg:pypi/jupyterlab@4.6.5"
     },
     {
       "package": "jupyterlab-pygments",
@@ -641,10 +641,10 @@
     },
     {
       "package": "langchain-core",
-      "version": "1.7.0",
+      "version": "1.7.3",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-core@1.7.0"
+      "purl": "pkg:pypi/langchain-core@1.7.3"
     },
     {
       "package": "langchain-protocol",
@@ -760,10 +760,10 @@
     },
     {
       "package": "mkdocs-material",
-      "version": "9.7.7",
+      "version": "9.8.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/mkdocs-material@9.7.7"
+      "purl": "pkg:pypi/mkdocs-material@9.8.0"
     },
     {
       "package": "mkdocs-material-extensions",
@@ -774,10 +774,10 @@
     },
     {
       "package": "mypy",
-      "version": "2.4.0",
+      "version": "2.4.1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/mypy@2.4.0"
+      "purl": "pkg:pypi/mypy@2.4.1"
     },
     {
       "package": "mypy-extensions",
@@ -844,10 +844,10 @@
     },
     {
       "package": "numpy",
-      "version": "2.5.2",
+      "version": "2.5.4",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/numpy@2.5.2"
+      "purl": "pkg:pypi/numpy@2.5.4"
     },
     {
       "package": "openpyxl",
@@ -855,6 +855,13 @@
       "license": "MIT",
       "source": "https://pypi.org/simple",
       "purl": "pkg:pypi/openpyxl@3.1.5"
+    },
+    {
+      "package": "opentelemetry-api",
+      "version": "1.45.2",
+      "license": "Unknown",
+      "source": "https://pypi.org/simple",
+      "purl": "pkg:pypi/opentelemetry-api@1.45.2"
     },
     {
       "package": "orjson",
@@ -1019,24 +1026,24 @@
     },
     {
       "package": "pydantic",
-      "version": "2.14.1",
+      "version": "2.14.2",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pydantic@2.14.1"
+      "purl": "pkg:pypi/pydantic@2.14.2"
     },
     {
       "package": "pydantic-core",
-      "version": "2.50.1",
+      "version": "2.50.2",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pydantic-core@2.50.1"
+      "purl": "pkg:pypi/pydantic-core@2.50.2"
     },
     {
       "package": "pydantic-settings",
-      "version": "2.16.1",
+      "version": "2.16.2",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pydantic-settings@2.16.1"
+      "purl": "pkg:pypi/pydantic-settings@2.16.2"
     },
     {
       "package": "pygments",
@@ -1061,17 +1068,17 @@
     },
     {
       "package": "pytest",
-      "version": "9.1.1",
+      "version": "9.2.0",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pytest@9.1.1"
+      "purl": "pkg:pypi/pytest@9.2.0"
     },
     {
       "package": "pytest-asyncio",
-      "version": "1.4.0",
+      "version": "1.4.1.post1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pytest-asyncio@1.4.0"
+      "purl": "pkg:pypi/pytest-asyncio@1.4.1.post1"
     },
     {
       "package": "pytest-cov",
@@ -1110,10 +1117,10 @@
     },
     {
       "package": "python-multipart",
-      "version": "0.0.32",
+      "version": "0.0.33",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/python-multipart@0.0.32"
+      "purl": "pkg:pypi/python-multipart@0.0.33"
     },
     {
       "package": "pywinpty",
@@ -1194,10 +1201,10 @@
     },
     {
       "package": "ruff",
-      "version": "0.17.1",
+      "version": "0.17.3",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ruff@0.17.1"
+      "purl": "pkg:pypi/ruff@0.17.3"
     },
     {
       "package": "scikit-learn",
@@ -1243,10 +1250,10 @@
     },
     {
       "package": "sqlalchemy",
-      "version": "2.0.52",
+      "version": "2.1.6",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/sqlalchemy@2.0.52"
+      "purl": "pkg:pypi/sqlalchemy@2.1.6"
     },
     {
       "package": "stack-data",
