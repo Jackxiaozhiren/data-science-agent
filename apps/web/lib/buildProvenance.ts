@@ -3,6 +3,7 @@
 import * as React from "react";
 import { apiUrl } from "@/lib/api";
 import { t, type Locale } from "@/lib/locale";
+import { isTerminalStatus } from "@/app/lib/analysisStatus";
 
 /**
  * Build provenance: which artifact answers, and what would produce the next plan.
@@ -155,5 +156,89 @@ export function describeReasoningMode(mode: ReasoningMode, locale: Locale): Mode
     short: plan,
     detail: t(locale, "prov.modelDetail").replace("{plan}", plan),
     modelPlanned: true,
+  };
+}
+
+/**
+ * What one *run* recorded about its own planning, captured at run start.
+ *
+ * A different fact from `BuildProvenance`, which describes the process answering the page now. The two
+ * disagree whenever a deployment's mode changes after a run exists -- an operator flips `DSA_LLM_MODE`, or
+ * a redeploy lands with a different environment -- and a report page that showed only the instance would
+ * then describe a model-produced run as heuristic, or the reverse. `stub` and `error` are absent on rows
+ * written before those fields existed, which is why each is optional rather than defaulted.
+ */
+export type RunReasoning = {
+  mode: string;
+  provider: string;
+  model?: string | null;
+  source?: string | null;
+  stub?: boolean | null;
+  error?: string | null;
+};
+
+export type RunReasoningDescription = {
+  label: string;
+  detail: string;
+  variant: "warning" | "secondary" | "outline";
+  modelPlanned: boolean;
+};
+
+/**
+ * The one wording for a run's own reasoning record, and the only place that decides what an absent one says.
+ *
+ * Returns null while a run is still in flight and has not written its record yet: the row is created before
+ * the graph starts, so "not recorded" during those seconds would be a claim about a run that is about to
+ * record it. A finished run without a record is the legacy case, and it says so instead of adopting the
+ * mode of whichever process happens to be serving the page -- the same rule the report body already follows.
+ */
+export function describeRunReasoning(
+  record: RunReasoning | null | undefined,
+  status: string,
+  locale: Locale
+): RunReasoningDescription | null {
+  if (!record) {
+    if (!isTerminalStatus(status)) return null;
+    return {
+      label: t(locale, "prov.runModeNotRecorded"),
+      detail: t(locale, "prov.runNotRecordedDetail"),
+      variant: "outline",
+      modelPlanned: false,
+    };
+  }
+  if (record.error) {
+    return {
+      label: t(locale, "prov.runModeNotRunnable").replace("{mode}", record.mode),
+      detail: record.error,
+      variant: "warning",
+      modelPlanned: false,
+    };
+  }
+  if (record.stub === true) {
+    return {
+      label: t(locale, "prov.runModeLabel").replace("{plan}", record.mode),
+      detail: t(locale, "prov.runStubDetail")
+        .replace("{mode}", record.mode)
+        .replace("{provider}", record.provider),
+      variant: "warning",
+      modelPlanned: false,
+    };
+  }
+  if (record.stub === false) {
+    const plan = `${record.provider}${record.model ? ` · ${record.model}` : ""}`;
+    return {
+      label: t(locale, "prov.runModeLabel").replace("{plan}", plan),
+      detail: t(locale, "prov.runModelDetail").replace("{plan}", plan),
+      variant: "secondary",
+      modelPlanned: true,
+    };
+  }
+  return {
+    label: t(locale, "prov.runModeLabel").replace("{plan}", record.mode),
+    detail: t(locale, "prov.runStubUnknownDetail")
+      .replace("{mode}", record.mode)
+      .replace("{provider}", record.provider),
+    variant: "outline",
+    modelPlanned: false,
   };
 }

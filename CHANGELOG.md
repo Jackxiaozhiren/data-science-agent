@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Changed (post-4.6.0) — a run page names the planner that run had
+
+- The reasoning badge and its notice on a run page now read the run's own `ReasoningRecord` (`state.reasoning`,
+  written when the graph starts) instead of `/version`. The header chip and the footer keep `/version`: they answer
+  "what would plan a run here now", which is a different fact from "what planned this one".
+- The two facts disagree whenever a deployment changes mode after a run exists — an operator flips
+  `DSA_LLM_MODE`, or a redeploy lands with a different environment. The badge then showed the instance's mode a
+  few lines above a report whose first line named the run's, which is R-02's defect class arriving one layer down.
+  Spec 2 asks for "the vocabulary the run already carries"; `AUDIT_LEDGER.md` §311 had recorded the instance-scoped
+  badge as a deliberate deferral.
+- A finished run with no record says `This run: not recorded` and does not adopt the serving process's mode — the
+  rule the report body already follows. A run still in flight renders nothing: the row exists before the graph
+  writes its record, so "not recorded" there would be a claim about a run that is about to record it.
+- Seven locale keys in both languages (label, not-recorded, not-runnable, and one sentence per recorded shape).
+  The run-page probe in `tests/contract/test_reasoning_mode_and_version_provenance.py` now checks that the record
+  and status are handed to both components and that the badge does not read `/version` again; three planted copies
+  (a badge without the record, a badge calling `useBuildProvenance`, a component no longer mounted) are each RED on
+  the same function. 15 passed.
+- Witnessed in a local browser at 1280×820: `output/lane-a/r02-run-badge-vs-instance.png` (run recorded `stub`,
+  instance serving `heuristic` — the two labels now state their own scope) and
+  `output/lane-a/r02-run-badge-not-recorded.png` (the record stripped from a row, which says so). The hosted demo
+  keeps its current build until Render is redeployed; nothing about this change is claimed as live there.
+- `tests/contract`: 324 passed, 3 failed and 32 errors, all in files this change does not touch — the failures are
+  this machine's sandbox shim (its `AF_UNIX` broker sockets counted as network in `test_provider_route_is_offline`;
+  its `mkdir` returning `EEXIST` on pytest's tmp root in `test_product_events`). `test_product_events` passes when
+  run alone; `test_provider_route_is_offline` fails alone with the same broker sockets, so the cause is the shim
+  rather than test order.
+
 ### Changed (post-4.6.0) — the contributor refresh approves the runs its own request cannot start
 
 - The weekly job opens a pull request authored by `app/github-actions`, which the repository's workflow-approval

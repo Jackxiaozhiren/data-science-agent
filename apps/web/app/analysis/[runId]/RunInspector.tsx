@@ -17,6 +17,7 @@ import { Progress, Separator } from "@/app/components/ui/feedback";
 import { PageHeader } from "@/app/components/data/PageHeader";
 import { StatusBadge } from "@/app/components/data/StatusBadge";
 import { ReasoningModeBadge, ReasoningModeNotice } from "@/app/components/analysis/ReasoningModeBadge";
+import type { RunReasoning } from "@/lib/buildProvenance";
 import { EmptyState } from "@/app/components/data/States";
 import { TraceTimeline } from "@/app/components/data/TraceTimeline";
 import { ConfidenceBars } from "@/app/components/ui/chart";
@@ -37,6 +38,8 @@ export type RunDetail = {
     evidence: { id: string; claim: string; source_type: string; source_id: string; confidence: number; result: Record<string, unknown> }[];
     insights: { id: string; finding: string; evidence_ids: string[]; limitation?: string }[];
     validation_results: { check: string; passed: boolean; message: string }[];
+    // Captured at run start, so a run keeps the planner it actually had after the deployment changes mode.
+    reasoning?: RunReasoning | null;
     report_markdown: string | null;
     artifacts: { id: string; type: string; path: string; metadata: Record<string, unknown> }[];
   } | null;
@@ -523,7 +526,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
         actions={
           <>
             <StatusBadge status={statusNow} />
-            <ReasoningModeBadge />
+            <ReasoningModeBadge reasoning={st?.reasoning ?? null} status={statusNow} />
             {st?.report_markdown && (
               <a href={reportUrl} target="_blank" rel="noreferrer">
                 <Button variant="secondary" size="sm"><Download className="size-4" aria-hidden /> {t(locale, "insp.downloadReport")}</Button>
@@ -569,7 +572,7 @@ export function RunInspector({ run, reportUrl, findingsUrl, htmlUrl, fromRunId }
         }
       />
 
-      <ReasoningModeNotice />
+      <ReasoningModeNotice reasoning={st?.reasoning ?? null} status={statusNow} />
 
       {bundle !== "idle" && bundle !== "sending" && (
         <p

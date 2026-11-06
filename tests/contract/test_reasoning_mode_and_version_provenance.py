@@ -45,6 +45,9 @@ PROVENANCE_CONSUMERS = (
     "app/components/analysis/ReasoningModeBadge.tsx",
 )
 RUN_INSPECTOR = "app/analysis/[runId]/RunInspector.tsx"
+#: The run-level badge. It is still a provenance consumer -- for wording -- but it must not read the
+#: instance, because a run keeps the planner it had when it started.
+RUN_MODE_BADGE = "app/components/analysis/ReasoningModeBadge.tsx"
 
 VERSION_OWNER = "apps/api/src/dsa_api/core/config.py"
 API_SURFACES = (ROOT / "apps/api/src/dsa_api/routers", ROOT / "apps/api/src/dsa_api/core")
@@ -467,11 +470,69 @@ def test_the_rendering_probe_fires_on_each_shape_it_would_miss() -> None:
     )
 
 
-def test_the_run_report_page_mounts_the_mode_label() -> None:
-    """R-02 Spec 2 and 3: the badge sits by the status, and the exclusion is in body text."""
-    inspector = _read(f"apps/web/{RUN_INSPECTOR}")
+def run_page_issues(inspector: str, badge: str) -> list[str]:
+    """Every way a report page could go back to labelling a run with the process that serves it.
+
+    R-02 Spec 2 asks for "the vocabulary the run already carries". The run carries a ``ReasoningRecord``
+    written at start, so the badge and the notice must be handed that record and the status that decides
+    what an absent one means. A badge that reads ``/version`` instead describes whichever deployment happens
+    to answer, which is how a model-produced run becomes "heuristic" after an operator flips the mode.
+    """
+    issues: list[str] = []
     for name in ("ReasoningModeBadge", "ReasoningModeNotice"):
-        assert name in inspector, f"the run report page no longer mounts {name}"
+        # The JSX tag, not the bare name: the import alone would satisfy a substring check while the page
+        # had stopped rendering the component -- which is exactly the regression the plant below proves.
+        if f"<{name}" not in inspector:
+            issues.append(f"the run report page no longer mounts {name}")
+    for name in ("ReasoningModeBadge", "ReasoningModeNotice"):
+        call = f"<{name} reasoning={{st?.reasoning ?? null}} status={{statusNow}}"
+        if call not in inspector:
+            issues.append(f"{name}: not handed the run's own reasoning record and status")
+    if "useBuildProvenance" in badge:
+        issues.append(
+            f"{RUN_MODE_BADGE}: reads the instance's /version again, so the run inherits the deployment's mode"
+        )
+    if "@/lib/buildProvenance" not in badge:
+        issues.append(f"{RUN_MODE_BADGE}: words the run's mode without the module that owns the wording")
+    return issues
+
+
+def test_the_run_report_page_labels_the_run_not_the_process_serving_it() -> None:
+    """R-02 Spec 2 and 3: the badge sits by the status, and it names the run's planner."""
+    issues = run_page_issues(
+        _read(f"apps/web/{RUN_INSPECTOR}"), _read(f"apps/web/{RUN_MODE_BADGE}")
+    )
+    assert issues == []
+
+
+def test_the_run_page_probe_fires_on_an_instance_scoped_badge() -> None:
+    """Falsification: the three shapes this guard exists for, each reported by the function above."""
+    inspector = _read(f"apps/web/{RUN_INSPECTOR}")
+    badge = _read(f"apps/web/{RUN_MODE_BADGE}")
+
+    detached = _planted(
+        inspector.replace(
+            "<ReasoningModeBadge reasoning={st?.reasoning ?? null} status={statusNow}",
+            "<ReasoningModeBadge",
+        ),
+        inspector,
+    )
+    assert any("ReasoningModeBadge: not handed" in i for i in run_page_issues(detached, badge)), detached
+
+    instance_scoped = _planted(
+        badge.replace(
+            "const locale = useLocale();",
+            "const locale = useLocale();\n  useBuildProvenance();",
+        ),
+        badge,
+    )
+    assert any(
+        "inherits the deployment's mode" in i
+        for i in run_page_issues(inspector, instance_scoped)
+    ), instance_scoped
+
+    unmounted = _planted(inspector.replace("<ReasoningModeNotice", "<span"), inspector)
+    assert any("no longer mounts ReasoningModeNotice" in i for i in run_page_issues(unmounted, badge)), unmounted
 
 
 def test_the_header_keeps_the_mode_beside_the_api_indicator() -> None:
