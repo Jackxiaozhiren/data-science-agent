@@ -493,7 +493,9 @@ def run_page_issues(inspector: str, badge: str) -> list[str]:
             f"{RUN_MODE_BADGE}: reads the instance's /version again, so the run inherits the deployment's mode"
         )
     if "@/lib/buildProvenance" not in badge:
-        issues.append(f"{RUN_MODE_BADGE}: words the run's mode without the module that owns the wording")
+        issues.append(
+            f"{RUN_MODE_BADGE}: words the run's mode without the module that owns the wording"
+        )
     return issues
 
 
@@ -517,7 +519,9 @@ def test_the_run_page_probe_fires_on_an_instance_scoped_badge() -> None:
         ),
         inspector,
     )
-    assert any("ReasoningModeBadge: not handed" in i for i in run_page_issues(detached, badge)), detached
+    assert any("ReasoningModeBadge: not handed" in i for i in run_page_issues(detached, badge)), (
+        detached
+    )
 
     instance_scoped = _planted(
         badge.replace(
@@ -527,12 +531,13 @@ def test_the_run_page_probe_fires_on_an_instance_scoped_badge() -> None:
         badge,
     )
     assert any(
-        "inherits the deployment's mode" in i
-        for i in run_page_issues(inspector, instance_scoped)
+        "inherits the deployment's mode" in i for i in run_page_issues(inspector, instance_scoped)
     ), instance_scoped
 
     unmounted = _planted(inspector.replace("<ReasoningModeNotice", "<span"), inspector)
-    assert any("no longer mounts ReasoningModeNotice" in i for i in run_page_issues(unmounted, badge)), unmounted
+    assert any(
+        "no longer mounts ReasoningModeNotice" in i for i in run_page_issues(unmounted, badge)
+    ), unmounted
 
 
 def test_the_header_keeps_the_mode_beside_the_api_indicator() -> None:
