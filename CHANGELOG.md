@@ -22,8 +22,18 @@
   the same function. 15 passed.
 - Witnessed in a local browser at 1280×820: `output/lane-a/r02-run-badge-vs-instance.png` (run recorded `stub`,
   instance serving `heuristic` — the two labels now state their own scope) and
-  `output/lane-a/r02-run-badge-not-recorded.png` (the record stripped from a row, which says so). The hosted demo
-  keeps its current build until Render is redeployed; nothing about this change is claimed as live there.
+  `output/lane-a/r02-run-badge-not-recorded.png` (the record stripped from a row, which says so).
+- Verified against the hosted demo on 2026-11-07: Vercel had served the `main` build from its Git integration;
+  this session initiated no deployment, and the change is frontend-only, so no Render redeploy was involved.
+  `data-science-agent-web.vercel.app/analysis/run-f26cc1ec4b` answered HTTP 200 with
+  `server: Vercel`, `x-vercel-cache: MISS`, `x-vercel-id: hnd1::iad1::5gdbt-1794019729196-0a43cd8a72c6`
+  (response identifiers, not a deploy status). Its server-rendered HTML carries `This run: heuristic` and the new
+  notice with no `This API instance` wording, and the served JS chunks carry `This run: not recorded` and
+  `本次运行：未记录`. A real browser read the badge in both languages; see
+  `output/lane-a/r02-live-run-page.png`, `output/lane-a/r02-live-run-page-zh.png`,
+  `output/lane-a/r02-live-witness.log` and `output/lane-a/r02-live-witness-zh.log`. Both Vercel hosts named in
+  `docs/hosted-demo.md` served the same 126,235-byte run page. R-01's dataset probe still returns
+  `titanic.csv` (900 rows, `owner=shared`); the Render API was not redeployed, so its seeded data was untouched.
 - `tests/contract`: 324 passed, 3 failed and 32 errors, all in files this change does not touch — the failures are
   this machine's sandbox shim (its `AF_UNIX` broker sockets counted as network in `test_provider_route_is_offline`;
   its `mkdir` returning `EEXIST` on pytest's tmp root in `test_product_events`). `test_product_events` passes when
