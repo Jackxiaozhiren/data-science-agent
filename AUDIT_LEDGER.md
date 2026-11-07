@@ -17738,3 +17738,64 @@ probe start, not from an observed label. All timings are page-observed, so they 
 proxy hop and are comparable to each other, not directly to §314's server-side figures. No application
 code was changed: `backendProbe.ts` is unmodified by this work, and the conclusion is that it should stay
 that way.
+
+## 319. A run page names its own planner, and why "not deployed" was the wrong conclusion
+
+§311 recorded a deliberate deferral: the reasoning badge on a run page read `/version`, so it described the
+process serving the page rather than the run being displayed. R-02 Spec 2 asks for "the vocabulary the run
+already carries", and the report body already did exactly that — its first `**Reasoning:**` line comes from the
+run's `ReasoningRecord` in `state.reasoning`, written by the graph when the run starts and returned by the
+analysis router. The same page therefore gave two answers whenever a deployment changed mode after a run
+existed. On 2026-11-06 this was put to the owner as the §19.1 class-7 product fork with four numbered options;
+the owner authorised option 1, "the report page reads the run's own record", with no new product vocabulary.
+
+**What changed.** Six files in `2afdbe3`: `ReasoningModeBadge.tsx` and `buildProvenance.ts` take the run's record
+and its status instead of calling `useBuildProvenance`; `RunInspector.tsx` hands both to the two components;
+`locale.ts` gains seven keys in English and Chinese; the contract probe grows a run-page check; `CHANGELOG.md`
+records it. A finished run without a record says `This run: not recorded` and does not inherit the serving
+process's mode. A run still in flight renders nothing, because the row exists before the graph writes its record.
+The header chip and the footer keep `/version`: they answer a different question — what would plan a run here now.
+
+**Three commits, and what the first one cost.** `2afdbe3` (implementation), `306dd3e` (`ruff format --check` on
+the new block; only line wrapping changed), `0db4068` (the live-status correction below). The first push failed
+exactly one step, `ruff format --check`. Pushing `306dd3e` produced the remote warning "Required status check ci
+is expected", because the rule sees the branch rather than the pending run; the honest verdict is therefore the
+commit's own check-runs, not the push receipt. Both `306dd3e` and `0db4068` subsequently report `ci` success.
+
+**Falsification, captured rather than asserted.** An isolated tree at `/tmp/r02-red` held the three pre-change
+sources from `9cf0453` with the new probe copied in: `1 failed, 14 deselected`, reporting three issues (the
+record is not handed over, the component reads `/version`, the component is no longer mounted). Against the real
+tree the same probe reports `15 passed in 6.60s`, and the falsification assertion alone passes. Three planted
+copies — a badge without the record, a badge calling `useBuildProvenance`, a component no longer mounted — each
+redden the same function. Logs: `output/lane-a/red-r02-run-page.log`, `green-r02-run-page.log`.
+
+**Gates.** At `0db4068`, six check-runs completed with no failure: `ci`, `web-regression`, CodeQL (python,
+javascript), gitleaks success, SonarCloud neutral. Locally `tsc --noEmit` and `mkdocs build --strict` returned 0,
+and `ruff format --check` over the CI scope reported 330 files already formatted. The local contract suite
+printed `3 failed, 324 passed, 32 errors in 167.28s`; all 32 errors are this machine's sandbox shim raising
+`FileExistsError: EEXIST` on pytest's tmp root, and all 3 failures are `test_provider_route_is_offline.py`
+counting the shim's `AF_UNIX` broker sockets as outbound network — in files this change does not touch. The
+remote `ci` job runs the same suite clean.
+
+**The correction.** Earlier in this lane the handoff said the hosted demo still served the old build and that a
+human would need to supply deploy credentials. That was wrong on two counts. `GitHub deployments?sha=306dd3e`
+returning zero rows is a record of deployments this repository knows about, not a statement about the running
+build; "this session issued no deploy" is a fact about the session, not about Vercel's Git integration. The
+change is frontend-only, so Render never needed a redeploy. The only sound test is the served artifact. On
+2026-11-07 both hosts named in `docs/hosted-demo.md` answered 200; `/analysis/run-f26cc1ec4b` returned the same
+126,235 bytes of server-rendered HTML carrying `This run: heuristic` and the new notice, with zero occurrences
+of `This API instance`; the 13 `_next/static` chunks referenced by the home page carried `This run: not recorded`
+and `本次运行：未记录`. A real browser read the badge in English and after switching to Chinese; see
+`output/lane-a/r02-live-run-page{,-zh}.png` and `r02-live-witness{,-zh}.log`. `x-vercel-id` and `x-vercel-cache`
+are response identifiers, not deployment status words. `0db4068` replaced the stale sentence in `CHANGELOG.md`.
+R-01's probe still returns `titanic.csv` (900 rows, `owner=shared`) and `sales.csv` (500 rows, `owner=shared`);
+the Render instance was not redeployed, so its seeded data was untouched.
+
+**Why this entry is late, and what it does not claim.** The working copy of `AUDIT_LEDGER.md` is 202 lines behind
+`main`, so appending in place would have deleted existing content; this entry was built from
+`git show 0db4068:AUDIT_LEDGER.md` through a separate index. It makes no deployment claim on behalf of this
+session and quotes no deploy identifier. The owner's 2026-11-06 decision to leave #16 and #81 open and unworked
+stands; the five open Dependabot pull requests (#168-#172) are outside this lane and were not merged, since
+§19.1 item 4 withholds dependency and lockfile changes. If a human later redeploys the free-tier Render
+instance, its seeded datasets are dropped and R-01's acceptance probe must be re-run with the deployment's own
+identifier and status words quoted.
