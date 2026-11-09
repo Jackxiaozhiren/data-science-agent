@@ -32,6 +32,7 @@ nav:
       - Frontend: FRONTEND_IA.md
       - ADR — MCP stateless core: ADR/ADR-001-mcp-2026-07-28-stateless-core.md
       - ADR — Output artefact export: ADR/ADR-002-output-artifact-export-2026-09-08.md
+      - ADR — Zero-cost self-hosted baseline: ADR/ADR-003-zero-cost-self-hosted-baseline-2026-11-09.md
   - Evaluation:
       - Benchmark: benchmark.md
       - Contribute a Task: benchmark-task-contribution.md
