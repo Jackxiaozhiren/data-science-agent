@@ -1,0 +1,61 @@
+{
+  "recorded_at": "2026-11-09T12:04:16Z",
+  "verdict": "ok",
+  "targets": {
+    "web": "https://data-science-agent-web.vercel.app",
+    "api": "https://data-science-agent-api-h43i.onrender.com",
+    "expected_api_host": "data-science-agent-api-h43i.onrender.com"
+  },
+  "checks": [
+    {
+      "name": "api_version_contract",
+      "status": "ok",
+      "detail": "HTTP 200",
+      "required": true
+    },
+    {
+      "name": "web_shell_names_chunks",
+      "status": "ok",
+      "detail": "HTTP 200, 13 distinct chunk path(s) named",
+      "required": true
+    },
+    {
+      "name": "web_chunks_answer",
+      "status": "ok",
+      "detail": "12 sampled, 0 did not answer as JavaScript",
+      "required": true
+    },
+    {
+      "name": "web_bundle_targets_documented_api",
+      "status": "ok",
+      "detail": "'data-science-agent-api-h43i.onrender.com' seen in a sampled chunk",
+      "required": false
+    }
+  ],
+  "observed": {
+    "version_payload": {
+      "version": "4.6.0",
+      "distribution": "jack-data-science-agent",
+      "reasoning_mode": {
+        "mode": "heuristic",
+        "stub": true,
+        "provider": "stub",
+        "model": null,
+        "error": null,
+        "source": "environment"
+      },
+      "storage": {
+        "durable": false,
+        "ephemeral_roots": [
+          "artifacts",
+          "database",
+          "datasets"
+        ]
+      }
+    },
+    "web_status": 200,
+    "web_content_type": "text/html; charset=utf-8",
+    "chunk_count": 13
+  },
+  "basis": "Served artifacts only: the `/version` payload and the JavaScript the page names. No local build, no repository source and no version string is treated as evidence about what is deployed. Bounded sampling: chunks are read up to a fixed limit, so a negative result is reported as unproven rather than absent."
+}
