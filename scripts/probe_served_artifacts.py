@@ -14,28 +14,31 @@ What it reads, in four separate verdicts rather than one:
 * ``web_shell_names_chunks`` -- the page HTML still names built JavaScript. A shell that references
   nothing is a blank page that returns 200.
 * ``web_chunks_answer`` -- every sampled chunk returns 200 with JavaScript, so the build that the shell
-  names was actually uploaded rather than half-pruned.
+  names was actually uploaded rather than half-pruned. A chunk the host refuses is a mismatch; a chunk
+  no answer arrived for is unmeasured, because a TLS reset is a fact about the read, not the build.
 * ``web_bundle_targets_documented_api`` (advisory) -- a sampled chunk contains the canonical API host,
   which is what proves the bundle was built with ``NEXT_PUBLIC_API_URL`` set. Sampling is bounded, so a
   host that is not seen is reported as unproven, never as absent.
 
-Exit codes are the product: ``0`` pass, ``1`` mismatch, ``2`` unmeasured. An unreachable host is never a
+Exit codes are the product: ``0`` ok, ``1`` mismatch, ``2`` unmeasured. An unreachable host is never a
 pass -- a sleeping free instance leaves the question open, and calling that green is how a gate stops
 meaning anything (the failure mode ``scripts/run_web_live_gates.sh`` was written to avoid).
 
-No write outside ``docs/audit/``. Network access is the point of this script, unlike ``audit_facts.py``
-which is deliberately offline; both are stdlib-only.
+Two constraints this file inherits from ``scripts/audit_facts.py``: stdlib only, and no write outside
+``docs/audit/``. It is deliberately *not* offline -- reading the deployment is the whole point -- and it
+keeps its exception handling in one place (``_guarded``) so the repository's handler ceiling moves by one
+rather than by one per read.
 """
 
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import re
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -54,10 +57,18 @@ VERDICT_MISMATCH = "mismatch"
 VERDICT_UNMEASURED = "unmeasured"
 VERDICTS = (VERDICT_OK, VERDICT_MISMATCH, VERDICT_UNMEASURED)
 
+USER_AGENT = "dsa-served-artifact-probe"
 #: Next serves build output from `/_next/static/**`; the Turbopack bundles live under `immutable/chunks`.
 _CHUNK_REF = re.compile(r"""(?:src|href)=["'](/_next/static/[^"'?>]+\.js)["']""")
 _MAX_BODY = 2_000_000
 _MAX_CHUNKS = 12
+
+
+@dataclass(frozen=True)
+class Reading:
+    status: int
+    content_type: str
+    body: bytes
 
 
 @dataclass
@@ -74,6 +85,79 @@ class Check:
             "detail": self.detail,
             "required": self.required,
         }
+
+
+def _guarded[T](call: Callable[[], T]) -> tuple[T | None, str]:
+    """Run one step, turning a network or parse failure into a reason instead of a traceback.
+
+    The single exception boundary in this file, and deliberately narrow: a programming error (say a
+    ``TypeError``) is not caught and must not be reported as an unreachable host.
+    """
+    try:
+        return call(), ""
+    except (OSError, http.client.HTTPException, ValueError) as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+
+
+def _read(url: str, timeout: float) -> Reading:
+    """One GET over ``http.client``; raises into ``_guarded`` rather than handling anything itself."""
+    # Checked rather than assumed: both defaults are https literals, but `--web` and `--api` are operator
+    # input, and a `file:` URL would turn this probe into a local read that reports as a deployment fact.
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https"):
+        raise ValueError(f"refusing a non-http(s) URL: {url!r}")
+    target = parts.path or "/"
+    if parts.query:
+        target = f"{target}?{parts.query}"
+    connection_class = (
+        http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+    )
+    connection = connection_class(parts.hostname, parts.port, timeout=timeout)
+    try:
+        connection.request("GET", target, headers={"User-Agent": USER_AGENT})
+        response = connection.getresponse()
+        return Reading(
+            status=response.status,
+            content_type=response.getheader("content-type", "") or "",
+            body=response.read(_MAX_BODY),
+        )
+    finally:
+        connection.close()
+
+
+def _read_chunk(url: str, timeout: float) -> tuple[Reading | None, str]:
+    """Read one chunk, retrying a transport failure once.
+
+    A CDN edge drops connections occasionally; the retry is here because a single TLS EOF was observed
+    on 2026-11-09 against a healthy bundle. The retry never applies to an HTTP answer -- a 404 is a
+    fact about the build and must not be retried into a different-looking result.
+    """
+    reading, error = _guarded(lambda: _read(url, timeout))
+    if reading is None:
+        reading, error = _guarded(lambda: _read(url, timeout))
+    return reading, error
+
+
+def chunk_verdict(names: list[str], bad: list[str], unread: list[str]) -> tuple[str, str]:
+    """The chunk check's whole decision, so it can be exercised with fixtures instead of a CDN.
+
+    ``bad`` holds chunks the host answered for and refused; ``unread`` holds chunks no answer arrived
+    for. Only the first is evidence about the build -- conflating them is how a transient TLS reset gets
+    recorded as a half-pruned deployment, which happened on 2026-11-09.
+    """
+    if not names:
+        return VERDICT_MISMATCH, "the shell named no chunk to read"
+    if bad:
+        return (
+            VERDICT_MISMATCH,
+            f"{len(names)} sampled, {len(bad)} did not answer as JavaScript: " + "; ".join(bad[:3]),
+        )
+    if unread:
+        return (
+            VERDICT_UNMEASURED,
+            f"{len(names)} sampled, {len(unread)} could not be read: " + "; ".join(unread[:3]),
+        )
+    return VERDICT_OK, f"{len(names)} sampled, all answered as JavaScript"
 
 
 def chunk_paths(html: str) -> list[str]:
@@ -121,7 +205,7 @@ def version_contract_errors(payload: Any) -> list[str]:
 
 
 def overall_verdict(checks: list[Check]) -> str:
-    """Mismatch beats unmeasured beats pass, and only required checks can demote the result."""
+    """Mismatch beats unmeasured beats ok, and only required checks can demote the result."""
     if any(c.status == VERDICT_MISMATCH for c in checks):
         return VERDICT_MISMATCH
     if any(c.required and c.status == VERDICT_UNMEASURED for c in checks):
@@ -129,81 +213,74 @@ def overall_verdict(checks: list[Check]) -> str:
     return VERDICT_OK
 
 
-def _fetch(url: str, timeout: float) -> tuple[int, str, bytes]:
-    # Checked rather than assumed: both defaults are https literals, but `--web` and `--api` are operator
-    # input, and a `file:` URL would turn this probe into a local read that reports as a deployment fact.
-    if urllib.parse.urlsplit(url).scheme not in ("http", "https"):
-        raise ValueError(f"refusing a non-http(s) URL: {url!r}")
-    request = urllib.request.Request(  # noqa: S310 - scheme restricted immediately above
-        url, headers={"User-Agent": "dsa-served-artifact-probe"}
-    )
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - scheme restricted above
-        return response.status, response.headers.get("content-type", ""), response.read(_MAX_BODY)
-
-
 def probe(web: str, api: str, api_host: str, timeout: float) -> dict[str, Any]:
+    """Read all four things and return the report; never raises for a deployment that is simply down."""
     checks: list[Check] = []
     observed: dict[str, Any] = {}
 
-    try:
-        status, _ctype, body = _fetch(f"{api.rstrip('/')}/version", timeout)
-        payload = json.loads(body)
+    reading, error = _guarded(lambda: _read(f"{api.rstrip('/')}/version", timeout))
+    payload: Any = None
+    parse_error = ""
+    if reading is not None:
+        payload, parse_error = _guarded(lambda: json.loads(reading.body))
+    if reading is None or parse_error:
+        checks.append(
+            Check(
+                "api_version_contract",
+                VERDICT_UNMEASURED,
+                f"unreachable or unparseable: {error or parse_error}",
+            )
+        )
+    else:
         observed["version_payload"] = payload
         errors = version_contract_errors(payload)
         checks.append(
             Check(
                 "api_version_contract",
-                VERDICT_OK if status == 200 and not errors else VERDICT_MISMATCH,
-                f"HTTP {status}" + ("" if not errors else "; " + "; ".join(errors)),
+                VERDICT_OK if reading.status == 200 and not errors else VERDICT_MISMATCH,
+                f"HTTP {reading.status}" + ("" if not errors else "; " + "; ".join(errors)),
             )
-        )
-    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
-        checks.append(
-            Check("api_version_contract", VERDICT_UNMEASURED, f"unreachable or unparseable: {exc}")
         )
 
     html: str | None = None
-    try:
-        status, ctype, body = _fetch(web, timeout)
-        html = body.decode("utf-8", errors="replace")
-        observed["web_status"] = status
-        observed["web_content_type"] = ctype
+    shell, shell_error = _guarded(lambda: _read(web, timeout))
+    if shell is None:
+        checks.append(
+            Check("web_shell_names_chunks", VERDICT_UNMEASURED, f"unreachable: {shell_error}")
+        )
+    else:
+        html = shell.body.decode("utf-8", errors="replace")
+        observed["web_status"] = shell.status
+        observed["web_content_type"] = shell.content_type
         names = chunk_paths(html)
         observed["chunk_count"] = len(names)
         checks.append(
             Check(
                 "web_shell_names_chunks",
-                VERDICT_OK if status == 200 and names else VERDICT_MISMATCH,
-                f"HTTP {status}, {len(names)} distinct chunk path(s) named",
+                VERDICT_OK if shell.status == 200 and names else VERDICT_MISMATCH,
+                f"HTTP {shell.status}, {len(names)} distinct chunk path(s) named",
             )
         )
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        checks.append(Check("web_shell_names_chunks", VERDICT_UNMEASURED, f"unreachable: {exc}"))
 
     if html is not None:
         names = chunk_paths(html)[:_MAX_CHUNKS]
         bad: list[str] = []
+        unread: list[str] = []
         host_seen = False
         for path in names:
-            try:
-                status, ctype, body = _fetch(f"{web.rstrip('/')}{path}", timeout)
-            except (urllib.error.URLError, TimeoutError, OSError) as exc:
-                bad.append(f"{path} -> {exc}")
-                continue
-            if status != 200:
-                bad.append(f"{path} -> HTTP {status}")
-            elif "javascript" not in ctype.lower():
-                bad.append(f"{path} -> content-type {ctype!r}")
-            elif api_host in body.decode("utf-8", errors="replace"):
+            chunk, chunk_error = _read_chunk(f"{web.rstrip('/')}{path}", timeout)
+            if chunk is None:
+                unread.append(f"{path} -> {chunk_error}")
+            elif chunk.status != 200:
+                bad.append(f"{path} -> HTTP {chunk.status}")
+            elif "javascript" not in chunk.content_type.lower():
+                bad.append(f"{path} -> content-type {chunk.content_type!r}")
+            elif api_host in chunk.body.decode("utf-8", errors="replace"):
                 host_seen = True
-        checks.append(
-            Check(
-                "web_chunks_answer",
-                VERDICT_OK if names and not bad else VERDICT_MISMATCH,
-                f"{len(names)} sampled, {len(bad)} did not answer as JavaScript"
-                + ("" if not bad else ": " + "; ".join(bad[:3])),
-            )
-        )
+        # An HTTP answer that says "no" is a fact about the build; a connection that never delivered one
+        # is a fact about this run. `chunk_verdict` keeps the two apart.
+        chunk_status, chunk_detail = chunk_verdict(names, bad, unread)
+        checks.append(Check("web_chunks_answer", chunk_status, chunk_detail))
         checks.append(
             Check(
                 "web_bundle_targets_documented_api",
@@ -216,10 +293,9 @@ def probe(web: str, api: str, api_host: str, timeout: float) -> dict[str, Any]:
             )
         )
 
-    verdict = overall_verdict(checks)
     return {
         "recorded_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "verdict": verdict,
+        "verdict": overall_verdict(checks),
         "targets": {"web": web, "api": api, "expected_api_host": api_host},
         "checks": [c.as_dict() for c in checks],
         "observed": observed,
@@ -233,7 +309,9 @@ def probe(web: str, api: str, api_host: str, timeout: float) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else "")
+    parser = argparse.ArgumentParser(
+        description=("Read the deployed artifacts and report the verdict.")
+    )
     parser.add_argument("--web", default=DEFAULT_WEB, help="web origin to read")
     parser.add_argument("--api", default=DEFAULT_API, help="api origin to read")
     parser.add_argument(
@@ -254,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.write:
         RECORD.parent.mkdir(parents=True, exist_ok=True)
-        RECORD.write_text(json.dumps(report, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+        RECORD.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     if args.json:
         print(json.dumps(report, indent=2))

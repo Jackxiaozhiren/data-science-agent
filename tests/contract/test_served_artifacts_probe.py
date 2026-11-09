@@ -54,7 +54,9 @@ def test_chunk_paths_keeps_both_next_static_layouts_and_drops_duplicates() -> No
     assert probe.chunk_paths(html) == [
         "/_next/static/chunks/main-app-abc.js",
         "/_next/static/immutable/chunks/1def.js",
-    ], "Turbopack emits under immutable/chunks; a chunks-only pattern would report zero and look broken"
+    ], (
+        "Turbopack emits under immutable/chunks; a chunks-only pattern would report zero and look broken"
+    )
 
 
 def test_version_contract_accepts_the_shape_the_api_publishes() -> None:
@@ -85,7 +87,9 @@ def _check(name: str, status: str, required: bool = True) -> probe.Check:
 
 
 def test_mismatch_outranks_unmeasured_and_unmeasured_never_reads_as_ok() -> None:
-    assert probe.overall_verdict([_check("a", probe.VERDICT_UNMEASURED)]) == probe.VERDICT_UNMEASURED
+    assert (
+        probe.overall_verdict([_check("a", probe.VERDICT_UNMEASURED)]) == probe.VERDICT_UNMEASURED
+    )
     assert (
         probe.overall_verdict(
             [_check("a", probe.VERDICT_UNMEASURED), _check("b", probe.VERDICT_MISMATCH)]
@@ -108,6 +112,29 @@ def test_an_empty_shell_is_a_mismatch_rather_than_a_quiet_pass() -> None:
     """A page that returns 200 and names no JavaScript is a blank page, not a measured success."""
     checks = [_check("web_shell_names_chunks", probe.VERDICT_MISMATCH)]
     assert probe.overall_verdict(checks) == probe.VERDICT_MISMATCH
+
+
+def test_a_chunk_the_host_refuses_is_a_mismatch() -> None:
+    status, detail = probe.chunk_verdict(["/a.js"], ["/a.js -> HTTP 404"], [])
+    assert status == probe.VERDICT_MISMATCH
+    assert "404" in detail
+
+
+def test_a_chunk_no_answer_arrived_for_is_unmeasured_not_a_mismatch() -> None:
+    """Observed 2026-11-09: one chunk raised SSLEOFError against a healthy bundle.
+
+    A dropped connection says nothing about whether the build is complete, so it must not be recorded
+    as one. The first draft of this probe did exactly that and reported a false mismatch.
+    """
+    status, detail = probe.chunk_verdict(["/a.js"], [], ["/a.js -> SSLEOFError: unexpected EOF"])
+    assert status == probe.VERDICT_UNMEASURED, detail
+    assert "could not be read" in detail
+
+
+def test_a_refusal_outranks_an_unread_chunk() -> None:
+    """When both kinds are present the definitive answer wins; the build really is missing an asset."""
+    status, _ = probe.chunk_verdict(["/a.js", "/b.js"], ["/a.js -> HTTP 404"], ["/b.js -> timeout"])
+    assert status == probe.VERDICT_MISMATCH
 
 
 def test_the_recorded_reading_is_shape_valid_and_names_its_basis() -> None:

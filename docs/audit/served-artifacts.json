@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-11-09T12:04:16Z",
+  "recorded_at": "2026-11-09T12:18:53Z",
   "verdict": "ok",
   "targets": {
     "web": "https://data-science-agent-web.vercel.app",
@@ -22,7 +22,7 @@
     {
       "name": "web_chunks_answer",
       "status": "ok",
-      "detail": "12 sampled, 0 did not answer as JavaScript",
+      "detail": "12 sampled, all answered as JavaScript",
       "required": true
     },
     {

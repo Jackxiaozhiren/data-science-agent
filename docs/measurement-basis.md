@@ -37,7 +37,7 @@ never a version string — and reports four independent checks:
 |---|---|---|
 | `api_version_contract` | the `/version` payload shape | a deployed API that dropped a key the front-end discloses, without failing any request |
 | `web_shell_names_chunks` | the page HTML | a shell that returns 200 and references no built JavaScript |
-| `web_chunks_answer` | up to 12 named chunks | a half-pruned build: the shell names assets the host does not serve |
+| `web_chunks_answer` | up to 12 named chunks | a half-pruned build: the shell names assets the host does not serve. A chunk the host refuses is a mismatch; a chunk no answer arrived for is unmeasured |
 | `web_bundle_targets_documented_api` | a sampled chunk body | a bundle rebuilt without `NEXT_PUBLIC_API_URL`, pointing at an origin nobody documented |
 
 Three properties of this basis matter more than the number:
@@ -47,14 +47,19 @@ Three properties of this basis matter more than the number:
   otherwise is how a gate stops meaning anything.
 - **Chunk sampling is bounded, so absence is unproven.** The origin check is therefore *advisory*: it can
   promote a reading but never demote one, and a host that is not seen is recorded as unproven.
+- **A refusal and a dropped connection are different facts.** An HTTP answer that says "no" is a fact
+  about the build; a connection that never delivered one is a fact about the run, and is recorded as
+  unmeasured. The first draft conflated them and reported one transient TLS reset as a half-pruned
+  deployment — the instrument failing the way the deployment is not supposed to.
 - **The version string is not evidence about a deployment.** `/version` returns a hand-typed value that
   cannot disagree with a running build; on 2026-11-07 it reported `4.6.0` while the served front-end
   still carried the previous build's copy. That is why this metric reads artefacts instead.
 
-The first reading (2026-11-09T12:04:16Z) recorded all four checks green, and independently confirmed from
-the deployed side that all three writable roots are ephemeral (`storage.durable=false`,
-`ephemeral_roots=[artifacts, database, datasets]`) — the same fact `render.yaml` states in the repository,
-now measured from the outside instead of read from a file.
+The first reading (2026-11-09, `docs/audit/served-artifacts.json`) recorded all four checks green, and
+independently confirmed from the deployed side that all three writable roots are ephemeral
+(`storage.durable=false`, `ephemeral_roots=[artifacts, database, datasets]`) — the same fact `render.yaml`
+states in the repository, now measured from the outside instead of read from a file. The exact reading
+time lives in that file rather than here, so a re-run cannot leave this page quoting a stale moment.
 
 ## Evidence alignment
 
