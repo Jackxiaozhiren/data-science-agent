@@ -39,6 +39,7 @@ nav:
       - Evaluation: evaluation.md
       - Real-model Evaluation: real-model-evaluation.md
       - Reproducibility: reproducibility.md
+      - Measurement Basis: measurement-basis.md
       - Research: research.md
   - Operations & Security:
       - Security: security.md
