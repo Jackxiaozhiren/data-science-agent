@@ -63,7 +63,7 @@ Two further options were considered and rejected on evidence rather than cost:
 |---|---|---|---|
 | S1 trustworthy baseline | this ADR accepted | evidence four-layer alignment, clean-environment re-run, served-artifact probe, authorization checklist | each metric recorded once with a defined measurement basis |
 | S2 boundary and attribution | S1 exit | boundary matrix, deterministic-path latency and failure attribution, export-first lifecycle, contract-version policy | boundary decidability, attribution completeness and artifact parseability recorded; `matrix_valid` and `publication_ready` never conflated |
-| S3 controlled expansion | S2 exit, and the open questions in Appendix C answered | checkpoint replay, cross-environment diffs, decision-event log | each expansion carries its own ADR and passes INV1–INV8 |
+| S3 controlled expansion | S2 exit, and the open questions in Appendix C answered | replay grounded in a real checkpoint (planned only — not implemented in this build, and not to be described as available until a shipped path supports it), cross-environment diffs, decision-event log | each expansion carries its own ADR and passes INV1–INV8 |
 
 No dependency additions, no infrastructure additions, no edits to the evaluator or the frozen catalogs.
 
