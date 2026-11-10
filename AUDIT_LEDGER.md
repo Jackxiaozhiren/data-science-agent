@@ -18103,3 +18103,70 @@ claims and all twenty-four no-argument document guards pass; `mkdocs build --str
 documentation page was added, so no nav entry moved. The pull request's own head carries its CI gates
 and they are not quoted here. No deployment was issued, no public issue was commented on or closed, no
 credential was read and no paid resource was enabled in this lane.
+
+## §324 — S2 opens with the boundary matrix (2026-11-10)
+
+**What the stage asks.** ADR-003's S2 exit condition is "boundary decidability, attribution completeness
+and artifact parseability recorded", with `matrix_valid` and `publication_ready` never conflated. Only the
+first of its four items is taken here. Latency and failure attribution, the export-first lifecycle and the
+contract-version policy have no reading, and this section does not claim they have started.
+
+**The question is not how strong the boundary is.** It is whether anything decides, at request time, that a
+capability is refused. ADR-003 already states that a deny list is not containment; repeating that in prose
+changes nothing. So a cell is scored by the outcome of the last check a caller meets, and a cell with no
+such check is recorded `undecidable` even where today's code never exercises the capability. The
+alternative — scoring `fenced` because the module never calls `open` — would describe the source rather
+than a boundary, and the next edit would close the gap with no check objecting. Those cells keep the
+observation in `fenced_in_this_tree` and stay out of the decidability numerator.
+
+**What was measured.** The surfaces that accept model-authored input — `run_python`, `run_sql`,
+`profile_dataset` — crossed with five capabilities: process spawn, network egress, filesystem read,
+filesystem write, credential read. `scripts/measure_execution_boundary.py` runs probes whose expressions
+are repository constants and writes `docs/audit/execution-boundary.json` against `ab95872`. The one file a
+probe opens is a CSV this tree ships, and it is opened only to watch the engine refuse it; nothing reaches
+the network, and the CLI takes no path argument.
+
+**First reading: six open, six fenced, three undecidable.** Twelve of the fifteen cells carry a
+request-time decision; three are fenced only by today's import list or today's function body.
+`effect_verified` counts separately and is three — the cells where a test in this tree has watched the
+refusal happen, as opposed to a check having been read.
+
+**The asymmetry is the finding.** `run_sql` carries two layers: a name filter over statement text and,
+behind it, `SET enable_external_access=false` on the connection. The filter permits
+`SELECT * FROM '/etc/hosts'` — the shape names no denied pattern — and the engine refuses it anyway; the
+filter refuses `read_csv_auto`, and the engine refuses that too, so either layer alone would close the
+cell. `run_python` has one layer and no engine equivalent, and every one of its cells is open. That is the
+S2 result, and it is a property of the two shapes rather than of the day's pattern lists.
+
+**Names are not effects, measured twice.** `open('/etc/hosts')` is refused while `pl.read_csv('/etc/hosts')`
+is not; `.environ` is refused while `pl.os.__dict__['environ']` is not. The second spelling is new to this
+record: `docs/security.md` already noted that `pl.os.walk` and `pl._dependencies.subprocess.Popen` pass the
+check, but not that the subscript arm reopens the attribute the filter had just closed. `_check_ast`'s
+`ast.Subscript` branch is a comment about blocking `__builtins__.__dict__` followed by `pass`, so the
+mapping is reachable by name. Both spellings sit in the probe set, which is why the credential cell reads
+open rather than fenced.
+
+**One environmental fact worth keeping.** `SandboxViolation` is declared as a `ToolExecutionError`
+subclass, and at measurement time `issubclass` is false: the sandbox module's
+`from dsa_tools.errors import ToolExecutionError` falls into its own `except ImportError` fallback through
+the package cycle and defines a local class. The instrument lists `SandboxViolation` beside
+`ToolExecutionError` instead of assuming the relation. An instrument that trusted the declaration would
+have read every probe as a crash.
+
+**What the reading does not say.** Nothing about containment, in the record's own words; nothing about
+whether an adversary could reach a capability by a path no probe names; nothing about `publication_ready`,
+which keeps its own gate and its own `scope=full` requirement. A green matrix here would not move a
+leaderboard row.
+
+**Gates.** The new contract tests rebuild the record and compare it field by field, re-derive every verdict
+from its layers instead of importing the rule, require each layer's outcome to agree with the probes it
+cites, forbid absence from scoring as a decision, check that the summary is arithmetic over the cells, and
+pin the disclaimer text, the timestamp and commit shape, and the basis page's pointers. `ruff check` and
+`ruff format --check` return 0; `scripts/find_orphan_reads.py --check` reports the registered keys
+unchanged; `scripts/audit_facts.py --check` returns OK after `ceiling.debt.exceptHandlers` moved 187 -> 188
+for the single handler in `_attempt`, with the reason appended to `_redefinitionNote`;
+`scripts/check_public_claims.py` reports no stale claims; the census and checkpoint document guards pass;
+`mkdocs build --strict` succeeds and no page was added, so no nav entry moved. One local failure,
+`tests/contract/test_doc_code_paths.py`, is a stale-worktree artifact: it names four S1 files this copy
+does not carry, and they exist on the branch. No deployment was issued, no issue was commented on or
+closed, no credential was read and no paid resource was enabled.

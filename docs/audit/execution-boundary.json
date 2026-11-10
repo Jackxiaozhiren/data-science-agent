@@ -1,0 +1,537 @@
+{
+  "schema": "execution-boundary-matrix/v1",
+  "recorded_at": "2026-11-10T12:57:58Z",
+  "reviewed_commit": "ab958723f7e8",
+  "question": "for each surface that accepts model-authored input, is the capability decided by a check that runs at request time?",
+  "verdict_rule": "the last check to run decides the cell; a capability with no request-time check is recorded undecidable even when today's code does not exercise it",
+  "surfaces": [
+    {
+      "id": "run_python",
+      "entry": "packages/execution/src/dsa_execution/python_sandbox.py:execute_python",
+      "input": "model-authored Python"
+    },
+    {
+      "id": "run_sql",
+      "entry": "packages/tools/src/dsa_tools/tools/run_sql.py:execute",
+      "input": "model-authored SQL"
+    },
+    {
+      "id": "profile_dataset",
+      "entry": "packages/tools/src/dsa_tools/tools/profile_dataset.py:execute",
+      "input": "a path, not code"
+    }
+  ],
+  "probes": [
+    {
+      "id": "ast-open-call",
+      "surface": "run_python",
+      "question": "is the builtin open() refused by the AST check?",
+      "observed": "refused",
+      "detail": "Call denied: open()"
+    },
+    {
+      "id": "ast-environ-attribute",
+      "surface": "run_python",
+      "question": "is the .environ attribute refused by the AST check?",
+      "observed": "refused",
+      "detail": "Attribute denied: .environ"
+    },
+    {
+      "id": "ast-environ-subscript",
+      "surface": "run_python",
+      "question": "is .environ still refused when the mapping is read through __dict__?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "ast-subprocess-reexport",
+      "surface": "run_python",
+      "question": "is a process handle reachable through an allowlisted module?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "ast-read-csv-path",
+      "surface": "run_python",
+      "question": "is an arbitrary local path readable through an allowlisted module?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "ast-read-csv-remote",
+      "surface": "run_python",
+      "question": "is a remote path accepted through an allowlisted module?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "ast-write-csv",
+      "surface": "run_python",
+      "question": "is a write reachable through an allowlisted module?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "sql-install-extension",
+      "surface": "run_sql",
+      "question": "does the SQL guard refuse extension loading?",
+      "observed": "refused",
+      "detail": "Disallowed SQL pattern: '\\\\bINSTALL\\\\b'"
+    },
+    {
+      "id": "sql-copy-out",
+      "surface": "run_sql",
+      "question": "does the SQL guard refuse writing a file?",
+      "observed": "refused",
+      "detail": "Disallowed SQL pattern: '\\\\bCOPY\\\\b'"
+    },
+    {
+      "id": "sql-read-function",
+      "surface": "run_sql",
+      "question": "does the SQL guard refuse a file-reading table function?",
+      "observed": "refused",
+      "detail": "Disallowed SQL pattern: '\\\\bread_\\\\w+'"
+    },
+    {
+      "id": "sql-quoted-path",
+      "surface": "run_sql",
+      "question": "does the SQL guard refuse a quoted path used as a table name?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "sql-env-function",
+      "surface": "run_sql",
+      "question": "does the SQL guard refuse an environment-variable function?",
+      "observed": "permitted",
+      "detail": ""
+    },
+    {
+      "id": "duckdb-read-csv",
+      "surface": "run_sql",
+      "question": "does the engine fence allow a CSV on disk to be opened?",
+      "observed": "refused",
+      "detail": "Permission Error: Cannot access file \"benchmarks/ds-agent-benchmark/datasets/data_quality.csv\" - file system operations are disabled by configuration"
+    },
+    {
+      "id": "duckdb-copy-out",
+      "surface": "run_sql",
+      "question": "does the engine fence allow a table to be written to a file?",
+      "observed": "refused",
+      "detail": "Permission Error: Cannot access file \"/tmp/dsa-probe.csv\" - file system operations are disabled by configuration"
+    },
+    {
+      "id": "duckdb-glob",
+      "surface": "run_sql",
+      "question": "does the engine fence allow the working directory to be listed?",
+      "observed": "refused",
+      "detail": "Permission Error: Cannot access file \"*\" - file system operations are disabled by configuration"
+    },
+    {
+      "id": "duckdb-env-function",
+      "surface": "run_sql",
+      "question": "does the engine expose an environment-variable function?",
+      "observed": "refused",
+      "detail": "Catalog Error: Scalar Function with name getenv does not exist!"
+    },
+    {
+      "id": "profile-url-path",
+      "surface": "profile_dataset",
+      "question": "does a URL-shaped path get past the existence and separator checks?",
+      "observed": "refused",
+      "detail": "a URL-shaped path fails the existence check and the doubled-separator rule"
+    },
+    {
+      "id": "profile-process-import",
+      "surface": "profile_dataset",
+      "question": "does the profile tool import a process or shell module?",
+      "observed": "refused",
+      "detail": "imports only ['__future__', 'dsa_datasets', 'dsa_tools', 'pathlib', 'pydantic', 'typing']"
+    }
+  ],
+  "cells": [
+    {
+      "id": "RP-1",
+      "surface": "run_python",
+      "capability": "process_spawn",
+      "verdict": "open",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "ast_deny_list",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "ast-subprocess-reexport"
+          ],
+          "note": "the filter names identifiers rather than effects, and it is the only check here"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "a process handle is reachable through an allowlisted module, so the cell is open whether or not this build resolves the attribute"
+    },
+    {
+      "id": "RP-2",
+      "surface": "run_python",
+      "capability": "network_egress",
+      "verdict": "open",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "ast_deny_list",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "ast-read-csv-remote"
+          ],
+          "note": "the filter names identifiers rather than effects, and it is the only check here"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "no engine-level fence exists for the interpreter; which hosts are reachable is a property of the installed wheels and of the network the process runs in"
+    },
+    {
+      "id": "RP-3",
+      "surface": "run_python",
+      "capability": "filesystem_read",
+      "verdict": "open",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "ast_deny_list",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "ast-read-csv-path"
+          ],
+          "note": "the filter names identifiers rather than effects, and it is the only check here"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "open() is refused while an allowlisted reader is not, so the filter does not close reads"
+    },
+    {
+      "id": "RP-4",
+      "surface": "run_python",
+      "capability": "filesystem_write",
+      "verdict": "open",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "ast_deny_list",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "ast-write-csv"
+          ],
+          "note": "the filter names identifiers rather than effects, and it is the only check here"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "the same shape as the read cell: the refused spelling is not the only spelling"
+    },
+    {
+      "id": "RP-5",
+      "surface": "run_python",
+      "capability": "credential_read",
+      "verdict": "open",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "ast_deny_list",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "ast-environ-attribute",
+            "ast-environ-subscript"
+          ],
+          "note": "the filter names identifiers rather than effects, and it is the only check here"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "one refused spelling and one permitted spelling of the same capability; the cell is open"
+    },
+    {
+      "id": "RS-1",
+      "surface": "run_sql",
+      "capability": "process_spawn",
+      "verdict": "fenced",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "sql_guard",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "sql-install-extension"
+          ],
+          "note": "a name filter over statement text: it decides spellings, not engine behaviour"
+        },
+        {
+          "layer": "duckdb_fence",
+          "outcome": "fenced",
+          "decided_by": "read",
+          "probes": [],
+          "note": "extension loading is off, and the engine's catalogue holds no shell or process function at all"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "the capability is absent from the engine rather than refused by a check, so an engine that grew one would not be caught here"
+    },
+    {
+      "id": "RS-2",
+      "surface": "run_sql",
+      "capability": "network_egress",
+      "verdict": "fenced",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "sql_guard",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "sql-read-function"
+          ],
+          "note": "a name filter over statement text: it decides spellings, not engine behaviour"
+        },
+        {
+          "layer": "duckdb_fence",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "duckdb-read-csv"
+          ],
+          "note": "the connection sets enable_external_access=false before any caller statement runs"
+        }
+      ],
+      "effect_verified": true,
+      "verified_by": "tests/security/test_sql_sandbox.py",
+      "residual": "both layers refuse independently; the engine layer is the one that survives a filter edit"
+    },
+    {
+      "id": "RS-3",
+      "surface": "run_sql",
+      "capability": "filesystem_read",
+      "verdict": "fenced",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "sql_guard",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "sql-quoted-path"
+          ],
+          "note": "a quoted path names none of the denied patterns, which is why a second layer exists"
+        },
+        {
+          "layer": "duckdb_fence",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "duckdb-read-csv"
+          ],
+          "note": "the connection sets enable_external_access=false before any caller statement runs"
+        }
+      ],
+      "effect_verified": true,
+      "verified_by": "tests/security/test_sql_sandbox.py",
+      "residual": "the filter is open here and the engine closes it, so the cell carries the engine's answer"
+    },
+    {
+      "id": "RS-4",
+      "surface": "run_sql",
+      "capability": "filesystem_write",
+      "verdict": "fenced",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "sql_guard",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "sql-copy-out"
+          ],
+          "note": "a name filter over statement text: it decides spellings, not engine behaviour"
+        },
+        {
+          "layer": "duckdb_fence",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "duckdb-copy-out"
+          ],
+          "note": "the connection sets enable_external_access=false before any caller statement runs"
+        }
+      ],
+      "effect_verified": true,
+      "verified_by": "tests/security/test_sql_sandbox.py",
+      "residual": "write verbs are refused by name and file operations are refused by configuration"
+    },
+    {
+      "id": "RS-5",
+      "surface": "run_sql",
+      "capability": "credential_read",
+      "verdict": "fenced",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "sql_guard",
+          "outcome": "open",
+          "decided_by": "probe",
+          "probes": [
+            "sql-env-function"
+          ],
+          "note": "a name filter over statement text: it decides spellings, not engine behaviour"
+        },
+        {
+          "layer": "duckdb_fence",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "duckdb-env-function"
+          ],
+          "note": "the engine answers that no such function exists, so there is nothing to read"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "the filter would permit the call; the refusal comes from the engine's function catalogue, which is a property of the build rather than a statement of policy"
+    },
+    {
+      "id": "PD-1",
+      "surface": "profile_dataset",
+      "capability": "process_spawn",
+      "verdict": "undecidable",
+      "decided_by": "absence",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "no_process_import",
+          "outcome": "fenced",
+          "decided_by": "absence",
+          "probes": [
+            "profile-process-import"
+          ],
+          "note": "no process, shell or filesystem-mutation module is imported, so nothing refuses the capability at request time"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "fenced by today's import list, not by a check"
+    },
+    {
+      "id": "PD-2",
+      "surface": "profile_dataset",
+      "capability": "network_egress",
+      "verdict": "fenced",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "path_existence_and_separator",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "profile-url-path"
+          ],
+          "note": "the path must exist on this host and must not carry a doubled separator, and a URL-shaped path fails both"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "the refusal is a side effect of two local-path checks rather than a scheme allowlist"
+    },
+    {
+      "id": "PD-3",
+      "surface": "profile_dataset",
+      "capability": "filesystem_read",
+      "verdict": "open",
+      "decided_by": "check",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "no_root_confinement",
+          "outcome": "open",
+          "decided_by": "read",
+          "probes": [],
+          "note": "the path is the argument: a recognised extension anywhere on the host is read, and the tool reports whether a path exists before it reports the extension it dislikes"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "no directory or root check exists, so the cell is open by construction"
+    },
+    {
+      "id": "PD-4",
+      "surface": "profile_dataset",
+      "capability": "filesystem_write",
+      "verdict": "undecidable",
+      "decided_by": "absence",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "no_write_call",
+          "outcome": "fenced",
+          "decided_by": "absence",
+          "probes": [],
+          "note": "the execute body reads and profiles; it contains no write call"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "fenced by today's body, not by a check"
+    },
+    {
+      "id": "PD-5",
+      "surface": "profile_dataset",
+      "capability": "credential_read",
+      "verdict": "undecidable",
+      "decided_by": "absence",
+      "fenced_in_this_tree": true,
+      "layers": [
+        {
+          "layer": "no_environment_access",
+          "outcome": "fenced",
+          "decided_by": "absence",
+          "probes": [],
+          "note": "no environment read appears in the module, and no check would refuse one"
+        }
+      ],
+      "effect_verified": false,
+      "verified_by": null,
+      "residual": "fenced by today's body, not by a check"
+    }
+  ],
+  "summary": {
+    "cells": 15,
+    "open": 6,
+    "fenced": 6,
+    "undecidable": 3,
+    "decided_by_check": 12,
+    "decidability": 0.8,
+    "effect_verified": 3,
+    "layers": 20
+  },
+  "not_claimed": [
+    "containment: a name-based filter is not a containment mechanism, and no cell says one is",
+    "matrix_valid does not imply publication_ready: this record says nothing about the evaluation matrix",
+    "a fenced cell is a refusal observed through a mechanism, not a penetration test"
+  ]
+}
