@@ -1,0 +1,240 @@
+{
+  "recorded_at": "2026-11-10T10:38:02Z",
+  "metric": "authorization_coverage",
+  "reading": 2,
+  "verdict": "measured",
+  "basis": "docs/measurement-basis.md#authorization-coverage, published 2026-11-09; definition unchanged for this reading",
+  "basis_unchanged": true,
+  "reviewed_commit": "920d4df",
+  "method": "Census, not a sample. Every externally consequential action class named in the definition is enumerated exactly once and scored against files in the reviewed commit plus one live reading of repository settings. A class is covered only when the tree names both (a) the person or role who decides and (b) the place the decision is written down. A mechanical gate, a prohibition, a limit or a CI check is a control, not an authorizer; a validator output is evidence, not a decision record.",
+  "denominator_basis": "The definition names six groups. Three are split because their alternatives have different external effects and different possible deciders or records: release vs leaderboard publication, issue comment vs issue close, and the governance document vs repository settings. The other three (spending money, using a credential, stating an external conclusion) stay whole. This yields the nine classes below.",
+  "previous_reading": {
+    "path": "docs/audit/authorization-coverage.json",
+    "recorded_at": "2026-11-10T04:10:17Z",
+    "numerator": 2,
+    "denominator": 9,
+    "note": "Retained unedited as the historical reading of the earlier tree."
+  },
+  "change_scored": "The owner explicitly authorized a governance change on 2026-11-10. GOVERNANCE.md gained a decision-authority table naming a decider and a record location for each of the nine classes, plus an explicit statement that the table is accountability, not enforcement. The first reading's proposed_amendment field describes the earlier tree and is left unedited; applying it here is a change in the tree, not in the measurement basis.",
+  "branch_protection_reading": {
+    "observed_at": "2026-11-10T10:38:02Z",
+    "source": "gh api repos/Jackxiaozhiren/data-science-agent/branches/main/protection",
+    "required_status_checks": [
+      "ci"
+    ],
+    "strict": true,
+    "required_pull_request_reviews": false,
+    "enforce_admins": false,
+    "note": "Re-read at the time of the second reading: identical to the first reading. No technical enforcement was added. Naming an authorizer is not the same as requiring one, and this metric measures the former."
+  },
+  "action_classes": [
+    {
+      "id": "AC1",
+      "action": "Publishing a release (tag, package artifact and changelog entry)",
+      "external_consequence": "A version becomes publicly installable and citable.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:11",
+        "GOVERNANCE.md:17",
+        "GOVERNANCE.md:36"
+      ],
+      "decision_record": "The annotated vX.Y.Z tag with its CHANGELOG.md entry; the pull request carries the canonical gate output.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:36",
+        "CHANGELOG.md",
+        "docs/security/VERIFY_RELEASE.md"
+      ],
+      "existing_controls": [
+        "GOVERNANCE.md:17-19 (canonical gates)"
+      ],
+      "covered": true,
+      "reason": "Already covered in the first reading. The decision-authority table restates the same decider and record rather than inventing a new one."
+    },
+    {
+      "id": "AC2",
+      "action": "Promoting a real-model result to a public leaderboard row or external comparison claim",
+      "external_consequence": "A quantitative quality claim about the system becomes public.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:37"
+      ],
+      "decision_record": "The pull request publishing the row, carrying matrix_validation.json and naming the maintainer who approved promotion.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:37",
+        "docs/real-model-evaluation.md:392-409"
+      ],
+      "existing_controls": [
+        "docs/real-model-evaluation.md:392-409 (publication rule, 14 conditions)",
+        "docs/real-model-evaluation.md:378,409 (publication_ready requires scope=full and task_limit=0)"
+      ],
+      "covered": true,
+      "reason": "The table names who decides and the publishing PR as the record. publication_ready stays a precondition over artifact fields, not the authorization itself."
+    },
+    {
+      "id": "AC3",
+      "action": "Commenting on a public issue",
+      "external_consequence": "A statement is made in the project's name in a public forum.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:38"
+      ],
+      "decision_record": "The issue thread: a named account and the comment body; a comment written by an agent names the authorizing maintainer in the same comment.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:38"
+      ],
+      "existing_controls": [
+        "GOVERNANCE.md:12 (contributors may take part in issues and discussions)",
+        "GOVERNANCE.md:30-31 (triage labelling SLA)"
+      ],
+      "covered": true,
+      "reason": "Contributors speaking in their own name are unaffected; a statement made on the project's behalf now has a named decider and a durable public record."
+    },
+    {
+      "id": "AC4",
+      "action": "Closing a public issue",
+      "external_consequence": "An externally visible request or report changes state, possibly without a fix.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:39"
+      ],
+      "decision_record": "The close event and a closing comment in the issue thread stating the reason and who decided.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:39",
+        "GOVERNANCE.md:57-62"
+      ],
+      "existing_controls": [
+        "GOVERNANCE.md:11 (final say on merges, releases, security response, roadmap)",
+        "GOVERNANCE.md:30-31 (triage SLA and no fix-commitment SLA)"
+      ],
+      "covered": true,
+      "reason": "The first gap was that closing a public issue appeared in none of the maintainer's enumerated powers. The table now assigns it and names the closing comment as record."
+    },
+    {
+      "id": "AC5",
+      "action": "Changing the governance document (GOVERNANCE.md) or a comparable policy file",
+      "external_consequence": "The published allocation of authority changes.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:11",
+        "GOVERNANCE.md:16",
+        "GOVERNANCE.md:40",
+        ".github/CODEOWNERS:2"
+      ],
+      "decision_record": "The pull request and its merge commit; an AUDIT_LEDGER.md entry when the change moves authority.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:40",
+        "AUDIT_LEDGER.md"
+      ],
+      "existing_controls": [
+        "required status check ci (strict)",
+        "CODEOWNERS names an owner for every path"
+      ],
+      "covered": true,
+      "reason": "Already covered in the first reading; this very change is an AC5 action and its PR and merge commit are the record."
+    },
+    {
+      "id": "AC6",
+      "action": "Changing branch protection or repository settings",
+      "external_consequence": "The set of checks and reviewers standing between a change and main changes.",
+      "authorizer": "Maintainer (Jackxiaozhiren), acting as repository admin",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:41"
+      ],
+      "decision_record": "A dated AUDIT_LEDGER.md entry quoting the before/after setting and the API response or run that made it.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:41",
+        "AUDIT_LEDGER.md"
+      ],
+      "existing_controls": [
+        "branch protection: required status check ci, strict=true (live reading in this record)",
+        "GOVERNANCE.md:16 (CI gates for merges)"
+      ],
+      "covered": true,
+      "reason": "The first gap was that a settings change is not a merge, so the required ci check does not govern it. The table names the decider and an append-only record. No setting was changed by this work."
+    },
+    {
+      "id": "AC7",
+      "action": "Spending money or enabling a credentialed paid model lane",
+      "external_consequence": "A billable action is taken against the zero-billing constraint.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:42",
+        "GOVERNANCE.md:64-67"
+      ],
+      "decision_record": "A dated AUDIT_LEDGER.md entry naming the budget cap, duration and credential; absent that entry the no-billing rule stands.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:42",
+        "AUDIT_LEDGER.md",
+        "docs/real-model-evaluation.md:137-142"
+      ],
+      "existing_controls": [
+        "GOVERNANCE.md:35 (no billing)",
+        "docs/real-model-evaluation.md:137-142 (DSA_MAX_COST_USD per-process cap and project-level limit)",
+        ".github/workflows/real-model-evaluation.yml:4,20-21 (workflow_dispatch only, pinned smoke scope)",
+        "docs/ADR/ADR-003-zero-cost-self-hosted-baseline-2026-11-09.md (INV8)"
+      ],
+      "covered": true,
+      "reason": "A prohibition and a per-process cap were the only controls before. The table now names who would have to decide before an exception and where that decision is written. It does not create an exception."
+    },
+    {
+      "id": "AC8",
+      "action": "Adding, rotating or using a repository credential",
+      "external_consequence": "An external service is accessed with the project's identity.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:43"
+      ],
+      "decision_record": "A dated AUDIT_LEDGER.md entry naming the secret, the workflow and the run id; secrets stay in repository secrets, never in source or artifacts.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:43",
+        "GOVERNANCE.md:66-67",
+        "SECURITY.md:28",
+        "AUDIT_LEDGER.md"
+      ],
+      "existing_controls": [
+        ".github/workflows/real-model-evaluation.yml:46,92,138,184 (secrets.OPENAI_API_KEY)",
+        "SECURITY.md:28 (secret scanning and push protection)",
+        "GOVERNANCE.md:35-36 (keys stay in the user's environment)"
+      ],
+      "covered": true,
+      "reason": "The workflow consumed secrets without a named decider or a use record. The table assigns both; secret scanning remains a leak detector, not a decision record."
+    },
+    {
+      "id": "AC9",
+      "action": "Stating an external conclusion outside a leaderboard row (capability, security, currency or compatibility claims)",
+      "external_consequence": "A claim about the product is published to users or reviewers.",
+      "authorizer": "Maintainer (Jackxiaozhiren)",
+      "authorizer_evidence": [
+        "GOVERNANCE.md:44"
+      ],
+      "decision_record": "The pull request carrying the claim, with its evidence link and a named approval.",
+      "decision_record_evidence": [
+        "GOVERNANCE.md:44",
+        "scripts/check_public_claims.py"
+      ],
+      "existing_controls": [
+        "tests/test_checkpoint_claims.py",
+        "tests/test_doc_census_claims.py",
+        "tests/test_measure_claims.py",
+        "tests/test_currency_claims.py",
+        "tests/test_baseline_readme_integrity.py",
+        "scripts/check_public_claims.py"
+      ],
+      "covered": true,
+      "reason": "The claim guards are mechanical. The table names a decider and a record, and states explicitly that guards are necessary, not sufficient."
+    }
+  ],
+  "numerator": 9,
+  "denominator": 9,
+  "gaps": [],
+  "scope_note": "A full score means only that the tree now names a decider and a record for every class in the census. It does not mean any control is technically enforced, that any decision was correct, that any past external action is retroactively authorized, or that any external action was taken under the new table. The zero-billing constraint, branch protection and credential handling are unchanged. ADR-003's INV6 row rates the actions of that ADR, not global coverage, so neither reading contradicts it.",
+  "residual": [
+    "No required pull-request review: CODEOWNERS names an owner but GitHub does not enforce one.",
+    "AC6/AC7/AC8 records depend on a human actually writing the ledger entry; nothing creates it automatically.",
+    "AC2's precondition is a gate over artifact fields; a named approval is a disclosure requirement, not a validator output."
+  ],
+  "proposed_amendment": null,
+  "supersedes": null,
+  "current": true,
+  "series_note": "This is the current reading. The first is retained unedited as history. A basis change would require a third record that marks this one superseded."
+}
