@@ -17799,3 +17799,79 @@ stands; the five open Dependabot pull requests (#168-#172) are outside this lane
 §19.1 item 4 withholds dependency and lockfile changes. If a human later redeploys the free-tier Render
 instance, its seeded datasets are dropped and R-01's acceptance probe must be re-run with the deployment's own
 identifier and status words quoted.
+
+## 320. Measuring what the baseline actually says, and a score that is low on purpose
+
+Recorded 2026-11-10T04:29:37Z. Lane: S1 trustworthy baseline under ADR-003. This entry is late relative
+to the work it records: the decision landed in `242cb4a` (#174), the first reading in `08be9b5` (#175),
+and the second in `5eca2e0` (#176). It is written against `origin/main` = `5eca2e0`, not against the
+working copy, which remains on `tmp141` and is 202 lines behind on this file. Appending in place would
+have deleted content belonging to other sessions, so the entry was built from
+`git show 5eca2e0:AUDIT_LEDGER.md` through a separate index, as §319 was.
+
+**The measurement rule that shaped all three commits.** `docs/measurement-basis.md` sets one exit
+condition for S1: a metric is either recorded with a timestamp and an explicit basis, or written as
+"not measured". A zero is a reading, not an absence of one. That rule is why this lane did not publish
+four plausible numbers on the day the ADR was accepted. Two readings exist; two are still declared
+unmeasured, and the ADR's rollback path permits that outcome.
+
+**First reading (2026-11-09).** `scripts/probe_served_artifacts.py` reads only what the two public hosts
+serve: the `/version` payload shape, the chunk paths named by the page shell, the bodies of up to twelve
+of those chunks, and the API origin embedded in one body. All four checks were green, and the deployed
+side independently confirmed `storage.durable=false` with three ephemeral roots — the same fact
+`render.yaml` asserts in the tree, now observed from outside it. The instrument's exit codes are the
+product: 0 pass, 1 mismatch, 2 unmeasured. A refused chunk is a fact about the build; a TLS reset is a
+fact about the run. The first draft conflated the two and reported one transient reset as a half-pruned
+deployment. It also cost the ratchet three exception handlers and two suppression directives before it
+was rewritten around a single guarded boundary; only the one-handler version was allowed to land.
+
+**Second reading (2026-11-10).** `docs/audit/authorization-coverage.json` scores a census of the
+externally consequential action classes named in the definition. Two of nine name both an authorizer
+and a place where the decision is recorded: release publication (`GOVERNANCE.md:11,17-19`; tag and
+`CHANGELOG.md`) and a change to the governance document (`GOVERNANCE.md:11,16`;
+`.github/CODEOWNERS:2`; the pull request and its merge commit). The other seven — leaderboard
+promotion, issue comment, issue close, branch settings, spending money, using a credential, and
+stating an external conclusion — fail on one or both.
+
+The low score is a finding, not a defect to be rounded away. Two distinctions carry it. A **gate is not
+an authorizer**: `publication_ready`, `DSA_MAX_COST_USD`, the required `ci` check and the claim guards
+are controls, and none names who decides. A **named owner is not an enforced one**: the branch
+protection read at `2026-11-10T04:05Z` requires `ci` with `strict=true`, has
+`required_pull_request_reviews=false` and `enforce_admins=false`, so `CODEOWNERS` is advisory.
+Enforcement was deliberately left outside the numerator; including it would have changed the question
+from "what does the tree say" to "what does GitHub do". The reading says nothing about whether a past
+decision was correct, and ADR-003's INV6 row rates only the actions taken by that ADR (none), not
+global coverage.
+
+**Corrections shipped with the reading.** The merged measurement-basis page said three rows were
+unmeasured while one had already been recorded, and its closing line said the table reported "the one
+that does" — an internal contradiction, not a stale figure. ADR-003's status line still said "S1–S3
+not started" after #175 landed. The status line now points at `docs/measurement-basis.md` instead of
+repeating a count that would go stale again; the decision text and evidence are untouched.
+
+**Gates.** At `f66a874`, the head #176 was merged from, all check-runs completed green: `ci` 8m22s,
+`web-regression` 4m52s, CodeQL, gitleaks, dependency-review, label, SonarCloud and both Vercel
+statuses. Locally the three new contract tests and all twenty-four no-argument document-guard tests
+passed, `ruff check` and `ruff format --check` returned 0, and `scripts/audit_facts.py --check`
+returned "facts ratchet: OK" both in the working tree and in a clean `git archive` export of
+`69d7729` — the latter to avoid the `floor.debt.testFunctions` trap §312 recorded. No new exception
+handler or suppression directive was introduced, so no ceiling in `docs/audit/facts.limits.json`
+moved. The record is JSON under `docs/audit/`, not a new documentation page, so
+`capabilities.navOrphanPages` and `mkdocs.yml` were left alone. #173 (`d557afa`, contributor
+recognition) was updated to the base, re-checked and merged first; open pull requests are zero.
+
+**What remains, and why it is not dressed up as done.** The proposal to close the seven gaps — a
+decision-authority table in `GOVERNANCE.md` naming an authorizer, a record location and a review
+requirement per action class — is written into the record as text and explicitly marked NOT APPLIED.
+Changing the governance document is itself a governed action; it needs its own decision, and a later
+reading must be a new record under the same basis rather than an edit to this one. Evidence alignment
+also stays unmeasured: the local experiment reports do carry the four layers (conclusion to evidence
+node to tool call to dataset path and hash), but all of them sit under `/artifacts/`, which
+`.gitignore:20` excludes, so a third party cannot reproduce the sample; and the input bytes are gone
+for part of the set, so the recorded hash cannot be recomputed for those. Independent re-run needs a
+clean environment and an actual reproduction bundle, neither of which exists yet. Neither gap is filled
+with an estimate.
+
+**What this entry does not claim.** No deployment was issued or verified from this lane, no public
+issue was commented on or closed, no governance setting was changed, and no paid resource was enabled.
+The owner's 2026-11-06 decision to leave #16 and #81 open and unworked stands.
