@@ -1,0 +1,7335 @@
+{
+  "capture_rule": "census of every artifacts/reports/*/experiment.json visible in the local working copy at capture time; sorted by run_id; no random draw and no exclusion by outcome",
+  "runs": [
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
+      "evidence": [
+        {
+          "id": "E-c1b8bf2d",
+          "source_id": "TC-44ccacad"
+        },
+        {
+          "id": "E-69a226ff",
+          "source_id": "TC-51ae176e"
+        },
+        {
+          "id": "E-e4fc03e6",
+          "source_id": "TC-7ed03469"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-69a226ff"
+          ],
+          "id": "I-a4fea04e"
+        }
+      ],
+      "run_id": "entrypoint-saver",
+      "source_sha256": "b7460d07dcbbe3f7f054bc7037549427a43c04c25fd898bc0ed9c943ec88723d",
+      "tool_calls": [
+        {
+          "call_id": "TC-44ccacad",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-51ae176e",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-7ed03469",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-8633adb6",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
+      "evidence": [
+        {
+          "id": "E-bfddc653",
+          "source_id": "TC-6eae0d10"
+        },
+        {
+          "id": "E-e9229cea",
+          "source_id": "TC-649e6fe7"
+        },
+        {
+          "id": "E-e423a66b",
+          "source_id": "TC-fd6a45b5"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-e9229cea"
+          ],
+          "id": "I-a0f6bc46"
+        }
+      ],
+      "run_id": "guard-thread",
+      "source_sha256": "09af0eb8bca3f9c631dc81f766a3128c3ec6d50f6a60f4e8e32d2468a3146512",
+      "tool_calls": [
+        {
+          "call_id": "TC-6eae0d10",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-649e6fe7",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-fd6a45b5",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a736688c",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-f58fc304",
+          "source_id": "TC-b3554a53"
+        },
+        {
+          "id": "E-7c8d5b5b",
+          "source_id": "TC-2124c7fc"
+        },
+        {
+          "id": "E-6de1fdf2",
+          "source_id": "TC-36c28fe6"
+        },
+        {
+          "id": "E-c815413b",
+          "source_id": "TC-f77cca39"
+        },
+        {
+          "id": "E-f84be2f0",
+          "source_id": "TC-14efa136"
+        },
+        {
+          "id": "E-1f3d9206",
+          "source_id": "TC-c9713104"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-f58fc304"
+          ],
+          "id": "I-450fa717"
+        },
+        {
+          "evidence_ids": [
+            "E-f84be2f0"
+          ],
+          "id": "I-4c5bf47e"
+        },
+        {
+          "evidence_ids": [
+            "E-1f3d9206"
+          ],
+          "id": "I-ecfee616"
+        }
+      ],
+      "run_id": "run-008a1531cf",
+      "source_sha256": "419a3b4a7eae6ba96a5ef0831f59da3db119f5c6079aeca6bc54c46792f6dd67",
+      "tool_calls": [
+        {
+          "call_id": "TC-b3554a53",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-2124c7fc",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-36c28fe6",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-f77cca39",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-14efa136",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-c9713104",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "8bdb63b19d2cf6aeba1eb0855408ace958473f70d197a844e19946f8dc51f4a4",
+      "evidence": [
+        {
+          "id": "E-7f80ed0e",
+          "source_id": "TC-fda079df"
+        },
+        {
+          "id": "E-ec04d0bd",
+          "source_id": "TC-1c8b173c"
+        },
+        {
+          "id": "E-3f9aa725",
+          "source_id": "TC-7df5f188"
+        },
+        {
+          "id": "E-0156a5a2",
+          "source_id": "TC-34874398"
+        },
+        {
+          "id": "E-9ba228f4",
+          "source_id": "TC-74531541"
+        },
+        {
+          "id": "E-f85a4781",
+          "source_id": "TC-63b184d7"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-7f80ed0e"
+          ],
+          "id": "I-095ab8cc"
+        },
+        {
+          "evidence_ids": [
+            "E-f85a4781"
+          ],
+          "id": "I-b8349e6d"
+        }
+      ],
+      "run_id": "run-033aa176e3",
+      "source_sha256": "7db5eb5416afa02f1279067f28e1fc2a704ac5b6ac78330b5a76ae750bff0d8f",
+      "tool_calls": [
+        {
+          "call_id": "TC-fda079df",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1c8b173c",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-7df5f188",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-34874398",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-74531541",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-63b184d7",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-36b1095a",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-5f65d8b0",
+          "source_id": "TC-74a869b6"
+        },
+        {
+          "id": "E-bdc40633",
+          "source_id": "TC-ff2a2d3b"
+        },
+        {
+          "id": "E-28de9946",
+          "source_id": "TC-a6a6f6b4"
+        },
+        {
+          "id": "E-35c4130d",
+          "source_id": "TC-50750c83"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5f65d8b0"
+          ],
+          "id": "I-cf6095a0"
+        }
+      ],
+      "run_id": "run-0a71959aaa",
+      "source_sha256": "25d341bbdf579d9a6b2b06b2c7a5b6f403cdf61f618f2cc2e5b8a49c4e148554",
+      "tool_calls": [
+        {
+          "call_id": "TC-74a869b6",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-ff2a2d3b",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a6a6f6b4",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-50750c83",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-5826562f",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "d0c365d9a663c22763b8cea92c5ea93854566d5efeee0a678fdf203a525fa8ed",
+      "evidence": [
+        {
+          "id": "E-c4ab51fd",
+          "source_id": "TC-6c1a2652"
+        },
+        {
+          "id": "E-0c5cbebd",
+          "source_id": "TC-f01733e9"
+        },
+        {
+          "id": "E-f596dae7",
+          "source_id": "TC-24428f1d"
+        },
+        {
+          "id": "E-f408f836",
+          "source_id": "TC-6265388a"
+        },
+        {
+          "id": "E-86ef2be1",
+          "source_id": "TC-e5c0ff7f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-c4ab51fd"
+          ],
+          "id": "I-5a412d17"
+        }
+      ],
+      "run_id": "run-0c004191b2",
+      "source_sha256": "30e73d6cbda841c031c9940c09e8fdc18b736d785aa5590f2cf416dbb707fac1",
+      "tool_calls": [
+        {
+          "call_id": "TC-6c1a2652",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-f01733e9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-24428f1d",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-6265388a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e5c0ff7f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-1e8e8efa",
+          "source_id": "TC-be5806e7"
+        },
+        {
+          "id": "E-e0892b7e",
+          "source_id": "TC-6a7342d7"
+        },
+        {
+          "id": "E-4dcb4960",
+          "source_id": "TC-63ff169f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-1e8e8efa"
+          ],
+          "id": "I-259d2097"
+        }
+      ],
+      "run_id": "run-0ca4ceec4a",
+      "source_sha256": "6c7d94c6493b8fbfba9f4bb06400a80610c86618daeaf53ce6d2f293159f91d7",
+      "tool_calls": [
+        {
+          "call_id": "TC-be5806e7",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-6a7342d7",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-63ff169f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-567c624f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        },
+        {
+          "call_id": "TC-91cd3cb0",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-8c4494a8",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-3d386c7a",
+          "source_id": "TC-9a549f9b"
+        },
+        {
+          "id": "E-92bd160e",
+          "source_id": "TC-955e8d38"
+        },
+        {
+          "id": "E-db9c8e53",
+          "source_id": "TC-9f930c2f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-3d386c7a"
+          ],
+          "id": "I-7043a27b"
+        }
+      ],
+      "run_id": "run-16912befc6",
+      "source_sha256": "01dbfb2464d25131bbe5e9c3ee6d79f83ba44a4dd7e96b7f2092d48f26dbdee9",
+      "tool_calls": [
+        {
+          "call_id": "TC-9a549f9b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-955e8d38",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-9f930c2f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-956d334d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        },
+        {
+          "call_id": "TC-795b0c56",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-341d91ba",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "647fa53c91974b2f701e51dcaf9c6fbe0d3790b4607ea767be99a7be1bbea4a6",
+      "evidence": [
+        {
+          "id": "E-d0e3d3ff",
+          "source_id": "TC-4f1e1404"
+        },
+        {
+          "id": "E-4c328c75",
+          "source_id": "TC-14d3414a"
+        },
+        {
+          "id": "E-2c205350",
+          "source_id": "TC-883d578f"
+        },
+        {
+          "id": "E-7e289f06",
+          "source_id": "TC-628af36a"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-d0e3d3ff"
+          ],
+          "id": "I-5f385445"
+        }
+      ],
+      "run_id": "run-17ade192cf",
+      "source_sha256": "d9f63a560bc9dea6f45cfcb11242782bd4de56419d4a7a9d368130b0c0317652",
+      "tool_calls": [
+        {
+          "call_id": "TC-4f1e1404",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-14d3414a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-883d578f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-628af36a",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-2985d58c",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "09396b21de8dc6627b6966f02fc9d45a4128abccbb232af66de189352508ea93",
+      "evidence": [
+        {
+          "id": "E-261af4d5",
+          "source_id": "TC-e90fec65"
+        },
+        {
+          "id": "E-b0e20417",
+          "source_id": "TC-3f30910b"
+        },
+        {
+          "id": "E-a0d4cae3",
+          "source_id": "TC-b3726c25"
+        },
+        {
+          "id": "E-91e7a831",
+          "source_id": "TC-d762404c"
+        },
+        {
+          "id": "E-225c595f",
+          "source_id": "TC-22fdf6dc"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-91e7a831"
+          ],
+          "id": "I-09f3d294"
+        },
+        {
+          "evidence_ids": [
+            "E-225c595f"
+          ],
+          "id": "I-49dc059e"
+        }
+      ],
+      "run_id": "run-1c70a7896a",
+      "source_sha256": "7e9738a6f8bd3cdb925fc672afa41f366ff601db1e01f7b47017c73f16d23338",
+      "tool_calls": [
+        {
+          "call_id": "TC-0203473c",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e90fec65",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-3f30910b",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-b3726c25",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-babce07e",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-d762404c",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-22fdf6dc",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        },
+        {
+          "call_id": "TC-b3ea13f9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-97327d38",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-06a6a44f",
+          "source_id": "TC-4ec7d962"
+        },
+        {
+          "id": "E-ec45536d",
+          "source_id": "TC-8552138b"
+        },
+        {
+          "id": "E-a98fb091",
+          "source_id": "TC-0a4d9212"
+        },
+        {
+          "id": "E-87889bfd",
+          "source_id": "TC-537bebba"
+        },
+        {
+          "id": "E-8a106ca5",
+          "source_id": "TC-cff300ac"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-06a6a44f"
+          ],
+          "id": "I-11c7e93b"
+        },
+        {
+          "evidence_ids": [
+            "E-8a106ca5"
+          ],
+          "id": "I-b1a2b5c6"
+        }
+      ],
+      "run_id": "run-1e23bb1497",
+      "source_sha256": "5cedf0cc037f02e854b53cf2e5823e24d378cdd18f8c5293d7908d80826131ed",
+      "tool_calls": [
+        {
+          "call_id": "TC-4ec7d962",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-8552138b",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-0a4d9212",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-537bebba",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-cff300ac",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-63fa626b",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-09feea21",
+          "source_id": "TC-1b4fd8b5"
+        },
+        {
+          "id": "E-7c328c09",
+          "source_id": "TC-250c9070"
+        },
+        {
+          "id": "E-4b3e51f6",
+          "source_id": "TC-018b959d"
+        },
+        {
+          "id": "E-a87ec72c",
+          "source_id": "TC-44272d29"
+        },
+        {
+          "id": "E-c8257bb4",
+          "source_id": "TC-9eb1b184"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-09feea21"
+          ],
+          "id": "I-2d80dcf5"
+        }
+      ],
+      "run_id": "run-1efb88eb40",
+      "source_sha256": "8d56119a44f98051f51753af18ce435481aed8664cb369ec719bbd6b123e2550",
+      "tool_calls": [
+        {
+          "call_id": "TC-1b4fd8b5",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-250c9070",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-018b959d",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-44272d29",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-9eb1b184",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-0da3803e",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-eac03066",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-918e7553",
+          "source_id": "TC-2094cbb4"
+        },
+        {
+          "id": "E-34ce8846",
+          "source_id": "TC-7de0606e"
+        },
+        {
+          "id": "E-ac854acb",
+          "source_id": "TC-f5f8590e"
+        },
+        {
+          "id": "E-bb1a8f47",
+          "source_id": "TC-61c6941e"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-918e7553"
+          ],
+          "id": "I-b94c0bcb"
+        }
+      ],
+      "run_id": "run-1f8f11eb18",
+      "source_sha256": "3fcacceb94f6b12660c533d16dd5a8424e30b0b821d2c6be21ab1cbc64506fcc",
+      "tool_calls": [
+        {
+          "call_id": "TC-2094cbb4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-7de0606e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-f5f8590e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-61c6941e",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-34ddb702",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
+      "evidence": [
+        {
+          "id": "E-8080a7a2",
+          "source_id": "TC-dad3e8ab"
+        },
+        {
+          "id": "E-88847bb8",
+          "source_id": "TC-1336136f"
+        },
+        {
+          "id": "E-faf95d0c",
+          "source_id": "TC-a53cb9cd"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-8080a7a2"
+          ],
+          "id": "I-20d46d60"
+        }
+      ],
+      "run_id": "run-20538837cb",
+      "source_sha256": "fc66f78b415163cb68c49ceab4c5bca1c9abc953e1cab2e704cc6bf85872ae8f",
+      "tool_calls": [
+        {
+          "call_id": "TC-dad3e8ab",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1336136f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a53cb9cd",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-74f72826",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-5715655a",
+          "source_id": "TC-daa7ad4a"
+        },
+        {
+          "id": "E-1d194799",
+          "source_id": "TC-ca77c053"
+        },
+        {
+          "id": "E-01915780",
+          "source_id": "TC-5ed6072e"
+        },
+        {
+          "id": "E-4c5918eb",
+          "source_id": "TC-1322320f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5715655a"
+          ],
+          "id": "I-239945d1"
+        }
+      ],
+      "run_id": "run-2314e7831f",
+      "source_sha256": "24beef69bdd24ffff5b79bb064551388feeaefaef3b824b39ec0a0dadce06d34",
+      "tool_calls": [
+        {
+          "call_id": "TC-daa7ad4a",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-ca77c053",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-5ed6072e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1322320f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-33b18d5d",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
+      "evidence": [
+        {
+          "id": "E-63e51382",
+          "source_id": "TC-586e2a3b"
+        },
+        {
+          "id": "E-f7c17929",
+          "source_id": "TC-c55aea3e"
+        },
+        {
+          "id": "E-0d4cc403",
+          "source_id": "TC-a271c041"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-63e51382"
+          ],
+          "id": "I-2cc04b6c"
+        }
+      ],
+      "run_id": "run-24c35bf84e",
+      "source_sha256": "3580caa5ed12dec8ec47d79aabff47619e2a47b26939009907ece52c2dcc535a",
+      "tool_calls": [
+        {
+          "call_id": "TC-586e2a3b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-c55aea3e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a271c041",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-cc02921e",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-9390824a",
+          "source_id": "TC-04a06757"
+        },
+        {
+          "id": "E-f29e39e6",
+          "source_id": "TC-cece449f"
+        },
+        {
+          "id": "E-636e366f",
+          "source_id": "TC-99704926"
+        },
+        {
+          "id": "E-1e05a4e7",
+          "source_id": "TC-6f765479"
+        },
+        {
+          "id": "E-c220f805",
+          "source_id": "TC-66cafb85"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-9390824a"
+          ],
+          "id": "I-b653710c"
+        }
+      ],
+      "run_id": "run-271774a82c",
+      "source_sha256": "c96da536e2fa96b0cd80724d9d5eb674f56250e9ca8a6ec19326fadda974bcd8",
+      "tool_calls": [
+        {
+          "call_id": "TC-04a06757",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-cece449f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-99704926",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-6f765479",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-66cafb85",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-b69b36ac",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-3f1c63b3",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "af3e35ea042a9851403cc29abb05b4b3b0c0f779d87d4935abead6d92d5c993b",
+      "evidence": [
+        {
+          "id": "E-69e633a4",
+          "source_id": "TC-7a56a664"
+        },
+        {
+          "id": "E-8450f198",
+          "source_id": "TC-fefa52ca"
+        },
+        {
+          "id": "E-823f45c5",
+          "source_id": "TC-18007c59"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-69e633a4"
+          ],
+          "id": "I-03f46bb8"
+        }
+      ],
+      "run_id": "run-2cd2771ce5",
+      "source_sha256": "7445d7d926f0808cacfd94ac5bd857b8a624d0dba834943536ae9b533bf6ca1d",
+      "tool_calls": [
+        {
+          "call_id": "TC-7a56a664",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-fefa52ca",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-18007c59",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-80afe347",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-a6042545",
+          "source_id": "TC-902334a1"
+        },
+        {
+          "id": "E-f21bc355",
+          "source_id": "TC-6a3b1971"
+        },
+        {
+          "id": "E-dd2ddda6",
+          "source_id": "TC-d8ee6dd2"
+        },
+        {
+          "id": "E-8a87be9a",
+          "source_id": "TC-ba970d3e"
+        },
+        {
+          "id": "E-f9b35ad9",
+          "source_id": "TC-7233725c"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-a6042545"
+          ],
+          "id": "I-063be0f2"
+        }
+      ],
+      "run_id": "run-36f22a84ab",
+      "source_sha256": "1f0af4e15ae06cd934388c585e57012591c9fce29b29d77332321d607a27bef3",
+      "tool_calls": [
+        {
+          "call_id": "TC-902334a1",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-6a3b1971",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-d8ee6dd2",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-ba970d3e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-7233725c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-083f96e1",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-c08bc5e4",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-43e90db6",
+          "source_id": "TC-57a34bcf"
+        },
+        {
+          "id": "E-bdc247b3",
+          "source_id": "TC-e55c2760"
+        },
+        {
+          "id": "E-4fdff851",
+          "source_id": "TC-afca9624"
+        },
+        {
+          "id": "E-280d31c5",
+          "source_id": "TC-eea2a414"
+        },
+        {
+          "id": "E-10c4894c",
+          "source_id": "TC-88e39da3"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-43e90db6"
+          ],
+          "id": "I-3f57ed99"
+        },
+        {
+          "evidence_ids": [
+            "E-10c4894c"
+          ],
+          "id": "I-e1cbace6"
+        }
+      ],
+      "run_id": "run-3c676a6697",
+      "source_sha256": "ee2ceb29170f5abe5974cf3f4bd10b118d36a18fcbec9579bdde65d9d0068099",
+      "tool_calls": [
+        {
+          "call_id": "TC-57a34bcf",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e55c2760",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-afca9624",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-eea2a414",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-88e39da3",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-a5c4b1a3",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "6e7c2cf73e9c68d17be58fb9ef6dc1bb90357fba2b5afafb6ee33575aca7e456",
+      "evidence": [
+        {
+          "id": "E-6772f2b1",
+          "source_id": "TC-5f5596bf"
+        },
+        {
+          "id": "E-311f24e8",
+          "source_id": "TC-5260863a"
+        },
+        {
+          "id": "E-dfed9b5c",
+          "source_id": "TC-e68bd3d0"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-6772f2b1"
+          ],
+          "id": "I-5fe6ff03"
+        }
+      ],
+      "run_id": "run-44043c60a0",
+      "source_sha256": "de22b775c53f9d5ce29ea2ffcdda20cb8304b1890bd87cb63c4844ed42bbe0db",
+      "tool_calls": [
+        {
+          "call_id": "TC-5f5596bf",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-5260863a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e68bd3d0",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-2f18bddd",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-51f66360",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        },
+        {
+          "call_id": "TC-35285ede",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-6da57b72",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "2b509ccfcfa25806cbe271482c4bdb62c83651e088368299b7e17d04b834c5ce",
+      "evidence": [
+        {
+          "id": "E-5d7e424f",
+          "source_id": "TC-90a031a9"
+        },
+        {
+          "id": "E-8e43bb43",
+          "source_id": "TC-34bf481c"
+        },
+        {
+          "id": "E-ae3422f9",
+          "source_id": "TC-8493994b"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5d7e424f"
+          ],
+          "id": "I-669882ea"
+        }
+      ],
+      "run_id": "run-44f22dd059",
+      "source_sha256": "934f7b6d0096b114d37ec97eb6c84859509fb69da9d9a679fccf3e125aa47d9b",
+      "tool_calls": [
+        {
+          "call_id": "TC-90a031a9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-34bf481c",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-8493994b",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-ea29eeb8",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-266719cd",
+          "source_id": "TC-3ffda6b9"
+        },
+        {
+          "id": "E-e59778ab",
+          "source_id": "TC-17e6ae22"
+        },
+        {
+          "id": "E-1b157b91",
+          "source_id": "TC-33fc2b04"
+        },
+        {
+          "id": "E-3075b2e4",
+          "source_id": "TC-f8dd6543"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-266719cd"
+          ],
+          "id": "I-270a8402"
+        }
+      ],
+      "run_id": "run-49fa3b999a",
+      "source_sha256": "12c27a822892a78241e5edbebe9e66b9aef744bf8883a0ff76f54f66cce67b78",
+      "tool_calls": [
+        {
+          "call_id": "TC-3ffda6b9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-17e6ae22",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-33fc2b04",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-f8dd6543",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-6e807084",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "579c0dedc450fc3142876dfb66a36d0006e8d9a86987ae2dbf0184319992718c",
+      "evidence": [
+        {
+          "id": "E-2ba89485",
+          "source_id": "TC-5101db11"
+        },
+        {
+          "id": "E-43b0fa70",
+          "source_id": "TC-2f6ababe"
+        },
+        {
+          "id": "E-9707339c",
+          "source_id": "TC-5dea7afc"
+        },
+        {
+          "id": "E-4529634b",
+          "source_id": "TC-bd259113"
+        },
+        {
+          "id": "E-ad48588a",
+          "source_id": "TC-b597d5e7"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-2ba89485",
+            "E-43b0fa70",
+            "E-9707339c"
+          ],
+          "id": "I-663b8a11"
+        }
+      ],
+      "run_id": "run-4c618702c9",
+      "source_sha256": "f08ee8c9bf5ea4d1b9228cd42ba4c78e4cff6d98d225b4b71135815a7436b3cf",
+      "tool_calls": [
+        {
+          "call_id": "TC-5101db11",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-2f6ababe",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-5dea7afc",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-bd259113",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-b597d5e7",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-ee074249",
+          "source_id": "TC-65935fb9"
+        },
+        {
+          "id": "E-8564cb57",
+          "source_id": "TC-522a8dac"
+        },
+        {
+          "id": "E-b85f2e4e",
+          "source_id": "TC-5aef2481"
+        },
+        {
+          "id": "E-d7f1becb",
+          "source_id": "TC-faed065f"
+        },
+        {
+          "id": "E-a0e569e6",
+          "source_id": "TC-c833b794"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-ee074249"
+          ],
+          "id": "I-6e1ce2fe"
+        }
+      ],
+      "run_id": "run-503c156976",
+      "source_sha256": "64afac21288053f90ed80422a5470f0f344cd5183d46fb9521e376bb17f4892b",
+      "tool_calls": [
+        {
+          "call_id": "TC-65935fb9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-522a8dac",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-5aef2481",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-faed065f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-c833b794",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-087dcc76",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-68e16f0a",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-3e523e0e",
+          "source_id": "TC-efc85a99"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-3e523e0e"
+          ],
+          "id": "I-ab4743f1"
+        }
+      ],
+      "run_id": "run-51548e6c77",
+      "source_sha256": "fea30fe9cf8784297f528e3fba2e699bccd920c9a0527fc6ac15d885c6c8ba1e",
+      "tool_calls": [
+        {
+          "call_id": "TC-efc85a99",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-b2b5bee7",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        },
+        {
+          "call_id": "TC-a76a01b4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-8dea176a",
+          "source_id": "TC-3c4025e9"
+        },
+        {
+          "id": "E-505a1bc7",
+          "source_id": "TC-e5eb5892"
+        },
+        {
+          "id": "E-8a2e4148",
+          "source_id": "TC-82d9ccbf"
+        },
+        {
+          "id": "E-865c35ba",
+          "source_id": "TC-1cbe9f08"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-8dea176a"
+          ],
+          "id": "I-112a222f"
+        }
+      ],
+      "run_id": "run-53e08ae7cb",
+      "source_sha256": "789d7a5ef19bed87ec2f13c964525614aef17e177771b89698a92cceae62bbc9",
+      "tool_calls": [
+        {
+          "call_id": "TC-3c4025e9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e5eb5892",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-82d9ccbf",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1cbe9f08",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-076a0c69",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
+      "evidence": [
+        {
+          "id": "E-6a2f4806",
+          "source_id": "TC-980082b0"
+        },
+        {
+          "id": "E-0f38bd63",
+          "source_id": "TC-cea4e101"
+        },
+        {
+          "id": "E-00ee2152",
+          "source_id": "TC-28cbd693"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-6a2f4806"
+          ],
+          "id": "I-f92a0471"
+        }
+      ],
+      "run_id": "run-567439ef4c",
+      "source_sha256": "6af70c056a5651fb971395735587f1e9ac17b4bc1a7778c9002f16e6e2a6f251",
+      "tool_calls": [
+        {
+          "call_id": "TC-980082b0",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-cea4e101",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-28cbd693",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-6415b0ae",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-31ed7847",
+          "source_id": "TC-b0a090ad"
+        },
+        {
+          "id": "E-ba6b3374",
+          "source_id": "TC-8b4dd06a"
+        },
+        {
+          "id": "E-2bf33874",
+          "source_id": "TC-fe7e6f74"
+        },
+        {
+          "id": "E-fe5925d1",
+          "source_id": "TC-4a011e08"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-31ed7847"
+          ],
+          "id": "I-1ebbb091"
+        }
+      ],
+      "run_id": "run-58a1bc0b07",
+      "source_sha256": "4a52de838786b47b9ddb3cd1967a6a87d7c9e9c9f47dc0d0987459106a972c6c",
+      "tool_calls": [
+        {
+          "call_id": "TC-b0a090ad",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-8b4dd06a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-fe7e6f74",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-4a011e08",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-46429545",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-3c4c9c31",
+          "source_id": "TC-49c9fb3f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-3c4c9c31"
+          ],
+          "id": "I-b15ccf01"
+        }
+      ],
+      "run_id": "run-59ba0700ee",
+      "source_sha256": "bf5943d6c243bff9b1ca538e86ee7bd0628da690451067a0e78371804d16f75a",
+      "tool_calls": [
+        {
+          "call_id": "TC-49c9fb3f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-2180991c",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        },
+        {
+          "call_id": "TC-b5407725",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-de9720cc",
+          "source_id": "TC-10c50cd9"
+        },
+        {
+          "id": "E-425e4998",
+          "source_id": "TC-4093489f"
+        },
+        {
+          "id": "E-42f1ca56",
+          "source_id": "TC-c9e605c1"
+        },
+        {
+          "id": "E-a6b721af",
+          "source_id": "TC-0790fce7"
+        },
+        {
+          "id": "E-2c0dbddc",
+          "source_id": "TC-74f8632e"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-de9720cc"
+          ],
+          "id": "I-c9b85492"
+        }
+      ],
+      "run_id": "run-5b2e6b54aa",
+      "source_sha256": "4aee09dc406cec276f1563aa583f451d776f3f8a3f8dc33727be50640e360200",
+      "tool_calls": [
+        {
+          "call_id": "TC-10c50cd9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-4093489f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-c9e605c1",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-0790fce7",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-74f8632e",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-bfaa5f60",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-d1096680",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-75224a89",
+          "source_id": "TC-4f370cd0"
+        },
+        {
+          "id": "E-ffb0a962",
+          "source_id": "TC-dd4efe38"
+        },
+        {
+          "id": "E-e4abf8ac",
+          "source_id": "TC-34416388"
+        },
+        {
+          "id": "E-4df23057",
+          "source_id": "TC-904f9d79"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-75224a89"
+          ],
+          "id": "I-566ffde0"
+        }
+      ],
+      "run_id": "run-5b87bf677a",
+      "source_sha256": "170049cf387c54e8c7979b6235b9953f1072dc20a5eae612580dc28452b93018",
+      "tool_calls": [
+        {
+          "call_id": "TC-4f370cd0",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-dd4efe38",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-34416388",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-904f9d79",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-05dfe644",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-c5ffaa9b",
+          "source_id": "TC-00d84d66"
+        },
+        {
+          "id": "E-12c82da1",
+          "source_id": "TC-54c1d55e"
+        },
+        {
+          "id": "E-1e3ec8c5",
+          "source_id": "TC-8200b8f8"
+        },
+        {
+          "id": "E-ba183926",
+          "source_id": "TC-9c58edef"
+        },
+        {
+          "id": "E-6282e7b6",
+          "source_id": "TC-275fba1f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-c5ffaa9b"
+          ],
+          "id": "I-3098f467"
+        }
+      ],
+      "run_id": "run-5f201555c8",
+      "source_sha256": "2abb22fc779eb4e0ead18ba45c5da5694ce1e16d1e3ffdd4c15c46289b23aa71",
+      "tool_calls": [
+        {
+          "call_id": "TC-00d84d66",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-54c1d55e",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-8200b8f8",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-9c58edef",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-275fba1f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-a1492be1",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-6707d134",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
+      "evidence": [
+        {
+          "id": "E-977a5738",
+          "source_id": "TC-f5753ca0"
+        },
+        {
+          "id": "E-c9756364",
+          "source_id": "TC-5b7242e4"
+        },
+        {
+          "id": "E-db7840c5",
+          "source_id": "TC-144ad921"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-c9756364"
+          ],
+          "id": "I-f73d4510"
+        }
+      ],
+      "run_id": "run-602690af2f",
+      "source_sha256": "d4dd7da9f7bfc690727b61043308f4fc6f48ac8d17e1c10e489fac7fc88d952c",
+      "tool_calls": [
+        {
+          "call_id": "TC-f5753ca0",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-5b7242e4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-144ad921",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-bf9837ed",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
+      "evidence": [
+        {
+          "id": "E-c6f600c4",
+          "source_id": "TC-3cff793a"
+        },
+        {
+          "id": "E-0caa142d",
+          "source_id": "TC-595ca19c"
+        },
+        {
+          "id": "E-7866d2be",
+          "source_id": "TC-47008388"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-0caa142d"
+          ],
+          "id": "I-685a69ff"
+        }
+      ],
+      "run_id": "run-62c8f73fdd",
+      "source_sha256": "383534b31d94c1dac137448cd7595f6b01281837bcfdf0bcc20d1427939dd15c",
+      "tool_calls": [
+        {
+          "call_id": "TC-3cff793a",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-595ca19c",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-47008388",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-f75152d5",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-98e39d8d",
+          "source_id": "TC-c50df275"
+        },
+        {
+          "id": "E-4fec094f",
+          "source_id": "TC-292dd919"
+        },
+        {
+          "id": "E-f7e3d6d3",
+          "source_id": "TC-c61b5629"
+        },
+        {
+          "id": "E-947de13e",
+          "source_id": "TC-87c87cf5"
+        },
+        {
+          "id": "E-2e85b236",
+          "source_id": "TC-01bb1be2"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-98e39d8d"
+          ],
+          "id": "I-f5c3ef3c"
+        }
+      ],
+      "run_id": "run-647dfc189d",
+      "source_sha256": "49892a6af0abcc38e92e8be2de440a935f891cda42ed84bb8227c0c8b287d2be",
+      "tool_calls": [
+        {
+          "call_id": "TC-c50df275",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-292dd919",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-c61b5629",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-87c87cf5",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-01bb1be2",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-2ef062b7",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-f517027b",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-3ca31177",
+          "source_id": "TC-5db5300d"
+        },
+        {
+          "id": "E-e6aecbf8",
+          "source_id": "TC-6b4dcd48"
+        },
+        {
+          "id": "E-0d86093d",
+          "source_id": "TC-2cb0293d"
+        },
+        {
+          "id": "E-84bee4c4",
+          "source_id": "TC-e02725db"
+        },
+        {
+          "id": "E-53ddd206",
+          "source_id": "TC-4af44948"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-3ca31177"
+          ],
+          "id": "I-14ba3c02"
+        }
+      ],
+      "run_id": "run-69e2163ea0",
+      "source_sha256": "3ca8cea1d0f9fbbf430f5ca51a566e46f04906600b543482db9058b6e1904780",
+      "tool_calls": [
+        {
+          "call_id": "TC-5db5300d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-6b4dcd48",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-2cb0293d",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e02725db",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-4af44948",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-d79cfc6b",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-53833c7c",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "e036f888b40d68362dfa1b02ca021e81d13d957874bba3bfd8fdf14c02bbaba7",
+      "evidence": [
+        {
+          "id": "E-392f3b32",
+          "source_id": "TC-2dbbd919"
+        },
+        {
+          "id": "E-a9969e36",
+          "source_id": "TC-f163c0a4"
+        },
+        {
+          "id": "E-c6185ff1",
+          "source_id": "TC-d6144b47"
+        },
+        {
+          "id": "E-81711065",
+          "source_id": "TC-1bf9bf16"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-392f3b32"
+          ],
+          "id": "I-d0bb7864"
+        }
+      ],
+      "run_id": "run-69e2a5642d",
+      "source_sha256": "d6cae89f9d3dbe326d1c3b0729681c46f788072879be29d22f5241f0d3024c05",
+      "tool_calls": [
+        {
+          "call_id": "TC-2dbbd919",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-f163c0a4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-d6144b47",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-1bf9bf16",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-655114c0",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-9d56e4d9",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b99ed55d193470d7990db83f6d5356f9c81081f48e2dcb577c26daf1fc26d6f9",
+      "evidence": [
+        {
+          "id": "E-8a2da8c9",
+          "source_id": "TC-60240b02"
+        },
+        {
+          "id": "E-8e73337c",
+          "source_id": "TC-12659849"
+        },
+        {
+          "id": "E-a1ddf7d4",
+          "source_id": "TC-6de0ebc0"
+        },
+        {
+          "id": "E-ce628fdb",
+          "source_id": "TC-465b71f7"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-8a2da8c9"
+          ],
+          "id": "I-6346f31d"
+        }
+      ],
+      "run_id": "run-69e6c9c8f2",
+      "source_sha256": "579ca8d532647abcea93b689a5757aed8f13898f24235153f2e0de1ea9d3374b",
+      "tool_calls": [
+        {
+          "call_id": "TC-60240b02",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-12659849",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-6de0ebc0",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-465b71f7",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-1ce84846",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-767117f1",
+          "source_id": "TC-2f305b6e"
+        },
+        {
+          "id": "E-38134888",
+          "source_id": "TC-5b96ae86"
+        },
+        {
+          "id": "E-002525a2",
+          "source_id": "TC-8deb26a5"
+        },
+        {
+          "id": "E-a301a81d",
+          "source_id": "TC-0147c488"
+        },
+        {
+          "id": "E-ed0f583a",
+          "source_id": "TC-cb9f8e9c"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-767117f1"
+          ],
+          "id": "I-068b29a2"
+        }
+      ],
+      "run_id": "run-750052f8db",
+      "source_sha256": "6da6e38a2d9c71f5e4c4cd9557c35a2c7da3fe5061656a20044a2e2d5c06f33a",
+      "tool_calls": [
+        {
+          "call_id": "TC-2f305b6e",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-5b96ae86",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-8deb26a5",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-0147c488",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-cb9f8e9c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-161e4cb1",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-89eec2fc",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-0b73973c",
+          "source_id": "TC-34c6f241"
+        },
+        {
+          "id": "E-6b4edcec",
+          "source_id": "TC-bfc3f230"
+        },
+        {
+          "id": "E-6de90bfd",
+          "source_id": "TC-a668d9e3"
+        },
+        {
+          "id": "E-3d979685",
+          "source_id": "TC-3c16f54c"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-0b73973c"
+          ],
+          "id": "I-2b69cd04"
+        }
+      ],
+      "run_id": "run-761f3aafe7",
+      "source_sha256": "d8b41fc9956760ddb5bbbcdb0b9a5f5a22d6b1f61e6fc070cfb943c0b72b9830",
+      "tool_calls": [
+        {
+          "call_id": "TC-34c6f241",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-bfc3f230",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a668d9e3",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-3c16f54c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-a5cf48c0",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
+      "evidence": [
+        {
+          "id": "E-73a751f0",
+          "source_id": "TC-58dbe8dd"
+        },
+        {
+          "id": "E-eb9295d6",
+          "source_id": "TC-9844896c"
+        },
+        {
+          "id": "E-e2ba86b5",
+          "source_id": "TC-ba98164d"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-73a751f0"
+          ],
+          "id": "I-634b6d1c"
+        }
+      ],
+      "run_id": "run-7fb0f1c96e",
+      "source_sha256": "e74ac74d1dd02dfe5280720f0224b2fca750074f1dee55b5e30420cf70a8050e",
+      "tool_calls": [
+        {
+          "call_id": "TC-58dbe8dd",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-9844896c",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-ba98164d",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-24ac1909",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
+      "evidence": [
+        {
+          "id": "E-d7a16cea",
+          "source_id": "TC-f027d40f"
+        },
+        {
+          "id": "E-abb33ad1",
+          "source_id": "TC-6df060f5"
+        },
+        {
+          "id": "E-35aa6876",
+          "source_id": "TC-1625ef6d"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-d7a16cea"
+          ],
+          "id": "I-040a7833"
+        }
+      ],
+      "run_id": "run-81a714f66a",
+      "source_sha256": "a7b46dfc913f5a46536527fcd134a38161f311b2f421d38255b86c0f63718443",
+      "tool_calls": [
+        {
+          "call_id": "TC-f027d40f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-6df060f5",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-1625ef6d",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-eaa28817",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "29026141753f71c2bb67b8f71b5046eb5c12c00e658ab665b4e2ba0a331f70f0",
+      "evidence": [
+        {
+          "id": "E-f703ec1d",
+          "source_id": "TC-24e6ef20"
+        },
+        {
+          "id": "E-5889650a",
+          "source_id": "TC-06dd3bc3"
+        },
+        {
+          "id": "E-da60236c",
+          "source_id": "TC-0ffcb7e8"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5889650a"
+          ],
+          "id": "I-5fab2088"
+        }
+      ],
+      "run_id": "run-8ac23d26da",
+      "source_sha256": "4220d148b773ed58a321c50be059709aa39e72948b42675be0497ddb1480fe81",
+      "tool_calls": [
+        {
+          "call_id": "TC-24e6ef20",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-06dd3bc3",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-0ffcb7e8",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-b4a7160f",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
+      "evidence": [
+        {
+          "id": "E-22675814",
+          "source_id": "TC-6daacbc1"
+        },
+        {
+          "id": "E-db6aa5ac",
+          "source_id": "TC-ccb90ff8"
+        },
+        {
+          "id": "E-4017b69c",
+          "source_id": "TC-389231c3"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-22675814"
+          ],
+          "id": "I-a0fb9c5c"
+        }
+      ],
+      "run_id": "run-934815bb7e",
+      "source_sha256": "2e7e3f333311ae74912525f3d91504af9b842a9e1702960201db115dbc054a10",
+      "tool_calls": [
+        {
+          "call_id": "TC-6daacbc1",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-ccb90ff8",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-389231c3",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-54de4ece",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "",
+      "evidence": [],
+      "insights": [],
+      "run_id": "run-96bed5ecb4",
+      "source_sha256": "ccaa289046ac841e80e7ac1917b98288e7219847a46c9692740666761e08d7a7",
+      "tool_calls": [
+        {
+          "call_id": "TC-96f5ee75",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-35283f01",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-6c081607",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-bc668822",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-32971acd",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-90d13d47",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-5ea8775f",
+          "source_id": "TC-d62e2354"
+        },
+        {
+          "id": "E-2edb04b1",
+          "source_id": "TC-ea33986b"
+        },
+        {
+          "id": "E-75dc470f",
+          "source_id": "TC-c0bb2249"
+        },
+        {
+          "id": "E-3aa7c0e5",
+          "source_id": "TC-63e1fb65"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5ea8775f"
+          ],
+          "id": "I-ee7cf055"
+        }
+      ],
+      "run_id": "run-982f7b5bd5",
+      "source_sha256": "5bd559e0c67ea613831d713934386146d73d693943a8ab45541361d75b110e27",
+      "tool_calls": [
+        {
+          "call_id": "TC-d62e2354",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-ea33986b",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-c0bb2249",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-63e1fb65",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-6348f24d",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "88bb2b0208a50e6f577d8d36d9370d51db95ce7fd25f7b0254fe4329a558e997",
+      "evidence": [
+        {
+          "id": "E-e711ead4",
+          "source_id": "TC-9a3f8e0d"
+        },
+        {
+          "id": "E-65253ee1",
+          "source_id": "TC-ddc3cbe0"
+        },
+        {
+          "id": "E-839abe0c",
+          "source_id": "TC-edc61e3b"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-e711ead4"
+          ],
+          "id": "I-2d2ead57"
+        }
+      ],
+      "run_id": "run-9c943b40b5",
+      "source_sha256": "c15cc343fac660f4a84565175e62412af3d126197bead2a17bfd7fbf9bbd3b64",
+      "tool_calls": [
+        {
+          "call_id": "TC-9a3f8e0d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-ddc3cbe0",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-edc61e3b",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-ce5bbc6d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        },
+        {
+          "call_id": "TC-e858bf65",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-50d1863a",
+          "source_id": "TC-54bead40"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-50d1863a"
+          ],
+          "id": "I-53a4f6d6"
+        }
+      ],
+      "run_id": "run-acbc2ea6db",
+      "source_sha256": "e48a234850f2e272f9e58346de9ea335371ebcafe2cb4d7175526e6b4d314368",
+      "tool_calls": [
+        {
+          "call_id": "TC-54bead40",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-5f2e944f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        },
+        {
+          "call_id": "TC-e135238a",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-11b2102e",
+          "source_id": "TC-3200c4cc"
+        },
+        {
+          "id": "E-893a4906",
+          "source_id": "TC-88241412"
+        },
+        {
+          "id": "E-216caacc",
+          "source_id": "TC-44286107"
+        },
+        {
+          "id": "E-ac731ed4",
+          "source_id": "TC-99734a26"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-11b2102e"
+          ],
+          "id": "I-316074e0"
+        }
+      ],
+      "run_id": "run-accept-1",
+      "source_sha256": "2654bffa750b6cd3bf9921515ee31783f484a2c1ccca1bdb005fd7381b937364",
+      "tool_calls": [
+        {
+          "call_id": "TC-3200c4cc",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-88241412",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-44286107",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-99734a26",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-af9f5dc0",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-16fe2ba9",
+          "source_id": "TC-85c9de02"
+        },
+        {
+          "id": "E-fb69729e",
+          "source_id": "TC-0ab7d46b"
+        },
+        {
+          "id": "E-675a717a",
+          "source_id": "TC-9f6fd407"
+        },
+        {
+          "id": "E-d14ae8dc",
+          "source_id": "TC-a2d096ec"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-16fe2ba9"
+          ],
+          "id": "I-7186a659"
+        }
+      ],
+      "run_id": "run-ada6672b1a",
+      "source_sha256": "a93a6fd9123ae7192478abb5aca0987f721dbbc8f3a21bca59081ea0ac4e37a2",
+      "tool_calls": [
+        {
+          "call_id": "TC-85c9de02",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-0ab7d46b",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-9f6fd407",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-a2d096ec",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-56baf320",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "579c0dedc450fc3142876dfb66a36d0006e8d9a86987ae2dbf0184319992718c",
+      "evidence": [
+        {
+          "id": "E-83f7eb64",
+          "source_id": "TC-590137d5"
+        },
+        {
+          "id": "E-40593502",
+          "source_id": "TC-98e846fe"
+        },
+        {
+          "id": "E-e6f6bc93",
+          "source_id": "TC-eddc8a4c"
+        },
+        {
+          "id": "E-a71d5f0f",
+          "source_id": "TC-7e6c602d"
+        },
+        {
+          "id": "E-cd0daf37",
+          "source_id": "TC-b8ccd070"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-83f7eb64",
+            "E-40593502",
+            "E-e6f6bc93"
+          ],
+          "id": "I-4024e873"
+        }
+      ],
+      "run_id": "run-b392342c61",
+      "source_sha256": "e9225428bf84f680df630fc7ad87d5f98286d8a8470b2057d3aec02099dddb91",
+      "tool_calls": [
+        {
+          "call_id": "TC-590137d5",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-98e846fe",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-eddc8a4c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-7e6c602d",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-b8ccd070",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-0f4aec2d",
+          "source_id": "TC-85858e77"
+        },
+        {
+          "id": "E-ae43bbfa",
+          "source_id": "TC-b4eee354"
+        },
+        {
+          "id": "E-cf909513",
+          "source_id": "TC-0531fcb2"
+        },
+        {
+          "id": "E-a6515c02",
+          "source_id": "TC-f1156561"
+        },
+        {
+          "id": "E-c750272f",
+          "source_id": "TC-16867f21"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-0f4aec2d"
+          ],
+          "id": "I-7709fee2"
+        }
+      ],
+      "run_id": "run-b983f5a031",
+      "source_sha256": "876bf8e259e0300b165eca7f6206ca531f845d300b9fe0672435badb52b92c46",
+      "tool_calls": [
+        {
+          "call_id": "TC-85858e77",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-b4eee354",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-0531fcb2",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-f1156561",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-16867f21",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-6dd47ec6",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-e88d668d",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
+      "evidence": [
+        {
+          "id": "E-77a64d9b",
+          "source_id": "TC-c069b5be"
+        },
+        {
+          "id": "E-8124a961",
+          "source_id": "TC-9702a60f"
+        },
+        {
+          "id": "E-27f2a528",
+          "source_id": "TC-d55d008c"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-77a64d9b"
+          ],
+          "id": "I-d66c8d88"
+        }
+      ],
+      "run_id": "run-bcc7c4731f",
+      "source_sha256": "7f7ddb595537202ee5f48b1541e3f5502c2a6600432e02a5cfd4736a8111592c",
+      "tool_calls": [
+        {
+          "call_id": "TC-c069b5be",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-9702a60f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-d55d008c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-1e2ae923",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-5172b90a",
+          "source_id": "TC-c2a69243"
+        },
+        {
+          "id": "E-cebea84e",
+          "source_id": "TC-c956ceb2"
+        },
+        {
+          "id": "E-03241e2c",
+          "source_id": "TC-8085422c"
+        },
+        {
+          "id": "E-188e4401",
+          "source_id": "TC-ae6cf07f"
+        },
+        {
+          "id": "E-0d493315",
+          "source_id": "TC-759f6276"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5172b90a"
+          ],
+          "id": "I-c5614068"
+        }
+      ],
+      "run_id": "run-be11d7e612",
+      "source_sha256": "68d89b7b2c3a59cdae971381a0e05dc947ea4360fcf6016642fcd5bb99b0eb01",
+      "tool_calls": [
+        {
+          "call_id": "TC-c2a69243",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-c956ceb2",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-8085422c",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-ae6cf07f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-759f6276",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-919aaad4",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-a73c2aa2",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "39baca68baf6c36f438c23e9c4b550853397290560ac2462db07ddc04e37d211",
+      "evidence": [
+        {
+          "id": "E-5f2b724a",
+          "source_id": "TC-91f70032"
+        },
+        {
+          "id": "E-b478e274",
+          "source_id": "TC-b48c108b"
+        },
+        {
+          "id": "E-9148fa08",
+          "source_id": "TC-ac5f49c7"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5f2b724a"
+          ],
+          "id": "I-967f8720"
+        }
+      ],
+      "run_id": "run-c1b3f59ac9",
+      "source_sha256": "450032912a2357137434be22a142930c7c81bfc89fc1bce3879b20d882fdd963",
+      "tool_calls": [
+        {
+          "call_id": "TC-91f70032",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-b48c108b",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-ac5f49c7",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-be8d330d",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-7a3fb248",
+          "source_id": "TC-7fd4e32d"
+        },
+        {
+          "id": "E-ee9b39ee",
+          "source_id": "TC-5360ee1c"
+        },
+        {
+          "id": "E-2c2cbc17",
+          "source_id": "TC-e42fbcb2"
+        },
+        {
+          "id": "E-d0537076",
+          "source_id": "TC-fb72c9f8"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-7a3fb248"
+          ],
+          "id": "I-a79d5362"
+        }
+      ],
+      "run_id": "run-c1b7b31caa",
+      "source_sha256": "b126639ccb8bfeaab5aaea7be12382fc920428ede8ff545aabd60d5059e88eca",
+      "tool_calls": [
+        {
+          "call_id": "TC-7fd4e32d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-5360ee1c",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e42fbcb2",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-fb72c9f8",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-43b01cab",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
+      "evidence": [
+        {
+          "id": "E-072cc106",
+          "source_id": "TC-92c4e5a4"
+        },
+        {
+          "id": "E-527c4833",
+          "source_id": "TC-f59f7df7"
+        },
+        {
+          "id": "E-597dea34",
+          "source_id": "TC-72ba9a89"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-072cc106"
+          ],
+          "id": "I-e10cf6f4"
+        }
+      ],
+      "run_id": "run-c5402a3587",
+      "source_sha256": "a374f8ee8469d04485c2853a29847d15c3af3341b2b5486ac31b773badb7a7b6",
+      "tool_calls": [
+        {
+          "call_id": "TC-92c4e5a4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-f59f7df7",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-72ba9a89",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-6b6d08a6",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-8ad99e9a",
+          "source_id": "TC-087dabe4"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-8ad99e9a"
+          ],
+          "id": "I-81753670"
+        }
+      ],
+      "run_id": "run-c7afbebdcb",
+      "source_sha256": "c924c6763e905be361358a661503cf92d911df2ab04916b8e8878ddfca30df97",
+      "tool_calls": [
+        {
+          "call_id": "TC-087dabe4",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-84dc8a32",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        },
+        {
+          "call_id": "TC-0fd4d441",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-87fa6b66",
+          "source_id": "TC-93c30b3c"
+        },
+        {
+          "id": "E-e4ae8487",
+          "source_id": "TC-5ec9ea96"
+        },
+        {
+          "id": "E-51916672",
+          "source_id": "TC-a734048c"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-87fa6b66"
+          ],
+          "id": "I-ae22117f"
+        }
+      ],
+      "run_id": "run-c7facf5e83",
+      "source_sha256": "1c97639d3c594206d248e53e8e591eb5dd95df5c6a28ec1c34e9a83bc9fee091",
+      "tool_calls": [
+        {
+          "call_id": "TC-93c30b3c",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-5ec9ea96",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a734048c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-23fb686f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        },
+        {
+          "call_id": "TC-b7dcd922",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-9a538f4b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-7b77060c",
+          "source_id": "TC-e1f2b21c"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-7b77060c"
+          ],
+          "id": "I-eb77fd54"
+        }
+      ],
+      "run_id": "run-c878d24f20",
+      "source_sha256": "0dde85c343cc4ad782b4db30fa5ab9d28fb6f1607045c92f1525268d56835e28",
+      "tool_calls": [
+        {
+          "call_id": "TC-e1f2b21c",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-86cc355b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        },
+        {
+          "call_id": "TC-e9be91b6",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-bb9d7015",
+          "source_id": "TC-8ed7b663"
+        },
+        {
+          "id": "E-93770075",
+          "source_id": "TC-903a0269"
+        },
+        {
+          "id": "E-58abe002",
+          "source_id": "TC-06b0a976"
+        },
+        {
+          "id": "E-ce7dfe80",
+          "source_id": "TC-2b5f9e18"
+        },
+        {
+          "id": "E-5a112aad",
+          "source_id": "TC-5f01354e"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-bb9d7015"
+          ],
+          "id": "I-d77e34e1"
+        }
+      ],
+      "run_id": "run-c8e8f945c8",
+      "source_sha256": "2a5993602cd72b3e4e3ed9d6c5953b56e7ea49ed90f613d31dff10a63dc7bac9",
+      "tool_calls": [
+        {
+          "call_id": "TC-8ed7b663",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-903a0269",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-06b0a976",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-2b5f9e18",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-5f01354e",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-26b85e61",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-5e028907",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-6ee34256",
+          "source_id": "TC-cf8e023d"
+        },
+        {
+          "id": "E-79fb2f60",
+          "source_id": "TC-818fbdfb"
+        },
+        {
+          "id": "E-c180b17d",
+          "source_id": "TC-bf5000ce"
+        },
+        {
+          "id": "E-4c6ce731",
+          "source_id": "TC-aff6887f"
+        },
+        {
+          "id": "E-d1ff89a2",
+          "source_id": "TC-36a57c30"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-6ee34256"
+          ],
+          "id": "I-02b8eee8"
+        }
+      ],
+      "run_id": "run-cb279fb16d",
+      "source_sha256": "63dd3fd5e5ac96d48fd2d948f219656f93b526d9844b08163926cd9bec9fa7ec",
+      "tool_calls": [
+        {
+          "call_id": "TC-cf8e023d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-818fbdfb",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-bf5000ce",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-aff6887f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-36a57c30",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-ccb2035a",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-ad5312d7",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "68e76faa3137b685e9038edec3261c78403c29c796ace0ef1faa1ec49432880d",
+      "evidence": [
+        {
+          "id": "E-bc000647",
+          "source_id": "TC-b2f74290"
+        },
+        {
+          "id": "E-fea8b80a",
+          "source_id": "TC-85cbf736"
+        },
+        {
+          "id": "E-da2ccf19",
+          "source_id": "TC-ffaee4a1"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-bc000647"
+          ],
+          "id": "I-6e5b8207"
+        }
+      ],
+      "run_id": "run-cd71ab4f39",
+      "source_sha256": "3d75f3fc1427c7ed6369ea5437cc8b0bbf6c11243fcfa313f91b21ba0e2af882",
+      "tool_calls": [
+        {
+          "call_id": "TC-b2f74290",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-3fbde794",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "group_col",
+            "test",
+            "value_col"
+          ]
+        },
+        {
+          "call_id": "TC-85cbf736",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-ffaee4a1",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-30945cf6",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-9bd6f5e4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "group_col",
+            "test",
+            "value_col"
+          ]
+        },
+        {
+          "call_id": "TC-3efb8e2b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "29026141753f71c2bb67b8f71b5046eb5c12c00e658ab665b4e2ba0a331f70f0",
+      "evidence": [
+        {
+          "id": "E-15f2ec87",
+          "source_id": "TC-527d7511"
+        },
+        {
+          "id": "E-dc159e1a",
+          "source_id": "TC-d91f4701"
+        },
+        {
+          "id": "E-6a40b4f3",
+          "source_id": "TC-8d5018e5"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-15f2ec87"
+          ],
+          "id": "I-40c0a044"
+        }
+      ],
+      "run_id": "run-cfc03a1924",
+      "source_sha256": "331d12672343914483858d763d7fc35d9821c8bd0e0a1126c074a257107372b8",
+      "tool_calls": [
+        {
+          "call_id": "TC-527d7511",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-d91f4701",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-8d5018e5",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-f7cbb7ac",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "df61636cec6135757f95a5185f675af5fed03ea20b9985cb24a621f4c3c05328",
+      "evidence": [
+        {
+          "id": "E-5d0f1634",
+          "source_id": "TC-e2f36749"
+        },
+        {
+          "id": "E-aadb3a32",
+          "source_id": "TC-631c76cc"
+        },
+        {
+          "id": "E-28dbed07",
+          "source_id": "TC-88657d58"
+        },
+        {
+          "id": "E-6f8be548",
+          "source_id": "TC-1bc2a18d"
+        },
+        {
+          "id": "E-d1d161d0",
+          "source_id": "TC-8bfdd0a0"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-5d0f1634"
+          ],
+          "id": "I-ff62ab1e"
+        },
+        {
+          "evidence_ids": [
+            "E-d1d161d0"
+          ],
+          "id": "I-b43be314"
+        }
+      ],
+      "run_id": "run-d1f43414f1",
+      "source_sha256": "62c06b538b680b27ba6d8d0b1a1e9b612139682fe29d699eb3f685685285e017",
+      "tool_calls": [
+        {
+          "call_id": "TC-e2f36749",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-631c76cc",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-88657d58",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1bc2a18d",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-906d23d0",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-8bfdd0a0",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-ddb6289c",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-22aa6327",
+          "source_id": "TC-a14413ac"
+        },
+        {
+          "id": "E-4edb1044",
+          "source_id": "TC-401c6878"
+        },
+        {
+          "id": "E-6c8ecba5",
+          "source_id": "TC-6d94325a"
+        },
+        {
+          "id": "E-775c424a",
+          "source_id": "TC-fe3e1008"
+        },
+        {
+          "id": "E-4fbfc5c0",
+          "source_id": "TC-cbe35cd9"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-22aa6327"
+          ],
+          "id": "I-73c04b8c"
+        }
+      ],
+      "run_id": "run-d9db7d4aaa",
+      "source_sha256": "949c9b457b6373aca1532923edc761198f6194c554506854523740bbe7a9e1fc",
+      "tool_calls": [
+        {
+          "call_id": "TC-a14413ac",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-401c6878",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-6d94325a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-fe3e1008",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-cbe35cd9",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-3cfc27c7",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-dfef235e",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-3e245216",
+          "source_id": "TC-aed6b294"
+        },
+        {
+          "id": "E-4993ef8f",
+          "source_id": "TC-d80f1e46"
+        },
+        {
+          "id": "E-fcc95a2f",
+          "source_id": "TC-c016f1be"
+        },
+        {
+          "id": "E-63ec9ad4",
+          "source_id": "TC-323dafe7"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-3e245216"
+          ],
+          "id": "I-9b8a460f"
+        }
+      ],
+      "run_id": "run-df474e248b",
+      "source_sha256": "4304627be009656b0e52cb79fa687f23c319ca4652782c6c9bff4f773e466e39",
+      "tool_calls": [
+        {
+          "call_id": "TC-aed6b294",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-d80f1e46",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-c016f1be",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-323dafe7",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-3aacedfa",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "39baca68baf6c36f438c23e9c4b550853397290560ac2462db07ddc04e37d211",
+      "evidence": [
+        {
+          "id": "E-d8ae8db4",
+          "source_id": "TC-701d1376"
+        },
+        {
+          "id": "E-b45c8aea",
+          "source_id": "TC-b4bec3b6"
+        },
+        {
+          "id": "E-687e055f",
+          "source_id": "TC-20244542"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-d8ae8db4"
+          ],
+          "id": "I-13354102"
+        }
+      ],
+      "run_id": "run-df97c75cd1",
+      "source_sha256": "17d0a993fb1ee834092afae258bacb553aa35b9dc533508e583a540eb919cc0d",
+      "tool_calls": [
+        {
+          "call_id": "TC-701d1376",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-b4bec3b6",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-20244542",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-956b7dbc",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "2a87344745d164c86e6b9d28a153441d7214722591aa22e169bdf99199d15088",
+      "evidence": [
+        {
+          "id": "E-9b3a066a",
+          "source_id": "TC-daeb3d58"
+        },
+        {
+          "id": "E-76526b05",
+          "source_id": "TC-0016eb90"
+        },
+        {
+          "id": "E-1796789e",
+          "source_id": "TC-3b2d28b5"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-9b3a066a"
+          ],
+          "id": "I-2bb25961"
+        }
+      ],
+      "run_id": "run-e2138754e5",
+      "source_sha256": "affca9c97341438e5806443a8586a9e8d9dff97dc28050d2d4473bb10ca807eb",
+      "tool_calls": [
+        {
+          "call_id": "TC-daeb3d58",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-0016eb90",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-3b2d28b5",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-d24aafaf",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-78bd552d",
+          "source_id": "TC-35922048"
+        },
+        {
+          "id": "E-69c8f881",
+          "source_id": "TC-cafa7490"
+        },
+        {
+          "id": "E-dbc01311",
+          "source_id": "TC-2d064b58"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-78bd552d"
+          ],
+          "id": "I-90aa005c"
+        }
+      ],
+      "run_id": "run-e29e4dce43",
+      "source_sha256": "c3aa32ddc5f0eca88e15555fa4eea9390502e898523aacdfe9572ffe043d74b8",
+      "tool_calls": [
+        {
+          "call_id": "TC-35922048",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-cafa7490",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-2d064b58",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-7c092f59",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        },
+        {
+          "call_id": "TC-8a6c94ea",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-3cca1326",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "e47fd0fd12cdc56523da6377d4b311a6c40c3b022d587f58299cf319578fe1ef",
+      "evidence": [
+        {
+          "id": "E-c29fba18",
+          "source_id": "TC-96eeaac9"
+        },
+        {
+          "id": "E-566adb07",
+          "source_id": "TC-5b436bf2"
+        },
+        {
+          "id": "E-50bc4e58",
+          "source_id": "TC-96e9d5e2"
+        },
+        {
+          "id": "E-892d7c30",
+          "source_id": "TC-8b1e51cf"
+        },
+        {
+          "id": "E-75fffe1b",
+          "source_id": "TC-570287b4"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-c29fba18"
+          ],
+          "id": "I-1cd6f252"
+        },
+        {
+          "evidence_ids": [
+            "E-75fffe1b"
+          ],
+          "id": "I-1e289103"
+        }
+      ],
+      "run_id": "run-e569d4141d",
+      "source_sha256": "f2d6f1999e84a286a6456ef98c91ed0bbe7847bb80b0dd1a65419709430e3d6d",
+      "tool_calls": [
+        {
+          "call_id": "TC-96eeaac9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-5b436bf2",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-96e9d5e2",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-8b1e51cf",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-570287b4",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        },
+        {
+          "call_id": "TC-7fb73816",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        },
+        {
+          "call_id": "TC-bd94f1a1",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "outcome",
+            "treatment"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
+      "evidence": [
+        {
+          "id": "E-46edaf9d",
+          "source_id": "TC-77081a4d"
+        },
+        {
+          "id": "E-f4410360",
+          "source_id": "TC-4c9ae176"
+        },
+        {
+          "id": "E-2fa41bcf",
+          "source_id": "TC-79985f0a"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-46edaf9d"
+          ],
+          "id": "I-e5dddae0"
+        }
+      ],
+      "run_id": "run-e56b69eef8",
+      "source_sha256": "48d368b22299fe74cdd839befdcc18928b41d900223ffe5a8b754106a5d54a4e",
+      "tool_calls": [
+        {
+          "call_id": "TC-77081a4d",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-4c9ae176",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-79985f0a",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-a512b5df",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-0eaf9b07",
+          "source_id": "TC-d43d79f1"
+        },
+        {
+          "id": "E-938ccf4d",
+          "source_id": "TC-35c9833f"
+        },
+        {
+          "id": "E-abed7726",
+          "source_id": "TC-b028e410"
+        },
+        {
+          "id": "E-293ffd38",
+          "source_id": "TC-7409c9e8"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-0eaf9b07"
+          ],
+          "id": "I-b4c90c97"
+        }
+      ],
+      "run_id": "run-e57418da08",
+      "source_sha256": "9476fd0d5f56e7bccbe13b06c423e79c797432b38bb877488bdc123e94653e39",
+      "tool_calls": [
+        {
+          "call_id": "TC-d43d79f1",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-35c9833f",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-b028e410",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-7409c9e8",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-55da1322",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-619be229",
+          "source_id": "TC-d6e17cfa"
+        },
+        {
+          "id": "E-7282bc63",
+          "source_id": "TC-b76cf2f7"
+        },
+        {
+          "id": "E-56d3fb02",
+          "source_id": "TC-d23c259a"
+        },
+        {
+          "id": "E-fa3184b1",
+          "source_id": "TC-14170b58"
+        },
+        {
+          "id": "E-ffcae46f",
+          "source_id": "TC-fda2a658"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-619be229"
+          ],
+          "id": "I-e0ba8634"
+        }
+      ],
+      "run_id": "run-ebfc2ffbcb",
+      "source_sha256": "0add8d981f5ded05c6e746c7d2c87ee19d6e6f85bab9f6ab4df26288b7a6342b",
+      "tool_calls": [
+        {
+          "call_id": "TC-d6e17cfa",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-b76cf2f7",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-d23c259a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-14170b58",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-fda2a658",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-d6695745",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-9e8d9c96",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-632a1727",
+          "source_id": "TC-cf5add2b"
+        },
+        {
+          "id": "E-6ff36f29",
+          "source_id": "TC-1527f24a"
+        },
+        {
+          "id": "E-3f575475",
+          "source_id": "TC-bee0bdaf"
+        },
+        {
+          "id": "E-fa31601f",
+          "source_id": "TC-62d84971"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-632a1727"
+          ],
+          "id": "I-2ec7844a"
+        }
+      ],
+      "run_id": "run-ee123b5479",
+      "source_sha256": "5d1f00225ee29d3b92374f9114db3421d0b66144bd9346b1e72099fcf8694a7c",
+      "tool_calls": [
+        {
+          "call_id": "TC-cf5add2b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1527f24a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-bee0bdaf",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-62d84971",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-7397a9bb",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-f4455663",
+          "source_id": "TC-c8f22f23"
+        },
+        {
+          "id": "E-6e563128",
+          "source_id": "TC-2d3cdbd4"
+        },
+        {
+          "id": "E-c0fa4967",
+          "source_id": "TC-b1a8f866"
+        },
+        {
+          "id": "E-7907fdf9",
+          "source_id": "TC-6bdf88a6"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-f4455663"
+          ],
+          "id": "I-2ebaca43"
+        }
+      ],
+      "run_id": "run-ee5b5a3d99",
+      "source_sha256": "f61bf061a3fbee3e2b32a393c990468ee39c1f18c41a1c246949579b7653d1b8",
+      "tool_calls": [
+        {
+          "call_id": "TC-c8f22f23",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-2d3cdbd4",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-b1a8f866",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-6bdf88a6",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-e1507820",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-4e831f29",
+          "source_id": "TC-ef84af06"
+        },
+        {
+          "id": "E-ac07ee5f",
+          "source_id": "TC-b0293c26"
+        },
+        {
+          "id": "E-4fd1c5f0",
+          "source_id": "TC-696544be"
+        },
+        {
+          "id": "E-0f6ad91c",
+          "source_id": "TC-907fe3ed"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-4e831f29"
+          ],
+          "id": "I-f6fef410"
+        }
+      ],
+      "run_id": "run-explicit-1",
+      "source_sha256": "14b92d197f200c897cf82c3eb507a833bbee24e1f059a6e7e7d23e8ec863a67d",
+      "tool_calls": [
+        {
+          "call_id": "TC-ef84af06",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-b0293c26",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-696544be",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-907fe3ed",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-28776aad",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-0d7059f2",
+          "source_id": "TC-0c31c2c9"
+        },
+        {
+          "id": "E-51100fc5",
+          "source_id": "TC-c72d10b8"
+        },
+        {
+          "id": "E-634e60e7",
+          "source_id": "TC-e80b6030"
+        },
+        {
+          "id": "E-bb574978",
+          "source_id": "TC-3eac9397"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-0d7059f2"
+          ],
+          "id": "I-e73c22e0"
+        }
+      ],
+      "run_id": "run-explicit-2",
+      "source_sha256": "9e274c3532e0376f217006953d7cc0188d65193f9f2fa11758c7738f6bbdce20",
+      "tool_calls": [
+        {
+          "call_id": "TC-0c31c2c9",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-c72d10b8",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e80b6030",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-3eac9397",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-87bff386",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "e036f888b40d68362dfa1b02ca021e81d13d957874bba3bfd8fdf14c02bbaba7",
+      "evidence": [
+        {
+          "id": "E-c5854a06",
+          "source_id": "TC-37f41efa"
+        },
+        {
+          "id": "E-ce910102",
+          "source_id": "TC-8c242f4f"
+        },
+        {
+          "id": "E-d1e724e1",
+          "source_id": "TC-e14b9740"
+        },
+        {
+          "id": "E-df6e9518",
+          "source_id": "TC-e1941789"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-c5854a06"
+          ],
+          "id": "I-9d4f61bd"
+        }
+      ],
+      "run_id": "run-f21a968adb",
+      "source_sha256": "ae951be6b6d3b36e3a412b2fe7d867f4c557f6e41d6b318483882a61857cd6b2",
+      "tool_calls": [
+        {
+          "call_id": "TC-37f41efa",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-8c242f4f",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "sql"
+          ]
+        },
+        {
+          "call_id": "TC-e14b9740",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e1941789",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-0912e822",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-9e0e668f",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "2b509ccfcfa25806cbe271482c4bdb62c83651e088368299b7e17d04b834c5ce",
+      "evidence": [
+        {
+          "id": "E-65e77ea7",
+          "source_id": "TC-dd196092"
+        },
+        {
+          "id": "E-536aac79",
+          "source_id": "TC-e3b0cd72"
+        },
+        {
+          "id": "E-65677029",
+          "source_id": "TC-48f58e6f"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-65e77ea7"
+          ],
+          "id": "I-f33a813a"
+        }
+      ],
+      "run_id": "run-f7afdc3cea",
+      "source_sha256": "d91aa8e37d23a1564a755676d984c3e08adf55d94576f2ba472e564cfcad9f69",
+      "tool_calls": [
+        {
+          "call_id": "TC-dd196092",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e3b0cd72",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-48f58e6f",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-f0fd5634",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
+      "evidence": [
+        {
+          "id": "E-f9227981",
+          "source_id": "TC-bdb9cc77"
+        },
+        {
+          "id": "E-0afdf732",
+          "source_id": "TC-e6261bae"
+        },
+        {
+          "id": "E-233f1969",
+          "source_id": "TC-e54e5036"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-f9227981"
+          ],
+          "id": "I-63550909"
+        }
+      ],
+      "run_id": "run-f9e4c72630",
+      "source_sha256": "4e628a53cb50f903c703876f60ce1ec2242092afb4c76d4244513f46e9e7a872",
+      "tool_calls": [
+        {
+          "call_id": "TC-bdb9cc77",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e6261bae",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e54e5036",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-62449b3b",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        },
+        {
+          "call_id": "TC-817c0f2f",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-de95e7b8",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-467eb773",
+          "source_id": "TC-26585b0e"
+        },
+        {
+          "id": "E-e7295e6c",
+          "source_id": "TC-72116abd"
+        },
+        {
+          "id": "E-cd30e67d",
+          "source_id": "TC-90bc9c05"
+        },
+        {
+          "id": "E-08a7caf5",
+          "source_id": "TC-98203016"
+        },
+        {
+          "id": "E-812a1998",
+          "source_id": "TC-30a67ca0"
+        },
+        {
+          "id": "E-07581871",
+          "source_id": "TC-3d2ca2c0"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-467eb773"
+          ],
+          "id": "I-4bf9af1c"
+        },
+        {
+          "evidence_ids": [
+            "E-07581871"
+          ],
+          "id": "I-e0b5b62b"
+        }
+      ],
+      "run_id": "run-fb421c7ef0",
+      "source_sha256": "10c908d4c3944f787978f70007c7408e5648c0497c1da576528203e4a72d049c",
+      "tool_calls": [
+        {
+          "call_id": "TC-26585b0e",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-72116abd",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-90bc9c05",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-98203016",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-30a67ca0",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "target",
+            "task"
+          ]
+        },
+        {
+          "call_id": "TC-3d2ca2c0",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "periods"
+          ]
+        },
+        {
+          "call_id": "TC-f94e095a",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
+      "evidence": [
+        {
+          "id": "E-662df2db",
+          "source_id": "TC-e132d5df"
+        },
+        {
+          "id": "E-80adb360",
+          "source_id": "TC-e34d8e3e"
+        },
+        {
+          "id": "E-b6efacfe",
+          "source_id": "TC-8e856b1e"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-662df2db"
+          ],
+          "id": "I-609d355e"
+        }
+      ],
+      "run_id": "run-fca0fd4a19",
+      "source_sha256": "b8c6b6e5a12f958f89ffd033834531ba348c0137e5221656cae4bf70f42b8b61",
+      "tool_calls": [
+        {
+          "call_id": "TC-e132d5df",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-e34d8e3e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-8e856b1e",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-a1843b02",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "",
+      "evidence": [],
+      "insights": [],
+      "run_id": "run-guard-absent-file",
+      "source_sha256": "cddd3c1269a95a685d0b42c8fc484f2b497625be6321d7b03011a967c4381192",
+      "tool_calls": [
+        {
+          "call_id": "TC-153cefe8",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-8cfacfc0",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a5b9b436",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        },
+        {
+          "call_id": "TC-ea6103d0",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-98783945",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-68313d9f",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-6daddf83",
+          "source_id": "TC-3005491a"
+        },
+        {
+          "id": "E-b9093eb3",
+          "source_id": "TC-12a76411"
+        },
+        {
+          "id": "E-b67e2ec7",
+          "source_id": "TC-a2b5db9e"
+        },
+        {
+          "id": "E-54fb1e23",
+          "source_id": "TC-1c323413"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-6daddf83"
+          ],
+          "id": "I-ec933d82"
+        }
+      ],
+      "run_id": "run-main-1",
+      "source_sha256": "40ceb7f802d7ab1b28d508ca1210dfcdca29fdd8ed14316873be3fbab9e080f8",
+      "tool_calls": [
+        {
+          "call_id": "TC-3005491a",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-12a76411",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-a2b5db9e",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-1c323413",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-c07e0b6c",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-a793315a",
+          "source_id": "TC-a48721f2"
+        },
+        {
+          "id": "E-61baf05f",
+          "source_id": "TC-0679ee38"
+        },
+        {
+          "id": "E-258ca32f",
+          "source_id": "TC-fb73cba0"
+        },
+        {
+          "id": "E-a470e242",
+          "source_id": "TC-89500645"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-a793315a"
+          ],
+          "id": "I-ba5f26af"
+        }
+      ],
+      "run_id": "run-res-test",
+      "source_sha256": "8916a68825fa9bfd113cb34bf4b2671c0d28fa829d86be55d7778c8301f6a3fa",
+      "tool_calls": [
+        {
+          "call_id": "TC-a48721f2",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-0679ee38",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-fb73cba0",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-89500645",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-db436d4d",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": true,
+      "dataset_hash_matches_at_capture": true,
+      "dataset_path_present": true,
+      "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
+      "evidence": [
+        {
+          "id": "E-4be4878c",
+          "source_id": "TC-ad526f34"
+        },
+        {
+          "id": "E-f58b7a3a",
+          "source_id": "TC-fcd3b59c"
+        },
+        {
+          "id": "E-6af9b777",
+          "source_id": "TC-34347c94"
+        },
+        {
+          "id": "E-c2e50f5c",
+          "source_id": "TC-13fbd6ba"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-4be4878c"
+          ],
+          "id": "I-d3520fd0"
+        }
+      ],
+      "run_id": "run-stateless",
+      "source_sha256": "80014092e635fd01cb0ba132661377d52feb8db41f9dd7f71f48e11bbe1a56ca",
+      "tool_calls": [
+        {
+          "call_id": "TC-ad526f34",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-fcd3b59c",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-34347c94",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-13fbd6ba",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-bb669921",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
+      "evidence": [
+        {
+          "id": "E-d36b97c3",
+          "source_id": "TC-f70b3cb4"
+        },
+        {
+          "id": "E-89455860",
+          "source_id": "TC-5c939a73"
+        },
+        {
+          "id": "E-4edd0bb7",
+          "source_id": "TC-fc738b6a"
+        }
+      ],
+      "insights": [
+        {
+          "evidence_ids": [
+            "E-89455860"
+          ],
+          "id": "I-58450bab"
+        }
+      ],
+      "run_id": "shared-saver-thread",
+      "source_sha256": "9b27ae0f321cce8431cba22f5b08ba630c6101c3d68ead8d7d16c99245133dc0",
+      "tool_calls": [
+        {
+          "call_id": "TC-f70b3cb4",
+          "input_is_object": true,
+          "input_keys": [
+            "path"
+          ]
+        },
+        {
+          "call_id": "TC-5c939a73",
+          "input_is_object": true,
+          "input_keys": [
+            "dataset_path",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "call_id": "TC-fc738b6a",
+          "input_is_object": true,
+          "input_keys": [
+            "chart_type",
+            "dataset_path",
+            "x"
+          ]
+        },
+        {
+          "call_id": "TC-e8101494",
+          "input_is_object": true,
+          "input_keys": [
+            "filename",
+            "format",
+            "source",
+            "workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
+      "evidence": [],
+      "insights": [],
+      "run_id": "test-report-_8d14f",
+      "source_sha256": "c446f294b930396299c6385e61dbff0e301987354f02b57d58ba44410c75fb88",
+      "tool_calls": []
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
+      "evidence": [],
+      "insights": [],
+      "run_id": "test-report-_8d14f-2",
+      "source_sha256": "5936722360c29f8dc28bb10d24f00b35135a7c324b0acb55510ce4375a5d5e8f",
+      "tool_calls": []
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
+      "evidence": [],
+      "insights": [],
+      "run_id": "test-report-_8d14f-3",
+      "source_sha256": "31f49f1fb90941254dcbe1f2d975a565f1a6c0bd447630d534d95aca2478c402",
+      "tool_calls": []
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
+      "evidence": [],
+      "insights": [],
+      "run_id": "test-report-jd2nfv",
+      "source_sha256": "608fadcc326cb6e8bbb7d34120ea37d42a1ae968901546631dc23cf12e83c6e3",
+      "tool_calls": []
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
+      "evidence": [],
+      "insights": [],
+      "run_id": "test-report-jd2nfv-2",
+      "source_sha256": "5017b2fb68621bfc282137c284350ce1a76c0b63e63e5a6da9b27992b3d5d19d",
+      "tool_calls": []
+    },
+    {
+      "dataset_file_present_at_capture": false,
+      "dataset_hash_matches_at_capture": false,
+      "dataset_path_present": true,
+      "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
+      "evidence": [],
+      "insights": [],
+      "run_id": "test-report-jd2nfv-3",
+      "source_sha256": "d126f9e8cd4826f0f70506cb10f533c5029f06ad209f8b779cdf0a802ca9be11",
+      "tool_calls": []
+    }
+  ],
+  "schema": "evidence-alignment-frame/v1",
+  "source_root": "artifacts/reports"
+}

@@ -17939,3 +17939,60 @@ the twenty-four no-argument document guards passed there; the one exception is
 see any in an archive export — an artefact of the simulation, not a failure in a real checkout. No
 new exception handler, suppression directive or documentation page was added, so no ceiling,
 lockfile or nav entry moved.
+
+## 322. A third S1 reading, measured from a frame a checkout actually contains
+
+Recorded 2026-11-10T11:01:49Z. Lane: S1 trustworthy baseline, continued. Base `40c4621`. This entry
+is built from `git show 40c4621:AUDIT_LEDGER.md` through a separate index, as §319–§321 were; the
+working copy on `tmp141` remains 202 lines behind on this file.
+
+**Scope of the decision.** §321's closing advice was to pin a fixed, hash-listed sample of experiment
+reports into the tree so evidence alignment could be reproduced. The owner authorized that line of
+work. It is an engineering change only: version-controlled fixture data, a measurement script, a
+record and contract tests. No governance document, branch protection setting, CODEOWNERS entry,
+secret, release, public issue or billing decision was touched, and the 2026-11-06 decision to leave
+#16 and #81 open and unworked stands.
+
+**What was measured.** `tests/fixtures/evidence-alignment/frame.json` is a deterministic projection
+of the 95 `artifacts/reports/*/experiment.json` files visible in the local working copy: the fields
+the four-hop walk reads, plus a SHA-256 anchor for each source report. It is 172,645 bytes against
+15,146,412 bytes of originals, and it is the first evidence sample in this lane that a third party
+receives with a checkout. `scripts/measure_evidence_alignment.py` recomputes the reading, the
+per-hop counts, the diagnostics and the frame digest from that file alone, and offers a capture mode
+for regenerating the frame where the originals exist. `docs/audit/evidence-alignment.json` is the
+first reading: 96 of 96 conclusions aligned, gaps empty, four per-hop counts of 96 each, 8 runs with
+no conclusions, 65 input files present at capture and 30 already gone. `docs/measurement-basis.md`
+now links the record and keeps the original definition verbatim.
+
+**Why a projection and not the originals.** §320 recorded the blocker precisely: the reports sit
+under `/artifacts/`, which `.gitignore:20` excludes, so the sample could not be reproduced by a
+reader; and for 30 of them the input bytes are gone, so the recorded hash cannot be recomputed.
+Shipping the originals verbatim would have made the number depend on 15 MB of unreviewable local
+state. The frame keeps the hash list as an anchor and states openly that projection fidelity is *not*
+independently verifiable from a checkout — that is a residual, not a solved problem.
+
+**Why one pull request this time.** §321 needed two because a `reviewed_commit` cannot name the
+commit that contains it. This reading names a *file digest*, not a commit, so there is no self-
+reference: the record and its measured object can land together. The rule that survives is the same
+— a changed frame or a changed hop definition is a basis change, requiring a new reading with this
+one left in place and marked superseded.
+
+**What 96 of 96 does not mean.** It is a statement about reference integrity inside a convenience
+census, not about product quality. The frame is every visible local report, mostly test runs, not a
+random draw from production. The four hops check that IDs resolve, not that an evidence node agrees
+with the tool output behind it or that a conclusion is true. The fourth hop asks that a hash be
+*recorded*, not that the input still exist; a well-formed hash for a lost input scores aligned, which
+is why 65/95 recomputable inputs is reported as a diagnostic and excluded from the numerator. A
+writer that always emits every field scores full marks here even when its content is wrong. The
+record's `residual` field says each of these in its own words. Independent re-run remains the one
+unmeasured S1 metric; it needs a genuinely clean environment and a produced reproduction bundle, and
+ADR-003 permits it to stay unmeasured rather than be filled with an estimate.
+
+**Gates.** Local verification on a `git archive` overlay of the intended tree: the seven new contract
+tests pass, including a negative case that breaks one hop at a time and asserts the reported gap
+stage; `--verify` returns 0 on every comparison field; `ruff check` and `ruff format --check` return
+0; `scripts/audit_facts.py --check` returns "facts ratchet: OK". The measurement script adds no
+exception handler, no suppression directive and no `check_`-style gate, so no debt ceiling or wiring
+entry moved; no new documentation page was added, so no nav entry moved. The pull request's own head
+carries its CI gates and they are not quoted here. No deployment was issued, no public issue was
+commented on or closed, no credential was used and no paid resource was enabled in this lane.
