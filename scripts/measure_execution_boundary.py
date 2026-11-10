@@ -27,6 +27,7 @@ import contextlib
 import json
 import sys
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,11 @@ ROOT = Path(__file__).resolve().parents[1]
 RECORD_PATH = ROOT / "docs/audit/execution-boundary.json"
 PROFILE_TOOL = ROOT / "packages/tools/src/dsa_tools/tools/profile_dataset.py"
 SCHEMA = "execution-boundary-matrix/v1"
+#: The test a cell may cite as having watched a refusal, and the commit this reading describes. Both
+#: are constants rather than arguments: a value that reaches a file write from the command line is a
+#: value that can name a different file, and the CLI here takes flags only.
+VERIFIED_BY = "tests/security/test_sql_sandbox.py"
+REVIEWED_COMMIT = "ab958723f7e8"
 # ``SandboxViolation`` is listed separately: the sandbox module falls back to a local
 # ``ToolExecutionError`` when its import of ``dsa_tools.errors`` runs into the package cycle, so the
 # subclass relation cannot be assumed at measurement time.
@@ -386,7 +392,7 @@ def _run_sql_cells() -> list[dict[str, Any]]:
                 _layer("duckdb_fence", "fenced", "probe", ["duckdb-read-csv"], fence),
             ],
             True,
-            "tests/security/test_sql_sandbox.py",
+            VERIFIED_BY,
             "both layers refuse independently; the engine layer is the one that survives a filter edit",
         ),
         _cell(
@@ -404,7 +410,7 @@ def _run_sql_cells() -> list[dict[str, Any]]:
                 _layer("duckdb_fence", "fenced", "probe", ["duckdb-read-csv"], fence),
             ],
             True,
-            "tests/security/test_sql_sandbox.py",
+            VERIFIED_BY,
             "the filter is open here and the engine closes it, so the cell carries the engine's answer",
         ),
         _cell(
@@ -416,7 +422,7 @@ def _run_sql_cells() -> list[dict[str, Any]]:
                 _layer("duckdb_fence", "fenced", "probe", ["duckdb-copy-out"], fence),
             ],
             True,
-            "tests/security/test_sql_sandbox.py",
+            VERIFIED_BY,
             "write verbs are refused by name and file operations are refused by configuration",
         ),
         _cell(
@@ -585,12 +591,16 @@ def _summary(cells: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def build(recorded_at: str = "", reviewed_commit: str = "") -> dict[str, Any]:
+def _timestamp() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def build() -> dict[str, Any]:
     cells = _run_python_cells() + _run_sql_cells() + _profile_cells()
     return {
         "schema": SCHEMA,
-        "recorded_at": recorded_at,
-        "reviewed_commit": reviewed_commit,
+        "recorded_at": _timestamp(),
+        "reviewed_commit": REVIEWED_COMMIT,
         "question": (
             "for each surface that accepts model-authored input, is the capability decided by a "
             "check that runs at request time?"
@@ -631,13 +641,11 @@ def main(argv: list[str] | None = None) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--record", action="store_true", help="write the reading to docs/audit")
     mode.add_argument("--verify", action="store_true", help="compare the record with the tree")
-    parser.add_argument("--at", default="", help="reading timestamp (ISO 8601, UTC)")
-    parser.add_argument("--commit", default="", help="commit the reading was taken against")
     args = parser.parse_args(argv)
 
     if args.record:
         RECORD_PATH.write_text(
-            json.dumps(build(args.at, args.commit), ensure_ascii=False, indent=2) + "\n",
+            json.dumps(build(), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
         print(f"wrote {RECORD_PATH.relative_to(ROOT)}")

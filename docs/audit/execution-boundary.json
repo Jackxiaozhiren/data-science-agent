@@ -1,6 +1,6 @@
 {
   "schema": "execution-boundary-matrix/v1",
-  "recorded_at": "2026-11-10T12:57:58Z",
+  "recorded_at": "2026-11-10T13:23:12Z",
   "reviewed_commit": "ab958723f7e8",
   "question": "for each surface that accepts model-authored input, is the capability decided by a check that runs at request time?",
   "verdict_rule": "the last check to run decides the cell; a capability with no request-time check is recorded undecidable even when today's code does not exercise it",
