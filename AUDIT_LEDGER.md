@@ -17875,3 +17875,67 @@ with an estimate.
 **What this entry does not claim.** No deployment was issued or verified from this lane, no public
 issue was commented on or closed, no governance setting was changed, and no paid resource was enabled.
 The owner's 2026-11-06 decision to leave #16 and #81 open and unworked stands.
+
+## 321. The decision §320 was waiting for, and a full score that claims less than it looks like
+
+Recorded 2026-11-10T10:38:02Z. Lane: S1 trustworthy baseline, continued. Base `7215d26`; the
+governance change landed first as `920d4df` (#178), and the second reading is taken against that
+merged commit. This entry is built from `git show 920d4df:AUDIT_LEDGER.md` through a separate index,
+as §319 and §320 were; the working copy on `tmp141` remains 202 lines behind on this file.
+
+**The decision, and its scope.** §320 closed by saying the proposal to close seven authorization gaps
+was NOT APPLIED and needed its own decision. The owner gave that decision on 2026-11-10 in response
+to the explicit request for it. It was interpreted narrowly: authority to change the governance
+**document**, not to change branch protection, CODEOWNERS, repository secrets, release state, issues
+or the zero-billing constraint. Nothing else was treated as authorized by the same sentence, and the
+owner's 2026-11-06 decision to leave #16 and #81 open and unworked stands.
+
+**What changed.** `GOVERNANCE.md` gained a decision-authority table (31 insertions, 0 deletions):
+one row for each of the nine S1 action classes, naming the decider, the place the decision is
+recorded and the precondition before acting. AC1 and AC5 restate rules that already existed; AC2,
+AC3, AC4, AC6, AC7, AC8 and AC9 now name a decider and a record where the first reading found none.
+The table states in its own text that it records **accountability, not enforcement**, that a named
+decider adds no technical gate, and that a settings change would itself have to be recorded under
+AC6. AC7 names who would have to decide before a paid lane; it does not create an exception to
+"No billing".
+
+**What deliberately did not change.** Branch protection was re-read at 2026-11-10T10:31Z and is
+identical to the first reading: required status check `ci`, `strict=true`,
+`required_pull_request_reviews=null`, `enforce_admins=false`. `CODEOWNERS` still names an owner
+without requiring one. Enabling required reviews on a single-maintainer repository is a separate,
+potentially self-blocking configuration decision; it was not taken, and the second reading does not
+count as having taken it. No release was cut, no public issue was commented on or closed, no
+credential was used, no external conclusion was published and no paid resource was enabled under the
+new table.
+
+**Why two pull requests.** The second reading had to name a real tree. Putting the record in the same
+commit as the governance table would have made `reviewed_commit` a self-reference with no hash that
+could appear inside itself. #178 landed first; the reading then names `920d4df`. This is the same
+rule §320 applied to dated readings, used on a smaller scale.
+
+**The second reading.** `docs/audit/authorization-coverage-second.json` scores the same nine classes
+under the same basis and records 9 of 9 with no gaps. The class definitions, method, denominator rule
+and basis string are copied verbatim from the first record, and `previous_reading` points at it with
+its original numerator and denominator. The first file is **not edited**: its "NOT APPLIED" proposal
+remains as a true statement about `08be9b5`. A contract test compares the two records on those shared
+fields, checks that the first was not rewritten, and recomputes the second score by parsing the
+governance table row by row — a blanked authorizer or record cell now fails CI instead of quietly
+lowering a number. The full score is therefore a change in the tree, not a change in the ruler.
+
+**What the full score does not mean.** It says only that every class now names a decider and a record.
+It does not mean any control is technically enforced, that any decision was correct, that past
+actions are retroactively authorized, or that ledger entries for AC6/AC7/AC8 will be written
+automatically. Those residual risks are listed in the record's `residual` field rather than hidden
+behind the numerator. `docs/measurement-basis.md` says the same in prose and now links both records.
+
+**Gates.** #178 finished with 12 successful check-runs and none pending or failing: `ci` 6m4s,
+`web-regression` 2m56s, CodeQL (python, javascript), gitleaks, dependency-review, label, SonarCloud
+and both Vercel statuses. For the reading PR, gates are recorded by CI on its own head and are not
+quoted here. Local verification before that PR: all five contract tests passed on a `git archive`
+overlay of the intended tree; `ruff check` and `ruff format --check` returned 0;
+`scripts/audit_facts.py --check` returned "facts ratchet: OK" on that clean tree. Twenty-three of
+the twenty-four no-argument document guards passed there; the one exception is
+`test_the_real_repository_carries_a_release_line`, which reads git tags from `Path.cwd()` and cannot
+see any in an archive export — an artefact of the simulation, not a failure in a real checkout. No
+new exception handler, suppression directive or documentation page was added, so no ceiling,
+lockfile or nav entry moved.

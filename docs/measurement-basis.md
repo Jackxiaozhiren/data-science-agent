@@ -22,7 +22,7 @@ Three rules apply to every metric below, each because the opposite caused a real
 | Served-artifact agreement | checks whose live reading matches the contract this tree publishes | checks attempted | `docs/audit/served-artifacts.json` | **measured, first reading 2026-11-09** |
 | Evidence alignment | conclusions traceable to an evidence node, a computation and a data hash | conclusions sampled from completed runs | not recorded | defined, not measured |
 | Independent re-run | bundles whose layers reproduce in a clean environment and match the recording | bundles sampled | not recorded | defined, not measured |
-| Authorization coverage | action classes with a named authorizer and a recorded decision | action classes identified in the tree | `docs/audit/authorization-coverage.json` | **measured, first reading 2026-11-10** |
+| Authorization coverage | action classes with a named authorizer and a recorded decision | action classes identified in the tree | `docs/audit/authorization-coverage.json`, `docs/audit/authorization-coverage-second.json` | **measured, two readings 2026-11-10** |
 
 The two remaining unmeasured rows are not omissions dressed as plans: S1's own exit condition is to
 record each of them once. Until then the honest value is "not measured", and the ADR's rollback path
@@ -104,9 +104,24 @@ outside the numerator — including it would turn a question about what the tree
 question about what GitHub does. The reading says nothing about whether any decision was correct.
 
 The two covered classes are release publication and a change to the governance document: in both the
-maintainer is named and the tag or pull request is the record. The record also carries a proposal for
-closing the others as text, not as an edit: changing `GOVERNANCE.md` is itself a governed action, and a
-second reading under the same basis has to wait for that decision.
+maintainer is named and the tag or pull request is the record. The first record also carried a
+proposal for closing the others as text, explicitly not applied. That proposal was a statement about
+`08be9b5` and is left unedited.
+
+The owner authorized the proposal on 2026-11-10, and `GOVERNANCE.md` gained a decision-authority
+table. A **second reading** (`docs/audit/authorization-coverage-second.json`) then scored the same
+nine classes against the merged commit `920d4df` under the same basis and recorded 9 of 9.
+The class definitions, method and denominator rule are copied verbatim between the two records, and a
+contract test compares them as well as recomputing the second score from the governance table itself;
+the change in the number is therefore a change in the tree, not a change in the ruler. The first
+reading stays as history, exactly as written.
+
+A full score is a narrow fact: every class now names a decider and a place where the decision is
+written down. It is **not** a claim that any control is technically enforced. Branch protection was
+re-read at the same time and is unchanged — `ci` required, no required review, `CODEOWNERS` advisory
+— and the governance table says so in its own text. Nor does the second reading authorize anything
+retroactively, certify a past decision, or create an exception to the zero-billing constraint. Its
+`residual` field lists what remains open.
 
 ## What this page is not
 
