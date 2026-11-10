@@ -1,0 +1,166 @@
+{
+  "schema": "independent-rerun/v1",
+  "recorded_at": "2026-11-10T12:31:55Z",
+  "lane": "S1 trustworthy baseline",
+  "metric": "independent re-run",
+  "definition": "Bundles whose layers reproduce in a clean environment and match the recording, over bundles sampled. Defined in docs/measurement-basis.md and unchanged here.",
+  "verdict": "measured",
+  "sampled": 1,
+  "numerator": 1,
+  "denominator": 1,
+  "sample": {
+    "name": "benchmarks/baseline — the frozen DS-Agent-Benchmark recording",
+    "why_this_one": "It is the only run recording in the tree that states its own provenance: run_manifest.json names llm_mode stub, call_count 0 and the commit it was frozen at. A sample without those fields could not be compared at all.",
+    "recording_commit": "4259e8f101ed",
+    "recording_sha256": "b4781193789101af5a8af5c3b87b3da7509035187dff3d0792e3bf6a17bed1a3",
+    "tasks": 50
+  },
+  "environment": {
+    "method": "git clone file://<local checkout> then git checkout origin/main; a clone rather than a git-archive extract so the runner can read a real HEAD.",
+    "commit": "3b9c0f7ab13f",
+    "working_tree_clean_before_run": true,
+    "artifacts_present_before_run": false,
+    "venv_present_before_run": false,
+    "python": "3.12.14",
+    "uv": "0.11.7",
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "dependency_source": "uv export --frozen --no-dev from the commit's own uv.lock, installed into a fresh venv, then the repository itself with --no-deps. The lock's hashes were enforced by uv during the install.",
+    "one_wheel_came_from_outside_the_registry": "polars-runtime-32 2.1.0 (45 MB) failed its download repeatedly over roughly forty minutes, so the same wheel was fetched separately and supplied with --find-links. Its sha256 matches the hash recorded in uv.lock for that exact filename, so the dependency set stayed lock-faithful, but the transfer path was not the plain one. A reader on a healthy network will not need this step."
+  },
+  "procedure": {
+    "commands": [
+      "git clone --no-local file://<local checkout> clean && cd clean",
+      "git checkout origin/main",
+      "uv venv --python 3.12 .venv",
+      "uv export --frozen --no-dev --format requirements-txt -o req.txt",
+      "uv pip install --python .venv/bin/python -r req.txt",
+      "uv pip install --python .venv/bin/python --no-deps -e .",
+      ".venv/bin/dsa --limit 50 --out artifacts/rerun",
+      ".venv/bin/dsa --reproduce",
+      "python3 scripts/compare_baseline_run.py"
+    ],
+    "lane": "stub / heuristic",
+    "model_calls": 0,
+    "durations_not_recorded": "The record carries no wall-clock duration: the same reason latency is excluded from the comparison applies to it. Per-task timings are in the fresh results and in the reproduction logs, which are produced rather than shipped.",
+    "no_credential_read": true
+  },
+  "harness_layers": {
+    "source": "reproduction/benchmark/comparison.json, written by `dsa --reproduce`",
+    "by_level": {
+      "L0": 0.0,
+      "L1": 0.0,
+      "L2": 0.0,
+      "L3": 0.0,
+      "L4": 0.0,
+      "L5": 1.0
+    },
+    "read_the_distribution_correctly": "by_level is the share of tasks whose highest reached level is that level, not a per-level pass rate. L0..L4 at 0.0 with L5 at 1.0 means every task reached the top level; it does not mean the run failed at L0. Read carelessly it looks like the opposite of what it is.",
+    "score": {
+      "execution": 1.0,
+      "numerical": 1.0,
+      "statistical": 1.0,
+      "evidence": 1.0,
+      "semantic": 1.0,
+      "overall": 1.0
+    },
+    "both_runs_inside_the_clean_clone": "The harness runs the benchmark twice in the same clone and compares the two. That establishes reproduction inside one environment; the comparison against the recording, below, is what crosses environments."
+  },
+  "comparison": {
+    "verdict": "ok",
+    "layers": {
+      "task_roster": "ok",
+      "task_verdicts": "ok",
+      "aggregate": "ok",
+      "execution": "ok"
+    },
+    "tasks_in_recording": 50,
+    "tasks_in_fresh": 50,
+    "roster_differences": [],
+    "task_disagreements": {},
+    "task_field_counts": {
+      "task_success": 0,
+      "statistical_accuracy": 0,
+      "sql_accuracy": 0,
+      "code_execution_success": 0,
+      "evidence_coverage": 0,
+      "unsupported_claim": 0
+    },
+    "aggregate": {
+      "n_equal": true,
+      "differing_keys": [],
+      "by_category_differing": [],
+      "excluded_keys": [
+        "mean_latency_ms"
+      ],
+      "recording": {
+        "code_execution_success": 1.0,
+        "evidence_coverage": 1.0,
+        "mean_latency_ms": 142.9,
+        "n": 50,
+        "sql_accuracy": 1.0,
+        "statistical_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "unsupported_claim_rate": 0.0
+      },
+      "fresh": {
+        "code_execution_success": 1.0,
+        "evidence_coverage": 1.0,
+        "mean_latency_ms": 1142.36,
+        "n": 50,
+        "sql_accuracy": 1.0,
+        "statistical_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "unsupported_claim_rate": 0.0
+      }
+    },
+    "execution": {
+      "differing_keys": [],
+      "recording": {
+        "llm_mode": "stub",
+        "provider": "stub",
+        "model": "heuristic",
+        "fallback": "error",
+        "evaluation_variant": "dsa",
+        "evidence_critic_enabled": true,
+        "evidence_critic_setting": "on",
+        "call_count": 0
+      },
+      "fresh": {
+        "llm_mode": "stub",
+        "provider": "stub",
+        "model": "heuristic",
+        "fallback": "error",
+        "evaluation_variant": "dsa",
+        "evidence_critic_enabled": true,
+        "evidence_critic_setting": "on",
+        "call_count": 0
+      },
+      "recording_commit": "4259e8f101ed",
+      "fresh_commit": "3b9c0f7ab13f",
+      "git_commit_compared": false
+    },
+    "latency": {
+      "samples": 50,
+      "tasks": 50,
+      "mean_ms": 1142.4,
+      "max_ms": 39157,
+      "excluded_from_equality": true,
+      "reason": "Wall-clock time is a property of the machine and the load on it, not of the analysis. It is reported here so a reader can see the run happened, and kept out of the verdict so that an honest re-run on slower hardware still reads as reproducing."
+    },
+    "recording_sha256": "b4781193789101af5a8af5c3b87b3da7509035187dff3d0792e3bf6a17bed1a3",
+    "fresh_sha256": "baa3c1c0a09193c4c1da149b7cccfe0c9730a668a848eafb670a5351f8e0c92d"
+  },
+  "residual": [
+    "One bundle sampled. It is the only frozen recording in the tree, so this reading says nothing about how often a production run reproduces — only that this one does.",
+    "The lane is the deterministic stub, zero model calls. It establishes that the pipeline, the evaluator and the frozen numbers still agree at this commit. It says nothing about a real-model run, which remains issue #16 and out of scope here.",
+    "The recording was frozen at 4259e8f101ed and the re-run ran at the fresh commit above. Agreement is therefore also evidence of no regression across that span, but the two sides are different commits by construction, so this is not a same-commit control.",
+    "mean_latency_ms differs (142.9 recorded against a fresh value above) and is excluded by rule. Latency parity would need identical hardware and an idle machine, which this lane cannot supply.",
+    "The fresh side lives under artifacts/, which .gitignore excludes. Unlike the evidence-alignment frame, a reader must re-run to check this reading; the record can be read, but the object it describes cannot be shipped.",
+    "The harness layer score is computed between two runs inside one environment. A cross-machine layer score is not available from the committed recording, because raw_runs.json — which carries the per-task run_result a cross-run L0..L5 comparison needs — is deliberately not committed."
+  ],
+  "not_claimed": [
+    "Not a publication-grade benchmark result: publication_ready needs scope=full and task_limit=0, and this run used --limit 50 on a fixed catalog.",
+    "Not evidence that conclusions are correct. The stub lane emits deterministic heuristics; matching itself is the property measured, not analytical quality.",
+    "Not a claim that the hosted deployment reproduces anything. Nothing here touched a deployed instance, a credential or a paid resource."
+  ]
+}

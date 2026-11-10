@@ -18026,3 +18026,80 @@ directive and no `check_`-style gate, so no debt ceiling or wiring entry moved; 
 page was added, so no nav entry moved. The pull request's own head carries its CI gates and they are
 not quoted here. No deployment was issued, no public issue was commented on or closed, no credential
 was used and no paid resource was enabled in this lane.
+## 323. The fourth S1 reading, taken by re-running the freeze instead of reasoning about it
+
+Recorded 2026-11-10T12:31:55Z. Lane: S1 trustworthy baseline, closing entry. Base `3b9c0f7`. This
+entry is built from `git show 3b9c0f7:AUDIT_LEDGER.md` through a separate index, as §319–§322 were;
+the working copy on `tmp141` remains far behind on this file.
+
+**What changed in the scoreboard.** S1 defines four metrics and requires each recorded once.
+Served-artifact agreement (§320, `08be9b5`), evidence alignment (§322), and authorization coverage in
+two readings (§320–§321) were on the board; independent re-run was not. It is now measured, 1 of 1
+sampled bundles reproducing. All four rows carry a reading, which is S1's exit condition and nothing
+more.
+
+**Why the previous entry could not do this.** §322 measured evidence alignment from a pinned frame
+because the originals sat under a git-ignored directory. This metric is different in kind: it asks
+whether a *second environment* produces the same result, so no artefact can be pinned — the reader has
+to run something. The object was already in the tree: `benchmarks/baseline` is a frozen recording that
+states its own provenance (`llm_mode: stub`, `call_count: 0`, frozen at `4259e8f101ed`), and
+`docs/reproducibility.md` documents the pipeline that regenerates it. What was missing was an
+environment that could honestly be called clean and an instrument that compared the two sides layer by
+layer.
+
+**The environment.** A `git clone` of this repository at `3b9c0f7ab13f`, not a `git archive` extract —
+the extract has no `.git`, and the first attempt proved the difference: the runner recorded
+`git_commit: null`, so the fresh side could not name what it ran. The clone started with no `artifacts/`
+directory, no environment directory, and an empty `git status`; its virtual environment was built from
+that commit's own `uv.lock`, and the repository was installed into it. Nothing was read from the working
+copy that had produced anything.
+
+**One deviation, recorded rather than smoothed over.** `polars-runtime-32` 2.1.0 — 45 MB — failed its
+download repeatedly over roughly forty minutes, so the wheel was fetched separately and supplied with
+`--find-links`. Its SHA-256 matches the hash `uv.lock` records for that exact filename, so the dependency
+set stayed lock-faithful; the transfer path did not. A reader on a healthy network will not need the
+step, and the record says so in its own field instead of leaving a tidy story.
+
+**Two comparisons, because they answer different questions.** Inside the clone, `dsa --reproduce` runs
+the benchmark twice and scores the pair: `overall 1.0`, `execution 1.0`, `trajectory 1.0`, and
+`by_level` of `L0..L4 = 0.0, L5 = 1.0`. That last block is the share of tasks whose *highest* level is
+that level, so all-zero below L5 is a full pass; read as a per-level pass rate it looks like total
+failure at the first step, which is the opposite fact. Against the recording,
+`scripts/compare_baseline_run.py` compares four layers — task roster, the six per-task verdict fields
+plus `error`, the aggregate block with its per-category table, and the `execution` block. All four agree,
+50 of 50 tasks on both sides, no verdict field differing on any task.
+
+**Two exclusions that are definition, not convenience.** `latency_ms` and its aggregate
+`mean_latency_ms` are excluded: the recorded mean is 142.9 ms and the fresh mean was 1142.4 ms on a
+loaded laptop, and comparing them would fail every honest re-run on slower hardware. The first draft got
+this wrong in a way worth recording — it excluded latency per task and then compared it inside the
+aggregate, failed its own re-run, and had to be corrected; the inconsistency was mine, not the machine's.
+`execution.git_commit` is expected to differ and is reported rather than compared, because the recording
+names the commit it was frozen at and a re-run names its own. Everything else in `execution` must agree:
+a changed `call_count` is a mismatch, since that would mean the two sides ran different lanes, and a
+contract test pins that.
+
+**What agreement here does not mean.** The recording was frozen at `4259e8f101ed` and the re-run ran at
+`3b9c0f7ab13f`, so agreement is also evidence of no regression across that span — but it is not a
+same-commit control. The lane is the deterministic stub with zero model calls, so this says nothing about
+a real-model run, which stays issue #16 and out of scope. It is not a publication-grade benchmark:
+`publication_ready` needs `scope=full` and `task_limit=0`, and this run used `--limit 50` on a fixed
+catalog. And the fresh side lives under `artifacts/`, which `.gitignore` excludes, so unlike the evidence
+frame the object cannot be shipped — a reader verifies this reading by re-running it, which the record's
+`procedure` field spells out command by command. A cross-machine layer score is not available from the
+committed recording either, because `raw_runs.json`, which carries the per-task `run_result` such a
+comparison needs, is deliberately not committed.
+
+**Gates.** Local verification on the clone, which is the tree being proposed: all twelve new contract
+tests pass, including a control that compares the recording with itself, a negative case that breaks one
+verdict and asserts the reported layer and field, and a case that asserts an absent fresh side reads as
+unmeasured rather than as agreement; `--verify` agrees on every compared field and returns 0, while a
+record with one tampered digest returns 1. `ruff check` and `ruff format --check` return 0;
+`scripts/find_orphan_reads.py --check` returns OK with the exemption list untouched — the new script
+writes no key that a registered orphan read claims; `scripts/audit_facts.py --check` returns
+"facts ratchet: OK" after the one handler in `load()` moved `ceiling.debt.exceptHandlers` 186 -> 187,
+with the reason appended to `_redefinitionNote` per §4; `scripts/check_public_claims.py` reports no stale
+claims and all twenty-four no-argument document guards pass; `mkdocs build --strict` succeeds. No new
+documentation page was added, so no nav entry moved. The pull request's own head carries its CI gates
+and they are not quoted here. No deployment was issued, no public issue was commented on or closed, no
+credential was read and no paid resource was enabled in this lane.

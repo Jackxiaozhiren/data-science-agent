@@ -21,12 +21,11 @@ Three rules apply to every metric below, each because the opposite caused a real
 |---|---|---|---|---|
 | Served-artifact agreement | checks whose live reading matches the contract this tree publishes | checks attempted | `docs/audit/served-artifacts.json` | **measured, first reading 2026-11-09** |
 | Evidence alignment | conclusions traceable to an evidence node, a computation and a data hash | conclusions sampled from completed runs | `docs/audit/evidence-alignment.json` | **measured, first reading 2026-11-10** |
-| Independent re-run | bundles whose layers reproduce in a clean environment and match the recording | bundles sampled | not recorded | defined, not measured |
+| Independent re-run | bundles whose layers reproduce in a clean environment and match the recording | bundles sampled | `docs/audit/independent-rerun.json` | **measured, first reading 2026-11-10** |
 | Authorization coverage | action classes with a named authorizer and a recorded decision | action classes identified in the tree | `docs/audit/authorization-coverage.json`, `docs/audit/authorization-coverage-second.json` | **measured, two readings 2026-11-10** |
 
-The one remaining unmeasured row is not an omission dressed as a plan: S1's own exit condition is to
-record each metric once. Until then the honest value is "not measured", and the ADR's rollback path
-explicitly allows the baseline to stay unmeasured rather than be filled with estimates.
+All four rows now carry a reading. That is S1's exit condition met, and nothing more: each row is one
+observed instance with its basis written down, not a trend and not a target that was hit.
 
 ## Served-artifact agreement
 
@@ -91,9 +90,9 @@ written in the ledger as context rather than made a field of the reading. Every 
 is recomputable from the frame.
 
 The reading therefore says nothing about whether a conclusion is true, whether a tool result agrees
-with the evidence node citing it, or whether a run can be reproduced. Those are what the independent
-re-run metric is for, and it remains unmeasured. A change to the frame or to the hop definition is a
-basis change: a new reading is added and this one marked superseded, not rewritten.
+with the evidence node citing it, or whether a run can be reproduced. The last of those is what the
+independent re-run metric measures, and it is measured below. A change to the frame or to the hop
+definition is a basis change: a new reading is added and this one marked superseded, not rewritten.
 
 ## Independent re-run
 
@@ -103,6 +102,44 @@ results match: manifest, pinned environment, ordered execution trace, artefacts 
 "Clean environment" is part of the claim, not a detail. A re-run executed in the directory that produced
 the bundle shares state with it and does not measure independence; until a clean environment is actually
 used, this metric stays unmeasured rather than reporting a comfortable number from a shared tree.
+
+### First reading (2026-11-10)
+
+The sample is `benchmarks/baseline`, the only recording in the tree that states its own provenance:
+`run_manifest.json` names the stub lane, zero model calls and the commit it was frozen at
+(`4259e8f101ed`). One bundle was sampled, one reproduced.
+
+The environment was `git clone` of this repository, checked out at `3b9c0f7ab13f`, with a fresh virtual
+environment built from that commit's own `uv.lock` and the repository installed into it. Before the run
+the clone had no `artifacts/` directory and no environment directory, and `git status` was empty. Nothing
+was read from the working copy that produced the recording.
+
+Two comparisons were made, because they answer different questions:
+
+- **Inside the clean clone**, `dsa --reproduce` runs the benchmark twice and scores the pair. Both runs
+  reached the top level on every task: the score is `overall 1.0`, `execution 1.0`, `trajectory 1.0`.
+  Its `by_level` block reads `L0..L4 = 0.0, L5 = 1.0`, which is the share of tasks whose *highest*
+  level is that level — read as a per-level pass rate it would look like a total failure at L0, which
+  is the opposite of the fact.
+- **Against the recording**, `scripts/compare_baseline_run.py` compares four layers: the task roster,
+  each task's six verdict fields and `error`, the aggregate block with its per-category table, and the
+  `execution` block. All four agree; 50 of 50 tasks are present on both sides and no verdict field
+  differs on any task. The two sides are different commits by construction, so agreement is also
+  evidence that nothing regressed between `4259e8f` and `3b9c0f7ab13f` — it is not a same-commit
+  control.
+
+Two exclusions are part of the definition rather than conveniences. `latency_ms` and its aggregate
+`mean_latency_ms` are excluded: wall-clock time is a property of the machine, and comparing it would
+fail every honest re-run on slower hardware (the recorded mean is 142.9 ms; the fresh mean was 1142.4 ms
+on a loaded laptop). `execution.git_commit` is expected to differ and is reported rather than compared.
+Every other field in the `execution` block must agree, and a changed `call_count` is a mismatch, because
+that would mean the two sides ran different lanes.
+
+The fresh side lives under `artifacts/`, which `.gitignore` excludes, so unlike the evidence frame this
+object cannot be shipped. A reader checks this reading by re-running it, which the record's `procedure`
+field spells out. The record also states one deviation: a 45 MB wheel failed to download repeatedly, so
+it was supplied from outside the registry — its SHA-256 matches the hash `uv.lock` records for that
+filename, so the dependency set stayed lock-faithful even though the transfer path was not the plain one.
 
 ## Authorization coverage
 
@@ -152,5 +189,6 @@ retroactively, certify a past decision, or create an exception to the zero-billi
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
 - Not a substitute for the evidence: the numbers live in their own records and are linked, so a change in
   a definition cannot quietly rewrite history.
-- Not complete. One of S1's four readings does not exist yet, and this page says so in the same table
-  that reports the three that do.
+- Not complete. All four rows now carry a first reading, but each is a single observation: none of them
+  establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
+  one recording in the tree states its own provenance.
