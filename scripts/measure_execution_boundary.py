@@ -23,9 +23,10 @@ probes touch is one CSV this tree ships.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -77,19 +78,42 @@ def _sql_probe(statement: str) -> Callable[[], str | None]:
     return run
 
 
-def _duckdb_probe(statement: str) -> Callable[[], str | None]:
-    """Run a statement on a connection carrying the same fence ``run_sql`` installs."""
+@contextlib.contextmanager
+def _fenced_connection() -> Iterator[duckdb.DuckDBPyConnection]:
+    """A connection carrying the same fence ``run_sql`` installs before any caller statement runs."""
+    con = duckdb.connect(database=":memory:")
+    try:
+        con.execute("SET enable_external_access=false")
+        yield con
+    finally:
+        con.close()
 
-    def run() -> str | None:
-        con = duckdb.connect(database=":memory:")
-        try:
-            con.execute("SET enable_external_access=false")
-            con.execute(statement).fetchall()
-        finally:
-            con.close()
-        return None
 
-    return run
+def _duckdb_read_probe() -> str | None:
+    """A CSV this tree ships, opened only so the engine can refuse it."""
+    with _fenced_connection() as con:
+        con.execute(
+            "SELECT * FROM read_csv_auto('benchmarks/ds-agent-benchmark/datasets/data_quality.csv')"
+        ).fetchall()
+    return None
+
+
+def _duckdb_copy_probe() -> str | None:
+    with _fenced_connection() as con:
+        con.execute("COPY (SELECT 1 AS a) TO '/tmp/dsa-probe.csv'").fetchall()
+    return None
+
+
+def _duckdb_glob_probe() -> str | None:
+    with _fenced_connection() as con:
+        con.execute("SELECT * FROM glob('*')").fetchall()
+    return None
+
+
+def _duckdb_env_probe() -> str | None:
+    with _fenced_connection() as con:
+        con.execute("SELECT getenv('HOME')").fetchall()
+    return None
 
 
 def _profile_url_probe() -> str | None:
@@ -190,29 +214,25 @@ PROBES: tuple[dict[str, Any], ...] = (
         "id": "duckdb-read-csv",
         "surface": "run_sql",
         "question": "does the engine fence allow a CSV on disk to be opened?",
-        # the one file a probe opens is a CSV this tree ships; a literal keeps the statement
-        # inspectable and keeps a caller-supplied path out of the script entirely
-        "run": _duckdb_probe(
-            "SELECT * FROM read_csv_auto('benchmarks/ds-agent-benchmark/datasets/data_quality.csv')"
-        ),
+        "run": _duckdb_read_probe,
     },
     {
         "id": "duckdb-copy-out",
         "surface": "run_sql",
         "question": "does the engine fence allow a table to be written to a file?",
-        "run": _duckdb_probe("COPY (SELECT 1 AS a) TO '/tmp/dsa-probe.csv'"),
+        "run": _duckdb_copy_probe,
     },
     {
         "id": "duckdb-glob",
         "surface": "run_sql",
         "question": "does the engine fence allow the working directory to be listed?",
-        "run": _duckdb_probe("SELECT * FROM glob('*')"),
+        "run": _duckdb_glob_probe,
     },
     {
         "id": "duckdb-env-function",
         "surface": "run_sql",
         "question": "does the engine expose an environment-variable function?",
-        "run": _duckdb_probe("SELECT getenv('HOME')"),
+        "run": _duckdb_env_probe,
     },
     {
         "id": "profile-url-path",

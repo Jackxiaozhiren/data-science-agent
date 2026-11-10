@@ -32,6 +32,9 @@ ROOT = Path(__file__).resolve().parents[2]
 RECORD_PATH = ROOT / "docs/audit/execution-boundary.json"
 BASIS_PAGE = ROOT / "docs/measurement-basis.md"
 RECORD = json.loads(RECORD_PATH.read_text(encoding="utf-8"))
+#: Every test the record is allowed to cite. A record naming a path of its own choosing would turn
+#: a citation into a file probe, so the set is closed here instead of resolved from the record.
+CITED_TESTS = {"tests/security/test_sql_sandbox.py"}
 CAPABILITIES = {
     "process_spawn",
     "network_egress",
@@ -125,8 +128,12 @@ def test_verification_sits_behind_a_verified_citation() -> None:
         if not cell["effect_verified"]:
             assert cell["verified_by"] is None, cell["id"]
             continue
-        assert cell["verified_by"], cell["id"]
-        assert (ROOT / cell["verified_by"]).exists(), (cell["id"], cell["verified_by"])
+        assert cell["verified_by"] in CITED_TESTS, cell["id"]
+
+
+def test_every_cited_test_is_in_the_tree() -> None:
+    for relative in sorted(CITED_TESTS):
+        assert (ROOT / relative).exists(), relative
 
 
 def test_the_record_disclaims_more_than_it_shows() -> None:
