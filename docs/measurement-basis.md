@@ -84,9 +84,11 @@ The frame is a **convenience census, not a random sample**: every report visible
 copy at capture time, sorted by run identifier, with no exclusion by outcome. Runs with no conclusions
 contribute nothing to either side of the rate. That boundary matters more than the score: these are
 mostly test runs, the frame is a projection whose fidelity a checkout cannot independently verify,
-and the fourth hop asks that a hash be *recorded*, not that the input still exist. At capture time 65
-of 95 input files were present and all 65 matched their recorded hash; 30 were already gone. Those
-are capture-time observations in the record's diagnostics, not part of the numerator.
+and the fourth hop asks that a hash be *recorded*, not that the input still exist. Whether the inputs
+still existed was checked once on the capturing machine — 65 of 95 present, all matching their
+recorded hash, 30 already gone — but that observation cannot be reproduced from a checkout, so it is
+written in the ledger as context rather than made a field of the reading. Every field of the reading
+is recomputable from the frame.
 
 The reading therefore says nothing about whether a conclusion is true, whether a tool result agrees
 with the evidence node citing it, or whether a run can be reproduced. Those are what the independent

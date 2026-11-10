@@ -101,8 +101,6 @@ def test_a_broken_reference_is_reported_as_a_gap_at_its_hop() -> None:
                 "source_sha256": "a" * 64,
                 "dataset_sha256": "b" * 64,
                 "dataset_path_present": True,
-                "dataset_file_present_at_capture": False,
-                "dataset_hash_matches_at_capture": False,
                 "tool_calls": [
                     {"call_id": "call-1", "input_is_object": True, "input_keys": ["path"]}
                 ],
@@ -117,8 +115,6 @@ def test_a_broken_reference_is_reported_as_a_gap_at_its_hop() -> None:
                 "source_sha256": "c" * 64,
                 "dataset_sha256": "d" * 64,
                 "dataset_path_present": True,
-                "dataset_file_present_at_capture": True,
-                "dataset_hash_matches_at_capture": True,
                 "tool_calls": [
                     {"call_id": "call-2", "input_is_object": True, "input_keys": ["path"]}
                 ],
@@ -130,8 +126,6 @@ def test_a_broken_reference_is_reported_as_a_gap_at_its_hop() -> None:
                 "source_sha256": "e" * 64,
                 "dataset_sha256": "",
                 "dataset_path_present": False,
-                "dataset_file_present_at_capture": False,
-                "dataset_hash_matches_at_capture": False,
                 "tool_calls": [
                     {"call_id": "call-3", "input_is_object": True, "input_keys": ["path"]}
                 ],
@@ -157,8 +151,6 @@ def test_runs_without_conclusions_do_not_inflate_the_denominator() -> None:
         "source_sha256": "f" * 64,
         "dataset_sha256": "0" * 64,
         "dataset_path_present": True,
-        "dataset_file_present_at_capture": False,
-        "dataset_hash_matches_at_capture": False,
         "tool_calls": [],
         "evidence": [],
         "insights": [],

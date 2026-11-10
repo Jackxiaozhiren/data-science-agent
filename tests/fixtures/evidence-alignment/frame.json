@@ -2,8 +2,6 @@
   "capture_rule": "census of every artifacts/reports/*/experiment.json visible in the local working copy at capture time; sorted by run_id; no random draw and no exclusion by outcome",
   "reports": [
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
       "evidence": [
@@ -69,8 +67,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
       "evidence": [
@@ -136,8 +132,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -244,8 +238,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "8bdb63b19d2cf6aeba1eb0855408ace958473f70d197a844e19946f8dc51f4a4",
       "evidence": [
@@ -356,8 +348,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -437,8 +427,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "d0c365d9a663c22763b8cea92c5ea93854566d5efeee0a678fdf203a525fa8ed",
       "evidence": [
@@ -520,8 +508,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -603,8 +589,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -686,8 +670,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "647fa53c91974b2f701e51dcaf9c6fbe0d3790b4607ea767be99a7be1bbea4a6",
       "evidence": [
@@ -767,8 +749,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "09396b21de8dc6627b6966f02fc9d45a4128abccbb232af66de189352508ea93",
       "evidence": [
@@ -892,8 +872,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -991,8 +969,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -1094,8 +1070,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -1175,8 +1149,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
       "evidence": [
@@ -1242,8 +1214,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -1323,8 +1293,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
       "evidence": [
@@ -1390,8 +1358,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -1493,8 +1459,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "af3e35ea042a9851403cc29abb05b4b3b0c0f779d87d4935abead6d92d5c993b",
       "evidence": [
@@ -1560,8 +1524,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -1663,8 +1625,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -1762,8 +1722,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "6e7c2cf73e9c68d17be58fb9ef6dc1bb90357fba2b5afafb6ee33575aca7e456",
       "evidence": [
@@ -1855,8 +1813,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "2b509ccfcfa25806cbe271482c4bdb62c83651e088368299b7e17d04b834c5ce",
       "evidence": [
@@ -1922,8 +1878,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2003,8 +1957,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "579c0dedc450fc3142876dfb66a36d0006e8d9a86987ae2dbf0184319992718c",
       "evidence": [
@@ -2080,8 +2032,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2183,8 +2133,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -2228,8 +2176,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2309,8 +2255,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
       "evidence": [
@@ -2376,8 +2320,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2457,8 +2399,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -2502,8 +2442,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2605,8 +2543,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2686,8 +2622,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -2789,8 +2723,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
       "evidence": [
@@ -2856,8 +2788,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
       "evidence": [
@@ -2923,8 +2853,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -3026,8 +2954,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -3129,8 +3055,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "e036f888b40d68362dfa1b02ca021e81d13d957874bba3bfd8fdf14c02bbaba7",
       "evidence": [
@@ -3218,8 +3142,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b99ed55d193470d7990db83f6d5356f9c81081f48e2dcb577c26daf1fc26d6f9",
       "evidence": [
@@ -3298,8 +3220,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -3401,8 +3321,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -3482,8 +3400,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
       "evidence": [
@@ -3549,8 +3465,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
       "evidence": [
@@ -3616,8 +3530,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "29026141753f71c2bb67b8f71b5046eb5c12c00e658ab665b4e2ba0a331f70f0",
       "evidence": [
@@ -3683,8 +3595,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
       "evidence": [
@@ -3750,8 +3660,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "",
       "evidence": [],
@@ -3814,8 +3722,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -3895,8 +3801,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "88bb2b0208a50e6f577d8d36d9370d51db95ce7fd25f7b0254fe4329a558e997",
       "evidence": [
@@ -3970,8 +3874,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -4015,8 +3917,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -4096,8 +3996,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -4177,8 +4075,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "579c0dedc450fc3142876dfb66a36d0006e8d9a86987ae2dbf0184319992718c",
       "evidence": [
@@ -4254,8 +4150,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -4357,8 +4251,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
       "evidence": [
@@ -4424,8 +4316,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -4527,8 +4417,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "39baca68baf6c36f438c23e9c4b550853397290560ac2462db07ddc04e37d211",
       "evidence": [
@@ -4594,8 +4482,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -4675,8 +4561,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
       "evidence": [
@@ -4742,8 +4626,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -4787,8 +4669,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -4870,8 +4750,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -4915,8 +4793,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -5018,8 +4894,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -5121,8 +4995,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "68e76faa3137b685e9038edec3261c78403c29c796ace0ef1faa1ec49432880d",
       "evidence": [
@@ -5216,8 +5088,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "29026141753f71c2bb67b8f71b5046eb5c12c00e658ab665b4e2ba0a331f70f0",
       "evidence": [
@@ -5283,8 +5153,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "df61636cec6135757f95a5185f675af5fed03ea20b9985cb24a621f4c3c05328",
       "evidence": [
@@ -5390,8 +5258,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -5493,8 +5359,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -5574,8 +5438,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "39baca68baf6c36f438c23e9c4b550853397290560ac2462db07ddc04e37d211",
       "evidence": [
@@ -5641,8 +5503,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "2a87344745d164c86e6b9d28a153441d7214722591aa22e169bdf99199d15088",
       "evidence": [
@@ -5708,8 +5568,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -5791,8 +5649,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "e47fd0fd12cdc56523da6377d4b311a6c40c3b022d587f58299cf319578fe1ef",
       "evidence": [
@@ -5897,8 +5753,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "00cc2a3f1a15a0825395734111006ca8512838fe0c22c10afaf1f7cee2e945cb",
       "evidence": [
@@ -5964,8 +5818,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6045,8 +5897,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6148,8 +5998,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6229,8 +6077,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6310,8 +6156,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6391,8 +6235,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6472,8 +6314,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "e036f888b40d68362dfa1b02ca021e81d13d957874bba3bfd8fdf14c02bbaba7",
       "evidence": [
@@ -6561,8 +6401,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "2b509ccfcfa25806cbe271482c4bdb62c83651e088368299b7e17d04b834c5ce",
       "evidence": [
@@ -6628,8 +6466,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "c0e4d2954ebb949283229ce45ae2637ade6cd9cbf339d6c1669f5a1a6a34b2cd",
       "evidence": [
@@ -6711,8 +6547,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -6823,8 +6657,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "bf0c0cfd143989ced23e330967174137c8cce1a9d318158894e1c7b34774d313",
       "evidence": [
@@ -6890,8 +6722,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "",
       "evidence": [],
@@ -6954,8 +6784,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -7035,8 +6863,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -7116,8 +6942,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": true,
-      "dataset_hash_matches_at_capture": true,
       "dataset_path_present": true,
       "dataset_sha256": "05e300aca0537fcc850cbd06c0649e3c869163a180daec4e7a20e002d1ad6044",
       "evidence": [
@@ -7197,8 +7021,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "3d84b67df9fd2b6aa0edc28eacf5cc45a9e79ad4d113d6e1fbd509ba89400320",
       "evidence": [
@@ -7264,8 +7086,6 @@
       ]
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
       "evidence": [],
@@ -7275,8 +7095,6 @@
       "tool_calls": []
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
       "evidence": [],
@@ -7286,8 +7104,6 @@
       "tool_calls": []
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
       "evidence": [],
@@ -7297,8 +7113,6 @@
       "tool_calls": []
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
       "evidence": [],
@@ -7308,8 +7122,6 @@
       "tool_calls": []
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
       "evidence": [],
@@ -7319,8 +7131,6 @@
       "tool_calls": []
     },
     {
-      "dataset_file_present_at_capture": false,
-      "dataset_hash_matches_at_capture": false,
       "dataset_path_present": true,
       "dataset_sha256": "b9485148546419a0f6a85e8d708c923557c15d7f3c7d078ef1fa7f7c0f57d5a5",
       "evidence": [],

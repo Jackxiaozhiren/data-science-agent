@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-11-10T11:18:17Z",
+  "recorded_at": "2026-11-10T11:34:51Z",
   "metric": "Evidence alignment",
   "reading": 1,
   "verdict": "measured",
@@ -7,21 +7,19 @@
   "basis_unchanged": true,
   "frame_path": "tests/fixtures/evidence-alignment/frame.json",
   "frame_schema": "evidence-alignment-frame/v1",
-  "frame_sha256": "962ac3825854f6ff2e9340b1b540ed1cf2bb71a33c69df4420bc6718818be7aa",
+  "frame_sha256": "8ef616e7d5d339b79e5ba508365f2d94d9c2d0ede95ea4902747015c28762759",
   "frame_runs": 95,
   "source_sha256_manifest_sha256": "f01df256479df71acd2231f4ef0a0e7c26b2caebd807799b22ef12808ed27980",
   "capture": {
     "source_root": "artifacts/reports (gitignored, local working copy)",
     "capture_rule": "census of every artifacts/reports/*/experiment.json visible in the local working copy at capture time; sorted by run_id; no random draw and no exclusion by outcome",
     "source_sha256_count": 95,
-    "relative_dataset_path_resolution": "49 of 95 reports record a relative dataset_path and 46 an absolute one. The capture resolves relative values against the repository root explicitly; an earlier draft resolved them against the process working directory and produced 17 instead of 65 present inputs when run from a different directory. The frame is now cwd-independent.",
+    "no_filesystem_probe": "The projection never follows a dataset_path to the filesystem. An earlier draft did, which made the frame depend on the capturing machine and produced a path-traversal finding from report content being used as a path. Both the dependency and the finding are gone; every field in the frame is a fact about the report itself.",
     "projection_fields": [
       "run_id",
       "source_sha256",
       "dataset_sha256",
       "dataset_path_present",
-      "dataset_file_present_at_capture",
-      "dataset_hash_matches_at_capture",
       "tool_calls[call_id, input_is_object, input_keys]",
       "evidence[id, source_id]",
       "insights[id, evidence_ids]"
@@ -40,17 +38,15 @@
   },
   "gaps": [],
   "diagnostics": {
-    "runs_without_conclusions": 8,
-    "dataset_files_present_at_capture": 65,
-    "dataset_hashes_recomputable_at_capture": 65
+    "runs_without_conclusions": 8
   },
-  "diagnostics_scope": "Capture-time observations recomputed from the frame but not reproducible from a clean checkout: whether each input file still existed and whether its hash matched. They are excluded from the numerator and denominator.",
+  "diagnostics_scope": "Only fields recomputable from the frame belong here. Observations that depended on files present only on the capturing machine were removed rather than reported as if a clean checkout could confirm them; the ledger records them as context. Nothing here enters the numerator or denominator.",
   "scope_note": "A full score here is a statement about reference integrity inside the pinned frame, not about the truth of any conclusion, not about content agreement between a tool result and an evidence node, and not about the ability to reproduce a run. It does not change the basis; a new frame or a new hop definition requires a separate reading, with this one left in place and marked superseded.",
   "residual": [
     "The frame is a projection. A third party can recompute this reading but cannot verify that the projection faithfully represents the 95 source reports; those reports are gitignored and only their SHA-256 anchors are shipped.",
     "The frame is a convenience census of reports visible in one local working copy, not a random sample of production runs. Many of them are pytest-generated runs and 8 contain no conclusions. The score must not be extrapolated to the deployed system.",
     "Four-hop alignment checks ID references only. It does not compare evidence.result with tool_calls.output, does not check that a cited computation actually produced the claim, and does not assess whether a conclusion is correct.",
-    "The fourth hop requires a recorded data hash and path, not a reproducible input. At capture time 65 of 95 input files still existed and all 65 matched their recorded hash; 30 were already gone. A report that writes a well-formed hash for a lost input still scores aligned here.",
+    "The fourth hop requires a recorded data hash and path, not a reproducible input. Whether each input still existed was checked once on the capturing machine and is recorded in the ledger as context, not as a field here, because a clean checkout cannot reproduce it. A report that writes a well-formed hash for a lost input still scores aligned.",
     "96 of 96 is a structural property of the report writer, which always emits every field. A report with complete references and wrong content would score identically. This is why the independent-re-run metric exists and remains unmeasured."
   ],
   "series_note": "First reading. The two earlier S1 measurements are served-artifact agreement and authorization coverage; this is the third metric, not a repeat of either."

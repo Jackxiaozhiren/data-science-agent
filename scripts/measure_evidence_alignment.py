@@ -15,9 +15,9 @@ Four rules are deliberate:
   frame; verify reads the pinned record. Neither is parameterised from the command line.
 * **No exception handling.** A malformed frame or a broken hash is a fact to surface, not a reason to
   report a comfortable number. Raising is the intended behaviour.
-* **Capture-time observations are labelled.** Whether an input file still existed, and whether its
-  SHA-256 matched, cannot be re-derived from a checkout. Those booleans live in diagnostics and never
-  enter the numerator.
+* **Every recorded field is recomputable.** Observations that only exist on the capturing machine —
+  whether an input file was still there, whether its hash matched — are deliberately absent from both
+  the frame and the reading. The ledger records them as capture-time context instead.
 
 The four hops, matching the definition verbatim: conclusion -> evidence node -> computation ->
 computation input -> input data with a hash. A missing ID at any hop is an unaligned conclusion.
@@ -63,29 +63,17 @@ def canonical_bytes(value: Any) -> bytes:
     )
 
 
-def _dataset_observation(obj: dict[str, Any], base: Path) -> dict[str, Any]:
-    """Fields about the input bytes that only exist at capture time, never in the numerator.
+def _dataset_fields(obj: dict[str, Any]) -> dict[str, Any]:
+    """The two facts the fourth hop needs, and nothing that reaches the filesystem.
 
-    Reports mix absolute and relative ``dataset_path`` values. Resolving a relative one against the
-    process working directory made the same capture produce two different diagnostics from two
-    directories, so the repository root is passed explicitly.
+    An earlier draft followed ``dataset_path`` to the input file to record whether it still existed
+    and whether its hash matched. That made the reading depend on local state a checkout cannot
+    reproduce, and it turned report content into a filesystem path. Both the dependency and the
+    finding go away by keeping only the recorded hash and the fact that a path was recorded.
     """
-    data_path = str(obj.get("dataset_path") or "")
-    declared_hash = str(obj.get("dataset_sha256") or "")
-    data_file = Path(data_path) if data_path else None
-    if data_file is not None and not data_file.is_absolute():
-        data_file = base / data_file
-    present = bool(data_file and data_file.is_file())
-    matches = bool(
-        present
-        and data_file
-        and hashlib.sha256(data_file.read_bytes()).hexdigest() == declared_hash
-    )
     return {
-        "dataset_sha256": declared_hash,
-        "dataset_path_present": bool(data_path),
-        "dataset_file_present_at_capture": present,
-        "dataset_hash_matches_at_capture": matches,
+        "dataset_sha256": str(obj.get("dataset_sha256") or ""),
+        "dataset_path_present": bool(obj.get("dataset_path")),
     }
 
 
@@ -124,7 +112,6 @@ def _project_insights(obj: dict[str, Any]) -> list[dict[str, Any]]:
 def capture(report_root: Path | None = None) -> dict[str, Any]:
     """Project local reports into a deterministic, self-contained frame."""
     root = report_root or REPORT_ROOT
-    base = root.parent.parent
     reports: list[dict[str, Any]] = []
     for path in sorted(root.glob("*/experiment.json")):
         raw = path.read_bytes()
@@ -133,7 +120,7 @@ def capture(report_root: Path | None = None) -> dict[str, Any]:
             {
                 "run_id": str(obj.get("run_id") or path.parent.name),
                 "source_sha256": hashlib.sha256(raw).hexdigest(),
-                **_dataset_observation(obj, base),
+                **_dataset_fields(obj),
                 "tool_calls": _project_tool_calls(obj),
                 "evidence": _project_evidence(obj),
                 "insights": _project_insights(obj),
@@ -204,12 +191,6 @@ def measure(frame: dict[str, Any]) -> dict[str, Any]:
         "gaps": gaps,
         "diagnostics": {
             "runs_without_conclusions": sum(1 for run in reports if not run["insights"]),
-            "dataset_files_present_at_capture": sum(
-                1 for run in reports if run["dataset_file_present_at_capture"]
-            ),
-            "dataset_hashes_recomputable_at_capture": sum(
-                1 for run in reports if run["dataset_hash_matches_at_capture"]
-            ),
         },
     }
 
