@@ -20,12 +20,12 @@ Three rules apply to every metric below, each because the opposite caused a real
 | Metric | Numerator | Denominator | Recorded in | Status |
 |---|---|---|---|---|
 | Served-artifact agreement | checks whose live reading matches the contract this tree publishes | checks attempted | `docs/audit/served-artifacts.json` | **measured, first reading 2026-11-09** |
-| Evidence alignment | conclusions traceable to an evidence node, a computation and a data hash | conclusions sampled from completed runs | not recorded | defined, not measured |
+| Evidence alignment | conclusions traceable to an evidence node, a computation and a data hash | conclusions sampled from completed runs | `docs/audit/evidence-alignment.json` | **measured, first reading 2026-11-10** |
 | Independent re-run | bundles whose layers reproduce in a clean environment and match the recording | bundles sampled | not recorded | defined, not measured |
 | Authorization coverage | action classes with a named authorizer and a recorded decision | action classes identified in the tree | `docs/audit/authorization-coverage.json`, `docs/audit/authorization-coverage-second.json` | **measured, two readings 2026-11-10** |
 
-The two remaining unmeasured rows are not omissions dressed as plans: S1's own exit condition is to
-record each of them once. Until then the honest value is "not measured", and the ADR's rollback path
+The one remaining unmeasured row is not an omission dressed as a plan: S1's own exit condition is to
+record each metric once. Until then the honest value is "not measured", and the ADR's rollback path
 explicitly allows the baseline to stay unmeasured rather than be filled with estimates.
 
 ## Served-artifact agreement
@@ -70,6 +70,30 @@ data with a hash — in one direction, without a gap and without re-running anyt
 Sampling is by conclusion, not by run: a run with twelve conclusions and one with two contribute twelve
 and two. A conclusion that names a chart but not the computation behind it counts as unaligned, which is
 the point of separating "there is evidence" from "the evidence is traceable".
+
+The first reading (2026-11-10, `docs/audit/evidence-alignment.json`) scores a pinned frame at
+`tests/fixtures/evidence-alignment/frame.json`. The original reports sit under the gitignored
+`/artifacts/` root and together outweigh the documentation tree, so pinning them verbatim would make
+the number depend on artefacts no reader can see. The frame keeps instead the fields the walk above
+reads, plus a SHA-256 anchor for every source report; `scripts/measure_evidence_alignment.py`
+recomputes the reading, the per-hop counts and the frame digest from that file alone. A broken
+reference at any hop is recorded together with the hop it broke at, so a full score is never a blank
+"all green".
+
+The frame is a **convenience census, not a random sample**: every report visible in one local working
+copy at capture time, sorted by run identifier, with no exclusion by outcome. Runs with no conclusions
+contribute nothing to either side of the rate. That boundary matters more than the score: these are
+mostly test runs, the frame is a projection whose fidelity a checkout cannot independently verify,
+and the fourth hop asks that a hash be *recorded*, not that the input still exist. Whether the inputs
+still existed was checked once on the capturing machine — 65 of 95 present, all matching their
+recorded hash, 30 already gone — but that observation cannot be reproduced from a checkout, so it is
+written in the ledger as context rather than made a field of the reading. Every field of the reading
+is recomputable from the frame.
+
+The reading therefore says nothing about whether a conclusion is true, whether a tool result agrees
+with the evidence node citing it, or whether a run can be reproduced. Those are what the independent
+re-run metric is for, and it remains unmeasured. A change to the frame or to the hop definition is a
+basis change: a new reading is added and this one marked superseded, not rewritten.
 
 ## Independent re-run
 
@@ -128,5 +152,5 @@ retroactively, certify a past decision, or create an exception to the zero-billi
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
 - Not a substitute for the evidence: the numbers live in their own records and are linked, so a change in
   a definition cannot quietly rewrite history.
-- Not complete. Two of S1's four readings do not exist yet, and this page says so in the same table that
-  reports the two that do.
+- Not complete. One of S1's four readings does not exist yet, and this page says so in the same table
+  that reports the three that do.
