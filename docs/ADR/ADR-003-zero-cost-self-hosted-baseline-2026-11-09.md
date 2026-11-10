@@ -1,6 +1,6 @@
 # ADR-003 — Zero-Cost Self-Hosted Baseline (R0)
 
-- Status: Accepted (decision only; S1–S3 not started) · Date: 2026-11-09 · Applies to: deployment topology (`render.yaml`, `deploy/`), execution isolation, artifact lifecycle, observability, evaluation publication
+- Status: Accepted · S1 in progress (see `docs/measurement-basis.md` for the current readings); S2–S3 not started · Date: 2026-11-09 · Applies to: deployment topology (`render.yaml`, `deploy/`), execution isolation, artifact lifecycle, observability, evaluation publication
 - Related: `docs/real-model-evaluation.md` (Spend cap, Automated matrix validation, Publication rule 14) · `deploy/render-persistent.example.yaml` · `GOVERNANCE.md` (Money / data) · `docs/ADR/ADR-002-output-artifact-export-2026-09-08.md`
 
 ## Problem

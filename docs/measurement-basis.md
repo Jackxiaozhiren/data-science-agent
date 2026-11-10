@@ -22,11 +22,11 @@ Three rules apply to every metric below, each because the opposite caused a real
 | Served-artifact agreement | checks whose live reading matches the contract this tree publishes | checks attempted | `docs/audit/served-artifacts.json` | **measured, first reading 2026-11-09** |
 | Evidence alignment | conclusions traceable to an evidence node, a computation and a data hash | conclusions sampled from completed runs | not recorded | defined, not measured |
 | Independent re-run | bundles whose layers reproduce in a clean environment and match the recording | bundles sampled | not recorded | defined, not measured |
-| Authorization coverage | action classes with a named authorizer and a recorded decision | action classes identified in the tree | not recorded | defined, not measured |
+| Authorization coverage | action classes with a named authorizer and a recorded decision | action classes identified in the tree | `docs/audit/authorization-coverage.json` | **measured, first reading 2026-11-10** |
 
-The three unmeasured rows are not omissions dressed as plans: S1's own exit condition is to record each
-of them once. Until then the honest value is "not measured", and the ADR's rollback path explicitly
-allows the baseline to stay unmeasured rather than be filled with estimates.
+The two remaining unmeasured rows are not omissions dressed as plans: S1's own exit condition is to
+record each of them once. Until then the honest value is "not measured", and the ADR's rollback path
+explicitly allows the baseline to stay unmeasured rather than be filled with estimates.
 
 ## Served-artifact agreement
 
@@ -91,10 +91,27 @@ recorded.
 This metric is a checklist that is scored, not a policy document: `GOVERNANCE.md` says who decides, and
 this row measures whether every class of action actually lands on one of those deciders.
 
+The first reading (2026-11-10, `docs/audit/authorization-coverage.json`) scored a census of the action
+classes named above against `origin/main` = `08be9b5`: 2 of 9 name both an authorizer and a location
+where the decision is recorded. It is a census rather than a sample, and the record gives the rule that
+expanded the definition's groups into individual classes, plus a file and line for every verdict.
+
+Two distinctions carry most of the weight. First, **a gate is not an authorizer**: `publication_ready`,
+`DSA_MAX_COST_USD`, the required `ci` check and the claim guards are all controls, and none of them
+names who decides. Second, **a named owner is not an enforced one**: the branch protection read at the
+same time requires `ci` only and no review, so `CODEOWNERS` is advisory. Enforcement is deliberately
+outside the numerator — including it would turn a question about what the tree says into a different
+question about what GitHub does. The reading says nothing about whether any decision was correct.
+
+The two covered classes are release publication and a change to the governance document: in both the
+maintainer is named and the tag or pull request is the record. The record also carries a proposal for
+closing the others as text, not as an edit: changing `GOVERNANCE.md` is itself a governed action, and a
+second reading under the same basis has to wait for that decision.
+
 ## What this page is not
 
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
 - Not a substitute for the evidence: the numbers live in their own records and are linked, so a change in
   a definition cannot quietly rewrite history.
 - Not complete. Two of S1's four readings do not exist yet, and this page says so in the same table that
-  reports the one that does.
+  reports the two that do.
