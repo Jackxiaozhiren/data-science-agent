@@ -1,9 +1,12 @@
-# Measurement basis (S1)
+# Measurement basis
 
-ADR-003 sets a single exit condition for S1: every metric is recorded once, and its basis is defined
-before the number is quoted. This page is that definition. It is deliberately about arithmetic and
-provenance rather than about targets — a target picked before the first reading is a preference, not a
-measurement.
+ADR-003 sets one exit condition per stage, and this page is the basis for each reading that claims to
+meet one. It is deliberately about arithmetic and provenance rather than about targets — a target
+picked before the first reading is a preference, not a measurement.
+
+S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks whether the
+execution boundary decides what it is supposed to decide; that matrix is at the end of the page, and
+it is the only S2 item recorded so far.
 
 Three rules apply to every metric below, each because the opposite caused a real problem here:
 
@@ -15,7 +18,7 @@ Three rules apply to every metric below, each because the opposite caused a real
 3. **A basis change is a new record, not an edit.** When a definition moves, the previous reading stays
    and is marked superseded, so a later reader can tell "the number improved" from "the ruler changed".
 
-## The four metrics
+## S1 — the four metrics
 
 | Metric | Numerator | Denominator | Recorded in | Status |
 |---|---|---|---|---|
@@ -184,11 +187,64 @@ re-read at the same time and is unchanged — `ci` required, no required review,
 retroactively, certify a past decision, or create an exception to the zero-billing constraint. Its
 `residual` field lists what remains open.
 
+## S2 — the boundary matrix
+
+S2 is the stage where ADR-003 replaces a commercial execution sandbox with a boundary published as a
+checkable matrix. Three of its four items — latency and failure attribution, the export-first
+lifecycle, the contract-version policy — have no reading yet. What follows describes the first one.
+
+### What a cell means
+
+For every surface that accepts model-authored input, five capabilities are scored: process spawn,
+network egress, filesystem read, filesystem write, credential read. A cell's verdict is the outcome
+of the **last check to run**, because that is the check a caller actually meets.
+
+| Verdict | Meaning |
+|---|---|
+| `fenced` | a check runs at request time and refuses the capability |
+| `open` | at least one expression reaches the capability |
+| `undecidable` | nothing refuses it: the cell is closed only by the absence of a call site in this tree |
+
+The third row is the one worth defending. Recording "fenced" because the code never calls `open`
+would describe today's source rather than a boundary: the next edit changes it and no check
+objects. Such cells carry `fenced_in_this_tree` true, which keeps the observation without promoting
+it to a control. A matrix that scored those as fenced would report a boundary wherever there is only
+code.
+
+### First reading (2026-11-10)
+
+`docs/audit/execution-boundary.json` takes the matrix against `ab95872`, and
+`scripts/measure_execution_boundary.py` rebuilds it. Every probe is a repository constant, so the
+record is recomputable from a checkout with no network and no service: the one file a probe opens is
+a CSV this tree ships, and it is opened only to watch the engine refuse it. Of the cells, six are
+open, six are fenced and three are undecidable, so twelve carry a request-time decision.
+`effect_verified` counts separately and is smaller: it names the cells where a test in this tree has
+watched the refusal happen, not merely read the check.
+
+Three findings matter more than the counts:
+
+- **The interpreter has one layer and the SQL surface has two.** `run_sql` pairs a name filter with
+  an engine-level fence, so editing the filter leaves the capability closed. `run_python` has no
+  engine equivalent, and every one of its cells is open. The asymmetry is the S2 result, not a
+  detail of it.
+- **Names are not effects.** `open()` is refused while `pl.read_csv` is not; `.environ` is refused
+  while the same mapping read through `__dict__` is not. Both spellings sit in the probe set, which
+  is why the credential cell reads open rather than fenced.
+- **`matrix_valid` is not `publication_ready`.** The record states in its own text that it says
+  nothing about the evaluation matrix, and the publication rule keeps its own gate. A green boundary
+  matrix would not move a leaderboard row.
+
+The reading says nothing about whether an adversary could reach a capability another way. A
+name-based filter is not a containment mechanism, and the record's `not_claimed` field says so in
+those words; the test file re-derives every verdict from the layers, so a changed filter changes the
+record rather than leaving a stale verdict behind.
+
 ## What this page is not
 
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
 - Not a substitute for the evidence: the numbers live in their own records and are linked, so a change in
   a definition cannot quietly rewrite history.
-- Not complete. All four rows now carry a first reading, but each is a single observation: none of them
+- Not complete. All four S1 rows carry a first reading, but each is a single observation: none of them
   establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
-  one recording in the tree states its own provenance.
+  one recording in the tree states its own provenance. S2 has one reading of four, and one reading is
+  not a stage exit.
