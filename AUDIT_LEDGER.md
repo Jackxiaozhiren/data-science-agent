@@ -17942,7 +17942,7 @@ lockfile or nav entry moved.
 
 ## 322. A third S1 reading, measured from a frame a checkout actually contains
 
-Recorded 2026-11-10T11:01:49Z. Lane: S1 trustworthy baseline, continued. Base `40c4621`. This entry
+Recorded 2026-11-10T11:18:17Z. Lane: S1 trustworthy baseline, continued. Base `40c4621`. This entry
 is built from `git show 40c4621:AUDIT_LEDGER.md` through a separate index, as §319–§321 were; the
 working copy on `tmp141` remains 202 lines behind on this file.
 
@@ -17955,11 +17955,12 @@ secret, release, public issue or billing decision was touched, and the 2026-11-0
 
 **What was measured.** `tests/fixtures/evidence-alignment/frame.json` is a deterministic projection
 of the 95 `artifacts/reports/*/experiment.json` files visible in the local working copy: the fields
-the four-hop walk reads, plus a SHA-256 anchor for each source report. It is 172,645 bytes against
+the four-hop walk reads, plus a SHA-256 anchor for each source report. It is 172,648 bytes against
 15,146,412 bytes of originals, and it is the first evidence sample in this lane that a third party
 receives with a checkout. `scripts/measure_evidence_alignment.py` recomputes the reading, the
 per-hop counts, the diagnostics and the frame digest from that file alone, and offers a capture mode
-for regenerating the frame where the originals exist. `docs/audit/evidence-alignment.json` is the
+for regenerating the frame where the originals exist. Its CLI takes no path argument: every file it
+reads or writes is a repository constant. `docs/audit/evidence-alignment.json` is the
 first reading: 96 of 96 conclusions aligned, gaps empty, four per-hop counts of 96 each, 8 runs with
 no conclusions, 65 input files present at capture and 30 already gone. `docs/measurement-basis.md`
 now links the record and keeps the original definition verbatim.
@@ -17988,11 +17989,29 @@ record's `residual` field says each of these in its own words. Independent re-ru
 unmeasured S1 metric; it needs a genuinely clean environment and a produced reproduction bundle, and
 ADR-003 permits it to stay unmeasured rather than be filled with an estimate.
 
-**Gates.** Local verification on a `git archive` overlay of the intended tree: the seven new contract
+**Three defects the first CI run caught, and what fixed them.** The first PR head failed two gates.
+`scripts/find_orphan_reads.py --check` reported that `runs` was listed in `docs/audit/orphan-reads.json`
+as an external key but was no longer an orphan: the new script had written a top-level `runs` dict
+literal, which counts as an in-repo producer. The right fix was not to delete a 2026-10-04 audit
+entry that still correctly describes `verify_release.py` reading an external raw-runs file; it was to
+rename the frame's key to `reports`, which is also the more accurate word. A contract test now fails
+if `runs` returns. SonarCloud reported two `S8707` path-traversal findings tainted from CLI path
+arguments plus two cognitive-complexity findings; the CLI was reduced to two boolean modes over fixed
+repository paths, and the capture and measure functions were split into small helpers. A local check
+then exposed a third defect that no gate would have seen: 49 reports carry a relative `dataset_path`
+and 46 an absolute one, so resolving relative paths against the process working directory produced
+17 present inputs from one directory and 65 from another. Capture now resolves them against the
+repository root explicitly, and generating the frame from two different working directories yields
+byte-identical output. The reading records that rule in its `capture` field.
+
+**Gates.** Local verification on a `git archive` overlay of the intended tree: the nine contract
 tests pass, including a negative case that breaks one hop at a time and asserts the reported gap
-stage; `--verify` returns 0 on every comparison field; `ruff check` and `ruff format --check` return
-0; `scripts/audit_facts.py --check` returns "facts ratchet: OK". The measurement script adds no
-exception handler, no suppression directive and no `check_`-style gate, so no debt ceiling or wiring
-entry moved; no new documentation page was added, so no nav entry moved. The pull request's own head
-carries its CI gates and they are not quoted here. No deployment was issued, no public issue was
-commented on or closed, no credential was used and no paid resource was enabled in this lane.
+stage, and a check that the frame key does not reclaim the registered orphan read; `--verify` returns
+0 on every comparison field; `ruff check` and `ruff format --check` return 0;
+`scripts/audit_facts.py --check` returns "facts ratchet: OK";
+`scripts/find_orphan_reads.py --check` returns OK with the exemption list untouched;
+`mkdocs build --strict` passes. The measurement script adds no exception handler, no suppression
+directive and no `check_`-style gate, so no debt ceiling or wiring entry moved; no new documentation
+page was added, so no nav entry moved. The pull request's own head carries its CI gates and they are
+not quoted here. No deployment was issued, no public issue was commented on or closed, no credential
+was used and no paid resource was enabled in this lane.

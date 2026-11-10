@@ -1,6 +1,6 @@
 {
   "capture_rule": "census of every artifacts/reports/*/experiment.json visible in the local working copy at capture time; sorted by run_id; no random draw and no exclusion by outcome",
-  "runs": [
+  "reports": [
     {
       "dataset_file_present_at_capture": false,
       "dataset_hash_matches_at_capture": false,

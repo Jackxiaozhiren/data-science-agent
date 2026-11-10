@@ -28,9 +28,22 @@ def test_frame_digest_matches_the_record() -> None:
     assert hashlib.sha256(FRAME_PATH.read_bytes()).hexdigest() == record["frame_sha256"]
 
 
+def test_frame_key_does_not_claim_a_registered_orphan_read() -> None:
+    """A top-level 'runs' key would make find_orphan_reads.py --check fail on verify_release.py."""
+    frame = _frame()
+    assert "reports" in frame
+    assert "runs" not in frame
+
+
+def test_verify_agrees_with_the_record() -> None:
+    ok, checks = alignment.verify()
+    assert ok
+    assert all(checks.values())
+
+
 def test_source_hash_manifest_is_complete_and_anchored() -> None:
     frame, record = _frame(), _record()
-    hashes = [run["source_sha256"] for run in frame["runs"]]
+    hashes = [report["source_sha256"] for report in frame["reports"]]
     assert len(hashes) == record["frame_runs"] == 95
     assert all(len(value) == 64 and all(c in "0123456789abcdef" for c in value) for value in hashes)
     digest = hashlib.sha256(alignment.canonical_bytes(hashes)).hexdigest()
@@ -82,7 +95,7 @@ def record_basis_fragment() -> str:
 def test_a_broken_reference_is_reported_as_a_gap_at_its_hop() -> None:
     frame = {
         "schema": alignment.SCHEMA,
-        "runs": [
+        "reports": [
             {
                 "run_id": "synthetic-a",
                 "source_sha256": "a" * 64,
@@ -150,7 +163,7 @@ def test_runs_without_conclusions_do_not_inflate_the_denominator() -> None:
         "evidence": [],
         "insights": [],
     }
-    result = alignment.measure({"schema": alignment.SCHEMA, "runs": [empty]})
+    result = alignment.measure({"schema": alignment.SCHEMA, "reports": [empty]})
     assert result["denominator"] == 0
     assert result["numerator"] == 0
     assert result["diagnostics"]["runs_without_conclusions"] == 1

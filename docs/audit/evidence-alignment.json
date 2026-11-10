@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-11-10T11:00:10Z",
+  "recorded_at": "2026-11-10T11:18:17Z",
   "metric": "Evidence alignment",
   "reading": 1,
   "verdict": "measured",
@@ -7,13 +7,14 @@
   "basis_unchanged": true,
   "frame_path": "tests/fixtures/evidence-alignment/frame.json",
   "frame_schema": "evidence-alignment-frame/v1",
-  "frame_sha256": "e69ff878578ece27954b77e4703b70938c3802de0d7e75bd77dbf87939bdabc2",
+  "frame_sha256": "962ac3825854f6ff2e9340b1b540ed1cf2bb71a33c69df4420bc6718818be7aa",
   "frame_runs": 95,
   "source_sha256_manifest_sha256": "f01df256479df71acd2231f4ef0a0e7c26b2caebd807799b22ef12808ed27980",
   "capture": {
     "source_root": "artifacts/reports (gitignored, local working copy)",
     "capture_rule": "census of every artifacts/reports/*/experiment.json visible in the local working copy at capture time; sorted by run_id; no random draw and no exclusion by outcome",
     "source_sha256_count": 95,
+    "relative_dataset_path_resolution": "49 of 95 reports record a relative dataset_path and 46 an absolute one. The capture resolves relative values against the repository root explicitly; an earlier draft resolved them against the process working directory and produced 17 instead of 65 present inputs when run from a different directory. The frame is now cwd-independent.",
     "projection_fields": [
       "run_id",
       "source_sha256",
