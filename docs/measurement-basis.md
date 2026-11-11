@@ -5,9 +5,9 @@ meet one. It is deliberately about arithmetic and provenance rather than about t
 picked before the first reading is a preference, not a measurement.
 
 S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks what a
-recorded run lets a reader point at: the execution-boundary matrix and the latency and failure
-attribution reading are both at the end of the page. They are two of S2's four items. The
-export-first lifecycle and the contract-version policy have no reading yet.
+recorded run lets a reader point at: the execution-boundary matrix, the latency and failure
+attribution reading and the export-first lifecycle are at the end of the page. They are three of
+S2's four items. The contract-version policy has no reading yet.
 
 Three rules apply to every metric below, each because the opposite caused a real problem here:
 
@@ -191,8 +191,8 @@ retroactively, certify a past decision, or create an exception to the zero-billi
 ## S2 — the boundary matrix
 
 S2 is the stage where ADR-003 replaces a commercial execution sandbox with a boundary published as a
-checkable matrix. Two of its four items — the export-first lifecycle and the contract-version policy —
-have no reading yet. What follows describes the first, and the second is the next section.
+checkable matrix. One of its four items — the contract-version policy — has no reading yet. What
+follows describes the first of the three that do; the others are the two sections after it.
 
 ### What a cell means
 
@@ -304,6 +304,58 @@ timestamp into the record. That is a change to the producer, not to this instrum
 migration plan keeps S2 work to documents, tests and checklists — none is written here. Until then the
 honest result is a measured gap, and a green matrix in the first S2 item does not fill it.
 
+## S2 — export-first lifecycle
+
+ADR-003 replaces "data survives a restart" with "artifacts stay parseable across lifecycle events",
+and its chosen alternative describes a bundle that carries "manifest, environment, pinned
+dependencies, ordered execution trace and artifact hashes". The third S2 item is whether that holds
+in the tree. `docs/audit/export-lifecycle.json` is the reading and
+`scripts/measure_export_lifecycle.py` rebuilds it; nothing in it is a clock, a local run or a
+deployment state, so a clean checkout reproduces it.
+
+### What an event is asked
+
+Six events, in the order an artifact meets them: the export tool writes it, the save tool writes it,
+the run record lists it, the bundle exports it, the plain report export renders it, and a consumer
+reads it back. Each event is asked two questions — does the record carry a digest of the bytes, and
+does a shipped path parse them and fail loudly — and each answer is labelled `ran` or `read`, because
+a claim obtained by running the code and one obtained by reading it are not the same evidence.
+
+### The reading
+
+**One event in six records a digest, and none of the three export-side events carries one forward.**
+`export_artifact` returns the SHA-256 of the bytes it just wrote, matched against a recomputation;
+`save_artifact` returns id, path, type and metadata and no digest; the 40 entries in the eight
+committed `artifacts.json` records name id, type, path, kind, author and time and no digest; the
+bundle's manifest carries `artifact_root`, `excluded`, `included`, `run_id` and `storage`, with zero
+digest references in the route; and the plain report export *removes* a 64-hex token on purpose,
+which is the rule that module states for itself. A recipient of a bundle can therefore tell which
+names were listed and cannot tell whether the bytes behind a name are the ones that were written.
+
+The second question separates even further: **one event in six has a parse check** — the consumer,
+which is every reader after the fact. The writers hash or copy and never re-open what they wrote, and
+the instrument's own read-back is not a shipped check, so it is not counted as one.
+
+**Parseability today: 48 of 48 committed exports read back** — 40 JSON parsed and 8 Markdown decoded.
+`csv`, `png` and `xlsx` have no committed export: run artifacts live under a gitignored root, so a
+number there would describe one machine. Those three are recorded `not_measured` with that reason,
+not as zero.
+
+### The divergence this reading makes visible
+
+ADR-003's bundle sentence names five elements, artifact hashes among them, and the shipped manifest
+carries none of the five as a field. This section does not claim the other four are absent from the
+bundle — the files a bundle carries may well hold environment and dependencies. It records the
+narrower, checkable fact: no per-file digest reaches the export, so a bundle cannot be checked
+against the run that produced it.
+
+### What would count as progress
+
+A digest written at the record event and copied into the manifest, with one reader that compares it,
+would move `export_side_events_with_a_digest` off zero. That is a producer change — `save_artifact`'s
+output model and the bundle route — and ADR-003 keeps S2 work to documents, tests and checklists, so
+it is recorded here as a gap rather than closed by this reading.
+
 ## What this page is not
 
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
@@ -311,5 +363,5 @@ honest result is a measured gap, and a green matrix in the first S2 item does no
   a definition cannot quietly rewrite history.
 - Not complete. All four S1 rows carry a first reading, but each is a single observation: none of them
   establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
-  one recording in the tree states its own provenance. S2 has two readings of four, and two readings
-  are not a stage exit.
+  one recording in the tree states its own provenance. S2 has three readings of four, and three
+  readings are not a stage exit.
