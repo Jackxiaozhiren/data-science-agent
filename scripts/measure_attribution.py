@@ -17,8 +17,13 @@ point at. Two facts are measured:
 The instrument follows the S1 evidence-alignment shape: the frame is the measured object, every path
 is a repository constant, there is no exception handling (a malformed frame is a fact to surface),
 and the CLI takes flags only. ``--capture`` regenerates the frame from a local 50-task run plus the
-two committed recordings; ``--record`` writes the dated reading; ``--verify`` rebuilds the reading
+two committed recordings; ``--record`` builds the dated reading; ``--verify`` rebuilds the reading
 from the frame and compares it field by field.
+
+Capture and record emit JSON on stdout and the caller redirects it to the pinned path. Nothing read
+from a file is ever passed back into a file-writing call in this module: content read from a JSON
+file and then written to another file is exactly the "path traversal via file content" shape, and
+keeping the write on the caller's side makes that impossible here rather than merely unsuspected.
 """
 
 from __future__ import annotations
@@ -76,15 +81,20 @@ PROCEDURE = [
     "Check out the reviewed commit into a clean tree and export its package src roots on PYTHONPATH.",
     "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; the manifest must report "
     "llm_mode=stub and call_count=0.",
-    "Run `python scripts/measure_attribution.py --capture` in the repository root to project the "
-    "run and the two committed recordings into tests/fixtures/attribution/frame.json.",
-    "Run `python scripts/measure_attribution.py --record` to write docs/audit/attribution.json, "
-    "then `--verify` to rebuild the reading from the frame alone.",
+    "Run `python scripts/measure_attribution.py --capture > tests/fixtures/attribution/frame.json` "
+    "in the repository root to project the run and the two committed recordings.",
+    "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build "
+    "the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit "
+    "JSON on stdout; the module never writes a file it has read.",
 ]
 
 
 def read_json(path: Path) -> dict[str, Any] | list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _render(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
 
 
 def file_sha256(path: Path) -> str:
@@ -348,23 +358,13 @@ def main(argv: list[str] | None = None) -> int:
         if not RUN_RAW.is_file():
             print(f"capture refused: {RUN_REL} is absent", file=sys.stderr)
             return 2
-        frame = capture()
-        FRAME_PATH.write_text(
-            json.dumps(frame, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        print(f"wrote {len(frame['latency_rows'])} latency rows to {FRAME_PATH.relative_to(ROOT)}")
+        sys.stdout.write(_render(capture()) + "\n")
         return 0
 
     if args.record:
         frame = read_json(FRAME_PATH)
         assert isinstance(frame, dict)
-        reading = build(frame, _timestamp())
-        RECORD_PATH.write_text(
-            json.dumps(reading, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        print(f"wrote {RECORD_PATH.relative_to(ROOT)}")
+        sys.stdout.write(_render(build(frame, _timestamp())) + "\n")
         return 0
 
     if args.verify:
@@ -375,7 +375,7 @@ def main(argv: list[str] | None = None) -> int:
 
     frame = read_json(FRAME_PATH)
     assert isinstance(frame, dict)
-    print(json.dumps(measure(frame), ensure_ascii=False, indent=2, sort_keys=True))
+    print(_render(measure(frame)))
     return 0
 
 

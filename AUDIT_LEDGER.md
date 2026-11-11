@@ -18173,7 +18173,7 @@ closed, no credential was read and no paid resource was enabled.
 
 ## §325 — S2 second reading: what a deterministic run lets you point at (2026-11-11)
 
-**What the stage asks.** ADR-003's S2 work list has four items; §324 took the boundary matrix, and this
+**What the stage asks.** ADR-003's S2 work list has four items; the boundary-matrix section took the first, and this
 section takes "deterministic-path latency and failure attribution". The export-first lifecycle and the
 contract-version policy still have no reading, and this section does not claim they have started. S2's
 exit condition also asks for artifact parseability and forbids conflating `matrix_valid` with
@@ -18187,7 +18187,7 @@ said no". Both halves are answered from fields the tree already writes, with no 
 the agent and no edit to the evaluator or the frozen catalogs.
 
 **Provenance was taken from the recording, not typed beside it.** A clean clone of `a68c04b` (the tree
-after §324) ran `dsa --limit 50 --out artifacts/bench-attribution`. Its own `run_manifest.json` reports
+after PR #182) ran `dsa --limit 50 --out artifacts/bench-attribution`. Its own `run_manifest.json` reports
 `git_commit: a68c04b1cdb3`, `llm_mode: stub`, `call_count: 0`; `scripts/measure_attribution.py --capture`
 reads that manifest, the run's `raw_runs.json`, and the two deterministic recordings already committed to
 the tree, then projects them into `tests/fixtures/attribution/frame.json` with the SHA-256 of each source.
@@ -18223,11 +18223,23 @@ record actually carries would count. And a residual is not "overhead": it is tim
 has no boundary, so the instrument reports its existence rather than assigning it to a phase. Both are
 written into the record's `not_claimed` and pinned by contract tests.
 
-**Guard work done before the PR, not after a red build.** The CLI takes flags only and every path is a
-repository constant, because S8707 in §324's PR read an `argparse` value reaching a file write as an
-injection even when the write path was fixed. The contract test resolves committed sources from a closed
-set declared in the test instead of from strings in the frame — the shape that drew S2083 in the earlier
-draft. The first draft also used `runs` as a dictionary key in the instrument, which `find_orphan_reads.py
+**Two red checks on the first CI pass, each fixed at the cause.** `ci` failed at
+`scripts/check_ledger_identifiers.py --check`: this section's three citations of the previous section's number named a heading
+written as `## §NNN — ...`, which is outside the canonical `## N. ` numbering run the checker holds
+contiguous, so each citation was dangling. The citations were reworded to "the boundary-matrix
+section" and "PR #182"; neither the checker nor a dated entry was edited. SonarCloud failed Security
+Rating on New Code with two BLOCKER `pythonsecurity:S2083` findings: the sink was
+`FRAME_PATH.write_text(json.dumps(...))` (and the record's equivalent), and the source was
+`json.loads(path.read_text(...))` in `read_json` — content read from one file and written to another
+is the "path traversal via file content" shape even though every path here is a constant. Capture and
+record now emit JSON on stdout and the caller redirects it, so the module has no read-to-write edge at
+all. Neither fix widened an exemption list.
+
+**Other guard work, before the first pass.** The CLI takes flags only and every path is a repository
+constant, because S8707 in PR #182 read an `argparse` value reaching a file write as an injection even
+when the write path was fixed. The contract test resolves committed sources from a closed set declared
+in the test instead of from strings in the frame — the shape that drew S2083 in an earlier draft. The
+first draft also used `runs` as a dictionary key in the instrument, which `find_orphan_reads.py
 --check` read as an in-repo producer for a registered external orphan; the key was renamed `n_runs`
 rather than deleting the 2026-10-04 audit entry. No exception handler was added, so
 `ceiling.debt.exceptHandlers` stays at 188 and `docs/audit/facts.limits.json` is untouched.
@@ -18238,7 +18250,9 @@ rows, check every row's arithmetic invariants, require the empty denominator to 
 check the two committed source hashes and the frame hash, and pin the pass mark against `adapter.py`.
 `ruff check` and `ruff format --check` return 0; `find_orphan_reads.py --check` reports the same 14
 keys; `audit_facts.py --check` returns OK with no ceiling change; `check_public_claims.py` reports no
-stale claims; the census, checkpoint, measure, currency and baseline-readme guards pass;
-`mkdocs build --strict` succeeds and no page was added, so no nav entry moved. No deployment was issued,
-no issue was commented on or closed, no governance or branch-protection setting changed, no credential
-was read and no paid resource was enabled. **S2 stands at 2/4, which is progress, not a stage exit.**
+stale claims; `check_ledger_identifiers.py --check` returns OK on this ledger; the census, checkpoint,
+measure, currency, baseline-readme and doc-code-path guards pass; `mkdocs build --strict` succeeds and
+no page was added, so no nav entry moved. All of these were also run in a clean clone carrying only
+the delivered files, with the six-megabyte local run absent. No deployment was issued, no issue was
+commented on or closed, no governance or branch-protection setting changed, no credential was read
+and no paid resource was enabled. **S2 stands at 2/4, which is progress, not a stage exit.**

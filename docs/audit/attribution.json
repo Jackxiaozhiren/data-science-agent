@@ -64,11 +64,11 @@
   "procedure": [
     "Check out the reviewed commit into a clean tree and export its package src roots on PYTHONPATH.",
     "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; the manifest must report llm_mode=stub and call_count=0.",
-    "Run `python scripts/measure_attribution.py --capture` in the repository root to project the run and the two committed recordings into tests/fixtures/attribution/frame.json.",
-    "Run `python scripts/measure_attribution.py --record` to write docs/audit/attribution.json, then `--verify` to rebuild the reading from the frame alone."
+    "Run `python scripts/measure_attribution.py --capture > tests/fixtures/attribution/frame.json` in the repository root to project the run and the two committed recordings.",
+    "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit JSON on stdout; the module never writes a file it has read."
   ],
   "question": "in a deterministic run, what fraction of the clock and which of the failures can be pointed at a named part of the record?",
-  "recorded_at": "2026-11-11T12:03:17Z",
+  "recorded_at": "2026-11-11T12:14:17Z",
   "reviewed_commit": "a68c04b1cdb3",
   "run_manifest_call_count": 0,
   "run_manifest_commit": "a68c04b1cdb3",
