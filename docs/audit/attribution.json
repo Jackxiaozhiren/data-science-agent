@@ -1,0 +1,78 @@
+{
+  "basis": "docs/measurement-basis.md#s2--latency-and-failure-attribution",
+  "capture_rule": "one local 50-task deterministic run plus a census of both deterministic recordings already committed to the tree; no random draw, no exclusion by outcome, no cross-run averaging",
+  "environment": {
+    "platform": "macOS-27.2.1-arm64-arm-64bit",
+    "python_version": "3.12.14 (main, Aug 12 2026, 13:57:54) [Clang 21.0.0 (clang-2100.1.1.101)]"
+  },
+  "failures": {
+    "external_bundle": {
+      "artifact_level": 11,
+      "artifact_signals": {
+        "no_evidence": 10,
+        "run_did_not_complete": 1
+      },
+      "free_text_errors": 1,
+      "n_runs": 45,
+      "non_passing": 40,
+      "outcome_level": 40,
+      "partial_credit": 8,
+      "per_task_latency_present": 0,
+      "stage_level": 0,
+      "unplaced": 29,
+      "wall_s": 144.2
+    },
+    "frozen_baseline": {
+      "non_passing": 0,
+      "reason": "empty denominator: no failure in this recording can be attributed",
+      "status": "not_measured",
+      "tasks": 50
+    }
+  },
+  "frame_path": "tests/fixtures/attribution/frame.json",
+  "frame_schema": "attribution-frame/v1",
+  "frame_sha256": "f933f290d77c3be879fe250efbfefc03dcca537d945c0c0bc91fe7e03bfa6603",
+  "latency": {
+    "elapsed_ms_total": 4110,
+    "outside_window_ms_total": 1168,
+    "per_task_tool_share": {
+      "max": 0.9493,
+      "mean": 0.4626,
+      "median": 0.3536,
+      "min": 0.0
+    },
+    "tasks": 50,
+    "tasks_outside_run_window": 1,
+    "tasks_over_tool_budget": 0,
+    "tasks_with_residual_ms": 50,
+    "tasks_with_stage_boundaries": 0,
+    "tool_calls": 249,
+    "tool_failures": 0,
+    "tool_ms_total": 2382,
+    "zero_duration_calls": 168
+  },
+  "not_claimed": [
+    "No causality: a zero-evidence or OOM-killed run is placed at the artifact level from recorded counts, not diagnosed as to why it failed.",
+    "No stage or cause codes are invented from prose, tool names or the evaluator's score; only closed-code fields a record actually carries would count, and none of these carry one.",
+    "Absolute milliseconds are not comparable with the frozen baseline or with another machine: the baseline README records three different means for the same commit minutes apart.",
+    "The tool-time share is a lower bound, not a measurement of tool cost: duration_ms is an integer millisecond, so a sub-millisecond call contributes zero.",
+    "Neither recording is a random sample. Both are convenience censuses of what this tree ships.",
+    "Nothing here is a penetration result, a latency target, an S2 exit, or a statement about publication_ready, which keeps its own gate."
+  ],
+  "pass_mark": 0.5,
+  "pass_mark_source": "benchmarks/external/datascibench/adapter.py (score >= 0.5)",
+  "procedure": [
+    "Check out the reviewed commit into a clean tree and export its package src roots on PYTHONPATH.",
+    "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; the manifest must report llm_mode=stub and call_count=0.",
+    "Run `python scripts/measure_attribution.py --capture` in the repository root to project the run and the two committed recordings into tests/fixtures/attribution/frame.json.",
+    "Run `python scripts/measure_attribution.py --record` to write docs/audit/attribution.json, then `--verify` to rebuild the reading from the frame alone."
+  ],
+  "question": "in a deterministic run, what fraction of the clock and which of the failures can be pointed at a named part of the record?",
+  "recorded_at": "2026-11-11T12:03:17Z",
+  "reviewed_commit": "a68c04b1cdb3",
+  "run_manifest_call_count": 0,
+  "run_manifest_commit": "a68c04b1cdb3",
+  "run_manifest_llm_mode": "stub",
+  "schema": "attribution-reading/v1",
+  "window_resolution_ms": 10
+}

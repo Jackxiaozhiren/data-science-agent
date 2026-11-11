@@ -18170,3 +18170,75 @@ for the single handler in `_attempt`, with the reason appended to `_redefinition
 `tests/contract/test_doc_code_paths.py`, is a stale-worktree artifact: it names four S1 files this copy
 does not carry, and they exist on the branch. No deployment was issued, no issue was commented on or
 closed, no credential was read and no paid resource was enabled.
+
+## §325 — S2 second reading: what a deterministic run lets you point at (2026-11-11)
+
+**What the stage asks.** ADR-003's S2 work list has four items; §324 took the boundary matrix, and this
+section takes "deterministic-path latency and failure attribution". The export-first lifecycle and the
+contract-version policy still have no reading, and this section does not claim they have started. S2's
+exit condition also asks for artifact parseability and forbids conflating `matrix_valid` with
+`publication_ready`; neither is touched here.
+
+**The question is not speed.** `benchmarks/baseline/README.md` already records three different mean
+latencies (162.3, 73.04, 89.56 ms) for the same command on the same commit within minutes. Publishing a
+fourth would add nothing. The question here is what a recorded run lets a reader *name*: which part of
+the clock belongs to an execution unit, and which failures can be placed below the level of "the judge
+said no". Both halves are answered from fields the tree already writes, with no new instrumentation in
+the agent and no edit to the evaluator or the frozen catalogs.
+
+**Provenance was taken from the recording, not typed beside it.** A clean clone of `a68c04b` (the tree
+after §324) ran `dsa --limit 50 --out artifacts/bench-attribution`. Its own `run_manifest.json` reports
+`git_commit: a68c04b1cdb3`, `llm_mode: stub`, `call_count: 0`; `scripts/measure_attribution.py --capture`
+reads that manifest, the run's `raw_runs.json`, and the two deterministic recordings already committed to
+the tree, then projects them into `tests/fixtures/attribution/frame.json` with the SHA-256 of each source.
+The frame is the measured object; a clean checkout rebuilds `docs/audit/attribution.json` from it with
+`--verify` and never needs the six-megabyte gitignored run again.
+
+**Latency reading: a lower bound with no stage names.** 50 tasks, 249 tool calls, all recorded `ok`.
+Per task, `tool_ms` is the sum of `duration_ms` and is the only time named to an execution unit; the
+median share of `elapsed_ms` is 0.3536, the mean 0.4626, the range 0.0–0.9493. All 50 tasks have a
+positive residual and no task carries a stage-time field, so `stage_decomposition = 0/50`. One task
+sits 1168 ms outside the window its own `created_at`/`updated_at` bound, with no name for that time.
+The sharpest fact is instrumental: 168 of 249 calls have `duration_ms = 0` because the field is an
+integer millisecond and a sub-millisecond call contributes nothing. So the share is a lower bound on
+what the record can name, not a measurement of what a tool costs. A second run of the same clean tree at
+the same commit read a median share of 0.3709, 179 zero-duration calls and a mean elapsed of 76.2 ms
+against the first run's 0.3536, 168 and 82.2 ms; those are capture-time context in this paragraph, not
+a second reading and not part of the record, and they are why the frame pins one run by hash.
+
+**Failure reading: one empty denominator, one measured gap.** The frozen baseline has 50 tasks and no
+failure, so `docs/audit/attribution.json` records `not_measured` with the reason "empty denominator" —
+not 100%, not 0/0. The external deterministic bundle has 45 runs; using the adapter's own `score >= 0.5`
+pass mark (not one chosen for this reading), 40 do not pass: 39 `failed` and one `execution_error`. All
+40 carry an outcome; 11 can be placed at the artifact level by mechanical counts (10 completed with no
+evidence node, one did not complete); **0 of 40 carry a stage or cause code**. The remaining 29 completed
+with a report, tool calls and evidence and were still graded below the mark — the record cannot say
+whether the plan, a tool result, the evidence or the evaluator's expected shape was responsible. Eight
+carry partial credit, so "failed" is not binary; one carries a free-text OOM note, and a note is not a
+code. The bundle records `wall_s: 144.2` for all 45 runs and a per-task latency for none of them.
+
+**Two distinctions the instrument refuses to collapse.** A score below the pass mark is not an
+attribution, so no prose, tool name or score is promoted into a cause code; only a closed-code field a
+record actually carries would count. And a residual is not "overhead": it is time for which the record
+has no boundary, so the instrument reports its existence rather than assigning it to a phase. Both are
+written into the record's `not_claimed` and pinned by contract tests.
+
+**Guard work done before the PR, not after a red build.** The CLI takes flags only and every path is a
+repository constant, because S8707 in §324's PR read an `argparse` value reaching a file write as an
+injection even when the write path was fixed. The contract test resolves committed sources from a closed
+set declared in the test instead of from strings in the frame — the shape that drew S2083 in the earlier
+draft. The first draft also used `runs` as a dictionary key in the instrument, which `find_orphan_reads.py
+--check` read as an in-repo producer for a registered external orphan; the key was renamed `n_runs`
+rather than deleting the 2026-10-04 audit entry. No exception handler was added, so
+`ceiling.debt.exceptHandlers` stays at 188 and `docs/audit/facts.limits.json` is untouched.
+
+**Gates.** `scripts/measure_attribution.py --verify` rebuilds all 21 fields from the frame; ten contract
+tests independently re-derive the latency statistics and the failure classification from the frame's
+rows, check every row's arithmetic invariants, require the empty denominator to stay `not_measured`,
+check the two committed source hashes and the frame hash, and pin the pass mark against `adapter.py`.
+`ruff check` and `ruff format --check` return 0; `find_orphan_reads.py --check` reports the same 14
+keys; `audit_facts.py --check` returns OK with no ceiling change; `check_public_claims.py` reports no
+stale claims; the census, checkpoint, measure, currency and baseline-readme guards pass;
+`mkdocs build --strict` succeeds and no page was added, so no nav entry moved. No deployment was issued,
+no issue was commented on or closed, no governance or branch-protection setting changed, no credential
+was read and no paid resource was enabled. **S2 stands at 2/4, which is progress, not a stage exit.**

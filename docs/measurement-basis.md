@@ -4,9 +4,10 @@ ADR-003 sets one exit condition per stage, and this page is the basis for each r
 meet one. It is deliberately about arithmetic and provenance rather than about targets — a target
 picked before the first reading is a preference, not a measurement.
 
-S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks whether the
-execution boundary decides what it is supposed to decide; that matrix is at the end of the page, and
-it is the only S2 item recorded so far.
+S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks what a
+recorded run lets a reader point at: the execution-boundary matrix and the latency and failure
+attribution reading are both at the end of the page. They are two of S2's four items. The
+export-first lifecycle and the contract-version policy have no reading yet.
 
 Three rules apply to every metric below, each because the opposite caused a real problem here:
 
@@ -239,6 +240,70 @@ name-based filter is not a containment mechanism, and the record's `not_claimed`
 those words; the test file re-derives every verdict from the layers, so a changed filter changes the
 record rather than leaving a stale verdict behind.
 
+## S2 — latency and failure attribution
+
+The second S2 item is not "how fast is the deterministic path". `benchmarks/baseline/README.md` already
+answers that question in the negative: the same command on the same commit read 162.3, 73.04 and 89.56
+milliseconds within minutes of each other. The question here is narrower and answerable — **what
+fraction of a recorded run's clock, and which of its failures, can be pointed at a named part of the
+record?** `docs/audit/attribution.json` is the reading, `tests/fixtures/attribution/frame.json` is the
+projection it is computed from, and `scripts/measure_attribution.py --verify` rebuilds it field by
+field.
+
+### Latency: what a row can name
+
+One clean-tree `dsa --limit 50` run supplies 50 rows whose manifest states `llm_mode=stub` and
+`call_count=0`. Each row carries one `elapsed_ms`, one `duration_ms` per tool call, and the run
+object's `created_at` / `updated_at`. Three quantities follow without interpretation:
+
+| Quantity | Definition | Why it is a boundary, not a benchmark |
+|---|---|---|
+| `tool_ms` | the sum of the row's `duration_ms` values | the only time named to an execution unit |
+| `residual_ms` | `elapsed_ms - tool_ms` | planning, evidence assembly and report writing have no timestamps of their own |
+| `outside_window_ms` | `max(0, elapsed_ms - (updated_at - created_at))` | time even the run object's own clock does not cover |
+
+The first reading: 249 tool calls across 50 tasks, all recorded as `ok`. The per-task tool share has a
+median of 0.3536 and a mean of 0.4626, ranging from 0.0 to 0.9493; every one of the 50 rows has a
+positive residual, and no row carries a stage-time field. One task stands 1168 ms outside the run
+object's window. The 168 calls whose `duration_ms` is zero are the important part: the field is an
+integer millisecond, so a sub-millisecond call is recorded as no time at all. The share is therefore
+a **lower bound on what the record can name**, not a measurement of what tools cost. A second run of
+the same clean tree at the same commit moved both the median share and the zero-duration count, so
+the frame pins the one run it describes by hash rather than quoting a stable-looking number; the
+ledger keeps the second observation as capture-time context, not as part of the reading.
+
+### Failures: two recordings, one empty denominator
+
+Two deterministic recordings ship in the tree, and neither is a random draw:
+
+- `benchmarks/baseline/results.json` — 50 tasks, none failing. There is no failure to attribute, so
+  the record says `not_measured` with the reason "empty denominator". It does not say 100%, and it
+  does not say 0/0; both would turn an absent observation into a score.
+- `benchmarks/external/datascibench/results/raw_runs.json` — 45 runs, 40 not passing (39 `failed`,
+  one `execution_error`, using the adapter's own `score >= 0.5` pass mark). It records a wall clock
+  for the bundle but no per-task latency at all.
+
+Attribution is counted at three depths, each derived from fields the record actually carries:
+
+| Depth | What counts | Reading |
+|---|---|---|
+| outcome | the run's `outcome` value | 40 of 40 |
+| artifact | a mechanical signal from the recorded counts: the run did not complete, or produced no report, no tool call, or no evidence | 11 of 40 (10 with no evidence, one unfinished) |
+| stage | a closed error-code or stage field naming the cause | **0 of 40** |
+
+The 29 remaining runs completed with a report, tool calls and evidence and were still graded below
+the pass mark; the record has no field that says whether the plan, a tool's result, the evidence or
+the evaluator's expected shape was responsible. Eight of the 40 carry partial credit, so "failed" is
+not even a binary state. One run carries a free-text error and that text is not a code. **Stage-level
+attribution completeness is 0 of 40**, and the empty baseline denominator cannot improve it.
+
+### What would count as progress
+
+A later reading would need the producer to write a closed stage or cause code and a stage-level
+timestamp into the record. That is a change to the producer, not to this instrument, and ADR-003's
+migration plan keeps S2 work to documents, tests and checklists — none is written here. Until then the
+honest result is a measured gap, and a green matrix in the first S2 item does not fill it.
+
 ## What this page is not
 
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
@@ -246,5 +311,5 @@ record rather than leaving a stale verdict behind.
   a definition cannot quietly rewrite history.
 - Not complete. All four S1 rows carry a first reading, but each is a single observation: none of them
   establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
-  one recording in the tree states its own provenance. S2 has one reading of four, and one reading is
-  not a stage exit.
+  one recording in the tree states its own provenance. S2 has two readings of four, and two readings
+  are not a stage exit.
