@@ -18348,6 +18348,12 @@ stays at 188 and `docs/audit/facts.limits.json` is untouched; `find_orphan_reads
 clean tree; the census, checkpoint, measure, currency, baseline-readme and doc-code-path guards pass;
 the page-consistency guard added in the previous section caught this section's own stale count before
 the PR existed, which is the first time that guard has fired on new work rather than on the defect it
-was written for. No deployment was issued, no issue was commented on or closed, no governance or
+was written for. The first CI pass failed in the attribution contract test, which pinned the
+literal string "two readings" in the ADR status line -- a count that changes by definition when
+the next reading lands, so the test failed on progress rather than on a regression. That assertion
+now requires the status line to name this reading and still call the stage in progress, and the
+arithmetic against the page's sections stays in the page-consistency test where it is derived.
+The same run's web-regression job failed installing Playwright because the runner could not resolve
+`archive.ubuntu.com`; nothing in this change touches the web app. No deployment was issued, no issue was commented on or closed, no governance or
 branch-protection setting changed, no credential was read and no paid resource was enabled. **S2
 stands at 3/4, which is progress, not a stage exit.**
