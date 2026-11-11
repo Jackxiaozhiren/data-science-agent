@@ -18256,3 +18256,39 @@ no page was added, so no nav entry moved. All of these were also run in a clean 
 the delivered files, with the six-megabyte local run absent. No deployment was issued, no issue was
 commented on or closed, no governance or branch-protection setting changed, no credential was read
 and no paid resource was enabled. **S2 stands at 2/4, which is progress, not a stage exit.**
+
+## §326 — a page that contradicted itself (2026-11-11)
+
+**What was wrong.** `docs/measurement-basis.md` opened by saying two of S2's four items carry a
+reading, and then, in the section introducing the boundary matrix, said that three of them did —
+naming latency and failure attribution as unread while its own section sat fifty lines further down.
+The sentence was written before that reading existed and was not revisited when the reading landed.
+Nothing in the tree objected: the page renders, every link resolves, and both numbers are prose.
+
+**How it surfaced.** Not from a build. It came up while answering a question about how much of the
+stage was finished, which is the weakest possible detector — a reader who trusts the middle of a page
+over its top would have taken the stale count as current. This is the second time this shape has
+appeared here: an earlier reading corrected a page that said "three unmeasured" in one place and "two
+of four" in another. The first was fixed by hand and taught nothing, which is why this one ships with
+a check.
+
+**The correction.** One sentence: the section now says two items have no reading, names them, and
+points at the next section for the second. No number elsewhere changed, because no other number was
+wrong — the ADR status line, the page intro and the section list already agreed with each other.
+
+**The check, with both sides derived from the page.** The new contract test reads the S2 section
+headings in `tests/contract/test_measurement_page_consistency.py` and refuses any sentence that
+says an item has no reading while naming a topic that has a section; it also compares the intro's
+"are N of S2's four items" and the ADR's "N readings … M items remaining" with the number of sections,
+so adding a third reading fails until both sentences move with it. Nothing in the test is a typed
+copy of a number in a page. Reverting the sentence makes it fail with the offending sentence in the
+message; restoring it makes it pass.
+
+**Gates.** `ruff check` and `ruff format --check` return 0; the new test plus the census, checkpoint,
+measure, currency, baseline-readme and doc-code-path guards pass in a clean tree at the merge commit
+of the previous section; `check_public_claims.py` reports no stale claims; `mkdocs build --strict`
+succeeds and no page was added, so no nav entry moved; `check_ledger_identifiers.py --check` returns
+OK on this ledger; `find_orphan_reads.py --check` and `audit_facts.py --check` are untouched by this
+change and stay as they were. No deployment was issued, no issue was commented on or closed, no
+governance or branch-protection setting changed, no credential was read and no paid resource was
+enabled. **Stage status is unchanged: S2 at 2/4, still not a stage exit.**

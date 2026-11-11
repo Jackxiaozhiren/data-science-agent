@@ -191,8 +191,8 @@ retroactively, certify a past decision, or create an exception to the zero-billi
 ## S2 — the boundary matrix
 
 S2 is the stage where ADR-003 replaces a commercial execution sandbox with a boundary published as a
-checkable matrix. Three of its four items — latency and failure attribution, the export-first
-lifecycle, the contract-version policy — have no reading yet. What follows describes the first one.
+checkable matrix. Two of its four items — the export-first lifecycle and the contract-version policy —
+have no reading yet. What follows describes the first, and the second is the next section.
 
 ### What a cell means
 
