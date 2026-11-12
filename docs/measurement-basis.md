@@ -414,6 +414,38 @@ replace the register's inference with the record's own statement. Until then the
 tree has version strings, no stated bump rule, and one convention that starts today — and the contract
 test is what holds that convention in place.
 
+## Stage exit — the four clauses against the four readings
+
+ADR-003's migration table gives S2 one exit condition with four clauses, and its work column four
+items. They are not the same four. Three clauses name a reading: boundary decidability is
+`docs/audit/execution-boundary.json`, attribution completeness is `docs/audit/attribution.json`, and
+artifact parseability is `docs/audit/export-lifecycle.json`. The fourth clause — `matrix_valid` and
+`publication_ready` never conflated — is a separation between two gates, not one of the work items.
+The fourth item, the contract-version policy (`docs/audit/contract-versions.json`), reads the shape
+of records rather than the behaviour they describe; no exit clause names it.
+
+| Clause | Where the evidence lives | What the reading actually says |
+|---|---|---|
+| Boundary decidability | `docs/audit/execution-boundary.json` | 12 of 15 cells are decided by a request-time check; 3 are undecidable, 6 open and 6 fenced |
+| Attribution completeness | `docs/audit/attribution.json` | 0 of 40 non-passing external-bundle runs carry a stage or cause code, and 0 of 50 tasks carry stage boundaries; the frozen baseline has an empty denominator and is `not_measured` |
+| Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end, but 1 of 6 lifecycle events runs a parse check and 0 of 3 export-side events record a digest; `csv`, `png` and `xlsx` are `not_measured` |
+| `matrix_valid` and `publication_ready` never conflated | `packages/evaluation/src/dsa_evaluation/publication.py` | `publication_ready = matrix_valid and scope == "full"`, so a valid matrix is not a publication decision; each of the four readings says in its own `not_claimed` that `publication_ready` keeps its own gate |
+
+The first three clauses are recorded; the fourth holds as a property of the code and of the records'
+own disclaimers. That is not the same as the three being complete. Two of the readings name a gap a
+producer change would have to close: stage and cause codes have to be written before attribution
+completeness can be computed, and a digest on the export side has to be written before parseability
+is measured anywhere other than at the consumer. The boundary reading's undecidable cells are a
+third gap, one that a request-time check rather than a document would have to close. None of the
+three is closed by this page.
+
+**The stage is not exited.** Four readings are a count of items, not a judgement about them; the ADR
+status line says `exit not declared`, and `tests/contract/test_s2_exit_review.py` derives each
+number in the table above from its record and derives the verdict from the gaps those records still
+carry. Changing the verdict is a product decision with a named owner, not a document edit; so is
+starting S3, whose entry condition also asks for the open questions in the ADR's Appendix C to be
+answered.
+
 ## What this page is not
 
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
