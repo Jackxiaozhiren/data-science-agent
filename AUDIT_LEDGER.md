@@ -18292,3 +18292,68 @@ OK on this ledger; `find_orphan_reads.py --check` and `audit_facts.py --check` a
 change and stay as they were. No deployment was issued, no issue was commented on or closed, no
 governance or branch-protection setting changed, no credential was read and no paid resource was
 enabled. **Stage status is unchanged: S2 at 2/4, still not a stage exit.**
+
+## §327 — S2 third reading: where a digest survives (2026-11-11)
+
+**What the stage asks.** ADR-003's persistence decision replaces "data survives a restart" with
+"artifacts stay parseable across lifecycle events", and its chosen alternative describes a bundle
+carrying "manifest, environment, pinned dependencies, ordered execution trace and artifact hashes".
+This section takes the third of S2's four work items, the export-first lifecycle. The contract-version
+policy still has no reading; artifact parseability is recorded for the classes the tree ships and is
+`not_measured` for the rest; `matrix_valid` and `publication_ready` are untouched, and
+`publication_ready` keeps its own gate.
+
+**Six events, two questions.** An artifact meets the export tool, the save tool, the run record, the
+bundle, the plain report export and a consumer, in that order. Each event is asked whether the record
+carries a digest of the bytes and whether a shipped path parses them and fails loudly, and each answer
+is labelled `ran` or `read` — five of the six were obtained by executing the code, the bundle by
+reading its route. The instrument writes only into throwaway temporary directories and prints JSON on
+stdout; the caller redirects it, so the module has no read-to-write edge, which is the S2083 finding from the previous section.
+
+**The reading: one event of six records a digest, and none of the three export-side events carries one
+forward.** `export_artifact` returns the SHA-256 of the bytes it has just written, and the
+recomputation matches; `save_artifact` returns id, path, type and metadata with no digest; the 40
+entries in the eight committed `artifacts.json` records carry id, type, path, kind, author and time
+and no digest field at all; the bundle's manifest carries `artifact_root`, `excluded`, `included`,
+`run_id` and `storage`, and the route contains zero digest references; and the plain report export
+removes a 64-hex token by design, which `report_export.py` states as its own rule. A recipient can
+tell which names the bundle listed and cannot tell whether the bytes behind a name are the ones that
+were written.
+
+**Parse checks separate further: one event of six has one, and it is the reader.** Every writer hashes
+or copies and never re-opens what it wrote. The instrument reads the CSV back on its own account and
+that is explicitly not counted as a shipped check — an instrument's own verification is not a control
+in the product.
+
+**Parseability today: 48 of 48 committed exports read back** — 40 JSON parsed, 8 Markdown decoded,
+counted by class from `case-studies/*/outputs/`. `csv`, `png` and `xlsx` have no committed export,
+because run artifacts live under a gitignored root; those three are `not_measured` with that reason
+rather than zero, applying the empty-denominator rule to a different denominator.
+
+**The divergence this makes visible is narrow and checkable.** The ADR's bundle sentence names five
+elements and the manifest carries none of them as a field. This record does not claim the other four
+are missing from the bundle — the files it ships may carry environment and dependencies. It claims
+only that no per-file digest reaches the export, so a bundle cannot be checked against the run that
+produced it. Closing that is a producer change (`save_artifact`'s output model and the bundle route),
+which ADR-003's migration plan places outside S2's document-and-test scope; the reading records the
+gap instead of closing it quietly.
+
+**Gates.** Nine contract tests rebuild the record, re-derive every summary count from the events,
+recount parseability from the tree, require each `not_measured` class to have no committed file,
+resolve every cited surface from a closed table in the test rather than from the record's strings,
+and pin the ADR quote against the ADR itself. A tampered summary count fails two of them. `ruff check`
+and `ruff format --check` return 0; no exception handler was added, so `ceiling.debt.exceptHandlers`
+stays at 188 and `docs/audit/facts.limits.json` is untouched; `find_orphan_reads.py --check`,
+`check_public_claims.py`, `check_ledger_identifiers.py --check` and `mkdocs build --strict` pass in a
+clean tree; the census, checkpoint, measure, currency, baseline-readme and doc-code-path guards pass;
+the page-consistency guard added in the previous section caught this section's own stale count before
+the PR existed, which is the first time that guard has fired on new work rather than on the defect it
+was written for. The first CI pass failed in the attribution contract test, which pinned the
+literal string "two readings" in the ADR status line -- a count that changes by definition when
+the next reading lands, so the test failed on progress rather than on a regression. That assertion
+now requires the status line to name this reading and still call the stage in progress, and the
+arithmetic against the page's sections stays in the page-consistency test where it is derived.
+The same run's web-regression job failed installing Playwright because the runner could not resolve
+`archive.ubuntu.com`; nothing in this change touches the web app. No deployment was issued, no issue was commented on or closed, no governance or
+branch-protection setting changed, no credential was read and no paid resource was enabled. **S2
+stands at 3/4, which is progress, not a stage exit.**

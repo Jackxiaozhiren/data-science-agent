@@ -225,5 +225,10 @@ def test_disclaimers_stay_in_the_record_and_the_basis_page_points_at_it() -> Non
     assert "docs/audit/attribution.json" in basis
     assert "scripts/measure_attribution.py" in basis
     assert "S2 has one reading of four" not in basis
-    adr = ADR.read_text(encoding="utf-8")
-    assert "two readings" in adr.splitlines()[2]
+    status = ADR.read_text(encoding="utf-8").splitlines()[2]
+    # Not a count: the number of S2 readings changes every time one lands, and pinning it here
+    # made this test fail on the next stage item rather than on a regression. What must stay true
+    # is that the status line names this reading and still calls the stage in progress; the
+    # arithmetic against the page's sections is checked in the page-consistency test.
+    assert "latency/failure attribution" in status, status
+    assert "S2 in progress" in status, status
