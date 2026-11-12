@@ -18411,3 +18411,60 @@ moved with the new section.
 no runtime behaviour changed. **S2's four items now each carry a reading. The stage is not exited**: an exit
 is a judgement about the readings, and two of the four record gaps that a producer change would have to
 close.
+
+## §329 — S2's exit condition read clause by clause (2026-11-12)
+
+**What the stage asks, and what four readings are not.** ADR-003's migration table gives S2 one exit
+condition with four clauses: boundary decidability, attribution completeness and artifact
+parseability recorded, with `matrix_valid` and `publication_ready` never conflated. Before this
+section, the tree carried four readings of the four work items but no place where a reader could see
+which clause each reading answers. A count of items is not an exit; the ADR status line and the
+measurement page both said the stage was not exited, and neither named the clause-to-evidence map.
+This section publishes that map and pins the verdict.
+
+**The two lists are not the same list.** Three clauses name a reading. Boundary decidability is
+`docs/audit/execution-boundary.json`: 12 of 15 cells are decided by a request-time check, 3 are
+undecidable, 6 open and 6 fenced. Attribution completeness is `docs/audit/attribution.json`: 0 of 40
+non-passing external-bundle runs carry a stage or cause code, 0 of 50 tasks carry stage boundaries,
+and the frozen baseline is `not_measured` on an empty denominator. Artifact parseability is
+`docs/audit/export-lifecycle.json`: 48 of 48 committed exports parse at the consumer end, 1 of 6
+lifecycle events runs a parse check, 0 of 3 export-side events record a digest, and the `csv`,
+`png` and `xlsx` classes are `not_measured`. The fourth clause is not a work item: it is a separation
+of gates, evidenced by `publication_ready = matrix_valid and scope == "full"` in
+`packages/evaluation/src/dsa_evaluation/publication.py` and by the `not_claimed` line in each of the
+four readings. Conversely the fourth item, the contract-version policy, has no exit clause naming it;
+`docs/audit/contract-versions.json` reads the shape of records rather than the behaviour they
+describe. The page's new `## Stage exit` section states both asymmetries, and the shape of its
+heading is deliberate: an `## S2 — ` heading would add a fifth item to a guard that derives the item
+count from the ADR's work column.
+
+**Verdict: not exited.** Three clauses are recorded, and "recorded" is not "complete". Two of the
+readings name a gap a producer change would have to close: stage and cause codes must be written
+before attribution completeness can be computed, and a digest on the export side must be written
+before parseability is measured anywhere other than at the consumer. The boundary reading's 3
+undecidable cells are a third gap, one a request-time check rather than a document would have to
+close. None is closed here. Declaring an exit on top of those gaps would turn a reading into a
+judgement nobody made, so the page, the ADR status line and this section all keep the verdict as
+not exited.
+
+**Guards.** `tests/contract/test_s2_exit_review.py` holds nine tests. It derives the four clause
+anchors from the ADR's S2 migration row, derives every number in the page's table from the record it
+names, requires each evidence path to exist, checks the gate expression against the shipped source
+and against the disclaimers of all four readings, proves the fourth item has no exit clause, checks
+that the review heading is not a fifth S2 item by deriving the item count from the ADR's work
+column, and derives the verdict from the gaps the records still carry. Nothing is typed as a literal
+count. A negative control was run: altering a derived figure in the page, or changing the verdict
+sentence, makes the file fail. The existing page-consistency guard needed no change: the intro still
+counts four `## S2 — ` sections and the new heading is not one of them.
+
+**What is not claimed.** This is a judgement about readings that already exist, not a fifth reading.
+No file was added under `docs/audit/`, so the contract-version register's row set stays as recorded
+and its P5 clause is not exercised by this change. No producer, evaluator or frozen catalog was
+touched; no runtime behaviour changed; no credential was read; no paid resource was enabled. The
+verdict is a product decision with a named owner and is not taken here.
+
+**Confirmation nodes left open.** Declaring S2 exited would require either closing the gaps above or
+an explicit maintainer decision to accept them. Starting S3 additionally requires S2 exit and the
+three open questions in the ADR's Appendix C to be answered, one of which needs model credentials
+and a spend ceiling that have not been provided. Public actions on issues, governance configuration
+and billing are outside the authorization for this section.
