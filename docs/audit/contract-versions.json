@@ -1,0 +1,164 @@
+{
+  "in_force_from": "2026-11-12",
+  "not_claimed": [
+    "not an external API guarantee: these are repository artefacts, and no consumer outside this tree is bound by the token",
+    "no claim that a checked token makes a reading correct; it makes the shape a reader assumes explicit",
+    "no claim that the pre-policy records are wrong; they are read as v0 rather than retro-tagged",
+    "no claim about the five gate inputs under docs/audit/; versioning a ceiling or an exception list is a separate question",
+    "not_measured is not zero, and publication_ready is untouched here"
+  ],
+  "policy": {
+    "applies_to": "every file under docs/audit/ that carries a recorded_at, written from 2026-11-12; the records above that predate it are read as v0",
+    "clauses": [
+      {
+        "enforced_by": "the token form, checked by --verify and by the contract test",
+        "id": "P1",
+        "rule": "schema is <subject>/vN: a kebab-case subject naming the record's own artifact, then a decimal major starting at 1. A projection's token goes in frame_schema under the same form."
+      },
+      {
+        "enforced_by": "nothing mechanical; a bump edits the record and this register in one change, and the contract test fails while they disagree",
+        "id": "P2",
+        "rule": "N increments when a consumer's arithmetic would change -- a key it reads is removed or renamed, or its type or meaning changes. Adding a key, reordering keys, or re-deriving a value for the same key does not increment."
+      },
+      {
+        "enforced_by": "check_kind per row, plus the post-policy rule in --verify",
+        "id": "P3",
+        "rule": "No silent readers. A consumer compares schema with a literal, with the instrument's constant, or with a rebuild, or refuses an unknown value explicitly. A consumer that never touches schema is registered as none."
+      },
+      {
+        "enforced_by": "effective_version per row, derived rather than typed",
+        "id": "P4",
+        "rule": "A record that predates this policy and declares no token is read as v0 and is not retro-tagged: the page's third rule forbids rewriting a reading that was taken. One that declares a token keeps it, checked or not, and the register says which."
+      },
+      {
+        "enforced_by": "the contract test compares the rows with the directory, so an unregistered record fails it",
+        "id": "P5",
+        "rule": "The register travels with the record: every docs/audit file carrying a recorded_at has a row in the change that adds it."
+      }
+    ],
+    "pre_policy_version": "v0"
+  },
+  "procedure": [
+    "Run `python scripts/measure_contract_versions.py --record > docs/audit/contract-versions.json` in the repository root.",
+    "Run `python scripts/measure_contract_versions.py --verify` to rebuild every field from the tree and compare it with the register.",
+    "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
+  ],
+  "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
+  "recorded_at": "2026-11-12T02:15:39Z",
+  "records": [
+    {
+      "check_kind": "record-vs-constant",
+      "checked_by": "tests/contract/test_attribution_record.py",
+      "declared_frame_schema": "attribution-frame/v1",
+      "declared_schema": "attribution-reading/v1",
+      "detail": "the test types both tokens and compares the reading and its frame with them",
+      "effective_version": "v1",
+      "path": "docs/audit/attribution.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-11T12:14:17Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "none",
+      "checked_by": null,
+      "declared_frame_schema": null,
+      "declared_schema": null,
+      "detail": "the second coverage reading repeats the first's shape, token included",
+      "effective_version": "v0",
+      "path": "docs/audit/authorization-coverage-second.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-10T10:38:02Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "none",
+      "checked_by": null,
+      "declared_frame_schema": null,
+      "declared_schema": null,
+      "detail": "the first coverage reading carries no token and the test reads only its action classes",
+      "effective_version": "v0",
+      "path": "docs/audit/authorization-coverage.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-10T04:10:17Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "input-vs-record",
+      "checked_by": "tests/contract/test_evidence_alignment_record.py",
+      "declared_frame_schema": "evidence-alignment-frame/v1",
+      "declared_schema": null,
+      "detail": "the test compares the frame's token with the record's frame_schema; the record has no token of its own",
+      "effective_version": "v0",
+      "path": "docs/audit/evidence-alignment.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-10T11:34:51Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "record-vs-rebuild",
+      "checked_by": "tests/contract/test_execution_boundary_record.py",
+      "declared_frame_schema": null,
+      "declared_schema": "execution-boundary-matrix/v1",
+      "detail": "the test re-runs the instrument and compares the rebuilt token with the recorded one",
+      "effective_version": "v1",
+      "path": "docs/audit/execution-boundary.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-10T13:23:12Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "record-vs-constant",
+      "checked_by": "tests/contract/test_export_lifecycle_record.py",
+      "declared_frame_schema": null,
+      "declared_schema": "export-lifecycle/v1",
+      "detail": "the test compares the record with the instrument's own SCHEMA constant",
+      "effective_version": "v1",
+      "path": "docs/audit/export-lifecycle.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-11T13:46:31Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "none",
+      "checked_by": null,
+      "declared_frame_schema": null,
+      "declared_schema": "independent-rerun/v1",
+      "detail": "the instrument writes the token and the test reads the record without touching it",
+      "effective_version": "v1",
+      "path": "docs/audit/independent-rerun.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-10T12:31:55Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "none",
+      "checked_by": null,
+      "declared_frame_schema": null,
+      "declared_schema": null,
+      "detail": "the probe writes verdicts and the test reads them; the record carries no token to check",
+      "effective_version": "v0",
+      "path": "docs/audit/served-artifacts.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-09T12:18:53Z",
+      "states_bump_rule": false
+    }
+  ],
+  "reviewed_commit": "93d5afaf9704",
+  "schema": "contract-versions/v1",
+  "scope": {
+    "gate_inputs": 5,
+    "readings": 8,
+    "registers": 1
+  },
+  "summary": {
+    "declaring_none": 3,
+    "declaring_only_input_schema": 1,
+    "declaring_own_schema": 4,
+    "own_tokens_checked": 3,
+    "own_tokens_unchecked": 1,
+    "policy_violations": 0,
+    "pre_policy": 8,
+    "records": 8,
+    "records_carrying_a_bump_rule": 0
+  }
+}

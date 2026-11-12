@@ -18357,3 +18357,57 @@ The same run's web-regression job failed installing Playwright because the runne
 `archive.ubuntu.com`; nothing in this change touches the web app. No deployment was issued, no issue was commented on or closed, no governance or
 branch-protection setting changed, no credential was read and no paid resource was enabled. **S2
 stands at 3/4, which is progress, not a stage exit.**
+
+## §328 — S2 fourth reading: the version a record declares about itself (2026-11-12)
+
+This section takes the last of S2's four items, the contract-version policy. The ADR names the item and does
+not define it, so the first thing the reading had to decide was what the phrase refers to. Two candidates:
+the `/version` payload a deployed API discloses, which the served-artifact probe already checks as
+`api_version_contract` and which therefore already has a reading in S1; and the version token on the audit
+records a consumer derives numbers from. The second was taken, because the first is measured and because a
+record is what a later reader meets before anything else in this repository.
+
+**What the tree declares.** Nine of the fourteen files under `docs/audit/` carry a `recorded_at` -- eight
+readings and the new register; the other five are gate inputs (a debt ceiling, a gitleaks ignore registry, an
+advisory exception list, a lock-divergence list, an orphan-reads registry) and state no date. Four of the
+eight readings declare a token of their own: `attribution-reading/v1`, `execution-boundary-matrix/v1`,
+`export-lifecycle/v1`, `independent-rerun/v1`. One declares only its input's: `evidence-alignment.json`
+carries `evidence-alignment-frame/v1` as `frame_schema` and nothing about itself -- the record with the most
+provenance in the set is the only one whose version belongs to a projection. Three declare nothing, all
+written before any record carried a token: both authorization-coverage readings and the served-artifact
+probe.
+
+**What holds a token to the record.** Three of the four are compared with something outside the record: the
+attribution test types both tokens, the boundary test compares a rebuild, the export-lifecycle test compares
+the record with its instrument's constant. The fourth is decoration -- `independent-rerun.json`'s token is
+written by the instrument, carried in the file, and read by its test with no assertion on the value. That is
+the reading's sharpest result, and the reason the register stores a `check_kind` per row: "the record says
+v1" and "a check holds the record to v1" are different facts, and only the second survives an edit.
+
+**The policy.** Five clauses, in force from 2026-11-12 and not back-dated: a token form (`<subject>/vN`,
+subject naming the record's own artifact, a projection's token in `frame_schema`); a bump rule (N increments
+when a consumer's arithmetic changes, not when a key is added); no silent readers; pre-policy records read as
+`v0` and not retro-tagged; and the register travelling with the record. The fourth clause is what keeps this
+section from rewriting history: retro-tagging the three unversioned readings would be the basis change the
+page's third rule forbids, so they stay unversioned and the register records `v0` as their effective version.
+
+**What enforces it, and what does not.** P1 is enforced by a regex in `--verify` and in the test. P5 is
+enforced by comparing the rows with the directory, and that is the clause that will bite: the next reading
+added under `docs/audit/` fails the contract test until it is registered. P2 is enforced by nothing
+mechanical, and the register says so in the clause's own `enforced_by` field rather than implying a gate that
+does not exist -- a bump edits the record and the register in one change, and the test fails while they
+disagree. P3's post-policy branch is exercised only by doctored rows in the test today, because every row in
+the tree predates the policy; that is a guard against the next record, not a claim about this one.
+
+**Guards.** Eleven contract tests: rebuild the register field by field, compare every row with the file it
+names, recount the directory partition, require every token to match the form, derive `effective_version`
+rather than accept it, prove each `check_kind: none` by reading the consumer and finding the token absent,
+recount the summary from the rows, fire the validator once per clause, pin the five clause ids with their
+`enforced_by` strings, and pin the disclaimers plus the page's citation of the instrument. The page guard
+added earlier in S2 needed no change of shape: its intro sentence counts sections, and the section count
+moved with the new section.
+
+`AUDIT_LEDGER.md` gains this section as a pure append. No producer, evaluator or frozen catalog was touched;
+no runtime behaviour changed. **S2's four items now each carry a reading. The stage is not exited**: an exit
+is a judgement about the readings, and two of the four record gaps that a producer change would have to
+close.
