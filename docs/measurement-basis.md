@@ -6,8 +6,9 @@ picked before the first reading is a preference, not a measurement.
 
 S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks what a
 recorded run lets a reader point at: the execution-boundary matrix, the latency and failure
-attribution reading and the export-first lifecycle are at the end of the page. They are three of
-S2's four items. The contract-version policy has no reading yet.
+attribution reading, the export-first lifecycle and the contract-version policy are at the end of the
+page. They are four of S2's four items, which closes the item list and not the stage: an exit is a
+judgement about the readings, and none is declared here.
 
 Three rules apply to every metric below, each because the opposite caused a real problem here:
 
@@ -191,8 +192,7 @@ retroactively, certify a past decision, or create an exception to the zero-billi
 ## S2 — the boundary matrix
 
 S2 is the stage where ADR-003 replaces a commercial execution sandbox with a boundary published as a
-checkable matrix. One of its four items — the contract-version policy — has no reading yet. What
-follows describes the first of the three that do; the others are the two sections after it.
+checkable matrix. This is the first of its four items; the others are the three sections after it.
 
 ### What a cell means
 
@@ -356,6 +356,64 @@ would move `export_side_events_with_a_digest` off zero. That is a producer chang
 output model and the bundle route — and ADR-003 keeps S2 work to documents, tests and checklists, so
 it is recorded here as a gap rather than closed by this reading.
 
+## S2 — the contract-version policy
+
+The ADR names this item and does not define it. Two readings of the phrase are available: the
+`/version` payload a deployed API discloses, which S1's served-artifact probe already checks as
+`api_version_contract`, and the version token on the records a consumer derives numbers from. This
+section takes the second, because the first already has a reading and because a record is what a later
+reader meets first. `docs/audit/contract-versions.json` is the register and
+`scripts/measure_contract_versions.py` rebuilds it.
+
+### What the eight readings declare
+
+Nine of the fourteen files under `docs/audit/` carry a `recorded_at`: eight readings and this register.
+The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory exception
+list, a lock-divergence list and an orphan-reads registry — and state no date. Of the eight readings, **four declare a token of their own**:
+`attribution-reading/v1`, `execution-boundary-matrix/v1`, `export-lifecycle/v1` and
+`independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
+`evidence-alignment-frame/v1` as `frame_schema` and nothing about itself. Three declare nothing — both
+authorization-coverage readings and the served-artifact probe, all written before any record carried a
+token.
+
+The five tokens are well-formed and use three different subjects: two end in `-reading`, one in
+`-matrix`, one in `-frame`, one is bare. That is a vocabulary, not a policy — nothing says which
+suffix a new record should take, and nothing says what changing one would mean. **No record carries a
+field stating a bump rule**, which is the gap this item exists to close.
+
+### What holds a token to the record
+
+Three of the four are compared with something that is not the record itself: the attribution test
+types both tokens, the boundary test compares a rebuild, and the export-lifecycle test compares the
+record with its instrument's constant. The fourth is decoration — `independent-rerun.json`'s token is
+written by the instrument, carried in the file, and read by its test without an assertion on the
+value. The register records that as `check_kind: none`, and the contract test proves the label by
+reading the consumer and finding the token absent, rather than by trusting the record's own sentence.
+
+### The policy, and what enforces it
+
+Five clauses, in force from 2026-11-12 and not back-dated onto the eight readings above:
+
+| Clause | Rule | Enforced by |
+|---|---|---|
+| P1 | `schema` is `<subject>/vN`: a kebab-case subject naming the record's own artifact, then a decimal major from 1. A projection's token goes in `frame_schema` under the same form | the token form, in `--verify` and in the contract test |
+| P2 | N increments when a consumer's arithmetic would change; adding a key or re-deriving a value for the same key does not | nothing mechanical — a bump edits the record and the register in one change, and the test fails while they disagree |
+| P3 | no silent readers: a consumer compares the token, or refuses an unknown value explicitly | `check_kind` per row, plus the post-policy rule in `--verify` |
+| P4 | a record that predates the policy and declares no token is read as `v0`, and is not retro-tagged | `effective_version` per row, derived rather than typed |
+| P5 | the register travels with the record: every dated file under `docs/audit/` has a row in the change that adds it | the test compares the rows with the directory |
+
+P4 decides what this page does not do: the three unversioned readings stay unversioned. Adding a token
+to a record that was already taken would be a basis change in the sense of the third rule at the top
+of this page, and this page's answer to a basis change is a new record, not an edited one.
+
+### What would count as progress
+
+Two things, neither of them a document. An assertion in the independent-rerun test would turn the one
+decorated token into a checked one; a producer change that wrote a bump rule into each record would
+replace the register's inference with the record's own statement. Until then the reading is that the
+tree has version strings, no stated bump rule, and one convention that starts today — and the contract
+test is what holds that convention in place.
+
 ## What this page is not
 
 - Not a scorecard: no metric here has a target yet, and the ADR does not set one for S1.
@@ -363,5 +421,6 @@ it is recorded here as a gap rather than closed by this reading.
   a definition cannot quietly rewrite history.
 - Not complete. All four S1 rows carry a first reading, but each is a single observation: none of them
   establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
-  one recording in the tree states its own provenance. S2 has three readings of four, and three
-  readings are not a stage exit.
+  one recording in the tree states its own provenance. S2's four items each carry a reading now; the
+  fourth reads the shape of the records rather than the behaviour they describe, and four readings
+  are not a stage exit.
