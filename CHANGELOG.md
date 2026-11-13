@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Changed — `profile_dataset` refuses before it reads (ADR-004)
+
+- The tool now refuses a path that is a symlink, not a regular file, or named like a credential
+  (`.env`, `id_rsa`, `*.pem`, anything under `.ssh`/`.aws`/`.gnupg`/`.kube`/`.docker`). It also refuses the
+  result when the input's size, modification time or inode moved while it was being read. The reader is
+  chosen from the same six-format allowlist as before; nothing about a successful profile changed.
+- This is a **behaviour change**, not only a hardening note: a caller that profiled a symlinked dataset, or a
+  file named like a key, now gets an error instead of a profile. `docs/security.md` states the scope and the
+  three things the checks do not observe.
+- The boundary reading is retaken as its second record. Three cells that the first reading recorded as
+  `undecidable` now name the check that decides them, so `decidability` reaches 1.0 — six open, nine fenced,
+  none undecidable. One cell (process spawn) is re-attributed rather than changed: the format allowlist was
+  already deciding it, and the record's `basis_change` says so. `docs/measurement-basis.md` keeps the first
+  reading's counts and marks them superseded.
+- `tests/security/test_profile_dataset_guard.py` pins each refusal; the boundary record's probes are rebuilt by
+  `scripts/measure_execution_boundary.py` and re-derived verdict-by-verdict in
+  `tests/contract/test_execution_boundary_record.py`.
+
 ### Changed (post-4.6.0) — a run page names the planner that run had
 
 - The reasoning badge and its notice on a run page now read the run's own `ReasoningRecord` (`state.reasoning`,

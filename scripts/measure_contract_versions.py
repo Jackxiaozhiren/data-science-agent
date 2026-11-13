@@ -30,8 +30,9 @@ ROOT = Path(__file__).resolve().parents[1]
 AUDIT = ROOT / "docs/audit"
 RECORD_PATH = AUDIT / "contract-versions.json"
 SCHEMA = "contract-versions/v1"
-#: The tree this reading describes: the merge commit of the previous section.
-REVIEWED_COMMIT = "93d5afaf9704"
+#: The tree this reading describes: the main commit the change that retook it was based on, so a
+#: register regenerated before its own merge still names a commit that exists.
+REVIEWED_COMMIT = "0d4c0a730d3c"
 
 #: The policy decides nothing about records written before it, and is not back-dated onto them.
 IN_FORCE_FROM = "2026-11-12"

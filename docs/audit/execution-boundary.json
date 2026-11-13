@@ -1,6 +1,8 @@
 {
-  "schema": "execution-boundary-matrix/v1",
-  "recorded_at": "2026-11-10T13:23:12Z",
+  "schema": "execution-boundary-matrix/v2",
+  "reading": 2,
+  "basis_change": "the first reading attributed profile_dataset's process-spawn cell to the absence of a process import, while the format allowlist was already deciding which reader a request could reach; it is re-attributed here rather than re-worded. The write and credential cells gained a check in the same change, so no cell is now decided by absence. The first reading's counts are kept in docs/measurement-basis.md and are not restated here.",
+  "recorded_at": "2026-11-13T06:41:48Z",
   "reviewed_commit": "ab958723f7e8",
   "question": "for each surface that accepts model-authored input, is the capability decided by a check that runs at request time?",
   "verdict_rule": "the last check to run decides the cell; a capability with no request-time check is recorded undecidable even when today's code does not exercise it",
@@ -146,7 +148,28 @@
       "surface": "profile_dataset",
       "question": "does the profile tool import a process or shell module?",
       "observed": "refused",
-      "detail": "imports only ['__future__', 'dsa_datasets', 'dsa_tools', 'pathlib', 'pydantic', 'typing']"
+      "detail": "imports only ['__future__', 'dsa_datasets', 'dsa_tools', 'pathlib', 'pydantic', 're', 'typing']"
+    },
+    {
+      "id": "profile-format-allowlist",
+      "surface": "profile_dataset",
+      "question": "is a format whose loader executes code refused before a reader is chosen?",
+      "observed": "refused",
+      "detail": "Unsupported file extension: '.pkl'. Allowed: ['.csv', '.json', '.jsonl', '.parquet', '.xls', '.xlsx']"
+    },
+    {
+      "id": "profile-credential-name",
+      "surface": "profile_dataset",
+      "question": "is a credential-shaped path refused before the reader runs?",
+      "observed": "refused",
+      "detail": "Refusing a credential-shaped path: .env"
+    },
+    {
+      "id": "profile-input-unchanged",
+      "surface": "profile_dataset",
+      "question": "is a result refused when the input changed while it was being read?",
+      "observed": "refused",
+      "detail": "Input changed while it was being profiled: data.csv"
     }
   ],
   "cells": [
@@ -418,23 +441,32 @@
       "id": "PD-1",
       "surface": "profile_dataset",
       "capability": "process_spawn",
-      "verdict": "undecidable",
-      "decided_by": "absence",
+      "verdict": "fenced",
+      "decided_by": "check",
       "fenced_in_this_tree": true,
       "layers": [
         {
           "layer": "no_process_import",
           "outcome": "fenced",
-          "decided_by": "absence",
+          "decided_by": "read",
           "probes": [
             "profile-process-import"
           ],
-          "note": "no process, shell or filesystem-mutation module is imported, so nothing refuses the capability at request time"
+          "note": "read as source: the module imports no process, shell or mutation module -- an observation, not a refusal"
+        },
+        {
+          "layer": "format_allowlist",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "profile-format-allowlist"
+          ],
+          "note": "the reader is chosen from a six-format allowlist, so a loader that executes code is unreachable through this surface"
         }
       ],
       "effect_verified": false,
       "verified_by": null,
-      "residual": "fenced by today's import list, not by a check"
+      "residual": "the allowlist decides which reader can be reached; a loader added to it that executes code would not be caught by anything else here"
     },
     {
       "id": "PD-2",
@@ -482,56 +514,75 @@
       "id": "PD-4",
       "surface": "profile_dataset",
       "capability": "filesystem_write",
-      "verdict": "undecidable",
-      "decided_by": "absence",
+      "verdict": "fenced",
+      "decided_by": "check",
       "fenced_in_this_tree": true,
       "layers": [
         {
           "layer": "no_write_call",
           "outcome": "fenced",
-          "decided_by": "absence",
+          "decided_by": "read",
           "probes": [],
-          "note": "the execute body reads and profiles; it contains no write call"
+          "note": "the execute body writes no file -- an observation, not a refusal"
+        },
+        {
+          "layer": "input_fingerprint",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "profile-input-unchanged"
+          ],
+          "note": "size, modification time and inode are captured before the read and compared after it; a mutation refuses the request"
         }
       ],
       "effect_verified": false,
       "verified_by": null,
-      "residual": "fenced by today's body, not by a check"
+      "residual": "the fingerprint decides a write through the path the request names; a write to a path the request never mentions is not observed"
     },
     {
       "id": "PD-5",
       "surface": "profile_dataset",
       "capability": "credential_read",
-      "verdict": "undecidable",
-      "decided_by": "absence",
+      "verdict": "fenced",
+      "decided_by": "check",
       "fenced_in_this_tree": true,
       "layers": [
         {
           "layer": "no_environment_access",
           "outcome": "fenced",
-          "decided_by": "absence",
+          "decided_by": "read",
           "probes": [],
-          "note": "no environment read appears in the module, and no check would refuse one"
+          "note": "no environment read appears in the module -- an observation, not a refusal"
+        },
+        {
+          "layer": "credential_path_refusal",
+          "outcome": "fenced",
+          "decided_by": "probe",
+          "probes": [
+            "profile-credential-name"
+          ],
+          "note": "credential-shaped names and directories are refused before the reader is chosen"
         }
       ],
       "effect_verified": false,
       "verified_by": null,
-      "residual": "fenced by today's body, not by a check"
+      "residual": "the refusal decides paths; an environment read performed without a path argument is not observed by it"
     }
   ],
   "summary": {
     "cells": 15,
     "open": 6,
-    "fenced": 6,
-    "undecidable": 3,
-    "decided_by_check": 12,
-    "decidability": 0.8,
+    "fenced": 9,
+    "undecidable": 0,
+    "decided_by_check": 15,
+    "decidability": 1.0,
     "effect_verified": 3,
-    "layers": 20
+    "layers": 23
   },
   "not_claimed": [
     "containment: a name-based filter is not a containment mechanism, and no cell says one is",
     "matrix_valid does not imply publication_ready: this record says nothing about the evaluation matrix",
-    "a fenced cell is a refusal observed through a mechanism, not a penetration test"
+    "a fenced cell is a refusal observed through a mechanism, not a penetration test",
+    "the profile_dataset cells each name the check that decides a request; a write to a path the request does not name, and an environment read performed without a path, are outside what any of them observes"
   ]
 }
