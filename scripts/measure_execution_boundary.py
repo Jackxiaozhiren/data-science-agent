@@ -706,9 +706,9 @@ def build() -> dict[str, Any]:
             "matrix_valid does not imply publication_ready: this record says nothing about the "
             "evaluation matrix",
             "a fenced cell is a refusal observed through a mechanism, not a penetration test",
-            "the profile_dataset cells each name the check that decides a request; a write to a path "
-            "the request does not name, and an environment read performed without a path, are "
-            "outside what any of them observes",
+            "the profile_dataset cells each name the check that decides a request",
+            "a write to a path the request does not name is outside what any of them observes",
+            "an environment read performed without a path is outside what any of them observes",
         ],
     }
 
