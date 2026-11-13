@@ -54,7 +54,7 @@ EXTERNAL_REL = "benchmarks/external/datascibench/results/raw_runs.json"
 
 SCHEMA = "attribution-frame/v2"
 RECORD_SCHEMA = "attribution-reading/v2"
-REVIEWED_COMMIT = "8200086d2106"
+REVIEWED_COMMIT = "5cbee4de0906"
 #: The pass mark is the external adapter's own threshold, not one chosen for this reading.
 PASS_MARK = 0.5
 #: Whole-millisecond timestamps are rounded to 1 ms; ten times that is a resolution band, not a test.
