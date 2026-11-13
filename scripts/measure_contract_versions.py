@@ -32,7 +32,7 @@ RECORD_PATH = AUDIT / "contract-versions.json"
 SCHEMA = "contract-versions/v1"
 #: The tree this reading describes: the main commit the change that retook it was based on, so a
 #: register regenerated before its own merge still names a commit that exists.
-REVIEWED_COMMIT = "0d4c0a730d3c"
+REVIEWED_COMMIT = "8200086d2106"
 
 #: The policy decides nothing about records written before it, and is not back-dated onto them.
 IN_FORCE_FROM = "2026-11-12"

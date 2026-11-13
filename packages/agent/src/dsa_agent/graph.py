@@ -224,12 +224,17 @@ async def run_analysis(
         ),
     )
 
+    # The first interval starts here rather than at the constructor: a state built by a caller that
+    # never runs this graph must read as "no stages recorded", not as a run that spent zero time
+    # understanding its task.
+    state.enter_stage(AnalysisStatus.UNDERSTANDING)
+
     # UNDERSTANDING -> PLANNING
     async def _notify() -> None:
         if on_update is not None:
             await on_update(state)
 
-    state.status = AnalysisStatus.PLANNING
+    state.enter_stage(AnalysisStatus.PLANNING)
     state.touch()
     cols = _get_columns(dataset_path)
     plan = await plan_analysis(user_query, dataset_path, cols)
@@ -256,7 +261,7 @@ async def run_analysis(
         "create_chart",
         "run_sql",
     }
-    state.status = AnalysisStatus.ANALYSIS
+    state.enter_stage(AnalysisStatus.ANALYSIS)
 
     async def _exec_one(step: Any) -> tuple[Any, Any, Any, Any, Any, float]:
         inputs = _tool_inputs_for_step(step.tool, step.inputs, dataset_path)
@@ -357,7 +362,9 @@ async def run_analysis(
             if state.current_step >= state.budget.max_steps:
                 break
             if state.tool_call_count >= state.budget.max_tool_calls:
-                state.status = AnalysisStatus.FAILED
+                state.enter_stage(AnalysisStatus.FAILED)
+                state.failure_stage = "analysis"
+                state.failure_code = "tool_budget_exceeded"
                 state.error = "Tool call budget exceeded"
                 break
             step2, inputs2, output2, ok2, err2, dur2 = await _exec_one(step)
@@ -367,19 +374,23 @@ async def run_analysis(
             if state.current_step >= state.budget.max_steps:
                 break
             if state.tool_call_count >= state.budget.max_tool_calls:
-                state.status = AnalysisStatus.FAILED
+                state.enter_stage(AnalysisStatus.FAILED)
+                state.failure_stage = "analysis"
+                state.failure_code = "tool_budget_exceeded"
                 state.error = "Tool call budget exceeded"
                 break
             step2, inputs2, output2, ok2, err2, dur2 = await _exec_one(step)
             await _record(step2, inputs2, output2, ok2, err2, dur2)
 
     if len(state.plan) > state.current_step and state.current_step >= state.budget.max_steps:
-        state.status = AnalysisStatus.FAILED
+        state.enter_stage(AnalysisStatus.FAILED)
+        state.failure_stage = "analysis"
+        state.failure_code = "step_budget_exceeded"
         state.error = "Step budget exceeded"
 
     # VALIDATION (Critic)
     if evidence_critic_enabled():
-        state.status = AnalysisStatus.VALIDATION
+        state.enter_stage(AnalysisStatus.VALIDATION)
         vresults = critic_validate(state)
         state.validation_results = vresults
         await _notify()
@@ -434,12 +445,15 @@ async def run_analysis(
     # Check if still failing hard
     failed = [r for r in state.validation_results if not r.passed and r.check in ("budget",)]
     if failed:
-        state.status = AnalysisStatus.FAILED
+        state.enter_stage(AnalysisStatus.FAILED)
+        state.failure_stage = "validation"
+        state.failure_code = "validation_hard_fail"
         state.error = correction_message(state.validation_results)
+        state.close_stage()
         return state
 
     # SYNTHESIS + REPORTING
-    state.status = AnalysisStatus.SYNTHESIS
+    state.enter_stage(AnalysisStatus.SYNTHESIS)
     # Insights already scaffolded; add summary insight if missing
     if not state.insights and state.evidence:
         state.insights.append(
@@ -451,7 +465,7 @@ async def run_analysis(
             )
         )
 
-    state.status = AnalysisStatus.REPORTING
+    state.enter_stage(AnalysisStatus.REPORTING)
     md = build_markdown_report(state)
     state.report_markdown = md
     # persist artifacts + reproducibility bundle (experiment.json + reproduce.sh + notebook)
@@ -569,6 +583,8 @@ async def run_analysis(
             )
     except Exception as e:
         state.error = f"Report write failed: {e}"
+        state.failure_stage = "reporting"
+        state.failure_code = "report_not_persisted"
         report_unpersisted = True
 
     # A run that could not put its report on disk did not deliver, whatever the critic thought:
@@ -576,8 +592,17 @@ async def run_analysis(
     has_hard_fail = any(
         not r.passed for r in state.validation_results if r.check in HARD_FAIL_CHECKS
     )
-    state.status = (
-        AnalysisStatus.FAILED if (has_hard_fail or report_unpersisted) else AnalysisStatus.COMPLETED
-    )
-    state.touch()
+    delivered = not (has_hard_fail or report_unpersisted)
+    if has_hard_fail and not report_unpersisted:
+        # The critic is where a hard check is decided, even though synthesis and reporting ran
+        # afterwards: the location is the branch that refused the result, not the last stage the
+        # clock happened to reach.
+        state.failure_stage = "validation"
+        state.failure_code = "validation_hard_fail"
+    if delivered:
+        # A budget guard that fired and was later satisfied must not leave a code on a success.
+        state.failure_stage = None
+        state.failure_code = None
+    state.enter_stage(AnalysisStatus.FAILED if not delivered else AnalysisStatus.COMPLETED)
+    state.close_stage()
     return state

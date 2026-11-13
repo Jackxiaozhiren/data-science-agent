@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any, Literal
 
@@ -101,6 +101,24 @@ class Budget(BaseModel):
     max_tokens: int = 50000
 
 
+class StageTiming(BaseModel):
+    """One interval a run spent in one status, closed when the next stage is entered.
+
+    The boundary exists so a failure has a location instead of a diagnosis: the last closed interval
+    names the part of the run that did not finish, and nothing here infers why. ``duration_ms`` is
+    wall clock, so it includes waiting the record cannot otherwise attribute.
+    """
+
+    stage: str
+    entered_at: datetime
+    left_at: datetime | None = None
+    duration_ms: int | None = None
+
+    def close(self, at: datetime) -> None:
+        self.left_at = at
+        self.duration_ms = max(0, round((at - self.entered_at) / timedelta(milliseconds=1)))
+
+
 class ReasoningRecord(BaseModel):
     """What produced this run, captured when it began.
 
@@ -143,12 +161,48 @@ class AnalysisState(BaseModel):
     report_markdown: str | None = None
     status: AnalysisStatus = AnalysisStatus.UNDERSTANDING
     error: str | None = None
+    #: Where the run was when it stopped delivering, as one of the stages the vocabulary in
+    #: ``dsa_evaluation.failure_codes`` accepts. Written by the same line as ``failure_code``, and
+    #: cleared on a run that completed: a budget guard that fired and was later satisfied must not
+    #: leave a code behind on a successful run.
+    failure_stage: str | None = None
+    #: Why this run did not deliver, as a member of the vocabulary closed in
+    #: ``dsa_evaluation.failure_codes``. Written by the line that decided it, never inferred from
+    #: ``error`` text; None on a run that completed. The agent package does not import the enum, so
+    #: the membership of every value written here is checked by ``tests/contract/test_failure_codes``
+    #: rather than by a runtime import that would invert the evaluator/agent dependency.
+    failure_code: str | None = None
     retry_count: int = 0
     tool_call_count: int = 0
     budget: Budget = Field(default_factory=Budget)
     reasoning: ReasoningRecord | None = None
+    #: Every interval this run spent in a status, in the order they were entered. Empty for a state
+    #: built by a caller that never runs the graph; the reader must not confuse that with a run whose
+    #: stages were not recorded, which is what ``stage_unrecorded`` exists to name.
+    stage_timings: list[StageTiming] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    def enter_stage(self, status: AnalysisStatus) -> None:
+        """Close the open interval and start one for ``status``.
+
+        A run's failure needs a location, and the location has to come from the moment the graph
+        moved rather than from a later reconstruction. Every transition in ``run_analysis`` goes
+        through here; assigning ``status`` directly still works but leaves the interval open.
+        """
+        now = datetime.now(UTC)
+        if self.stage_timings and self.stage_timings[-1].left_at is None:
+            self.stage_timings[-1].close(now)
+        self.stage_timings.append(StageTiming(stage=status.value.lower(), entered_at=now))
+        self.status = status
+        self.updated_at = now
+
+    def close_stage(self) -> None:
+        """Close the interval the run is in, so a terminal status has a duration."""
+        now = datetime.now(UTC)
+        if self.stage_timings and self.stage_timings[-1].left_at is None:
+            self.stage_timings[-1].close(now)
+        self.updated_at = now
 
     def touch(self) -> None:
         self.updated_at = datetime.now(UTC)
