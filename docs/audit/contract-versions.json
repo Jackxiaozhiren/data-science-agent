@@ -44,7 +44,7 @@
     "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
   ],
   "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
-  "recorded_at": "2026-11-12T02:15:39Z",
+  "recorded_at": "2026-11-13T07:08:25Z",
   "records": [
     {
       "check_kind": "record-vs-constant",
@@ -98,12 +98,12 @@
       "check_kind": "record-vs-rebuild",
       "checked_by": "tests/contract/test_execution_boundary_record.py",
       "declared_frame_schema": null,
-      "declared_schema": "execution-boundary-matrix/v1",
+      "declared_schema": "execution-boundary-matrix/v2",
       "detail": "the test re-runs the instrument and compares the rebuilt token with the recorded one",
-      "effective_version": "v1",
+      "effective_version": "v2",
       "path": "docs/audit/execution-boundary.json",
-      "pre_policy": true,
-      "recorded_at": "2026-11-10T13:23:12Z",
+      "pre_policy": false,
+      "recorded_at": "2026-11-13T07:08:18Z",
       "states_bump_rule": false
     },
     {
@@ -143,7 +143,7 @@
       "states_bump_rule": false
     }
   ],
-  "reviewed_commit": "93d5afaf9704",
+  "reviewed_commit": "0d4c0a730d3c",
   "schema": "contract-versions/v1",
   "scope": {
     "gate_inputs": 5,
@@ -157,7 +157,7 @@
     "own_tokens_checked": 3,
     "own_tokens_unchecked": 1,
     "policy_violations": 0,
-    "pre_policy": 8,
+    "pre_policy": 7,
     "records": 8,
     "records_carrying_a_bump_rule": 0
   }

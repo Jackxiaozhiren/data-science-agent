@@ -240,6 +240,28 @@ name-based filter is not a containment mechanism, and the record's `not_claimed`
 those words; the test file re-derives every verdict from the layers, so a changed filter changes the
 record rather than leaving a stale verdict behind.
 
+### Second reading (2026-11-13)
+
+The first reading is superseded. Two of its three `undecidable` cells gained a check, and the third
+was re-attributed after ADR-004 asked what actually runs at request time:
+
+- **process spawn.** The cell was recorded as fenced only by the absence of a process import. The
+  format allowlist runs earlier and is what decides the cell: the reader is chosen from six data
+  formats, so a loader that executes code cannot be reached through this surface. The observation
+  about imports stays as a `read` layer; it is not what refuses the request.
+- **filesystem write.** The body writes nothing, which is an observation. A check now captures the
+  input's size, modification time and inode before the read and compares them after it, and refuses
+  the result when they moved.
+- **credential read.** Credential-shaped names and directories are refused before a reader is
+  chosen.
+
+The counts move from six open / six fenced / three undecidable to six open / nine fenced / none
+undecidable, and `decidability` reaches 1.0. That is not a claim that the surface is contained: each
+new cell carries a residual naming what its check does not observe — a write to a path the request
+never names, an environment read performed without a path, and a loader added to the allowlist that
+executes code. The record's `basis_change` field states the re-attribution in its own words, so a
+reader comparing the two readings can tell an improved number from a moved ruler.
+
 ## S2 — latency and failure attribution
 
 The second S2 item is not "how fast is the deterministic path". `benchmarks/baseline/README.md` already
@@ -426,25 +448,27 @@ of records rather than the behaviour they describe; no exit clause names it.
 
 | Clause | Where the evidence lives | What the reading actually says |
 |---|---|---|
-| Boundary decidability | `docs/audit/execution-boundary.json` | 12 of 15 cells are decided by a request-time check; 3 are undecidable, 6 open and 6 fenced |
+| Boundary decidability | `docs/audit/execution-boundary.json` | 15 of 15 cells are decided by a request-time check; 0 are undecidable, 6 open and 9 fenced |
 | Attribution completeness | `docs/audit/attribution.json` | 0 of 40 non-passing external-bundle runs carry a stage or cause code, and 0 of 50 tasks carry stage boundaries; the frozen baseline has an empty denominator and is `not_measured` |
 | Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end, but 1 of 6 lifecycle events runs a parse check and 0 of 3 export-side events record a digest; `csv`, `png` and `xlsx` are `not_measured` |
 | `matrix_valid` and `publication_ready` never conflated | `packages/evaluation/src/dsa_evaluation/publication.py` | `publication_ready = matrix_valid and scope == "full"`, so a valid matrix is not a publication decision; each of the four readings says in its own `not_claimed` that `publication_ready` keeps its own gate |
 
 The first three clauses are recorded; the fourth holds as a property of the code and of the records'
-own disclaimers. That is not the same as the three being complete. Two of the readings name a gap a
-producer change would have to close: stage and cause codes have to be written before attribution
-completeness can be computed, and a digest on the export side has to be written before parseability
-is measured anywhere other than at the consumer. The boundary reading's undecidable cells are a
-third gap, one that a request-time check rather than a document would have to close. None of the
-three is closed by this page.
+own disclaimers. That is not the same as the three being complete. Three gaps were named, and
+ADR-004 took them one at a time. The boundary gap is closed: every cell now names a check that runs
+at request time, and the record's `basis_change` says which cell was re-attributed rather than
+re-worded. Two remain, and both need a producer to write a field before the reading can count it:
+stage and cause codes have to be written before attribution completeness can be computed, and a
+digest on the export side has to be written before parseability is measured anywhere other than at
+the consumer. Neither is closed by this page.
 
-**The stage is not exited.** Four readings are a count of items, not a judgement about them; the ADR
-status line says `exit not declared`, and `tests/contract/test_s2_exit_review.py` derives each
-number in the table above from its record and derives the verdict from the gaps those records still
-carry. Changing the verdict is a product decision with a named owner, not a document edit; so is
-starting S3, whose entry condition also asks for the open questions in the ADR's Appendix C to be
-answered.
+**The stage is not exited.** Closing one of the three gaps changes one number, and an exit is a
+judgement about all four clauses at once. Four readings are a count of items, not a judgement about
+them; the ADR status line says `exit not declared`, and `tests/contract/test_s2_exit_review.py`
+derives each number in the table above from its record and derives the verdict from the gaps those
+records still carry. Changing the verdict is a product decision with a named owner, not a document
+edit; so is starting S3, whose entry condition also asks for the open questions in the ADR's
+Appendix C to be answered.
 
 ## What this page is not
 

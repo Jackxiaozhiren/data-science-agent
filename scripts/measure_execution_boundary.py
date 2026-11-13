@@ -26,6 +26,7 @@ import argparse
 import contextlib
 import json
 import sys
+import tempfile
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,14 +34,17 @@ from typing import Any
 
 import duckdb
 
+from dsa_datasets.errors import UnsupportedFormatError
 from dsa_execution.python_sandbox import SandboxViolation, _check_ast
 from dsa_execution.sql_guard import validate_sql
 from dsa_tools.errors import ToolExecutionError
+from dsa_tools.tools.profile_dataset import _fingerprint, _guard_request, _guard_unchanged
 
 ROOT = Path(__file__).resolve().parents[1]
 RECORD_PATH = ROOT / "docs/audit/execution-boundary.json"
 PROFILE_TOOL = ROOT / "packages/tools/src/dsa_tools/tools/profile_dataset.py"
-SCHEMA = "execution-boundary-matrix/v1"
+BENCH_CSV = ROOT / "benchmarks/ds-agent-benchmark/datasets/data_quality.csv"
+SCHEMA = "execution-boundary-matrix/v2"
 #: The test a cell may cite as having watched a refusal, and the commit this reading describes. Both
 #: are constants rather than arguments: a value that reaches a file write from the command line is a
 #: value that can name a different file, and the CLI here takes flags only.
@@ -48,8 +52,9 @@ VERIFIED_BY = "tests/security/test_sql_sandbox.py"
 REVIEWED_COMMIT = "ab958723f7e8"
 # ``SandboxViolation`` is listed separately: the sandbox module falls back to a local
 # ``ToolExecutionError`` when its import of ``dsa_tools.errors`` runs into the package cycle, so the
-# subclass relation cannot be assumed at measurement time.
-_REFUSALS = (SandboxViolation, ToolExecutionError, duckdb.Error)
+# subclass relation cannot be assumed at measurement time. ``UnsupportedFormatError`` is the form
+# allowlist's refusal, which is what decides the process-spawn cell on ``profile_dataset``.
+_REFUSALS = (SandboxViolation, ToolExecutionError, UnsupportedFormatError, duckdb.Error)
 
 
 def _attempt(fn: Callable[[], str | None]) -> tuple[str, str]:
@@ -141,6 +146,32 @@ def _profile_spawn_probe() -> str | None:
     if roots & forbidden:
         return None
     return f"imports only {sorted(roots)}"
+
+
+def _profile_format_probe() -> str | None:
+    """A loader that executes code must not be reachable: the reader comes from the allowlist."""
+    _guard_request(BENCH_CSV, "payload.pkl", str(BENCH_CSV))
+    return None
+
+
+def _profile_credential_probe() -> str | None:
+    """A file whose name exists to hold a secret is refused before the reader is chosen."""
+    with tempfile.TemporaryDirectory(prefix="dsa-boundary-") as tmp:
+        target = Path(tmp) / ".env"
+        target.write_text("DSA_TOKEN=probe\n", encoding="utf-8")
+        _guard_request(target, None, str(target))
+    return None
+
+
+def _profile_write_probe() -> str | None:
+    """A write between the two observations is what the fingerprint check exists to refuse."""
+    with tempfile.TemporaryDirectory(prefix="dsa-boundary-") as tmp:
+        target = Path(tmp) / "data.csv"
+        target.write_text("a,b\n1,2\n", encoding="utf-8")
+        before = _fingerprint(target)
+        target.write_text("a,b\n1,2\n3,4\n", encoding="utf-8")
+        _guard_unchanged(target, before)
+    return None
 
 
 PROBES: tuple[dict[str, Any], ...] = (
@@ -251,6 +282,24 @@ PROBES: tuple[dict[str, Any], ...] = (
         "surface": "profile_dataset",
         "question": "does the profile tool import a process or shell module?",
         "run": _profile_spawn_probe,
+    },
+    {
+        "id": "profile-format-allowlist",
+        "surface": "profile_dataset",
+        "question": "is a format whose loader executes code refused before a reader is chosen?",
+        "run": _profile_format_probe,
+    },
+    {
+        "id": "profile-credential-name",
+        "surface": "profile_dataset",
+        "question": "is a credential-shaped path refused before the reader runs?",
+        "run": _profile_credential_probe,
+    },
+    {
+        "id": "profile-input-unchanged",
+        "surface": "profile_dataset",
+        "question": "is a result refused when the input changed while it was being read?",
+        "run": _profile_write_probe,
     },
 )
 
@@ -448,6 +497,11 @@ def _run_sql_cells() -> list[dict[str, Any]]:
 
 
 def _profile_cells() -> list[dict[str, Any]]:
+    """The three cells the first reading called undecidable now name the check that decides them.
+
+    Each keeps the old observation as a ``read`` layer, because the observation was true and stays
+    useful; what changed is that a refusal now runs after it.
+    """
     return [
         _cell(
             "PD-1",
@@ -457,15 +511,24 @@ def _profile_cells() -> list[dict[str, Any]]:
                 _layer(
                     "no_process_import",
                     "fenced",
-                    "absence",
+                    "read",
                     ["profile-process-import"],
-                    "no process, shell or filesystem-mutation module is imported, so nothing refuses "
-                    "the capability at request time",
-                )
+                    "read as source: the module imports no process, shell or mutation module -- an "
+                    "observation, not a refusal",
+                ),
+                _layer(
+                    "format_allowlist",
+                    "fenced",
+                    "probe",
+                    ["profile-format-allowlist"],
+                    "the reader is chosen from a six-format allowlist, so a loader that executes code "
+                    "is unreachable through this surface",
+                ),
             ],
             False,
             None,
-            "fenced by today's import list, not by a check",
+            "the allowlist decides which reader can be reached; a loader added to it that executes "
+            "code would not be caught by anything else here",
         ),
         _cell(
             "PD-2",
@@ -512,14 +575,23 @@ def _profile_cells() -> list[dict[str, Any]]:
                 _layer(
                     "no_write_call",
                     "fenced",
-                    "absence",
+                    "read",
                     [],
-                    "the execute body reads and profiles; it contains no write call",
-                )
+                    "the execute body writes no file -- an observation, not a refusal",
+                ),
+                _layer(
+                    "input_fingerprint",
+                    "fenced",
+                    "probe",
+                    ["profile-input-unchanged"],
+                    "size, modification time and inode are captured before the read and compared "
+                    "after it; a mutation refuses the request",
+                ),
             ],
             False,
             None,
-            "fenced by today's body, not by a check",
+            "the fingerprint decides a write through the path the request names; a write to a path "
+            "the request never mentions is not observed",
         ),
         _cell(
             "PD-5",
@@ -529,14 +601,22 @@ def _profile_cells() -> list[dict[str, Any]]:
                 _layer(
                     "no_environment_access",
                     "fenced",
-                    "absence",
+                    "read",
                     [],
-                    "no environment read appears in the module, and no check would refuse one",
-                )
+                    "no environment read appears in the module -- an observation, not a refusal",
+                ),
+                _layer(
+                    "credential_path_refusal",
+                    "fenced",
+                    "probe",
+                    ["profile-credential-name"],
+                    "credential-shaped names and directories are refused before the reader is chosen",
+                ),
             ],
             False,
             None,
-            "fenced by today's body, not by a check",
+            "the refusal decides paths; an environment read performed without a path argument is not "
+            "observed by it",
         ),
     ]
 
@@ -599,6 +679,14 @@ def build() -> dict[str, Any]:
     cells = _run_python_cells() + _run_sql_cells() + _profile_cells()
     return {
         "schema": SCHEMA,
+        "reading": 2,
+        "basis_change": (
+            "the first reading attributed profile_dataset's process-spawn cell to the absence of a "
+            "process import, while the format allowlist was already deciding which reader a request "
+            "could reach; it is re-attributed here rather than re-worded. The write and credential "
+            "cells gained a check in the same change, so no cell is now decided by absence. The "
+            "first reading's counts are kept in docs/measurement-basis.md and are not restated here."
+        ),
         "recorded_at": _timestamp(),
         "reviewed_commit": REVIEWED_COMMIT,
         "question": (
@@ -618,6 +706,9 @@ def build() -> dict[str, Any]:
             "matrix_valid does not imply publication_ready: this record says nothing about the "
             "evaluation matrix",
             "a fenced cell is a refusal observed through a mechanism, not a penetration test",
+            "the profile_dataset cells each name the check that decides a request",
+            "a write to a path the request does not name is outside what any of them observes",
+            "an environment read performed without a path is outside what any of them observes",
         ],
     }
 
@@ -628,10 +719,13 @@ def verify() -> tuple[bool, dict[str, bool]]:
     fresh = build()
     checks = {
         "schema": fresh["schema"] == record["schema"],
+        "reading": fresh["reading"] == record["reading"],
+        "basis_change": fresh["basis_change"] == record["basis_change"],
         "surfaces": fresh["surfaces"] == record["surfaces"],
         "probes": fresh["probes"] == record["probes"],
         "cells": fresh["cells"] == record["cells"],
         "summary": fresh["summary"] == record["summary"],
+        "not_claimed": fresh["not_claimed"] == record["not_claimed"],
     }
     return all(checks.values()), checks
 
