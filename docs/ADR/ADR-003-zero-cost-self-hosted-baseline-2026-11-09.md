@@ -97,6 +97,8 @@ No dependency additions, no infrastructure additions, no edits to the evaluator 
 
 | Item | Status | Consequence if unresolved |
 |---|---|---|
-| Cloud reporting from the `langsmith` SDK in use | **unverified** — a locked SDK is not an enabled service. The lockfile carries no exporter and no OTLP endpoint variable (E6), but a repository-wide configuration sweep was not completed, so reporting stays unproven rather than proven absent | If reporting turns out to be enabled and billable, the observability allowance in INV8 needs re-cutting |
+| Cloud reporting from the `langsmith` SDK in use | **proven absent in tracked configuration**, re-verified 2026-11-13 against `620727c` — a repository-wide sweep found no `LANGSMITH_*`, `LANGCHAIN_TRACING*`, `OTEL_*` or `OTLP_*` variable, no tracer initialisation, and no exporter; `langsmith 0.14.11` arrives only as a transitive dependency of `langchain-core 1.6.12` and pulls no OpenTelemetry exporter. This is a configuration-level result, not a runtime observation: platform-side environment variables, a gitignored `.env`, and outbound traffic are still unobserved | If reporting is enabled outside the tree and billable, the observability allowance in INV8 needs re-cutting |
 | Model credentials and spend ceiling | not provided | The paid lane stays off; S1–S3 are unaffected |
 | Whether the free lane produces a stable enough comparison to substitute for a paid baseline | untested at this date | The baseline stays "unmeasured"; do not substitute estimates |
+
+Answering the first row does not open S3. Its entry condition also requires S2's exit, and that exit is a separate maintainer decision: the four readings are recorded, but three gaps still name a producer change (`docs/measurement-basis.md`, "Stage exit — the four clauses against the four readings"). S3 therefore stays `not started` regardless of this sweep.

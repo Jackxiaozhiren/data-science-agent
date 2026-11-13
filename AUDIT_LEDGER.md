@@ -18468,3 +18468,48 @@ an explicit maintainer decision to accept them. Starting S3 additionally require
 three open questions in the ADR's Appendix C to be answered, one of which needs model credentials
 and a spend ceiling that have not been provided. Public actions on issues, governance configuration
 and billing are outside the authorization for this section.
+
+## §330 — Appendix C's first item, re-read against the tracked configuration (2026-11-13)
+
+ADR-003's Appendix C carried one item as `unverified`: whether the locked `langsmith` SDK could
+report to a cloud service and bill for it. The original audit left it unproven rather than proven
+absent because the repository-wide configuration sweep had timed out. This section records the
+sweep, and does not promote the result beyond what it measures.
+
+What was read, on `620727c`:
+
+- `git grep -n -i -E 'LANGSMITH_|LANGCHAIN_TRACING|OTEL_|OTLP_|LangChainTracer|LangsmithTracer'`
+  over the whole tree: no match.
+- `uv.lock`, the `langsmith` package block: version `0.14.11`, source `pypi.org/simple`, and a
+  dependency list of anyio, distro, httpx2, orjson, packaging, pydantic, requests,
+  requests-toolbelt, sniffio, typing-extensions, uuid-utils, websockets, xxhash and zstandard.
+  No OpenTelemetry SDK and no exporter.
+- `uv.lock` searched for `opentelemetry-exporter|otlp`: zero lines. The only OpenTelemetry entry is
+  `opentelemetry-api`, which arrives through `fastapi 0.162.0` and is an API surface, not an
+  export pipeline.
+- `render.yaml`, `deploy/`, `docker/`, `docker-compose.yml` and all eleven workflows: no tracing,
+  OTLP or exporter variable; the only hits for the search terms are `language`/`languages` matrix
+  keys and the word `traceback`.
+- No `import langsmith`, no `LangChainTracer`, no `@traceable` and no `TracerProvider` in the
+  Python sources. The project's own `dsa_evidence.observability` `Span`/`Trace` types are in-memory
+  and make no network call; the only consent-gated emitter writes local JSONL.
+
+Conclusion recorded: **absent from the tracked configuration**. The ADR row now says exactly that,
+with the residual scope stated in the same cell — platform-side environment variables, a
+gitignored `.env`, and outbound traffic were not observed. A configuration sweep cannot prove a
+runtime negative, and this section does not claim it does.
+
+Two boundaries follow, and both are deliberate:
+
+1. Answering this row does not open S3. ADR-003's entry condition is S2's exit **and** the Appendix
+   C answers. S2 stays `not exited` because three gaps name a producer change; that is a maintainer
+   decision, not a document edit. The ADR now says so next to the table.
+2. The second row — model credentials and spend ceiling — is still `not provided`. Nothing in this
+   sweep supplies it, and the paid lane stays off.
+
+Governance action taken the same day, recorded here because it changes no file in this tree: the
+`main` branch protection now requires linear history and conversation resolution, and continues to
+require the `ci` check with `strict` on. Force pushes and branch deletion were already disabled;
+required reviews remain unset, since a single-maintainer repository would otherwise block its own
+merges, and `enforce_admins` stays off. The rollback is the same endpoint with both new flags set
+to `false`.
