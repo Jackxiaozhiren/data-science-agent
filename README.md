@@ -8,7 +8,7 @@ Ask questions about CSV files and databases in natural language. DSA runs SQL, s
 
 [**Try Live Demo**](https://data-science-agent-web.vercel.app/datasets) ·
 [**Product Tour**](https://jackxiaozhiren.github.io/data-science-agent/) ·
-[**60-second quickstart**](#-60-second-quickstart) ·
+[**Quickstart**](#-quickstart) ·
 [**Install from PyPI**](https://pypi.org/project/jack-data-science-agent/) ·
 [**Case studies**](case-studies/) ·
 [**Evaluation**](docs/evaluation.md) ·
@@ -58,9 +58,10 @@ That means an analysis can be **inspected, audited, reproduced, and challenged**
 
 ---
 
-## ⚡ 60-second quickstart
+## ⚡ Quickstart
 
-Install:
+Install (one-time download of the scientific stack — time varies by network;
+measured ~70s wall in a clean Python 3.12 container, demo run itself ~2s):
 
 ```bash
 pip install jack-data-science-agent

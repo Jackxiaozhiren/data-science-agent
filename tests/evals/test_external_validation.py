@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from dsa_evaluation.external_validation import (
     DEMO_QUESTION,
     collect_installation_metrics,
@@ -42,3 +44,28 @@ def test_fresh_machine_checklist_no_fabrication() -> None:
     assert c["macos"]["tested_local"] is True
     assert c["windows"]["tested_local"] is False  # do not claim Windows tested
     assert c["local_first"]["cloud_cost"] == "$0"
+
+
+def test_synthetic_demo_dataset_is_deterministic(tmp_path: Path) -> None:
+    from dsa_evaluation.external_validation import _synthetic_demo_dataset
+
+    p1 = _synthetic_demo_dataset(tmp_path / "a")
+    p2 = _synthetic_demo_dataset(tmp_path / "b")
+    assert p1.read_bytes() == p2.read_bytes()
+    import polars as pl
+
+    df = pl.read_csv(p1)
+    assert df.shape[0] == 300
+    assert {"price", "revenue", "region", "category"} <= set(df.columns)
+
+
+def test_demo_falls_back_to_synthetic_without_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import dsa_evaluation.external_validation as ev
+
+    monkeypatch.setattr(ev, "_resolve_demo_dataset", lambda: None)
+    res = run_demo(question=DEMO_QUESTION, out=tmp_path / "demo")
+    assert res.task_success is True, res.error
+    assert res.has_report is True
+    assert "synthetic" in res.dataset
