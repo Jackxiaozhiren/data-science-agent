@@ -87,6 +87,38 @@ def _resolve_demo_dataset() -> Path | None:
     return None
 
 
+def _synthetic_demo_dataset(workdir: Path) -> Path:
+    """Deterministic built-in demo data (seed 42) for pip-installed wheels.
+
+    The wheel ships no repo CSVs; instead of failing with "No demo dataset
+    found", synthesize a small sales table matching DEMO_QUESTION.
+    """
+    import csv
+    import random
+
+    rng = random.Random(42)
+    workdir.mkdir(parents=True, exist_ok=True)
+    path = workdir / "demo_sales.csv"
+    with path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["date", "region", "category", "price", "units", "revenue"])
+        for i in range(300):
+            price = round(rng.uniform(10, 100), 2)
+            units = rng.randint(1, 50)
+            revenue = round(price * units * rng.uniform(0.9, 1.1), 2)
+            w.writerow(
+                [
+                    f"2024-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}",
+                    rng.choice(["East", "West", "North", "South"]),
+                    rng.choice(["A", "B", "C"]),
+                    price,
+                    units,
+                    revenue,
+                ]
+            )
+    return path
+
+
 def run_demo(
     dataset: Path | None = None,
     question: str = DEMO_QUESTION,
@@ -100,16 +132,14 @@ def run_demo(
     import asyncio
 
     ds = dataset or _resolve_demo_dataset()
-    if ds is None:
-        return DemoResult(
-            task_id="demo",
-            question=question,
-            dataset="missing",
-            workdir=str(out or ""),
-            error="No demo dataset found",
-        )
     workdir = out or Path(tempfile.mkdtemp(prefix="dsa-demo-"))
     workdir.mkdir(parents=True, exist_ok=True)
+    if ds is None:
+        # Wheel install without repo data: use the built-in synthetic table.
+        ds = _synthetic_demo_dataset(workdir)
+        synthetic = True
+    else:
+        synthetic = False
     t0 = time.perf_counter()
 
     async def _run() -> dict[str, Any]:
@@ -148,10 +178,15 @@ def run_demo(
         )
         ok = any(c.get("status") == "ok" for c in tcalls) if tcalls else False
         task_success = bool(ok and (has_report or tcalls))
+        ds_label = (
+            f"synthetic (built-in fallback): {ds.name}"
+            if synthetic
+            else (str(ds.relative_to(ROOT)) if ds.is_relative_to(ROOT) else str(ds))
+        )
         return DemoResult(
             task_id="demo",
             question=question,
-            dataset=str(ds.relative_to(ROOT)) if ds.is_relative_to(ROOT) else str(ds),
+            dataset=ds_label,
             workdir=str(workdir),
             elapsed_ms=elapsed,
             task_success=task_success,
