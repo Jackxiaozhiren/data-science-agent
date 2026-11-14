@@ -49,7 +49,7 @@ SCHEMA = "execution-boundary-matrix/v2"
 #: are constants rather than arguments: a value that reaches a file write from the command line is a
 #: value that can name a different file, and the CLI here takes flags only.
 VERIFIED_BY = "tests/security/test_sql_sandbox.py"
-REVIEWED_COMMIT = "ab958723f7e8"
+REVIEWED_COMMIT = "7e63717512be"
 # ``SandboxViolation`` is listed separately: the sandbox module falls back to a local
 # ``ToolExecutionError`` when its import of ``dsa_tools.errors`` runs into the package cycle, so the
 # subclass relation cannot be assumed at measurement time. ``UnsupportedFormatError`` is the form

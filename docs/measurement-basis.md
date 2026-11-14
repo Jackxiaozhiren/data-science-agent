@@ -7,8 +7,9 @@ picked before the first reading is a preference, not a measurement.
 S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks what a
 recorded run lets a reader point at: the execution-boundary matrix, the latency and failure
 attribution reading, the export-first lifecycle and the contract-version policy are at the end of the
-page. They are four of S2's four items, which closes the item list and not the stage: an exit is a
-judgement about the readings, and none is declared here.
+page. They are four of S2's four items, and the stage-exit review after them reads the ADR's four
+clauses against one set of readings and declares S2 exited. That declaration is about the exit
+condition only; what it leaves unclaimed is listed next to it.
 
 Three rules apply to every metric below, each because the opposite caused a real problem here:
 
@@ -274,9 +275,10 @@ field.
 
 ### Latency: what a row can name
 
-One clean-tree `dsa --limit 50` run supplies 50 rows whose manifest states `llm_mode=stub` and
-`call_count=0`. Each row carries one `elapsed_ms`, one `duration_ms` per tool call, and the run
-object's `created_at` / `updated_at`. Three quantities follow without interpretation:
+One clean-tree `dsa --limit 50 --out artifacts/bench-attribution` run supplies 50 rows whose manifest
+states `llm_mode=stub` and `call_count=0`. Each row carries one `elapsed_ms`, one `duration_ms` per
+tool call, the run object's `created_at` / `updated_at`, and — since ADR-004 D2 — the intervals the
+run spent in each status. Three quantities follow without interpretation:
 
 | Quantity | Definition | Why it is a boundary, not a benchmark |
 |---|---|---|
@@ -284,15 +286,22 @@ object's `created_at` / `updated_at`. Three quantities follow without interpreta
 | `residual_ms` | `elapsed_ms - tool_ms` | planning, evidence assembly and report writing have no timestamps of their own |
 | `outside_window_ms` | `max(0, elapsed_ms - (updated_at - created_at))` | time even the run object's own clock does not cover |
 
-The first reading: 249 tool calls across 50 tasks, all recorded as `ok`. The per-task tool share has a
-median of 0.3536 and a mean of 0.4626, ranging from 0.0 to 0.9493; every one of the 50 rows has a
-positive residual, and no row carries a stage-time field. One task stands 1168 ms outside the run
-object's window. The 168 calls whose `duration_ms` is zero are the important part: the field is an
-integer millisecond, so a sub-millisecond call is recorded as no time at all. The share is therefore
-a **lower bound on what the record can name**, not a measurement of what tools cost. A second run of
-the same clean tree at the same commit moved both the median share and the zero-duration count, so
-the frame pins the one run it describes by hash rather than quoting a stable-looking number; the
-ledger keeps the second observation as capture-time context, not as part of the reading.
+The second reading: 249 tool calls across 50 tasks, all recorded as `ok`. The per-task tool share has
+a median of 0.3709 and a mean of 0.4542, ranging from 0.0 to 0.9529; every one of the 50 rows has a
+positive residual, and every one carries the run's own stage intervals. One task runs past the run
+object's window by more than the 10 ms resolution band, and the 50 rows together stand 730 ms outside
+it. The 181 calls whose `duration_ms` is zero are the important part: the field is an integer
+millisecond, so a sub-millisecond call is recorded as no time at all. The share is therefore a **lower
+bound on what the record can name**, not a measurement of what tools cost. A second run of the same
+clean tree at the same commit moved both the median share and the zero-duration count, so the frame
+pins the one run it describes by hash rather than quoting a stable-looking number; the ledger keeps
+the second observation as capture-time context, not as part of the reading.
+
+The first reading recorded 0 of 50 rows with a stage field, because the run record had none to
+carry. The change to 50 of 50 is a producer change, and the record says so in `basis_change` rather
+than leaving it to be inferred from a diff. The first pass stays where it was recorded, as
+`docs/audit/attribution-first.json` with a `superseded_by` pointer, and the second points back at it
+with `supersedes` — so the pair reads as a ruler change rather than as a number that moved on its own.
 
 ### Failures: two recordings, one empty denominator
 
@@ -301,30 +310,39 @@ Two deterministic recordings ship in the tree, and neither is a random draw:
 - `benchmarks/baseline/results.json` — 50 tasks, none failing. There is no failure to attribute, so
   the record says `not_measured` with the reason "empty denominator". It does not say 100%, and it
   does not say 0/0; both would turn an absent observation into a score.
-- `benchmarks/external/datascibench/results/raw_runs.json` — 45 runs, 40 not passing (39 `failed`,
-  one `execution_error`, using the adapter's own `score >= 0.5` pass mark). It records a wall clock
-  for the bundle but no per-task latency at all.
+- `benchmarks/external/datascibench/results/raw_runs.json` — re-recorded on the reviewed commit: 38
+  runs the adapter supports, 33 of them not passing by its own `score >= 0.5` mark. Four of those runs
+  carry a `FAILED` status and a passing score, because the evaluator grades artifacts and not the run's
+  status; the record counts that disagreement in a field of its own rather than adding the two columns
+  together. The first recording of this bundle held 45 supported runs and 40 non-passing ones, so the
+  denominator moved with the recording — `basis_change` states it.
 
 Attribution is counted at three depths, each derived from fields the record actually carries:
 
 | Depth | What counts | Reading |
 |---|---|---|
-| outcome | the run's `outcome` value | 40 of 40 |
-| artifact | a mechanical signal from the recorded counts: the run did not complete, or produced no report, no tool call, or no evidence | 11 of 40 (10 with no evidence, one unfinished) |
-| stage | a closed error-code or stage field naming the cause | **0 of 40** |
+| outcome | the run's `outcome` value | 33 of 33 |
+| artifact | a mechanical signal from the recorded counts: the run did not complete, or produced no report, no tool call, or no evidence | 16 of 33 (all sixteen did not complete) |
+| stage | a `failure_stage` or `failure_code` whose value belongs to the closed vocabulary in `dsa_evaluation.failure_codes` | **33 of 33** |
 
-The 29 remaining runs completed with a report, tool calls and evidence and were still graded below
-the pass mark; the record has no field that says whether the plan, a tool's result, the evidence or
-the evaluator's expected shape was responsible. Eight of the 40 carry partial credit, so "failed" is
-not even a binary state. One run carries a free-text error and that text is not a code. **Stage-level
-attribution completeness is 0 of 40**, and the empty baseline denominator cannot improve it.
+The 17 remaining runs completed with a report, tool calls and evidence and were still graded below the
+pass mark; their location is `evaluation` with the code `score_below_threshold`, which says the
+evaluator's threshold refused the result and says nothing about why the score was low. Sixteen runs
+stopped at `validation` with `validation_hard_fail`: the critic found tool errors the run had already
+recorded, and that branch is where the refusal came from. Ten of the 33 carry partial credit, so
+"failed" is not a binary state. **Stage-level attribution completeness is 33 of 33**, and every code
+in it names a line of code rather than a reason. The empty baseline denominator is unchanged and still
+cannot be improved by this reading.
 
-### What would count as progress
+### What changed, and what did not
 
-A later reading would need the producer to write a closed stage or cause code and a stage-level
-timestamp into the record. That is a change to the producer, not to this instrument, and ADR-003's
-migration plan keeps S2 work to documents, tests and checklists — none is written here. Until then the
-honest result is a measured gap, and a green matrix in the first S2 item does not fill it.
+The producer now writes what this instrument used to report as missing: a stage interval per status,
+and one code from a vocabulary closed in code, refused by `assert_known` when a value comes from
+anywhere else. Two things this page does not claim. The first is that a code explains a failure —
+`score_below_threshold` is the location of a decision, not its cause, and the run that triggered it
+carries no field that would name one. The second is that the external bundle is reproducible on a
+clean clone: it needs the gitignored `.workspace/`, and the re-recording above is a census of the copy
+this machine holds.
 
 ## S2 — export-first lifecycle
 
@@ -343,40 +361,53 @@ reads it back. Each event is asked two questions — does the record carry a dig
 does a shipped path parse them and fail loudly — and each answer is labelled `ran` or `read`, because
 a claim obtained by running the code and one obtained by reading it are not the same evidence.
 
-### The reading
+### The reading, second pass
 
-**One event in six records a digest, and none of the three export-side events carries one forward.**
-`export_artifact` returns the SHA-256 of the bytes it just wrote, matched against a recomputation;
-`save_artifact` returns id, path, type and metadata and no digest; the 40 entries in the eight
-committed `artifacts.json` records name id, type, path, kind, author and time and no digest; the
-bundle's manifest carries `artifact_root`, `excluded`, `included`, `run_id` and `storage`, with zero
-digest references in the route; and the plain report export *removes* a 64-hex token on purpose,
-which is the rule that module states for itself. A recipient of a bundle can therefore tell which
-names were listed and cannot tell whether the bytes behind a name are the ones that were written.
+The first pass (2026-11-11, `export-lifecycle/v1`) asked whether a digest was recorded and found it
+in one event of six: `export_artifact` returned a SHA-256 and nothing else did. It stays at
+`docs/audit/export-lifecycle-first.json` marked `superseded_by`, and the second reading points back
+at it with `supersedes`, so a reader can see what moved instead of taking the new number's word.
 
-The second question separates even further: **one event in six has a parse check** — the consumer,
-which is every reader after the fact. The writers hash or copy and never re-open what they wrote, and
-the instrument's own read-back is not a shipped check, so it is not counted as one.
+**Three of three export-side events now record a digest.** `export_artifact` writes one payload,
+reads the file back, raises instead of returning a digest the file does not hold, and reports
+`verified`; `save_artifact` does the same and puts the digest in `metadata.sha256`, which is the field
+the run record inherits; the bundle manifest carries a `files` list with one `sha256` and one byte
+count per archived file, taken from the same bytes `writestr` receives; the 40 entries in the eight
+committed `artifacts.json` records each carry `metadata.sha256`; and the plain report export keeps its
+strip rule untouched and returns the digest beside the text through `export_with_digest`, which is
+what lets the rule go on removing 64-hex tokens from prose.
+
+Recording and checking are not the same claim, so the record now carries both. **Two of the three
+export-side events compare the digest here** — the tools against a re-read of the file, the bundle
+against the archive's own bytes. The third is `declared`: the 40 committed records name files under a
+gitignored artifact root, so the field is counted and the bytes behind it are not re-opened by this
+instrument. `scripts/backfill_artifact_digests.py` is what put those 40 digests in place, and it is
+also the check: re-running it against a tree that holds the files reports whether any entry still
+agrees with the bytes it names.
+
+The parse question did not move: **one event in six has a parse check** — the consumer, which is
+every reader after the fact. Re-reading after a write is a writer checking itself, not a consumer
+parsing what it was handed, and the two are not added together.
 
 **Parseability today: 48 of 48 committed exports read back** — 40 JSON parsed and 8 Markdown decoded.
 `csv`, `png` and `xlsx` have no committed export: run artifacts live under a gitignored root, so a
 number there would describe one machine. Those three are recorded `not_measured` with that reason,
 not as zero.
 
-### The divergence this reading makes visible
+### The divergence the first pass recorded
 
-ADR-003's bundle sentence names five elements, artifact hashes among them, and the shipped manifest
-carries none of the five as a field. This section does not claim the other four are absent from the
-bundle — the files a bundle carries may well hold environment and dependencies. It records the
-narrower, checkable fact: no per-file digest reaches the export, so a bundle cannot be checked
-against the run that produced it.
+ADR-003's bundle sentence names five elements, artifact hashes among them, and the manifest the first
+pass read carried none of them as a field. That no longer holds for the digest: `files` names each
+archived file with its SHA-256 and its byte count, so two bundles of different bytes now differ in
+their manifests. This reading says nothing about the other four elements; it records only that the
+one it could check is now present.
 
-### What would count as progress
+### What this reading still does not claim
 
-A digest written at the record event and copied into the manifest, with one reader that compares it,
-would move `export_side_events_with_a_digest` off zero. That is a producer change — `save_artifact`'s
-output model and the bundle route — and ADR-003 keeps S2 work to documents, tests and checklists, so
-it is recorded here as a gap rather than closed by this reading.
+The digests are not signatures. Nobody outside this repository compares them on receipt, so a
+recipient who recomputes one learns that the bytes match the number the server reported, not that the
+server is trustworthy. The 40 declared digests are the weaker case in the same direction: they name
+bytes this tree does not hold, so a reader either has the files or has a number.
 
 ## S2 — the contract-version policy
 
@@ -387,34 +418,41 @@ section takes the second, because the first already has a reading and because a 
 reader meets first. `docs/audit/contract-versions.json` is the register and
 `scripts/measure_contract_versions.py` rebuilds it.
 
-### What the eight readings declare
+### What the ten readings declare
 
-Nine of the fourteen files under `docs/audit/` carry a `recorded_at`: eight readings and this register.
+Eleven of the sixteen files under `docs/audit/` carry a `recorded_at`: ten readings and this register.
 The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory exception
-list, a lock-divergence list and an orphan-reads registry — and state no date. Of the eight readings, **four declare a token of their own**:
-`attribution-reading/v1`, `execution-boundary-matrix/v1`, `export-lifecycle/v1` and
-`independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
-`evidence-alignment-frame/v1` as `frame_schema` and nothing about itself. Three declare nothing — both
-authorization-coverage readings and the served-artifact probe, all written before any record carried a
-token.
+list, a lock-divergence list and an orphan-reads registry — and state no date. Of the ten readings,
+**six declare a token of their own**: `attribution-reading/v1` and `attribution-reading/v2`,
+`execution-boundary-matrix/v2`, `export-lifecycle/v1` and `export-lifecycle/v2` (two pairs, each the
+same surface at two passes) and `independent-rerun/v1`. One declares only its input's:
+`evidence-alignment.json` carries `evidence-alignment-frame/v1` as `frame_schema` and nothing about
+itself. Three declare nothing — both authorization-coverage readings and the served-artifact probe,
+all written before any record carried a token.
 
-The five tokens are well-formed and use three different subjects: two end in `-reading`, one in
-`-matrix`, one in `-frame`, one is bare. That is a vocabulary, not a policy — nothing says which
-suffix a new record should take, and nothing says what changing one would mean. **No record carries a
-field stating a bump rule**, which is the gap this item exists to close.
+The seven tokens are well-formed and share no vocabulary: `-reading` appears twice, `-matrix` and
+`-frame` once each, three are bare, and two subjects appear at two majors — the attribution reading and
+the export lifecycle, in both cases because the second pass changed what a consumer's arithmetic would
+do. That is a vocabulary, not a policy — nothing says which suffix a new record should take, and
+nothing says what changing one would mean. **No record carries a field stating a bump rule**, which is
+the gap this item exists to close.
 
 ### What holds a token to the record
 
-Three of the four are compared with something that is not the record itself: the attribution test
-types both tokens, the boundary test compares a rebuild, and the export-lifecycle test compares the
-record with its instrument's constant. The fourth is decoration — `independent-rerun.json`'s token is
-written by the instrument, carried in the file, and read by its test without an assertion on the
-value. The register records that as `check_kind: none`, and the contract test proves the label by
-reading the consumer and finding the token absent, rather than by trusting the record's own sentence.
+Five of the six are compared with something that is not the record itself: the attribution test types
+both of its passes' tokens and their two zero counts, the boundary test compares a rebuild, and the
+export-lifecycle test compares the second pass with its instrument's constant and types the first
+pass's token, so a kept file cannot quietly acquire a new one. The sixth carries a token nothing
+asserts — `independent-rerun.json`, whose token is written by the instrument and read by its test
+without a comparison. The register records it as `check_kind: none`, and the contract test proves the
+label by reading the consumer and finding the token absent, rather than by trusting the record's own
+sentence.
 
 ### The policy, and what enforces it
 
-Five clauses, in force from 2026-11-12 and not back-dated onto the eight readings above:
+Five clauses, in force from 2026-11-12 and not back-dated: seven of the ten readings above predate
+them, and the three re-taken since — attribution, the boundary and the export lifecycle — declare
+tokens the form accepts.
 
 | Clause | Rule | Enforced by |
 |---|---|---|
@@ -449,26 +487,55 @@ of records rather than the behaviour they describe; no exit clause names it.
 | Clause | Where the evidence lives | What the reading actually says |
 |---|---|---|
 | Boundary decidability | `docs/audit/execution-boundary.json` | 15 of 15 cells are decided by a request-time check; 0 are undecidable, 6 open and 9 fenced |
-| Attribution completeness | `docs/audit/attribution.json` | 0 of 40 non-passing external-bundle runs carry a stage or cause code, and 0 of 50 tasks carry stage boundaries; the frozen baseline has an empty denominator and is `not_measured` |
-| Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end, but 1 of 6 lifecycle events runs a parse check and 0 of 3 export-side events record a digest; `csv`, `png` and `xlsx` are `not_measured` |
+| Attribution completeness | `docs/audit/attribution.json` | 33 of 33 non-passing external-bundle runs carry a `failure_stage` and a `failure_code` drawn from the vocabulary closed in `dsa_evaluation.failure_codes`, and 50 of 50 tasks carry the intervals the graph recorded; the frozen baseline has an empty denominator and is `not_measured` |
+| Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end; 3 of 3 export-side events record a digest (2 of them compared here, the third declared), 1 of 6 lifecycle events runs a parse check, and `csv`, `png` and `xlsx` are `not_measured` |
 | `matrix_valid` and `publication_ready` never conflated | `packages/evaluation/src/dsa_evaluation/publication.py` | `publication_ready = matrix_valid and scope == "full"`, so a valid matrix is not a publication decision; each of the four readings says in its own `not_claimed` that `publication_ready` keeps its own gate |
 
 The first three clauses are recorded; the fourth holds as a property of the code and of the records'
-own disclaimers. That is not the same as the three being complete. Three gaps were named, and
-ADR-004 took them one at a time. The boundary gap is closed: every cell now names a check that runs
-at request time, and the record's `basis_change` says which cell was re-attributed rather than
-re-worded. Two remain, and both need a producer to write a field before the reading can count it:
-stage and cause codes have to be written before attribution completeness can be computed, and a
-digest on the export side has to be written before parseability is measured anywhere other than at
-the consumer. Neither is closed by this page.
+own disclaimers. Three gaps were named once — a boundary cell no check could decide, an attribution
+that stopped at the artefact, an export whose bytes nobody re-read — and ADR-004 closed them one at a
+time. The boundary now names a request-time check in every cell, and the record's `basis_change` says
+which cell was re-attributed rather than re-worded. Attribution carries a stage and a code from a
+vocabulary the code refuses to extend by accident, and every task carries the intervals the graph
+itself recorded. Every export surface writes a digest, and the two whose bytes this tree holds also
+compare it.
 
-**The stage is not exited.** Closing one of the three gaps changes one number, and an exit is a
-judgement about all four clauses at once. Four readings are a count of items, not a judgement about
-them; the ADR status line says `exit not declared`, and `tests/contract/test_s2_exit_review.py`
-derives each number in the table above from its record and derives the verdict from the gaps those
-records still carry. Changing the verdict is a product decision with a named owner, not a document
-edit; so is starting S3, whose entry condition also asks for the open questions in the ADR's
-Appendix C to be answered.
+### The four predicates on one set of readings
+
+A stage exit is not four numbers; it is one judgement that all four clauses hold on the readings that
+stand today. Each clause reduces to a predicate over its record, and each record names the commit its
+evidence lives at: the boundary and export readings re-read this tree at `7e63717512be`, while the
+attribution reading keeps `5cbee4de0906`, the tree its run was taken on, because re-deriving the
+record on a later tree may not move a field that describes a finished run. What makes the four one
+set is that each is the latest record for its clause, none is superseded, and the two that were
+re-taken (`attribution.json`, `export-lifecycle.json`) name the record they replace:
+
+| Clause predicate | Read from | Holds because |
+|---|---|---|
+| `undecidable == 0` | `execution-boundary.json` → `summary.undecidable` | 0 of 15 cells; every cell names a check that runs at request time |
+| `stage_level == non_passing` | `attribution.json` → `failures.external_bundle` | 33 of 33 non-passing runs carry a stage and a code |
+| `tasks_with_stage_boundaries == tasks` | `attribution.json` → `latency` | 50 of 50 tasks carry the intervals the graph recorded |
+| `export_side_events_with_a_digest == export_side_events` | `export-lifecycle.json` → `summary` | 3 of 3; 2 of those digests are compared in this tree and the third is declared by a surface whose bytes it does not hold |
+
+**The stage is exited.** S2's exit condition holds on that set of readings, the ADR status line now
+says `S2 complete`, and `tests/contract/test_s2_exit_review.py` derives each predicate above from its
+record and refuses the declaration if any of them is false — so the sentence in bold fails the build
+rather than outliving the numbers. The judgement, taken on 2026-11-14 at the maintainer's instruction,
+is recorded in `AUDIT_LEDGER.md`; this page carries the arithmetic it rests on.
+
+What the exit does not claim is the part worth writing down:
+
+- **Not a trend.** Each of the three readings is a single observation, pinned to the commit its
+  evidence lives at. The two that have a second pass differ from their first because a producer
+  changed — a run record that gained stages, an exporter that gained digests — so the pair records a
+  difference in the instrument, not a rate over repeated runs.
+- **Not `publication_ready`.** That gate is `matrix_valid` and `scope == "full"`, and nothing here
+  moves it; the four readings each say so in their own `not_claimed`.
+- **Not full export coverage.** `csv`, `png` and `xlsx` remain `not_measured`, and one of six
+  lifecycle events runs a parse check. The exit clause asks that every export-side event record a
+  digest, not that every export class be re-read.
+- **Not S3.** Starting it asks for the open questions in the ADR's Appendix C, and the second of them
+  — model credentials with a spend ceiling — is still `not provided`.
 
 ## What this page is not
 
@@ -477,6 +544,6 @@ Appendix C to be answered.
   a definition cannot quietly rewrite history.
 - Not complete. All four S1 rows carry a first reading, but each is a single observation: none of them
   establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
-  one recording in the tree states its own provenance. S2's four items each carry a reading now; the
-  fourth reads the shape of the records rather than the behaviour they describe, and four readings
-  are not a stage exit.
+  one recording in the tree states its own provenance. S2's four items each carry a reading and the
+  stage's exit condition holds on them, but the fourth reads the shape of the records rather than the
+  behaviour they describe, and an exit is not a claim that a reading will still hold next week.

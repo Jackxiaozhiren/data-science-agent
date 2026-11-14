@@ -24,6 +24,7 @@ import statistics
 from pathlib import Path
 
 from scripts import measure_attribution as attribution
+from dsa_evaluation.failure_codes import CODED_STAGES, FailureCode
 
 ROOT = Path(__file__).resolve().parents[2]
 FRAME_PATH = ROOT / "tests/fixtures/attribution/frame.json"
@@ -32,9 +33,12 @@ BASIS_PAGE = ROOT / "docs/measurement-basis.md"
 ADR = ROOT / "docs/ADR/ADR-003-zero-cost-self-hosted-baseline-2026-11-09.md"
 FRAME = json.loads(FRAME_PATH.read_text(encoding="utf-8"))
 RECORD = json.loads(RECORD_PATH.read_text(encoding="utf-8"))
-#: Only a closed cause-code field counts as a stage-level attribution. Nothing here scores a guess
-#: made from prose, a score, or the absence of evidence as "attributed".
-CAUSE_KEYS = ("error_code", "failure_stage", "stage", "cause")
+#: The closed set a failure code must belong to. ADR-004 D2: a code is a location, never a
+#: diagnosis, and a string outside this set is not a location the tree can point at.
+VOCABULARY = {
+    "stages": sorted(CODED_STAGES),
+    "codes": sorted(member.value for member in FailureCode),
+}
 #: Closed set of committed sources. A path resolved from the record would turn a citation into a
 #: filesystem probe of caller-chosen content, so the paths live here and the frame's strings are
 #: only ever compared as strings.
@@ -89,8 +93,8 @@ def test_frame_hash_and_committed_sources_are_the_ones_in_the_tree() -> None:
 
 def test_provenance_names_the_commit_the_run_was_taken_on() -> None:
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", RECORD["recorded_at"])
-    assert RECORD["schema"] == "attribution-reading/v1"
-    assert FRAME["schema"] == RECORD["frame_schema"] == "attribution-frame/v1"
+    assert RECORD["schema"] == "attribution-reading/v2"
+    assert FRAME["schema"] == RECORD["frame_schema"] == "attribution-frame/v2"
     assert RECORD["reviewed_commit"] == RECORD["run_manifest_commit"] == attribution.REVIEWED_COMMIT
     assert RECORD["run_manifest_llm_mode"] == "stub"
     assert RECORD["run_manifest_call_count"] == 0
@@ -113,7 +117,9 @@ def test_every_latency_row_is_internally_consistent() -> None:
         assert row["outside_window_ms"] == max(0, row["elapsed_ms"] - row["window_ms"])
         assert 0 <= row["zero_duration_calls"] <= row["n_tool_calls"], row["task_id"]
         assert 0 <= row["tool_failures"] <= row["n_tool_calls"], row["task_id"]
-        assert row["stage_keys"] == [], row["task_id"]
+        # ADR-004 D2: the record now carries an interval per stage. The key alone would not count;
+        # ``_stages_recorded`` only returns a field whose value is a non-empty list.
+        assert row["stage_keys"] == ["stage_timings"], row["task_id"]
 
 
 def test_latency_numbers_are_recomputed_from_the_rows() -> None:
@@ -144,7 +150,8 @@ def test_latency_numbers_are_recomputed_from_the_rows() -> None:
     # A share is a lower bound while sub-millisecond calls read zero. That is why the record is
     # about what the clock can be pointed at, not about how long a tool took.
     assert expected["zero_duration_calls"] > 0
-    assert expected["tasks_with_stage_boundaries"] == 0
+    # ADR-004 D2 asks for a boundary on every task, not on some: the number is the denominator.
+    assert expected["tasks_with_stage_boundaries"] == len(rows)
     assert expected["tasks_with_residual_ms"] == len(rows)
 
 
@@ -154,7 +161,11 @@ def test_every_failure_row_is_internally_consistent() -> None:
     assert len({row["task_id"] for row in rows}) == len(rows)
     for row in rows:
         assert row["outcome"] in {"failed", "execution_error", "unsupported"}, row["task_id"]
-        assert row["cause_keys"] == [], row["task_id"]
+        # Both members of the pair, and both from the closed vocabulary. One alone would let a
+        # record say "evaluation" and never say what decided it.
+        assert len(row["cause_keys"]) == 2, (row["task_id"], row["cause_keys"])
+        labels = {entry.split(": ", 1)[0] for entry in row["cause_keys"]}
+        assert labels == {"failure_stage", "failure_code"}, row["task_id"]
         assert row["score"] is None or 0 <= row["score"] < FRAME["pass_mark"]
         for key in ("n_tool_calls", "n_evidence", "report_chars"):
             assert row[key] >= 0, (row["task_id"], key)
@@ -177,17 +188,21 @@ def test_failure_numbers_are_recomputed_from_the_rows() -> None:
         "outcome_level": len(rows),
         "artifact_level": placed,
         "artifact_signals": dict(sorted(counts.items())),
-        "stage_level": sum(
-            1 for row in rows if any(key in CAUSE_KEYS for key in row["cause_keys"])
-        ),
+        "stage_level": sum(1 for row in rows if row["cause_keys"]),
         "unplaced": len(rows) - placed,
         "partial_credit": sum(
             1 for row in rows if row["score"] is not None and 0 < row["score"] < FRAME["pass_mark"]
         ),
         "free_text_errors": sum(1 for row in rows if row["has_error_text"]),
+        # A row the reading counts separately: the graph refused the run and the evaluator scored it
+        # above the mark anyway, so `status` and `outcome` disagree by design here.
+        "failed_status_but_scored_passing": ext["failed_status_but_scored_passing"],
     }
     assert RECORD["failures"]["external_bundle"] == expected
-    assert expected["stage_level"] == 0
+    # ADR-004 D2's own predicate: every non-passing run carries a location, and the vocabulary it
+    # was drawn from is listed in the reading rather than left in the code.
+    assert expected["stage_level"] == len(rows)
+    assert RECORD["failure_vocabulary"] == FRAME["failure_vocabulary"] == VOCABULARY
     assert expected["unplaced"] > 0
     assert expected["per_task_latency_present"] == 0
 
@@ -228,7 +243,33 @@ def test_disclaimers_stay_in_the_record_and_the_basis_page_points_at_it() -> Non
     status = ADR.read_text(encoding="utf-8").splitlines()[2]
     # Not a count: the number of S2 readings changes every time one lands, and pinning it here
     # made this test fail on the next stage item rather than on a regression. What must stay true
-    # is that the status line names this reading and still calls the stage in progress; the
-    # arithmetic against the page's sections is checked in the page-consistency test.
+    # is that the status line names this reading; the arithmetic against the page's sections and
+    # the stage's state word are checked in the page-consistency and exit-review tests.
     assert "latency/failure attribution" in status, status
-    assert "S2 in progress" in status, status
+    assert re.search(r"S2 (in progress|complete)", status), status
+
+
+def test_the_page_quotes_the_aggregates_the_record_carries() -> None:
+    """Every latency number the page states is built from the record, not remembered from a capture.
+
+    This is not hypothetical: the page once quoted the *first* recording's median, mean, zero-duration
+    count and window excursion next to a record that had been re-captured, and nothing failed because
+    no test read the two side by side. Pinning the sentences to the fields makes a re-capture fail
+    here rather than leaving prose that describes a frame the tree no longer holds.
+    """
+    latency = RECORD["latency"]
+    share = latency["per_task_tool_share"]
+    basis = re.sub(r"\s+", " ", BASIS_PAGE.read_text(encoding="utf-8"))
+    for sentence in (
+        f"{latency['tool_calls']} tool calls across {latency['tasks']} tasks",
+        f"a median of {share['median']} and a mean of {share['mean']}",
+        f"ranging from {share['min']} to {share['max']}",
+        f"{latency['outside_window_ms_total']} ms outside",
+        f"The {latency['zero_duration_calls']} calls whose `duration_ms` is zero",
+    ):
+        assert sentence in basis, sentence
+    # The two counts are the ones a re-capture moves hardest, so they are compared as numbers rather
+    # than only as substrings: a page that quotes a bigger zero count than the record has no such call.
+    assert latency["zero_duration_calls"] <= latency["tool_calls"]
+    assert latency["tasks_with_stage_boundaries"] == latency["tasks"]
+    assert latency["tasks_with_residual_ms"] == latency["tasks"]

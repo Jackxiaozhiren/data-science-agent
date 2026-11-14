@@ -37,6 +37,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from dsa_evaluation.failure_codes import CODED_STAGES, FailureCode
+
 ROOT = Path(__file__).resolve().parents[1]
 RUN_RAW = ROOT / "artifacts" / "bench-attribution" / "raw_runs.json"
 RUN_MANIFEST = ROOT / "artifacts" / "bench-attribution" / "run_manifest.json"
@@ -44,48 +46,59 @@ FROZEN_RESULTS = ROOT / "benchmarks" / "baseline" / "results.json"
 EXTERNAL_RUNS = ROOT / "benchmarks" / "external" / "datascibench" / "results" / "raw_runs.json"
 FRAME_PATH = ROOT / "tests" / "fixtures" / "attribution" / "frame.json"
 RECORD_PATH = ROOT / "docs" / "audit" / "attribution.json"
+#: The first pass stays where it was recorded and gains a pointer, so a reader can tell a
+#: moved count from a moved question without reconciling two addresses.
+SUPERSEDES = "docs/audit/attribution-first.json"
 
 RUN_REL = "artifacts/bench-attribution/raw_runs.json"
 MANIFEST_REL = "artifacts/bench-attribution/run_manifest.json"
 FROZEN_REL = "benchmarks/baseline/results.json"
 EXTERNAL_REL = "benchmarks/external/datascibench/results/raw_runs.json"
 
-SCHEMA = "attribution-frame/v1"
-RECORD_SCHEMA = "attribution-reading/v1"
-REVIEWED_COMMIT = "a68c04b1cdb3"
+SCHEMA = "attribution-frame/v2"
+RECORD_SCHEMA = "attribution-reading/v2"
+#: The commit the recorded run was taken on, not the commit this file happens to be read at: the
+#: procedure below checks that commit out, runs the benchmark there and derives the reading from the
+#: frame it produced. Re-deriving the record on a later tree does not move it, because the numbers
+#: describe that run. `--verify` holds the two together: `reviewed_commit == run_manifest_commit`.
+REVIEWED_COMMIT = "5cbee4de0906"
 #: The pass mark is the external adapter's own threshold, not one chosen for this reading.
 PASS_MARK = 0.5
 #: Whole-millisecond timestamps are rounded to 1 ms; ten times that is a resolution band, not a test.
 WINDOW_RESOLUTION_MS = 10
 STAGE_KEYS = ("stage_timings", "phase_timings", "stage_ms", "spans", "stages")
-CAUSE_KEYS = ("error_code", "failure_stage", "stage", "cause")
 CAPTURE_RULE = (
     "one local 50-task deterministic run plus a census of both deterministic recordings already "
     "committed to the tree; no random draw, no exclusion by outcome, no cross-run averaging"
 )
 NOT_CLAIMED = [
     "No causality: a zero-evidence or OOM-killed run is placed at the artifact level from recorded "
-    "counts, not diagnosed as to why it failed.",
-    "No stage or cause codes are invented from prose, tool names or the evaluator's score; only "
-    "closed-code fields a record actually carries would count, and none of these carry one.",
+    + "counts, not diagnosed as to why it failed.",
+    "A failure code names a place in the tree that decided the outcome, never a reason for it: "
+    + "`score_below_threshold` says the evaluator scored the run under its own threshold and says "
+    + "nothing about why the score was low.",
     "Absolute milliseconds are not comparable with the frozen baseline or with another machine: "
-    "the baseline README records three different means for the same commit minutes apart.",
+    + "the baseline README records three different means for the same commit minutes apart.",
     "The tool-time share is a lower bound, not a measurement of tool cost: duration_ms is an "
-    "integer millisecond, so a sub-millisecond call contributes zero.",
+    + "integer millisecond, so a sub-millisecond call contributes zero.",
     "Neither recording is a random sample. Both are convenience censuses of what this tree ships.",
+    "Outcome is the evaluator's verdict on artifacts, not the run's status: a run the graph refused "
+    + "can still score above the mark. The two columns are counted separately, never added together.",
     "Nothing here is a penetration result, a latency target, an S2 exit, or a statement about "
-    "publication_ready, which keeps its own gate.",
+    + "publication_ready, which keeps its own gate.",
 ]
 
 PROCEDURE = [
     "Check out the reviewed commit into a clean tree and export its package src roots on PYTHONPATH.",
-    "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; the manifest must report "
-    "llm_mode=stub and call_count=0.",
+    "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; `--out` is a top-level flag, "
+    + "and the manifest must report llm_mode=stub and call_count=0.",
+    "Run `python benchmarks/external/datascibench/run_eval.py` to re-record the external bundle; it "
+    + "is the deterministic local lane and reads the gitignored `.workspace/` in place.",
     "Run `python scripts/measure_attribution.py --capture > tests/fixtures/attribution/frame.json` "
-    "in the repository root to project the run and the two committed recordings.",
+    + "in the repository root to project the run and the two committed recordings.",
     "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build "
-    "the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit "
-    "JSON on stdout; the module never writes a file it has read.",
+    + "the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit "
+    + "JSON on stdout; the module never writes a file it has read.",
 ]
 
 
@@ -117,8 +130,30 @@ def _window_ms(run: dict[str, Any]) -> int:
     return round((end - start) / timedelta(milliseconds=1))
 
 
-def _keys_present(mapping: dict[str, Any], keys: tuple[str, ...]) -> list[str]:
-    return [name for name in keys if name in mapping]
+def _stages_recorded(run: dict[str, Any]) -> list[str]:
+    """Stage fields that carry at least one interval.
+
+    A key whose value is an empty list records that this run has no stage boundary; counting the key
+    alone would let a field exist and say nothing, which is the failure mode this reading exists to
+    catch rather than to reproduce.
+    """
+    return [name for name in STAGE_KEYS if isinstance(run.get(name), list) and run[name]]
+
+
+def _codes_present(row: dict[str, Any], vocabulary: dict[str, list[str]]) -> list[str]:
+    """Failure fields whose value is a member of the closed vocabulary.
+
+    Presence is not enough and neither is truthiness: a null, or a string nobody enumerated, records
+    no location. Only a value the vocabulary owns counts as having placed the failure.
+    """
+    found: list[str] = []
+    stage = row.get("failure_stage")
+    if isinstance(stage, str) and stage in vocabulary["stages"]:
+        found.append(f"failure_stage: {stage}")
+    code = row.get("failure_code")
+    if isinstance(code, str) and code in vocabulary["codes"]:
+        found.append(f"failure_code: {code}")
+    return found
 
 
 def capture() -> dict[str, Any]:
@@ -149,10 +184,14 @@ def capture() -> dict[str, Any]:
                 "n_tool_calls": len(calls),
                 "zero_duration_calls": sum(1 for call in calls if not call.get("duration_ms")),
                 "tool_failures": sum(1 for call in calls if call.get("status") != "ok"),
-                "stage_keys": _keys_present(run, STAGE_KEYS),
+                "stage_keys": _stages_recorded(run),
             }
         )
 
+    vocabulary = {
+        "stages": sorted(CODED_STAGES),
+        "codes": sorted(member.value for member in FailureCode),
+    }
     frozen_rows = frozen["results"]
     external_rows = external["runs"]
     failure_rows: list[dict[str, Any]] = []
@@ -169,7 +208,7 @@ def capture() -> dict[str, Any]:
                 "n_evidence": row["n_evidence"] or 0,
                 "report_chars": row["report_chars"] or 0,
                 "has_error_text": bool(row["error"]),
-                "cause_keys": _keys_present(row, CAUSE_KEYS),
+                "cause_keys": _codes_present(row, vocabulary),
             }
         )
 
@@ -191,7 +230,7 @@ def capture() -> dict[str, Any]:
             "n_non_passing": sum(
                 1 for row in frozen_rows if not row["metrics"].get("task_success")
             ),
-            "stage_keys": _keys_present(frozen_rows[0], STAGE_KEYS),
+            "stage_keys": _stages_recorded(frozen_rows[0]),
         },
         "external_bundle": {
             "n_runs": len(external_rows),
@@ -200,8 +239,18 @@ def capture() -> dict[str, Any]:
                 1 for row in external_rows if row["latency_s"] is not None
             ),
             "wall_s": external["wall_s"],
-            "stage_keys": _keys_present(external_rows[0], STAGE_KEYS),
+            "stage_keys": _stages_recorded(external_rows[0]),
+            "runs_with_stage_count": sum(1 for row in external_rows if row.get("n_stages")),
+            # A run the graph refused can still be scored above the mark, because the evaluator reads
+            # artifacts and not the run's status. Counting it without saying so would let a reader
+            # add the two columns and get a number that is neither.
+            "failed_status_but_scored_passing": sum(
+                1
+                for row in external_rows
+                if row["status"] != "COMPLETED" and row["outcome"] == "passed"
+            ),
         },
+        "failure_vocabulary": vocabulary,
         "pass_mark": PASS_MARK,
         "pass_mark_source": "benchmarks/external/datascibench/adapter.py (score >= 0.5)",
         "window_resolution_ms": WINDOW_RESOLUTION_MS,
@@ -290,8 +339,12 @@ def measure(frame: dict[str, Any]) -> dict[str, Any]:
                     if row["score"] is not None and 0 < row["score"] < frame["pass_mark"]
                 ),
                 "free_text_errors": sum(1 for row in failures if row["has_error_text"]),
+                "failed_status_but_scored_passing": external["failed_status_but_scored_passing"],
             },
         },
+        # Listed here rather than only in the adapter, because a reader of the record has to be able
+        # to see which values counted as a location without opening the code that wrote them.
+        "failure_vocabulary": frame["failure_vocabulary"],
     }
 
 
@@ -310,6 +363,7 @@ def build(frame: dict[str, Any], recorded_at: str) -> dict[str, Any]:
             "pointed at a named part of the record?"
         ),
         "basis": "docs/measurement-basis.md#s2--latency-and-failure-attribution",
+        "supersedes": SUPERSEDES,
         "frame_path": "tests/fixtures/attribution/frame.json",
         "frame_schema": frame["schema"],
         "frame_sha256": file_sha256(FRAME_PATH),
@@ -323,6 +377,19 @@ def build(frame: dict[str, Any], recorded_at: str) -> dict[str, Any]:
         "window_resolution_ms": frame["window_resolution_ms"],
         "procedure": PROCEDURE,
         "not_claimed": NOT_CLAIMED,
+        #: What changed between the first reading and this one, stated in the record rather than
+        #: left to a diff. Two of these move the ruler, one moves the denominator, and a reader who
+        #: adds them up as "the number improved" would be reading the wrong change.
+        "basis_change": [
+            "A cause field used to count when its key was present. This reading counts a value that "
+            + "belongs to the closed vocabulary, so a null, an empty string or an invented name "
+            + "records no location and is not counted.",
+            "The latency rows now carry the run's own stage intervals (ADR-004 D2). The first "
+            + "reading had no such field to find, which is why it recorded 0 of 50.",
+            "The external bundle was re-recorded on the reviewed commit: 38 supported tasks and 33 "
+            + "non-passing runs, where the first recording held 45 and 40. The denominator moved with "
+            + "the recording, not with the code, and this line is the only place that says so.",
+        ],
     }
     reading.update(measure(frame))
     return reading

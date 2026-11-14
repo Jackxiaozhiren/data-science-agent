@@ -21,6 +21,7 @@ An empty archive would read as success.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -94,7 +95,28 @@ async def download_run_bundle(
 
     state = row.get("state") or {}
     root = artifact_root().resolve()
-    include, excluded = _classify(root, list(state.get("artifacts") or []))
+    payload, manifest = build_bundle(run_id, list(state.get("artifacts") or []), root)
+    return Response(
+        content=payload,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{run_id}-bundle.zip"',
+            "X-Bundle-Files": str(len(manifest["included"])),
+            "X-Bundle-Excluded": str(len(manifest["excluded"])),
+        },
+    )
+
+
+def build_bundle(run_id: str, entries: list[Any], root: Path) -> tuple[bytes, dict[str, Any]]:
+    """Assemble the archive and the manifest that describes it, or refuse.
+
+    Split from the route so the assembly can be exercised without a database: ADR-004's third
+    decision asks the manifest to carry a digest per file, and a claim about bytes is only worth
+    something if the same call that writes the archive also writes the numbers. The two failure
+    modes stay here rather than in the route -- an empty archive reading as success, and a bundle
+    large enough that the caller wants a stream instead.
+    """
+    include, excluded = _classify(root, entries)
     if not include:
         raise HTTPException(
             status_code=404,
@@ -104,36 +126,40 @@ async def download_run_bundle(
             ),
         )
 
-    manifest = {
+    manifest: dict[str, Any] = {
         "run_id": run_id,
         "artifact_root": str(root),
         "included": sorted(name for name, _ in include),
         "excluded": sorted(excluded, key=lambda entry: (entry["name"], entry["reason"])),
         "storage": _storage_summary(),
+        # ADR-004 D3. One entry per file, in the same bytes the archive holds: the digest is taken
+        # from the payload and that payload is what `writestr` receives, so a manifest can never
+        # describe a file the visitor did not get.
+        "files": [],
     }
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        total = 0
         for name, path in include:
-            if buffer.tell() > MAX_BUNDLE_BYTES:
+            payload = path.read_bytes()
+            total += len(payload)
+            if total > MAX_BUNDLE_BYTES:
                 raise HTTPException(
                     status_code=413,
                     detail=f"bundle exceeds {MAX_BUNDLE_BYTES} bytes; fetch artifacts individually",
                 )
-            archive.write(path, arcname=f"{run_id}/{name}")
+            manifest["files"].append(
+                {
+                    "name": name,
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                    "bytes": len(payload),
+                }
+            )
+            archive.writestr(f"{run_id}/{name}", payload)
         archive.writestr(
             f"{run_id}/manifest.json", json.dumps(manifest, indent=2, sort_keys=True) + "\n"
         )
-
-    payload = buffer.getvalue()
-    return Response(
-        content=payload,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="{run_id}-bundle.zip"',
-            "X-Bundle-Files": str(len(include)),
-            "X-Bundle-Excluded": str(len(excluded)),
-        },
-    )
+    return buffer.getvalue(), manifest
 
 
 def _storage_summary() -> dict[str, Any]:
