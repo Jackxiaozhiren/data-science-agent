@@ -374,13 +374,13 @@ def build(frame: dict[str, Any], recorded_at: str) -> dict[str, Any]:
         #: adds them up as "the number improved" would be reading the wrong change.
         "basis_change": [
             "A cause field used to count when its key was present. This reading counts a value that "
-            "belongs to the closed vocabulary, so a null, an empty string or an invented name "
-            "records no location and is not counted.",
+            + "belongs to the closed vocabulary, so a null, an empty string or an invented name "
+            + "records no location and is not counted.",
             "The latency rows now carry the run's own stage intervals (ADR-004 D2). The first "
-            "reading had no such field to find, which is why it recorded 0 of 50.",
+            + "reading had no such field to find, which is why it recorded 0 of 50.",
             "The external bundle was re-recorded on the reviewed commit: 38 supported tasks and 33 "
-            "non-passing runs, where the first recording held 45 and 40. The denominator moved with "
-            "the recording, not with the code, and this line is the only place that says so.",
+            + "non-passing runs, where the first recording held 45 and 40. The denominator moved with "
+            + "the recording, not with the code, and this line is the only place that says so.",
         ],
     }
     reading.update(measure(frame))
