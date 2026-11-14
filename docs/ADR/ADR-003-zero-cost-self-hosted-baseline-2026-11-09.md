@@ -1,6 +1,6 @@
 # ADR-003 — Zero-Cost Self-Hosted Baseline (R0)
 
-- Status: Accepted · S1 complete (four readings, see `docs/measurement-basis.md`); S2 in progress (four readings: boundary matrix, latency/failure attribution, export-first lifecycle and contract-version policy; zero items remaining, exit not declared); S3 not started · Date: 2026-11-09 · Applies to: deployment topology (`render.yaml`, `deploy/`), execution isolation, artifact lifecycle, observability, evaluation publication
+- Status: Accepted · S1 complete (four readings, see `docs/measurement-basis.md`); S2 complete (four readings: boundary matrix, latency/failure attribution, export-first lifecycle and contract-version policy; zero items remaining, exit declared 2026-11-14 in the stage-exit review there, on one set of readings); S3 not started, its entry condition not met · Date: 2026-11-09 · Applies to: deployment topology (`render.yaml`, `deploy/`), execution isolation, artifact lifecycle, observability, evaluation publication
 - Related: `docs/real-model-evaluation.md` (Spend cap, Automated matrix validation, Publication rule 14) · `deploy/render-persistent.example.yaml` · `GOVERNANCE.md` (Money / data) · `docs/ADR/ADR-002-output-artifact-export-2026-09-08.md`
 
 ## Problem

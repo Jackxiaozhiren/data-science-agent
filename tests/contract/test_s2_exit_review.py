@@ -3,10 +3,13 @@
 Four readings do not by themselves say whether the stage is exited: the ADR's migration row names an
 exit condition with four clauses, and the work column names four items, but the two lists are not the
 same list. This file derives the clause anchors from the ADR, the numbers from the records, and the
-numbers from the records. Nothing here is typed as a literal count, so a record that changes makes
-the page stale and this test fail rather than quietly agreeing with it. The verdict itself is the one
-thing the records cannot supply: since P2 and P3 closed every producer gap, "not exited" is a
-declaration that has not been made yet, and the test pins its absence instead of inferring it.
+verdict from the predicates those records satisfy. Nothing here is typed as a literal count, so a
+record that changes makes the page stale and this test fail rather than quietly agreeing with it.
+
+The verdict used to be the one thing the records could not supply: with three producer gaps open,
+"not exited" was a declaration nobody had made, and this file pinned its absence. ADR-004 closed those
+gaps, so the verdict is derived now — four predicates, one set of readings — and the declaration is
+held to the derivation rather than to a sentence someone wrote first.
 
 No new audit record is added by the review. It is a judgement about records that already exist, and
 `docs/audit/contract-versions.json` keeps its own count of them.
@@ -14,6 +17,7 @@ No new audit record is added by the review. It is a judgement about records that
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from pathlib import Path
@@ -158,29 +162,109 @@ def test_the_fourth_item_has_no_exit_clause() -> None:
     assert "no exit clause names it" in review
 
 
-def test_the_declaration_has_not_run_ahead_of_the_readings() -> None:
-    """No exit is declared, and the three producer gaps it used to rest on are now closed.
+def _clauses(
+    boundary: dict[str, Any], attribution: dict[str, Any], export: dict[str, Any]
+) -> dict[str, bool]:
+    """The four exit predicates as functions of the records — not of the page that quotes them.
 
-    The previous form of this test required at least one open gap, on the argument that the verdict
-    was not exited *because* something was missing. P2 and P3 closed all three, so that premise no
-    longer holds: an exit is now a declaration to be made on one set of readings, and this test's
-    job is to keep the declaration from appearing before that review rather than to derive it.
+    Each is the ADR-004 Appendix B form: an equality between the numerator the record counts and the
+    denominator that makes it meaningful, so a zero denominator cannot pass as a closed gap.
     """
-    review = _review().lower()
-    status = _text(ADR).splitlines()[2]
-    assert "not exited" in review
-    assert "exit not declared" in status, status
-    assert "S2 in progress" in status, status
-    assert "S2 complete" not in status, status
-    assert "product decision" in review
+    external = attribution["failures"]["external_bundle"]
+    latency = attribution["latency"]
+    summary = export["summary"]
+    return {
+        "undecidable == 0": boundary["summary"]["undecidable"] == 0,
+        "stage_level == non_passing": external["stage_level"] == external["non_passing"],
+        "tasks_with_stage_boundaries == tasks": latency["tasks_with_stage_boundaries"]
+        == latency["tasks"],
+        "export_side_events_with_a_digest == export_side_events": summary[
+            "export_side_events_with_a_digest"
+        ]
+        == summary["export_side_events"],
+    }
 
-    boundary = _record(BOUNDARY)["summary"]
+
+def _records() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    return _record(BOUNDARY), _record(ATTRIBUTION), _record(EXPORT)
+
+
+def test_every_exit_clause_holds_on_the_records() -> None:
+    clauses = _clauses(*_records())
+    assert all(clauses.values()), clauses
+
+
+def test_each_reading_names_the_commit_its_evidence_lives_at() -> None:
+    """The four clauses are read from four records, and each names the commit it is evidence about.
+
+    They are not all one commit, and saying they were would be the false claim: the boundary and
+    export readings re-read this tree, while the attribution reading's `reviewed_commit` is the tree
+    its run was taken on — its own `--verify` requires that field to equal `run_manifest_commit`, so
+    re-deriving the record on a later tree cannot move it. What makes the four one set is that each
+    is the latest record for its clause, none is superseded, and the two that were re-taken say which
+    record they replace.
+    """
+    for path in (BOUNDARY, ATTRIBUTION, EXPORT, REGISTER):
+        record = _record(path)
+        assert re.fullmatch(r"[0-9a-f]{12}", record["reviewed_commit"]), path
+        assert "superseded_by" not in record, path
     attribution = _record(ATTRIBUTION)
-    export = _record(EXPORT)["summary"]
-    gaps = (
-        boundary["undecidable"] > 0,
-        attribution["failures"]["external_bundle"]["stage_level"] == 0,
-        export["export_side_events_with_a_digest"] == 0,
-    )
-    # All three closed. The page says so, and a reopened gap would make its paragraph false.
-    assert not any(gaps), (boundary, attribution["failures"], export)
+    assert attribution["reviewed_commit"] == attribution["run_manifest_commit"]
+    for first, second in (
+        (ROOT / "docs/audit/attribution-first.json", ATTRIBUTION),
+        (ROOT / "docs/audit/export-lifecycle-first.json", EXPORT),
+    ):
+        assert _record(first)["superseded_by"] == second.relative_to(ROOT).as_posix()
+        assert _record(second)["supersedes"] == first.relative_to(ROOT).as_posix()
+
+
+def test_a_reopened_gap_would_flip_the_verdict() -> None:
+    """Negative control: each predicate reads its own field, and none is carried by the other three."""
+    boundary, attribution, export = _records()
+
+    opened = copy.deepcopy(boundary)
+    opened["summary"]["undecidable"] = 1
+    assert not _clauses(opened, attribution, export)["undecidable == 0"]
+
+    unplaced = copy.deepcopy(attribution)
+    unplaced["failures"]["external_bundle"]["stage_level"] = 0
+    assert not _clauses(boundary, unplaced, export)["stage_level == non_passing"]
+
+    unbounded = copy.deepcopy(attribution)
+    unbounded["latency"]["tasks_with_stage_boundaries"] = 0
+    assert not _clauses(boundary, unbounded, export)["tasks_with_stage_boundaries == tasks"]
+
+    undeclared = copy.deepcopy(export)
+    undeclared["summary"]["export_side_events_with_a_digest"] = 0
+    assert not _clauses(boundary, attribution, undeclared)[
+        "export_side_events_with_a_digest == export_side_events"
+    ]
+
+    # Flipping one leaves exactly three true, so the conjunction is a real conjunction rather than
+    # one field that happens to agree with itself.
+    assert sum(_clauses(opened, attribution, export).values()) == 3
+    assert sum(_clauses(boundary, unplaced, export).values()) == 3
+    assert sum(_clauses(boundary, attribution, undeclared).values()) == 3
+
+
+def test_the_declaration_matches_the_readings() -> None:
+    """The page and the status line say what the records support, and neither says more.
+
+    This replaces the test that pinned the *absence* of a declaration. With the three producer gaps
+    closed, "not exited" stopped being derivable from a gap list, so the honest form runs the other
+    way: derive the four predicates above, then hold the prose to them.
+    """
+    review = _review()
+    status = _text(ADR).splitlines()[2]
+    assert "**The stage is exited.**" in review
+    assert "S2 complete" in status, status
+    assert "S2 in progress" not in status, status
+    assert "exit not declared" not in status, status
+    # Every predicate is named as a predicate next to the field it reads, so a reader can check the
+    # verdict rather than take it.
+    for name in _clauses(*_records()):
+        assert f"`{name}`" in review, name
+    # And the page states the boundary the exit does not widen.
+    lowered = review.lower()
+    for phrase in ("not a trend", "not `publication_ready`", "not full export coverage", "not s3"):
+        assert phrase in lowered, phrase

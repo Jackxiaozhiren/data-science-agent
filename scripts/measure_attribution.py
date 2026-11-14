@@ -46,6 +46,9 @@ FROZEN_RESULTS = ROOT / "benchmarks" / "baseline" / "results.json"
 EXTERNAL_RUNS = ROOT / "benchmarks" / "external" / "datascibench" / "results" / "raw_runs.json"
 FRAME_PATH = ROOT / "tests" / "fixtures" / "attribution" / "frame.json"
 RECORD_PATH = ROOT / "docs" / "audit" / "attribution.json"
+#: The first pass stays where it was recorded and gains a pointer, so a reader can tell a
+#: moved count from a moved question without reconciling two addresses.
+SUPERSEDES = "docs/audit/attribution-first.json"
 
 RUN_REL = "artifacts/bench-attribution/raw_runs.json"
 MANIFEST_REL = "artifacts/bench-attribution/run_manifest.json"
@@ -54,6 +57,10 @@ EXTERNAL_REL = "benchmarks/external/datascibench/results/raw_runs.json"
 
 SCHEMA = "attribution-frame/v2"
 RECORD_SCHEMA = "attribution-reading/v2"
+#: The commit the recorded run was taken on, not the commit this file happens to be read at: the
+#: procedure below checks that commit out, runs the benchmark there and derives the reading from the
+#: frame it produced. Re-deriving the record on a later tree does not move it, because the numbers
+#: describe that run. `--verify` holds the two together: `reviewed_commit == run_manifest_commit`.
 REVIEWED_COMMIT = "5cbee4de0906"
 #: The pass mark is the external adapter's own threshold, not one chosen for this reading.
 PASS_MARK = 0.5
@@ -356,6 +363,7 @@ def build(frame: dict[str, Any], recorded_at: str) -> dict[str, Any]:
             "pointed at a named part of the record?"
         ),
         "basis": "docs/measurement-basis.md#s2--latency-and-failure-attribution",
+        "supersedes": SUPERSEDES,
         "frame_path": "tests/fixtures/attribution/frame.json",
         "frame_schema": frame["schema"],
         "frame_sha256": file_sha256(FRAME_PATH),

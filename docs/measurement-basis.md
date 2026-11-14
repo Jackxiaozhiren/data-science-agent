@@ -7,8 +7,9 @@ picked before the first reading is a preference, not a measurement.
 S1 asks for each of four metrics to be recorded once; those readings are below. S2 asks what a
 recorded run lets a reader point at: the execution-boundary matrix, the latency and failure
 attribution reading, the export-first lifecycle and the contract-version policy are at the end of the
-page. They are four of S2's four items, which closes the item list and not the stage: an exit is a
-judgement about the readings, and none is declared here.
+page. They are four of S2's four items, and the stage-exit review after them reads the ADR's four
+clauses against one set of readings and declares S2 exited. That declaration is about the exit
+condition only; what it leaves unclaimed is listed next to it.
 
 Three rules apply to every metric below, each because the opposite caused a real problem here:
 
@@ -286,18 +287,21 @@ run spent in each status. Three quantities follow without interpretation:
 | `outside_window_ms` | `max(0, elapsed_ms - (updated_at - created_at))` | time even the run object's own clock does not cover |
 
 The second reading: 249 tool calls across 50 tasks, all recorded as `ok`. The per-task tool share has
-a median of 0.3786 and a mean of 0.4604, ranging from 0.0 to 0.95; every one of the 50 rows has a
-positive residual, and every one carries the run's own stage intervals. One task stands 1105 ms
-outside the run object's window. The 176 calls whose `duration_ms` is zero are the important part: the
-field is an integer millisecond, so a sub-millisecond call is recorded as no time at all. The share is
-therefore a **lower bound on what the record can name**, not a measurement of what tools cost. A
-second run of the same clean tree at the same commit moved both the median share and the zero-duration
-count, so the frame pins the one run it describes by hash rather than quoting a stable-looking number;
-the ledger keeps the second observation as capture-time context, not as part of the reading.
+a median of 0.3709 and a mean of 0.4542, ranging from 0.0 to 0.9529; every one of the 50 rows has a
+positive residual, and every one carries the run's own stage intervals. One task runs past the run
+object's window by more than the 10 ms resolution band, and the 50 rows together stand 730 ms outside
+it. The 181 calls whose `duration_ms` is zero are the important part: the field is an integer
+millisecond, so a sub-millisecond call is recorded as no time at all. The share is therefore a **lower
+bound on what the record can name**, not a measurement of what tools cost. A second run of the same
+clean tree at the same commit moved both the median share and the zero-duration count, so the frame
+pins the one run it describes by hash rather than quoting a stable-looking number; the ledger keeps
+the second observation as capture-time context, not as part of the reading.
 
 The first reading recorded 0 of 50 rows with a stage field, because the run record had none to
 carry. The change to 50 of 50 is a producer change, and the record says so in `basis_change` rather
-than leaving it to be inferred from a diff.
+than leaving it to be inferred from a diff. The first pass stays where it was recorded, as
+`docs/audit/attribution-first.json` with a `superseded_by` pointer, and the second points back at it
+with `supersedes` — so the pair reads as a ruler change rather than as a number that moved on its own.
 
 ### Failures: two recordings, one empty denominator
 
@@ -414,38 +418,39 @@ section takes the second, because the first already has a reading and because a 
 reader meets first. `docs/audit/contract-versions.json` is the register and
 `scripts/measure_contract_versions.py` rebuilds it.
 
-### What the nine readings declare
+### What the ten readings declare
 
-Ten of the fifteen files under `docs/audit/` carry a `recorded_at`: nine readings and this register.
+Eleven of the sixteen files under `docs/audit/` carry a `recorded_at`: ten readings and this register.
 The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory exception
-list, a lock-divergence list and an orphan-reads registry — and state no date. Of the nine readings,
-**five declare a token of their own**: `attribution-reading/v2`,
-`execution-boundary-matrix/v2`, `export-lifecycle/v1` and `export-lifecycle/v2` (the two passes of one
-surface) and `independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
-`evidence-alignment-frame/v1` as `frame_schema` and nothing about itself. Three declare nothing — both
-authorization-coverage readings and the served-artifact probe, all written before any record carried a
-token.
+list, a lock-divergence list and an orphan-reads registry — and state no date. Of the ten readings,
+**six declare a token of their own**: `attribution-reading/v1` and `attribution-reading/v2`,
+`execution-boundary-matrix/v2`, `export-lifecycle/v1` and `export-lifecycle/v2` (two pairs, each the
+same surface at two passes) and `independent-rerun/v1`. One declares only its input's:
+`evidence-alignment.json` carries `evidence-alignment-frame/v1` as `frame_schema` and nothing about
+itself. Three declare nothing — both authorization-coverage readings and the served-artifact probe,
+all written before any record carried a token.
 
-The six tokens are well-formed and share no vocabulary: `-reading`, `-matrix` and `-frame` each
-appear once, two subjects are bare, and one subject appears at two majors — `export-lifecycle/v1` and
-`export-lifecycle/v2`, because the second pass changed what a consumer's arithmetic would do. That is
-a vocabulary, not a policy — nothing says which suffix a new record should take, and nothing says what
-changing one would mean. **No record carries a field stating a bump rule**, which is the gap this item
-exists to close.
+The seven tokens are well-formed and share no vocabulary: `-reading` appears twice, `-matrix` and
+`-frame` once each, three are bare, and two subjects appear at two majors — the attribution reading and
+the export lifecycle, in both cases because the second pass changed what a consumer's arithmetic would
+do. That is a vocabulary, not a policy — nothing says which suffix a new record should take, and
+nothing says what changing one would mean. **No record carries a field stating a bump rule**, which is
+the gap this item exists to close.
 
 ### What holds a token to the record
 
-Four of the five are compared with something that is not the record itself: the attribution test
-types both tokens, the boundary test compares a rebuild, and the export-lifecycle test compares the
-second pass with its instrument's constant and types the first pass's token, so a kept file cannot
-quietly acquire a new one. The fifth carries a token nothing asserts — `independent-rerun.json`, whose
-token is written by the instrument and read by its test without a comparison. The register records it
-as `check_kind: none`, and the contract test proves the label by reading the consumer and finding the
-token absent, rather than by trusting the record's own sentence.
+Five of the six are compared with something that is not the record itself: the attribution test types
+both of its passes' tokens and their two zero counts, the boundary test compares a rebuild, and the
+export-lifecycle test compares the second pass with its instrument's constant and types the first
+pass's token, so a kept file cannot quietly acquire a new one. The sixth carries a token nothing
+asserts — `independent-rerun.json`, whose token is written by the instrument and read by its test
+without a comparison. The register records it as `check_kind: none`, and the contract test proves the
+label by reading the consumer and finding the token absent, rather than by trusting the record's own
+sentence.
 
 ### The policy, and what enforces it
 
-Five clauses, in force from 2026-11-12 and not back-dated: six of the nine readings above predate
+Five clauses, in force from 2026-11-12 and not back-dated: seven of the ten readings above predate
 them, and the three re-taken since — attribution, the boundary and the export lifecycle — declare
 tokens the form accepts.
 
@@ -487,23 +492,50 @@ of records rather than the behaviour they describe; no exit clause names it.
 | `matrix_valid` and `publication_ready` never conflated | `packages/evaluation/src/dsa_evaluation/publication.py` | `publication_ready = matrix_valid and scope == "full"`, so a valid matrix is not a publication decision; each of the four readings says in its own `not_claimed` that `publication_ready` keeps its own gate |
 
 The first three clauses are recorded; the fourth holds as a property of the code and of the records'
-own disclaimers. That is not the same as the three being complete. Three gaps were named, and
-ADR-004 took them one at a time. The boundary gap is closed: every cell now names a check that runs
-at request time, and the record's `basis_change` says which cell was re-attributed rather than
-re-worded. The attribution gap is closed too: every non-passing run now carries a stage and a code
-from a vocabulary the code refuses to extend by accident, and every task carries the intervals the
-graph itself recorded. The export gap is closed on the recording side: every export surface writes a
-digest, and the two whose bytes this tree holds also compare it. All three named gaps are closed, and
-a stage exit is still a separate judgement about all four clauses at once — `P4` is where that
-judgement is made, on one set of readings rather than on three.
+own disclaimers. Three gaps were named once — a boundary cell no check could decide, an attribution
+that stopped at the artefact, an export whose bytes nobody re-read — and ADR-004 closed them one at a
+time. The boundary now names a request-time check in every cell, and the record's `basis_change` says
+which cell was re-attributed rather than re-worded. Attribution carries a stage and a code from a
+vocabulary the code refuses to extend by accident, and every task carries the intervals the graph
+itself recorded. Every export surface writes a digest, and the two whose bytes this tree holds also
+compare it.
 
-**The stage is not exited.** Closing one of the three gaps changes one number, and an exit is a
-judgement about all four clauses at once. Four readings are a count of items, not a judgement about
-them; the ADR status line says `exit not declared`, and `tests/contract/test_s2_exit_review.py`
-derives each number in the table above from its record and derives the verdict from the gaps those
-records still carry. Changing the verdict is a product decision with a named owner, not a document
-edit; so is starting S3, whose entry condition also asks for the open questions in the ADR's
-Appendix C to be answered.
+### The four predicates on one set of readings
+
+A stage exit is not four numbers; it is one judgement that all four clauses hold on the readings that
+stand today. Each clause reduces to a predicate over its record, and each record names the commit its
+evidence lives at: the boundary and export readings re-read this tree at `7e63717512be`, while the
+attribution reading keeps `5cbee4de0906`, the tree its run was taken on, because re-deriving the
+record on a later tree may not move a field that describes a finished run. What makes the four one
+set is that each is the latest record for its clause, none is superseded, and the two that were
+re-taken (`attribution.json`, `export-lifecycle.json`) name the record they replace:
+
+| Clause predicate | Read from | Holds because |
+|---|---|---|
+| `undecidable == 0` | `execution-boundary.json` → `summary.undecidable` | 0 of 15 cells; every cell names a check that runs at request time |
+| `stage_level == non_passing` | `attribution.json` → `failures.external_bundle` | 33 of 33 non-passing runs carry a stage and a code |
+| `tasks_with_stage_boundaries == tasks` | `attribution.json` → `latency` | 50 of 50 tasks carry the intervals the graph recorded |
+| `export_side_events_with_a_digest == export_side_events` | `export-lifecycle.json` → `summary` | 3 of 3; 2 of those digests are compared in this tree and the third is declared by a surface whose bytes it does not hold |
+
+**The stage is exited.** S2's exit condition holds on that set of readings, the ADR status line now
+says `S2 complete`, and `tests/contract/test_s2_exit_review.py` derives each predicate above from its
+record and refuses the declaration if any of them is false — so the sentence in bold fails the build
+rather than outliving the numbers. The judgement, taken on 2026-11-14 at the maintainer's instruction,
+is recorded in `AUDIT_LEDGER.md`; this page carries the arithmetic it rests on.
+
+What the exit does not claim is the part worth writing down:
+
+- **Not a trend.** Each of the three readings is a single observation, pinned to the commit its
+  evidence lives at. The two that have a second pass differ from their first because a producer
+  changed — a run record that gained stages, an exporter that gained digests — so the pair records a
+  difference in the instrument, not a rate over repeated runs.
+- **Not `publication_ready`.** That gate is `matrix_valid` and `scope == "full"`, and nothing here
+  moves it; the four readings each say so in their own `not_claimed`.
+- **Not full export coverage.** `csv`, `png` and `xlsx` remain `not_measured`, and one of six
+  lifecycle events runs a parse check. The exit clause asks that every export-side event record a
+  digest, not that every export class be re-read.
+- **Not S3.** Starting it asks for the open questions in the ADR's Appendix C, and the second of them
+  — model credentials with a spend ceiling — is still `not provided`.
 
 ## What this page is not
 
@@ -512,6 +544,6 @@ Appendix C to be answered.
   a definition cannot quietly rewrite history.
 - Not complete. All four S1 rows carry a first reading, but each is a single observation: none of them
   establishes a rate over repeated runs, and the independent re-run sample is one bundle because only
-  one recording in the tree states its own provenance. S2's four items each carry a reading now; the
-  fourth reads the shape of the records rather than the behaviour they describe, and four readings
-  are not a stage exit.
+  one recording in the tree states its own provenance. S2's four items each carry a reading and the
+  stage's exit condition holds on them, but the fourth reads the shape of the records rather than the
+  behaviour they describe, and an exit is not a claim that a reading will still hold next week.

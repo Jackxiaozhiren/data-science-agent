@@ -30,6 +30,7 @@ PAGE = ROOT / "docs/measurement-basis.md"
 
 #: Who reads each record. Closed on purpose: a row cannot nominate its own consumer.
 CONSUMERS = {
+    "docs/audit/attribution-first.json": "tests/contract/test_attribution_record.py",
     "docs/audit/attribution.json": "tests/contract/test_attribution_record.py",
     "docs/audit/authorization-coverage-second.json": (
         "tests/contract/test_authorization_coverage_record.py"

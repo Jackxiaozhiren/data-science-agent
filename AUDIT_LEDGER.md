@@ -18513,3 +18513,84 @@ require the `ci` check with `strict` on. Force pushes and branch deletion were a
 required reviews remain unset, since a single-maintainer repository would otherwise block its own
 merges, and `enforce_admins` stays off. The rollback is the same endpoint with both new flags set
 to `false`.
+
+## §331 — S2's exit, declared on one set of readings (2026-11-14)
+
+ADR-004 fixed in advance what would count as closed, and named the one PR allowed to say so: a status
+line, the measurement page's Stage-exit section, a ledger entry, and an exit test that derives its
+verdict instead of asserting it. This is that entry. It takes no new reading of the tree — every
+number below is a field in a record that is already there — and it changes no runtime behaviour. It
+does restore one record that an earlier stage replaced in place, which is the one thing here that adds
+a file to `docs/audit/`.
+
+The four predicates, each read from its record rather than typed here:
+
+| Predicate | Record and field | Value |
+|---|---|---|
+| `undecidable == 0` | `docs/audit/execution-boundary.json` → `summary.undecidable` | 0 of 15 cells; 6 open, 9 fenced, all 15 decided by a request-time check |
+| `stage_level == non_passing` | `docs/audit/attribution.json` → `failures.external_bundle` | 33 of 33 |
+| `tasks_with_stage_boundaries == tasks` | `docs/audit/attribution.json` → `latency` | 50 of 50 |
+| `export_side_events_with_a_digest == export_side_events` | `docs/audit/export-lifecycle.json` → `summary` | 3 of 3 (2 compared in this tree, 1 declared) |
+
+The exit condition's fourth clause is not a predicate over a record. It is the separation between two
+gates, and it is checked by reading `publication_ready = matrix_valid and scope == "full"` in
+`packages/evaluation/src/dsa_evaluation/publication.py`, plus the `not_claimed` line each of the four
+readings carries. Both still hold; the exit widens neither.
+
+**Verdict: exited.** The four clauses hold on the readings as they stand, the ADR status line says
+`S2 complete`, and the measurement page says why in the same words. What makes these one set rather
+than four quotations is that each is the latest record for its clause, none is superseded, and the two
+that were re-taken name the record they replace.
+
+**The re-measurement, and the one thing it caught.** Three instruments were re-run on `7e63717` — the
+boundary matrix, the export lifecycle and the contract-version register — and every count came back
+identical (`undecidable 0/15`, `48 of 48` committed exports parse, `3 of 3` export-side digests, 10
+register rows, 0 policy violations). The attribution instrument was re-run from its pinned frame with
+the same result, but its first attempt set `reviewed_commit` to `7e63717` and
+`test_provenance_names_the_commit_the_run_was_taken_on` failed on it: that field describes the tree the
+run was taken on, and the instrument's `--verify` requires it to equal `run_manifest_commit`, so
+re-deriving the record on a later tree may not move it. The change was withdrawn and the field left at
+`5cbee4de0906`. A re-record that stamps a commit the run never ran on is a false provenance claim, and
+the test is what refused it — which is worth recording, because the same test is what would have let a
+wrong exit through unnoticed if it had been relaxed to make the re-record pass.
+
+**A stale paragraph the review found.** The attribution section of the measurement page quoted the
+*first* recording's aggregates — a median share of 0.3786, a mean of 0.4604, 176 zero-duration calls,
+and one task 1105 ms outside the run's window — beside a record whose frame had been re-captured under
+P2, where the same fields read 0.3709, 0.4542, 181, and 730 ms across the whole frame. Nothing failed,
+because no test read the page's numbers against the record's; the prose had outlived the frame. The
+page now quotes the record, and a new test pins each of those sentences to the field it came from, so
+a re-capture fails there rather than leaving a paragraph that describes a frame the tree no longer
+holds. The excursion sentence also changes shape: the record carries a total and a count, so the page
+states 730 ms across the frame and one task past the 10 ms resolution band, rather than a per-task
+figure the record never carried.
+
+**Records, not edits — with one residual.** P2 replaced the first attribution record in place; this
+change recovers it from `c04e37d` as `docs/audit/attribution-first.json`, gives it a `superseded_by`
+pointer, and gives the second record a `supersedes` pointer, so the two passes are distinguishable.
+P3 already kept its first export reading. P1 replaced the first boundary record in place, and its
+`basis_change` states that the first counts are kept in `docs/measurement-basis.md` rather than in a
+second record; no `-first` file is invented here for it. That reading therefore still cannot show its
+own ruler as a record, and this entry states the residual rather than papering over it.
+
+**The test, rewritten.** `tests/contract/test_s2_exit_review.py` used to pin the *absence* of a
+declaration, because with three producer gaps open "not exited" was derivable from a gap list. It now
+derives the four predicates from the records, sums them, and holds the page and the status line to the
+result. A negative control flips each field in a copy of its record and asserts that exactly one
+predicate goes false, so the conjunction cannot be carried by a single field. A second change makes
+`test_measurement_page_consistency.py` compare the status word against the page's own declaration, so a
+status line left at `in progress` fails rather than disagreeing quietly.
+
+**What is not claimed.** Not a trend: each reading is a single observation pinned to the commit its
+evidence lives at, and the two readings that have a second pass differ from their first because a
+producer changed rather than because the same measurement was repeated. Not `publication_ready`:
+that gate is untouched and still needs `scope == "full"`. Not full export coverage: `csv`, `png` and
+`xlsx` stay `not_measured`, and one of six lifecycle events runs a parse check. Not S3: its entry
+condition is S2's exit **and** the open questions in ADR-003's Appendix C, and the model-lane
+credentials with a spend ceiling are still `not provided`. No public action, no governance change and
+no spend is taken here.
+
+**Confirmation nodes left open.** Starting S3 needs the Appendix C answer that P1–P4 did not need. If
+the declaration turns out to be wrong, the rollback is to revert this PR: the status line, the page's
+Stage-exit section, this entry and the rewritten test return to `in progress` together, while every
+reading stays intact — which is the point of never rewriting a number to reach the exit.

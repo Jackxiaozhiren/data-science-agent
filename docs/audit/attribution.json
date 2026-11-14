@@ -105,11 +105,12 @@
     "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit JSON on stdout; the module never writes a file it has read."
   ],
   "question": "in a deterministic run, what fraction of the clock and which of the failures can be pointed at a named part of the record?",
-  "recorded_at": "2026-11-14T01:49:25Z",
+  "recorded_at": "2026-11-14T02:39:47Z",
   "reviewed_commit": "5cbee4de0906",
   "run_manifest_call_count": 0,
   "run_manifest_commit": "5cbee4de0906",
   "run_manifest_llm_mode": "stub",
   "schema": "attribution-reading/v2",
+  "supersedes": "docs/audit/attribution-first.json",
   "window_resolution_ms": 10
 }
