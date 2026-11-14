@@ -243,7 +243,33 @@ def test_disclaimers_stay_in_the_record_and_the_basis_page_points_at_it() -> Non
     status = ADR.read_text(encoding="utf-8").splitlines()[2]
     # Not a count: the number of S2 readings changes every time one lands, and pinning it here
     # made this test fail on the next stage item rather than on a regression. What must stay true
-    # is that the status line names this reading and still calls the stage in progress; the
-    # arithmetic against the page's sections is checked in the page-consistency test.
+    # is that the status line names this reading; the arithmetic against the page's sections and
+    # the stage's state word are checked in the page-consistency and exit-review tests.
     assert "latency/failure attribution" in status, status
-    assert "S2 in progress" in status, status
+    assert re.search(r"S2 (in progress|complete)", status), status
+
+
+def test_the_page_quotes_the_aggregates_the_record_carries() -> None:
+    """Every latency number the page states is built from the record, not remembered from a capture.
+
+    This is not hypothetical: the page once quoted the *first* recording's median, mean, zero-duration
+    count and window excursion next to a record that had been re-captured, and nothing failed because
+    no test read the two side by side. Pinning the sentences to the fields makes a re-capture fail
+    here rather than leaving prose that describes a frame the tree no longer holds.
+    """
+    latency = RECORD["latency"]
+    share = latency["per_task_tool_share"]
+    basis = re.sub(r"\s+", " ", BASIS_PAGE.read_text(encoding="utf-8"))
+    for sentence in (
+        f"{latency['tool_calls']} tool calls across {latency['tasks']} tasks",
+        f"a median of {share['median']} and a mean of {share['mean']}",
+        f"ranging from {share['min']} to {share['max']}",
+        f"{latency['outside_window_ms_total']} ms outside",
+        f"The {latency['zero_duration_calls']} calls whose `duration_ms` is zero",
+    ):
+        assert sentence in basis, sentence
+    # The two counts are the ones a re-capture moves hardest, so they are compared as numbers rather
+    # than only as substrings: a page that quotes a bigger zero count than the record has no such call.
+    assert latency["zero_duration_calls"] <= latency["tool_calls"]
+    assert latency["tasks_with_stage_boundaries"] == latency["tasks"]
+    assert latency["tasks_with_residual_ms"] == latency["tasks"]

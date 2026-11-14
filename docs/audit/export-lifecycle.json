@@ -113,8 +113,8 @@
     "The instrument writes into throwaway temporary directories only; nothing under the repository is written by it.",
     "The 40 committed artifact records were backfilled once by `scripts/backfill_artifact_digests.py`, which reads each file it names and prints the digest it computed; the record it writes is the input, and re-running it is what a reader does to check the numbers."
   ],
-  "recorded_at": "2026-11-14T01:32:23Z",
-  "reviewed_commit": "68ee52575d9c",
+  "recorded_at": "2026-11-14T02:32:37Z",
+  "reviewed_commit": "7e63717512be",
   "schema": "export-lifecycle/v2",
   "summary": {
     "classes_not_measured": [

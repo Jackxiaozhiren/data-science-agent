@@ -32,7 +32,7 @@ RECORD_PATH = AUDIT / "contract-versions.json"
 SCHEMA = "contract-versions/v1"
 #: The tree this reading describes: the main commit the change that retook it was based on, so a
 #: register regenerated before its own merge still names a commit that exists.
-REVIEWED_COMMIT = "5cbee4de0906"
+REVIEWED_COMMIT = "7e63717512be"
 
 #: The policy decides nothing about records written before it, and is not back-dated onto them.
 IN_FORCE_FROM = "2026-11-12"
@@ -52,6 +52,11 @@ CHECK_KINDS = ("record-vs-constant", "record-vs-rebuild", "input-vs-record", "no
 #: promote a token to "checked" by asserting it, and cannot demote one either. The token strings
 #: themselves are never typed here -- they are read from the file the token lives in.
 CHECKS: dict[str, tuple[str, str | None, str]] = {
+    "docs/audit/attribution-first.json": (
+        "record-vs-constant",
+        "tests/contract/test_attribution_record.py",
+        "the test types the superseded pass's token and its two zero counts",
+    ),
     "docs/audit/attribution.json": (
         "record-vs-constant",
         "tests/contract/test_attribution_record.py",
