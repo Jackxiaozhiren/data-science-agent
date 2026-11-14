@@ -7,15 +7,18 @@
     "manifest_keys": [
       "artifact_root",
       "excluded",
+      "files",
       "included",
       "run_id",
       "storage"
     ],
-    "reading": "the ADR's bundle description names artifact hashes among five elements; the shipped manifest names files and exclusion reasons and carries no per-file digest, so the element is planned in the ADR and absent from the export a visitor keeps"
+    "per_file_digest": true,
+    "reading": "the ADR's bundle description names artifact hashes among five elements; the manifest now carries a `files` list with one sha256 and one byte count per archived file, so the element is present in the export a visitor keeps and the divergence this reading recorded in its first pass no longer holds"
   },
   "events": [
     {
-      "detail": "returns sha256 equal to the written bytes (True); the file is never re-opened, so the digest is a number nobody checks -- the instrument read back 3 lines including the header on its own account",
+      "detail": "returns sha256 equal to the written bytes (True) and verified=True: the tool writes one payload, reads the file back, and raises rather than report a digest the file does not hold; the instrument re-read 3 lines including the header on its own account",
+      "digest_check": "compared_here",
       "evidence": "ran",
       "id": "write:export_artifact",
       "integrity_hash": "recorded",
@@ -23,39 +26,44 @@
       "surface": "packages/tools/src/dsa_tools/tools/export_artifact.py"
     },
     {
-      "detail": "returns ['artifact_id', 'metadata', 'path', 'type'] and writes the text without reading it back",
+      "detail": "returns ['artifact_id', 'bytes', 'metadata', 'path', 'sha256', 'type']; sha256 matches the file it wrote (True) and is also recorded under metadata.sha256, so the run record inherits the field; the writer reads the bytes back and raises on a mismatch",
+      "digest_check": "compared_here",
       "evidence": "ran",
       "id": "write:save_artifact",
-      "integrity_hash": "absent",
+      "integrity_hash": "recorded",
       "parse_check": "absent",
       "surface": "packages/tools/src/dsa_tools/tools/save_artifact.py"
     },
     {
-      "detail": "40 entries across 8 committed records; fields ['created_at', 'created_by', 'id', 'metadata', 'path', 'type']; 0 of them name a digest",
+      "detail": "40 entries across 8 committed records; top-level fields ['created_at', 'created_by', 'id', 'metadata', 'path', 'type']; 40 of 40 carry metadata.sha256 -- the field SaveArtifactTool writes from the bytes it re-read -- and the paths name a gitignored artifact root, so the digest is checkable by whoever holds the file and is not re-checked here",
+      "digest_check": "declared",
       "evidence": "ran",
       "id": "record:artifacts_json",
-      "integrity_hash": "absent",
+      "integrity_hash": "recorded",
       "parse_check": "absent",
       "surface": "case-studies/*/outputs/artifacts.json"
     },
     {
-      "detail": "manifest keys ['artifact_root', 'excluded', 'included', 'run_id', 'storage']; 0 digest references in the module, so two bundles of different bytes are indistinguishable from their manifests",
-      "evidence": "read",
+      "detail": "manifest keys ['artifact_root', 'excluded', 'files', 'included', 'run_id', 'storage']; 2 of 2 archived files carry a sha256, and every digest equals the bytes the zip holds (mismatches []); the deleted entry lands in excluded rather than in the archive, so two bundles of different bytes now differ in their manifests",
+      "digest_check": "compared_here",
+      "evidence": "ran",
       "id": "export:bundle",
-      "integrity_hash": "absent",
+      "integrity_hash": "recorded",
       "parse_check": "absent",
       "surface": "src/data_science_agent/_vendor/dsa_api/routers/bundles.py"
     },
     {
-      "detail": "a 64-hex token is removed on purpose: digest gone = True; the figure 0.81 survives, which is the rule the module states",
+      "detail": "returns the digest beside the text rather than inside it (True); the strip rule still holds over the same bytes -- a 64-hex token in the objective is removed (True) while the figure 0.81 survives -- so recording the digest did not weaken the rule that cleans the prose",
+      "digest_check": "compared_here",
       "evidence": "ran",
       "id": "read:report_export",
-      "integrity_hash": "stripped",
+      "integrity_hash": "recorded",
       "parse_check": "absent",
       "surface": "packages/agent/src/dsa_agent/report_export.py"
     },
     {
       "detail": "48 committed exports parsed by class [('json', 40), ('md', 8)]; the parser decides readability, nothing compares it with a stored digest",
+      "digest_check": "none",
       "evidence": "ran",
       "id": "read:consumer",
       "integrity_hash": "absent",
@@ -67,6 +75,7 @@
     "no containment and no tamper resistance: a digest nobody compares is a number, not a control",
     "no claim about the bundle's environment, pinned dependencies or execution trace; this reading examines digests and parse results only",
     "no claim that an absent digest means a corrupt file, and no claim that a parsed file is correct",
+    "one export-side digest is declared rather than compared here: the 40 committed artifact records name files under a gitignored root, so this instrument counts the field and cannot re-open what it names",
     "not_measured is not zero: csv, png and xlsx have no committed export to read",
     "publication_ready is untouched here and keeps its own gate"
   ],
@@ -101,11 +110,12 @@
   "procedure": [
     "Run `python scripts/measure_export_lifecycle.py --record > docs/audit/export-lifecycle.json` in the repository root.",
     "Run `python scripts/measure_export_lifecycle.py --verify` to rebuild every field from the tree and compare it with the record.",
-    "The instrument writes into throwaway temporary directories only; nothing under the repository is written by it."
+    "The instrument writes into throwaway temporary directories only; nothing under the repository is written by it.",
+    "The 40 committed artifact records were backfilled once by `scripts/backfill_artifact_digests.py`, which reads each file it names and prints the digest it computed; the record it writes is the input, and re-running it is what a reader does to check the numbers."
   ],
-  "recorded_at": "2026-11-11T13:46:31Z",
-  "reviewed_commit": "aea6ef17d647",
-  "schema": "export-lifecycle/v1",
+  "recorded_at": "2026-11-14T01:28:45Z",
+  "reviewed_commit": "45c10aba6d08",
+  "schema": "export-lifecycle/v2",
   "summary": {
     "classes_not_measured": [
       "csv",
@@ -115,10 +125,12 @@
     "committed_exports": 48,
     "committed_exports_parsed": 48,
     "events": 6,
-    "events_measured_by_running": 5,
-    "events_recording_a_digest": 1,
+    "events_measured_by_running": 6,
+    "events_recording_a_digest": 5,
     "events_with_a_parse_check": 1,
     "export_side_events": 3,
-    "export_side_events_with_a_digest": 0
-  }
+    "export_side_events_whose_digest_is_compared_here": 2,
+    "export_side_events_with_a_digest": 3
+  },
+  "supersedes": "docs/audit/export-lifecycle-first.json"
 }

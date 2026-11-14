@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Added — every export surface carries a digest of the bytes it wrote (ADR-004)
+
+- `export_artifact` builds one payload, writes it, reads the file back, and raises rather than report a digest
+  the file does not hold. The csv, xlsx and png branches now share that path, so `bytes` is the payload's length
+  rather than a stat taken afterwards, and the output gains `verified`.
+- `save_artifact` does the same and puts the digest in `metadata.sha256`; its output gains `sha256` and `bytes`.
+  This is the field the run record inherits, which is why the case studies' `artifacts.json` records could be
+  brought forward at all.
+- The bundle's `manifest.json` carries a `files` list with one `name`, `sha256` and byte count per archived
+  file, computed from the same payload that `writestr` receives. Assembly moved out of the route into
+  `build_bundle(run_id, entries, root)`, so the digest claim can be exercised without a database; the size limit
+  now counts the running total instead of the buffer's position after the previous file.
+- The plain report export keeps its identifier-stripping rule untouched and returns the digest beside the text:
+  `export_with_digest(source, mode) -> (markdown, sha256)`. Appending the hash to the document was tried first and
+  dropped — the module's own rule removes every 64-hex token it finds, so a trailer would have been stripped by
+  the test that pins the rule, which is the rule working.
+- The 40 entries in the eight committed `case-studies/*/outputs/artifacts.json` records gain `metadata.sha256`.
+  `scripts/backfill_artifact_digests.py` computes them from the files the entries name, refuses to invent one for
+  an absent file, and prints rather than writes: the caller redirects, and `--verify` re-checks all eight records.
+- The export-lifecycle reading is retaken as `export-lifecycle/v2`: **3 of 3 export-side events record a digest**,
+  two of them compared by the instrument itself and the third declared (the records name a gitignored root). The
+  bundle divergence the first pass recorded no longer holds. The first pass stays at
+  `docs/audit/export-lifecycle-first.json` with a `superseded_by` pointer, so a reader can tell a moved count from
+  a moved question. `docs/measurement-basis.md` states both numbers rather than only the exit predicate's.
+
 ### Changed — `profile_dataset` refuses before it reads (ADR-004)
 
 - The tool now refuses a path that is a symlink, not a regular file, or named like a credential

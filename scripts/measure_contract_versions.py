@@ -62,6 +62,11 @@ CHECKS: dict[str, tuple[str, str | None, str]] = {
         "tests/contract/test_execution_boundary_record.py",
         "the test re-runs the instrument and compares the rebuilt token with the recorded one",
     ),
+    "docs/audit/export-lifecycle-first.json": (
+        "record-vs-constant",
+        "tests/contract/test_export_lifecycle_record.py",
+        "the test types the superseded pass's token and asserts the kept file still declares it",
+    ),
     "docs/audit/export-lifecycle.json": (
         "record-vs-constant",
         "tests/contract/test_export_lifecycle_record.py",

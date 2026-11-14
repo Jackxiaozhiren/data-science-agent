@@ -343,40 +343,53 @@ reads it back. Each event is asked two questions — does the record carry a dig
 does a shipped path parse them and fail loudly — and each answer is labelled `ran` or `read`, because
 a claim obtained by running the code and one obtained by reading it are not the same evidence.
 
-### The reading
+### The reading, second pass
 
-**One event in six records a digest, and none of the three export-side events carries one forward.**
-`export_artifact` returns the SHA-256 of the bytes it just wrote, matched against a recomputation;
-`save_artifact` returns id, path, type and metadata and no digest; the 40 entries in the eight
-committed `artifacts.json` records name id, type, path, kind, author and time and no digest; the
-bundle's manifest carries `artifact_root`, `excluded`, `included`, `run_id` and `storage`, with zero
-digest references in the route; and the plain report export *removes* a 64-hex token on purpose,
-which is the rule that module states for itself. A recipient of a bundle can therefore tell which
-names were listed and cannot tell whether the bytes behind a name are the ones that were written.
+The first pass (2026-11-11, `export-lifecycle/v1`) asked whether a digest was recorded and found it
+in one event of six: `export_artifact` returned a SHA-256 and nothing else did. It stays at
+`docs/audit/export-lifecycle-first.json` marked `superseded_by`, and the second reading points back
+at it with `supersedes`, so a reader can see what moved instead of taking the new number's word.
 
-The second question separates even further: **one event in six has a parse check** — the consumer,
-which is every reader after the fact. The writers hash or copy and never re-open what they wrote, and
-the instrument's own read-back is not a shipped check, so it is not counted as one.
+**Three of three export-side events now record a digest.** `export_artifact` writes one payload,
+reads the file back, raises instead of returning a digest the file does not hold, and reports
+`verified`; `save_artifact` does the same and puts the digest in `metadata.sha256`, which is the field
+the run record inherits; the bundle manifest carries a `files` list with one `sha256` and one byte
+count per archived file, taken from the same bytes `writestr` receives; the 40 entries in the eight
+committed `artifacts.json` records each carry `metadata.sha256`; and the plain report export keeps its
+strip rule untouched and returns the digest beside the text through `export_with_digest`, which is
+what lets the rule go on removing 64-hex tokens from prose.
+
+Recording and checking are not the same claim, so the record now carries both. **Two of the three
+export-side events compare the digest here** — the tools against a re-read of the file, the bundle
+against the archive's own bytes. The third is `declared`: the 40 committed records name files under a
+gitignored artifact root, so the field is counted and the bytes behind it are not re-opened by this
+instrument. `scripts/backfill_artifact_digests.py` is what put those 40 digests in place, and it is
+also the check: re-running it against a tree that holds the files reports whether any entry still
+agrees with the bytes it names.
+
+The parse question did not move: **one event in six has a parse check** — the consumer, which is
+every reader after the fact. Re-reading after a write is a writer checking itself, not a consumer
+parsing what it was handed, and the two are not added together.
 
 **Parseability today: 48 of 48 committed exports read back** — 40 JSON parsed and 8 Markdown decoded.
 `csv`, `png` and `xlsx` have no committed export: run artifacts live under a gitignored root, so a
 number there would describe one machine. Those three are recorded `not_measured` with that reason,
 not as zero.
 
-### The divergence this reading makes visible
+### The divergence the first pass recorded
 
-ADR-003's bundle sentence names five elements, artifact hashes among them, and the shipped manifest
-carries none of the five as a field. This section does not claim the other four are absent from the
-bundle — the files a bundle carries may well hold environment and dependencies. It records the
-narrower, checkable fact: no per-file digest reaches the export, so a bundle cannot be checked
-against the run that produced it.
+ADR-003's bundle sentence names five elements, artifact hashes among them, and the manifest the first
+pass read carried none of them as a field. That no longer holds for the digest: `files` names each
+archived file with its SHA-256 and its byte count, so two bundles of different bytes now differ in
+their manifests. This reading says nothing about the other four elements; it records only that the
+one it could check is now present.
 
-### What would count as progress
+### What this reading still does not claim
 
-A digest written at the record event and copied into the manifest, with one reader that compares it,
-would move `export_side_events_with_a_digest` off zero. That is a producer change — `save_artifact`'s
-output model and the bundle route — and ADR-003 keeps S2 work to documents, tests and checklists, so
-it is recorded here as a gap rather than closed by this reading.
+The digests are not signatures. Nobody outside this repository compares them on receipt, so a
+recipient who recomputes one learns that the bytes match the number the server reported, not that the
+server is trustworthy. The 40 declared digests are the weaker case in the same direction: they name
+bytes this tree does not hold, so a reader either has the files or has a number.
 
 ## S2 — the contract-version policy
 
@@ -387,30 +400,34 @@ section takes the second, because the first already has a reading and because a 
 reader meets first. `docs/audit/contract-versions.json` is the register and
 `scripts/measure_contract_versions.py` rebuilds it.
 
-### What the eight readings declare
+### What the nine readings declare
 
-Nine of the fourteen files under `docs/audit/` carry a `recorded_at`: eight readings and this register.
+Ten of the fifteen files under `docs/audit/` carry a `recorded_at`: nine readings and this register.
 The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory exception
-list, a lock-divergence list and an orphan-reads registry — and state no date. Of the eight readings, **four declare a token of their own**:
-`attribution-reading/v1`, `execution-boundary-matrix/v1`, `export-lifecycle/v1` and
-`independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
+list, a lock-divergence list and an orphan-reads registry — and state no date. Of the nine readings,
+**five declare a token of their own**: `attribution-reading/v1`,
+`execution-boundary-matrix/v2`, `export-lifecycle/v1` and `export-lifecycle/v2` (the two passes of one
+surface) and `independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
 `evidence-alignment-frame/v1` as `frame_schema` and nothing about itself. Three declare nothing — both
 authorization-coverage readings and the served-artifact probe, all written before any record carried a
 token.
 
-The five tokens are well-formed and use three different subjects: two end in `-reading`, one in
-`-matrix`, one in `-frame`, one is bare. That is a vocabulary, not a policy — nothing says which
-suffix a new record should take, and nothing says what changing one would mean. **No record carries a
-field stating a bump rule**, which is the gap this item exists to close.
+The six tokens are well-formed and share no vocabulary: `-reading`, `-matrix` and `-frame` each
+appear once, two subjects are bare, and one subject appears at two majors — `export-lifecycle/v1` and
+`export-lifecycle/v2`, because the second pass changed what a consumer's arithmetic would do. That is
+a vocabulary, not a policy — nothing says which suffix a new record should take, and nothing says what
+changing one would mean. **No record carries a field stating a bump rule**, which is the gap this item
+exists to close.
 
 ### What holds a token to the record
 
-Three of the four are compared with something that is not the record itself: the attribution test
+Four of the five are compared with something that is not the record itself: the attribution test
 types both tokens, the boundary test compares a rebuild, and the export-lifecycle test compares the
-record with its instrument's constant. The fourth is decoration — `independent-rerun.json`'s token is
-written by the instrument, carried in the file, and read by its test without an assertion on the
-value. The register records that as `check_kind: none`, and the contract test proves the label by
-reading the consumer and finding the token absent, rather than by trusting the record's own sentence.
+second pass with its instrument's constant and types the first pass's token, so a kept file cannot
+quietly acquire a new one. The fifth carries a token nothing asserts — `independent-rerun.json`, whose
+token is written by the instrument and read by its test without a comparison. The register records it
+as `check_kind: none`, and the contract test proves the label by reading the consumer and finding the
+token absent, rather than by trusting the record's own sentence.
 
 ### The policy, and what enforces it
 
@@ -450,17 +467,17 @@ of records rather than the behaviour they describe; no exit clause names it.
 |---|---|---|
 | Boundary decidability | `docs/audit/execution-boundary.json` | 15 of 15 cells are decided by a request-time check; 0 are undecidable, 6 open and 9 fenced |
 | Attribution completeness | `docs/audit/attribution.json` | 0 of 40 non-passing external-bundle runs carry a stage or cause code, and 0 of 50 tasks carry stage boundaries; the frozen baseline has an empty denominator and is `not_measured` |
-| Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end, but 1 of 6 lifecycle events runs a parse check and 0 of 3 export-side events record a digest; `csv`, `png` and `xlsx` are `not_measured` |
+| Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end; 3 of 3 export-side events record a digest (2 of them compared here, the third declared), 1 of 6 lifecycle events runs a parse check, and `csv`, `png` and `xlsx` are `not_measured` |
 | `matrix_valid` and `publication_ready` never conflated | `packages/evaluation/src/dsa_evaluation/publication.py` | `publication_ready = matrix_valid and scope == "full"`, so a valid matrix is not a publication decision; each of the four readings says in its own `not_claimed` that `publication_ready` keeps its own gate |
 
 The first three clauses are recorded; the fourth holds as a property of the code and of the records'
 own disclaimers. That is not the same as the three being complete. Three gaps were named, and
 ADR-004 took them one at a time. The boundary gap is closed: every cell now names a check that runs
 at request time, and the record's `basis_change` says which cell was re-attributed rather than
-re-worded. Two remain, and both need a producer to write a field before the reading can count it:
-stage and cause codes have to be written before attribution completeness can be computed, and a
-digest on the export side has to be written before parseability is measured anywhere other than at
-the consumer. Neither is closed by this page.
+re-worded. The export gap is closed on the recording side: every export surface writes a digest, and
+the two whose bytes this tree holds also compare it. One remains, and it needs a producer to write a
+field before the reading can count it: stage and cause codes have to be written before attribution
+completeness can be computed. That is P2's work, and this page does not anticipate it.
 
 **The stage is not exited.** Closing one of the three gaps changes one number, and an exit is a
 judgement about all four clauses at once. Four readings are a count of items, not a judgement about

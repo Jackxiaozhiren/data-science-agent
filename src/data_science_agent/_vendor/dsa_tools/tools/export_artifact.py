@@ -52,6 +52,10 @@ class ExportArtifactOutput(BaseModel):
     rows: int = 0
     columns: list[str] = Field(default_factory=list)
     bytes: int = 0
+    #: ADR-004 D3. True when the bytes read back off disk equal the payload this call wrote. A false
+    #: value cannot be returned: the tool raises instead, so a caller never receives a digest of bytes
+    #: the file does not hold.
+    verified: bool = True
 
 
 class ExportArtifactTool(BaseTool[ExportArtifactInput, ExportArtifactOutput]):
@@ -96,7 +100,7 @@ class ExportArtifactTool(BaseTool[ExportArtifactInput, ExportArtifactOutput]):
             dest.resolve().relative_to(root.resolve())
         except ValueError:
             raise ToolExecutionError("Path escapes workspace")
-        rows, cols, nbytes = 0, [], 0
+        rows, cols = 0, []
         if fmt in ("csv", "xlsx"):
             columns = src.get("columns")
             data = src.get("rows")
@@ -110,12 +114,16 @@ class ExportArtifactTool(BaseTool[ExportArtifactInput, ExportArtifactOutput]):
             rows, cols = len(data), list(columns)
             if fmt == "csv":
                 import csv as _csv
+                import io as _io
 
-                with dest.open("w", newline="", encoding="utf-8") as fh:
-                    w = _csv.writer(fh)
-                    w.writerow(cols)
-                    w.writerows(data)
+                text = _io.StringIO(newline="")
+                w = _csv.writer(text)
+                w.writerow(cols)
+                w.writerows(data)
+                payload = text.getvalue().encode("utf-8")
             else:
+                import io as _io
+
                 try:
                     import openpyxl as _oxl
                 except ImportError:
@@ -125,7 +133,9 @@ class ExportArtifactTool(BaseTool[ExportArtifactInput, ExportArtifactOutput]):
                 ws.append(cols)
                 for r in data:
                     ws.append(list(r) if isinstance(r, (list, tuple)) else [r])
-                wb.save(dest)
+                binary = _io.BytesIO()
+                wb.save(binary)
+                payload = binary.getvalue()
         else:  # png
             import base64 as _b64
 
@@ -138,14 +148,24 @@ class ExportArtifactTool(BaseTool[ExportArtifactInput, ExportArtifactOutput]):
                 raise ToolExecutionError("invalid base64 chart payload")
             if raw[:8] != _PNG_MAGIC:
                 raise ToolExecutionError("chart payload is not a PNG")
-            dest.write_bytes(raw)
-            nbytes = len(raw)
-        digest = hashlib.sha256(dest.read_bytes()).hexdigest()
+            payload = raw
+        dest.write_bytes(payload)
+        # ADR-004 D3. The digest is computed from the payload and then checked against the file: a
+        # number derived from what this process meant to write describes an intention, and the
+        # read-back is what makes it a fact about the export.
+        readback = dest.read_bytes()
+        if readback != payload:
+            raise ToolExecutionError(
+                f"wrote {len(payload)} bytes to {name} and read back {len(readback)}; "
+                "refusing to report a digest the file does not hold"
+            )
+        digest = hashlib.sha256(payload).hexdigest()
         return ExportArtifactOutput(
             path=str(dest),
             sha256=digest,
             filename=name,
             rows=rows,
             columns=cols,
-            bytes=nbytes or dest.stat().st_size,
+            bytes=len(payload),
+            verified=True,
         )
