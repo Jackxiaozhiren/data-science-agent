@@ -88,7 +88,7 @@
   },
   "not_claimed": [
     "No causality: a zero-evidence or OOM-killed run is placed at the artifact level from recorded counts, not diagnosed as to why it failed.",
-    "A failure code names a place in the tree that decided the outcome, never a reason for it: `below_pass_mark` says the evaluator scored the run under its own threshold and says nothing about why the score was low.",
+    "A failure code names a place in the tree that decided the outcome, never a reason for it: `score_below_threshold` says the evaluator scored the run under its own threshold and says nothing about why the score was low.",
     "Absolute milliseconds are not comparable with the frozen baseline or with another machine: the baseline README records three different means for the same commit minutes apart.",
     "The tool-time share is a lower bound, not a measurement of tool cost: duration_ms is an integer millisecond, so a sub-millisecond call contributes zero.",
     "Neither recording is a random sample. Both are convenience censuses of what this tree ships.",
@@ -105,7 +105,7 @@
     "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit JSON on stdout; the module never writes a file it has read."
   ],
   "question": "in a deterministic run, what fraction of the clock and which of the failures can be pointed at a named part of the record?",
-  "recorded_at": "2026-11-13T10:23:39Z",
+  "recorded_at": "2026-11-14T01:49:25Z",
   "reviewed_commit": "5cbee4de0906",
   "run_manifest_call_count": 0,
   "run_manifest_commit": "5cbee4de0906",

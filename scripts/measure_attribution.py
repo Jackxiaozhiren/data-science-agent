@@ -66,32 +66,32 @@ CAPTURE_RULE = (
 )
 NOT_CLAIMED = [
     "No causality: a zero-evidence or OOM-killed run is placed at the artifact level from recorded "
-    "counts, not diagnosed as to why it failed.",
+    + "counts, not diagnosed as to why it failed.",
     "A failure code names a place in the tree that decided the outcome, never a reason for it: "
-    "`below_pass_mark` says the evaluator scored the run under its own threshold and says nothing "
-    "about why the score was low.",
+    + "`score_below_threshold` says the evaluator scored the run under its own threshold and says "
+    + "nothing about why the score was low.",
     "Absolute milliseconds are not comparable with the frozen baseline or with another machine: "
-    "the baseline README records three different means for the same commit minutes apart.",
+    + "the baseline README records three different means for the same commit minutes apart.",
     "The tool-time share is a lower bound, not a measurement of tool cost: duration_ms is an "
-    "integer millisecond, so a sub-millisecond call contributes zero.",
+    + "integer millisecond, so a sub-millisecond call contributes zero.",
     "Neither recording is a random sample. Both are convenience censuses of what this tree ships.",
     "Outcome is the evaluator's verdict on artifacts, not the run's status: a run the graph refused "
-    "can still score above the mark. The two columns are counted separately, never added together.",
+    + "can still score above the mark. The two columns are counted separately, never added together.",
     "Nothing here is a penetration result, a latency target, an S2 exit, or a statement about "
-    "publication_ready, which keeps its own gate.",
+    + "publication_ready, which keeps its own gate.",
 ]
 
 PROCEDURE = [
     "Check out the reviewed commit into a clean tree and export its package src roots on PYTHONPATH.",
     "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; `--out` is a top-level flag, "
-    "and the manifest must report llm_mode=stub and call_count=0.",
+    + "and the manifest must report llm_mode=stub and call_count=0.",
     "Run `python benchmarks/external/datascibench/run_eval.py` to re-record the external bundle; it "
-    "is the deterministic local lane and reads the gitignored `.workspace/` in place.",
+    + "is the deterministic local lane and reads the gitignored `.workspace/` in place.",
     "Run `python scripts/measure_attribution.py --capture > tests/fixtures/attribution/frame.json` "
-    "in the repository root to project the run and the two committed recordings.",
+    + "in the repository root to project the run and the two committed recordings.",
     "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build "
-    "the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit "
-    "JSON on stdout; the module never writes a file it has read.",
+    + "the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit "
+    + "JSON on stdout; the module never writes a file it has read.",
 ]
 
 
