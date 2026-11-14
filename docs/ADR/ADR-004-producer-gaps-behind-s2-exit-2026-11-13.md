@@ -1,6 +1,6 @@
 # ADR-004 — The producer changes behind S2's exit
 
-- Status: Accepted on merge (2026-11-13) · decisions D1–D3 are not implemented by this commit, so S2 remains in progress until one re-measurement satisfies D4 · Date: 2026-11-13 · Applies to: the execution boundary of `profile_dataset`, the failure fields of a run record and of the external-benchmark adapter, and the integrity fields of the export surfaces
+- Status: Accepted on merge (2026-11-13) · D1 landed as #191, D2 as #192, D3 as #200 · D4 satisfied on 2026-11-14, when one set of readings met all four predicates and ADR-003's status line moved to `S2 complete` · Date: 2026-11-13 · Applies to: the execution boundary of `profile_dataset`, the failure fields of a run record and of the external-benchmark adapter, and the integrity fields of the export surfaces
 - Related: `docs/ADR/ADR-003-zero-cost-self-hosted-baseline-2026-11-09.md` (S2 row, INV5, Appendix C) · `GOVERNANCE.md` (architecture changes, frozen surfaces) · `docs/measurement-basis.md` (Stage exit) · `docs/audit/execution-boundary.json` · `docs/audit/attribution.json` · `docs/audit/export-lifecycle.json`
 
 ## Problem

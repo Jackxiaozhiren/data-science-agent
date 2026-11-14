@@ -43,6 +43,12 @@ from dsa_evaluation.external_benchmark import (
     assert_gold_isolation,
     classify_outcome,
 )
+from dsa_evaluation.failure_codes import (
+    FailureCode,
+    FailureStage,
+    assert_known,
+    last_execution_stage,
+)
 
 __all__ = [
     "DataSciBenchAdapter",
@@ -263,6 +269,7 @@ class DataSciBenchAdapter:
                 agent_view=task.agent_view(),
                 status="skipped_unsupported",
                 error=task.unsupported_reason,
+                failure_code=FailureCode.SKIPPED_UNSUPPORTED.value,
             )
         view: AgentTaskView = task.agent_view()
         assert_gold_isolation(view)
@@ -275,9 +282,50 @@ class DataSciBenchAdapter:
                 agent_view=view,
                 status="execution_error",
                 error=str(exc),
+                failure_code=FailureCode.ADAPTER_EXECUTION_ERROR.value,
             )
         self._materialize_run_dir(run)
         return run
+
+    def failure_fields(self, run: ExternalRun, evaluation: ExternalEvaluation) -> dict[str, str]:
+        """ADR-004 D2 — where a non-passing run stopped, in the closed vocabulary.
+
+        A pass returns no fields, so an empty mapping and "this run passed" are one statement. Every
+        other path returns both members and passes them through :func:`assert_known`, which refuses a
+        value that did not come from the enumerations. ``failure_stage`` is a location: for a run that
+        did not complete it is the last interval the agent recorded, and for a completed run that was
+        scored below the mark it is ``evaluation`` — the place that decided the outcome.
+        """
+        if evaluation.outcome is TaskOutcome.PASSED:
+            return {}
+        stage = last_execution_stage(run.stage_timings)
+        if run.status == "skipped_unsupported":
+            stage, code = FailureStage.ADAPTER.value, FailureCode.SKIPPED_UNSUPPORTED.value
+        elif run.status == "execution_error" or evaluation.outcome is TaskOutcome.EXECUTION_ERROR:
+            stage, code = FailureStage.ADAPTER.value, FailureCode.ADAPTER_EXECUTION_ERROR.value
+        elif run.failure_code:
+            # The stage the graph wrote is a better location than the last interval on the clock: a
+            # hard check decided in validation is still that branch's decision after synthesis and
+            # reporting have run.
+            stage = run.failure_stage or stage
+            code = run.failure_code
+        elif run.status != "COMPLETED":
+            code = FailureCode.STAGE_UNRECORDED.value
+        elif evaluation.score is None:
+            stage, code = (
+                FailureStage.EVALUATION.value,
+                FailureCode.EVALUATOR_RETURNED_NO_SCORE.value,
+            )
+        elif run.report is not None and not run.report.strip():
+            stage, code = FailureStage.REPORTING.value, FailureCode.EMPTY_REPORT.value
+        elif not run.tool_calls:
+            stage, code = FailureStage.ANALYSIS.value, FailureCode.NO_TOOL_CALLS.value
+        elif not run.evidence:
+            stage, code = FailureStage.ANALYSIS.value, FailureCode.NO_EVIDENCE.value
+        else:
+            stage, code = FailureStage.EVALUATION.value, FailureCode.SCORE_BELOW_THRESHOLD.value
+        assert_known(stage, code)
+        return {"failure_stage": stage, "failure_code": code}
 
     def evaluate(self, run: ExternalRun) -> ExternalEvaluation:
         """Outcome for one run — execution lane vs GT lane (§89).

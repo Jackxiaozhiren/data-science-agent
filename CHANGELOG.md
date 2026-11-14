@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+### Added — every export surface carries a digest of the bytes it wrote (ADR-004)
+
+- `export_artifact` builds one payload, writes it, reads the file back, and raises rather than report a digest
+  the file does not hold. The csv, xlsx and png branches now share that path, so `bytes` is the payload's length
+  rather than a stat taken afterwards, and the output gains `verified`.
+- `save_artifact` does the same and puts the digest in `metadata.sha256`; its output gains `sha256` and `bytes`.
+  This is the field the run record inherits, which is why the case studies' `artifacts.json` records could be
+  brought forward at all.
+- The bundle's `manifest.json` carries a `files` list with one `name`, `sha256` and byte count per archived
+  file, computed from the same payload that `writestr` receives. Assembly moved out of the route into
+  `build_bundle(run_id, entries, root)`, so the digest claim can be exercised without a database; the size limit
+  now counts the running total instead of the buffer's position after the previous file.
+- The plain report export keeps its identifier-stripping rule untouched and returns the digest beside the text:
+  `export_with_digest(source, mode) -> (markdown, sha256)`. Appending the hash to the document was tried first and
+  dropped — the module's own rule removes every 64-hex token it finds, so a trailer would have been stripped by
+  the test that pins the rule, which is the rule working.
+- The 40 entries in the eight committed `case-studies/*/outputs/artifacts.json` records gain `metadata.sha256`.
+  `scripts/backfill_artifact_digests.py` computes them from the files the entries name, refuses to invent one for
+  an absent file, and prints rather than writes: the caller redirects, and `--verify` re-checks all eight records.
+- The export-lifecycle reading is retaken as `export-lifecycle/v2`: **3 of 3 export-side events record a digest**,
+  two of them compared by the instrument itself and the third declared (the records name a gitignored root). The
+  bundle divergence the first pass recorded no longer holds. The first pass stays at
+  `docs/audit/export-lifecycle-first.json` with a `superseded_by` pointer, so a reader can tell a moved count from
+  a moved question. `docs/measurement-basis.md` states both numbers rather than only the exit predicate's.
+
+### Added — a run records where it was, and why it stopped (ADR-004)
+
+- `AnalysisState` now carries `stage_timings`: one interval per status, opened when the graph enters a
+  stage and closed when it leaves. The external benchmark's `ExternalRun` carries the same list, read
+  from the `raw_state` the SDK already returns — `Analysis` itself is unchanged, because it is a stable
+  surface and does not grow a field per record column. A recorded run can now be placed in time instead
+  of having the placement inferred from its output.
+- A run that does not deliver now records `failure_stage` and `failure_code`, both drawn from a
+  vocabulary closed in `dsa_evaluation.failure_codes`. The code is written by the branch that refused
+  the run; `assert_known` refuses any value that did not come from the enumeration, and a test reads
+  `graph.py`'s assignments so a code added there without being declared fails CI. A run that delivers
+  carries neither field, and a budget guard that fired and was later satisfied leaves nothing behind.
+- This is additive: existing keys, shapes and call signatures are unchanged, and a state built without
+  the graph reads as "no stages recorded" rather than as a run that spent no time.
+- The attribution reading is retaken as its second record: every task carries stage boundaries and
+  every non-passing external run carries a stage and a code. Two things moved with the re-record, and
+  `basis_change` states both — the count now requires a vocabulary member rather than a key's presence,
+  and the external bundle holds fewer supported tasks than the first recording did.
+
 ### Changed — `profile_dataset` refuses before it reads (ADR-004)
 
 - The tool now refuses a path that is a symlink, not a regular file, or named like a credential

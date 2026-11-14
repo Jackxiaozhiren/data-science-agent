@@ -139,6 +139,13 @@ class ExternalRun(BaseModel):
     tokens_in: int | None = None
     tokens_out: int | None = None
     error: str | None = None
+    #: The agent's own stage intervals, copied rather than re-derived. Empty is a fact about this
+    #: runner (it recorded none), not about the task.
+    stage_timings: list[dict[str, Any]] = Field(default_factory=list)
+    #: ADR-004 D2. Both are members of a vocabulary closed in ``dsa_evaluation.failure_codes``; the
+    #: adapter fills them only for a run that did not pass, so an empty pair means "this passed".
+    failure_stage: str | None = None
+    failure_code: str | None = None
 
 
 class ExternalEvaluation(BaseModel):
@@ -194,6 +201,40 @@ def _as_seconds(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _stage_timings(stage_timings: Any) -> list[dict[str, Any]]:
+    """Copy the agent's stage intervals into the run record without inventing any.
+
+    A runner that records none leaves this list empty, and the failure then reads ``unrecorded``
+    rather than being placed at whichever stage a caller guesses. ``mode="json"`` keeps the
+    timestamps strings, so the record stays JSON-serialisable end to end.
+    """
+    out: list[dict[str, Any]] = []
+    for item in stage_timings or []:
+        if isinstance(item, dict):
+            out.append(item)
+        elif hasattr(item, "model_dump"):
+            out.append(item.model_dump(mode="json"))
+        elif hasattr(item, "__dict__"):
+            out.append(dict(vars(item)))
+    return out
+
+
+def _record_fields(result: Any) -> tuple[list[dict[str, Any]], str | None, str | None]:
+    """The stage intervals and failure pair from the run record the SDK kept.
+
+    ``Analysis`` is a stable surface and does not grow a field per record column, so the three values
+    are read from ``raw_state`` — the ``AnalysisState`` the SDK already carries. A result without one
+    yields the empty triple, which the adapter reports as an unrecorded location rather than filling
+    in a plausible stage.
+    """
+    state = getattr(result, "raw_state", None) or result
+    return (
+        _stage_timings(getattr(state, "stage_timings", None)),
+        getattr(state, "failure_stage", None),
+        getattr(state, "failure_code", None),
+    )
 
 
 def _evidence_to_dicts(evidence: Any) -> list[dict[str, Any]]:
@@ -312,6 +353,7 @@ class AgentBackedRunner:
         assert_gold_isolation(view)
         agent = self._build_agent()
         result = agent.analyze_sync(view.dataset_path, view.question)
+        stage_timings, failure_stage, failure_code = _record_fields(result)
         return ExternalRun(
             task_id=task.task_id,
             benchmark_name=task.benchmark_name,
@@ -322,4 +364,7 @@ class AgentBackedRunner:
             tool_calls=list(getattr(result, "tool_calls", []) or []),
             report=getattr(result, "report_markdown", None),
             latency_s=_as_seconds(getattr(result, "elapsed_s", None)),
+            stage_timings=stage_timings,
+            failure_stage=failure_stage,
+            failure_code=failure_code,
         )
