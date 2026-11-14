@@ -1,26 +1,61 @@
 {
   "basis": "docs/measurement-basis.md#s2--latency-and-failure-attribution",
+  "basis_change": [
+    "A cause field used to count when its key was present. This reading counts a value that belongs to the closed vocabulary, so a null, an empty string or an invented name records no location and is not counted.",
+    "The latency rows now carry the run's own stage intervals (ADR-004 D2). The first reading had no such field to find, which is why it recorded 0 of 50.",
+    "The external bundle was re-recorded on the reviewed commit: 38 supported tasks and 33 non-passing runs, where the first recording held 45 and 40. The denominator moved with the recording, not with the code, and this line is the only place that says so."
+  ],
   "capture_rule": "one local 50-task deterministic run plus a census of both deterministic recordings already committed to the tree; no random draw, no exclusion by outcome, no cross-run averaging",
   "environment": {
     "platform": "macOS-27.2.1-arm64-arm-64bit",
     "python_version": "3.12.14 (main, Aug 12 2026, 13:57:54) [Clang 21.0.0 (clang-2100.1.1.101)]"
   },
+  "failure_vocabulary": {
+    "codes": [
+      "adapter_execution_error",
+      "empty_report",
+      "evaluator_returned_no_score",
+      "no_evidence",
+      "no_tool_calls",
+      "report_not_persisted",
+      "run_not_completed",
+      "score_below_threshold",
+      "skipped_unsupported",
+      "stage_unrecorded",
+      "step_budget_exceeded",
+      "tool_budget_exceeded",
+      "validation_hard_fail"
+    ],
+    "stages": [
+      "adapter",
+      "analysis",
+      "data_profiling",
+      "evaluation",
+      "modeling",
+      "planning",
+      "reporting",
+      "synthesis",
+      "understanding",
+      "unrecorded",
+      "validation"
+    ]
+  },
   "failures": {
     "external_bundle": {
-      "artifact_level": 11,
+      "artifact_level": 16,
       "artifact_signals": {
-        "no_evidence": 10,
-        "run_did_not_complete": 1
+        "run_did_not_complete": 16
       },
-      "free_text_errors": 1,
-      "n_runs": 45,
-      "non_passing": 40,
-      "outcome_level": 40,
-      "partial_credit": 8,
+      "failed_status_but_scored_passing": 4,
+      "free_text_errors": 0,
+      "n_runs": 38,
+      "non_passing": 33,
+      "outcome_level": 33,
+      "partial_credit": 10,
       "per_task_latency_present": 0,
-      "stage_level": 0,
-      "unplaced": 29,
-      "wall_s": 144.2
+      "stage_level": 33,
+      "unplaced": 17,
+      "wall_s": 104.6
     },
     "frozen_baseline": {
       "non_passing": 0,
@@ -30,49 +65,52 @@
     }
   },
   "frame_path": "tests/fixtures/attribution/frame.json",
-  "frame_schema": "attribution-frame/v1",
-  "frame_sha256": "f933f290d77c3be879fe250efbfefc03dcca537d945c0c0bc91fe7e03bfa6603",
+  "frame_schema": "attribution-frame/v2",
+  "frame_sha256": "2e28bd92f9e9f4daa9ddae7541af60c631e908c613486820ec118b5f453a0586",
   "latency": {
-    "elapsed_ms_total": 4110,
-    "outside_window_ms_total": 1168,
+    "elapsed_ms_total": 3247,
+    "outside_window_ms_total": 730,
     "per_task_tool_share": {
-      "max": 0.9493,
-      "mean": 0.4626,
-      "median": 0.3536,
+      "max": 0.9529,
+      "mean": 0.4542,
+      "median": 0.3709,
       "min": 0.0
     },
     "tasks": 50,
     "tasks_outside_run_window": 1,
     "tasks_over_tool_budget": 0,
     "tasks_with_residual_ms": 50,
-    "tasks_with_stage_boundaries": 0,
+    "tasks_with_stage_boundaries": 50,
     "tool_calls": 249,
     "tool_failures": 0,
-    "tool_ms_total": 2382,
-    "zero_duration_calls": 168
+    "tool_ms_total": 2023,
+    "zero_duration_calls": 181
   },
   "not_claimed": [
     "No causality: a zero-evidence or OOM-killed run is placed at the artifact level from recorded counts, not diagnosed as to why it failed.",
-    "No stage or cause codes are invented from prose, tool names or the evaluator's score; only closed-code fields a record actually carries would count, and none of these carry one.",
+    "A failure code names a place in the tree that decided the outcome, never a reason for it: `score_below_threshold` says the evaluator scored the run under its own threshold and says nothing about why the score was low.",
     "Absolute milliseconds are not comparable with the frozen baseline or with another machine: the baseline README records three different means for the same commit minutes apart.",
     "The tool-time share is a lower bound, not a measurement of tool cost: duration_ms is an integer millisecond, so a sub-millisecond call contributes zero.",
     "Neither recording is a random sample. Both are convenience censuses of what this tree ships.",
+    "Outcome is the evaluator's verdict on artifacts, not the run's status: a run the graph refused can still score above the mark. The two columns are counted separately, never added together.",
     "Nothing here is a penetration result, a latency target, an S2 exit, or a statement about publication_ready, which keeps its own gate."
   ],
   "pass_mark": 0.5,
   "pass_mark_source": "benchmarks/external/datascibench/adapter.py (score >= 0.5)",
   "procedure": [
     "Check out the reviewed commit into a clean tree and export its package src roots on PYTHONPATH.",
-    "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; the manifest must report llm_mode=stub and call_count=0.",
+    "Run `dsa --limit 50 --out <repo>/artifacts/bench-attribution`; `--out` is a top-level flag, and the manifest must report llm_mode=stub and call_count=0.",
+    "Run `python benchmarks/external/datascibench/run_eval.py` to re-record the external bundle; it is the deterministic local lane and reads the gitignored `.workspace/` in place.",
     "Run `python scripts/measure_attribution.py --capture > tests/fixtures/attribution/frame.json` in the repository root to project the run and the two committed recordings.",
     "Run `python scripts/measure_attribution.py --record > docs/audit/attribution.json` to build the dated reading, then `--verify` to rebuild it from the frame alone. Both commands emit JSON on stdout; the module never writes a file it has read."
   ],
   "question": "in a deterministic run, what fraction of the clock and which of the failures can be pointed at a named part of the record?",
-  "recorded_at": "2026-11-11T12:14:17Z",
-  "reviewed_commit": "a68c04b1cdb3",
+  "recorded_at": "2026-11-14T02:39:47Z",
+  "reviewed_commit": "5cbee4de0906",
   "run_manifest_call_count": 0,
-  "run_manifest_commit": "a68c04b1cdb3",
+  "run_manifest_commit": "5cbee4de0906",
   "run_manifest_llm_mode": "stub",
-  "schema": "attribution-reading/v1",
+  "schema": "attribution-reading/v2",
+  "supersedes": "docs/audit/attribution-first.json",
   "window_resolution_ms": 10
 }

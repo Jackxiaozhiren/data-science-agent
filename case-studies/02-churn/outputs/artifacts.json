@@ -4,7 +4,8 @@
     "type": "report",
     "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/report.md",
     "metadata": {
-      "kind": "markdown"
+      "kind": "markdown",
+      "sha256": "d70caf0ee064ff891f3f03449639d475f3a9d26342a607101d8618b6e3041765"
     },
     "created_by": "agent",
     "created_at": "2026-08-22 04:21:59.789504+00:00"
@@ -14,7 +15,8 @@
     "type": "report",
     "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/experiment.json",
     "metadata": {
-      "kind": "experiment"
+      "kind": "experiment",
+      "sha256": "de22b775c53f9d5ce29ea2ffcdda20cb8304b1890bd87cb63c4844ed42bbe0db"
     },
     "created_by": "agent",
     "created_at": "2026-08-22 04:21:59.789508+00:00"
@@ -24,7 +26,8 @@
     "type": "evidence",
     "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/evidence_graph.json",
     "metadata": {
-      "kind": "evidence_graph"
+      "kind": "evidence_graph",
+      "sha256": "465afcadde556098d8b09ed36f3c46c1fdaa9e91f79d85e0c4a0e43659d18b2c"
     },
     "created_by": "agent",
     "created_at": "2026-08-22 04:21:59.789753+00:00"
@@ -34,7 +37,8 @@
     "type": "reproduce",
     "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/reproduce.sh",
     "metadata": {
-      "kind": "reproduce"
+      "kind": "reproduce",
+      "sha256": "4ba1fc80296537384ff16f396aa1cc61a2c9b0dd2834278ed21b6f69e99571fa"
     },
     "created_by": "agent",
     "created_at": "2026-08-22 04:21:59.794880+00:00"
@@ -44,7 +48,8 @@
     "type": "notebook",
     "path": "/Users/jackson/Data agent/artifacts/reports/run-44043c60a0/analysis.ipynb",
     "metadata": {
-      "kind": "notebook"
+      "kind": "notebook",
+      "sha256": "97875dff60870335d36b3cff6e7f5dccd2249252c5dfc0269e78369587f38ce2"
     },
     "created_by": "agent",
     "created_at": "2026-08-22 04:21:59.794885+00:00"

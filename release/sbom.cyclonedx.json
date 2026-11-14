@@ -1569,9 +1569,9 @@
     },
     {
       "name": "soupsieve",
-      "version": "2.9.2",
+      "version": "4.0",
       "licenses": [],
-      "purl": "pkg:pypi/soupsieve@2.9.2",
+      "purl": "pkg:pypi/soupsieve@4.0",
       "source": "https://pypi.org/simple"
     },
     {

@@ -47,6 +47,9 @@ apps/vscode/node_modules/
 
 # DataSciBench adapter: upstream clone + gated GT never committed (§23)
 benchmarks/external/datascibench/.workspace/
+# The same path as a symlink to a copy beside the worktree: the trailing slash above only
+# matches a directory, so the link form would otherwise be committed pointing at one machine.
+benchmarks/external/datascibench/.workspace
 # GT-run checkpoint (resume state; canonical artifact is results/raw_runs.json)
 benchmarks/external/datascibench/results/raw_runs.partial.jsonl
 
