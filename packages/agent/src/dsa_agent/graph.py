@@ -592,17 +592,17 @@ async def run_analysis(
     has_hard_fail = any(
         not r.passed for r in state.validation_results if r.check in HARD_FAIL_CHECKS
     )
-    delivered = not (has_hard_fail or report_unpersisted)
+    blocking = has_hard_fail or report_unpersisted
     if has_hard_fail and not report_unpersisted:
         # The critic is where a hard check is decided, even though synthesis and reporting ran
         # afterwards: the location is the branch that refused the result, not the last stage the
         # clock happened to reach.
         state.failure_stage = "validation"
         state.failure_code = "validation_hard_fail"
-    if delivered:
+    if not blocking:
         # A budget guard that fired and was later satisfied must not leave a code on a success.
         state.failure_stage = None
         state.failure_code = None
-    state.enter_stage(AnalysisStatus.FAILED if not delivered else AnalysisStatus.COMPLETED)
+    state.enter_stage(AnalysisStatus.FAILED if blocking else AnalysisStatus.COMPLETED)
     state.close_stage()
     return state
