@@ -80,8 +80,13 @@ with partial.open("a", encoding="utf-8") as ckpt:
             "latency_s": run.latency_s,
             "n_evidence": len(run.evidence),
             "n_tool_calls": len(run.tool_calls),
+            "n_stages": len(run.stage_timings),
             "report_chars": len(run.report or ""),
             "error": (run.error or "")[:300] or None,
+            # ADR-004 D2: both fields come from the adapter's closed vocabulary, and both are absent
+            # on a pass. They are written for every recorded task, not only the failing ones, so a
+            # missing pair is a fact about that task rather than about the field's presence.
+            **adapter.failure_fields(run, ev),
         }
         records.append(rec)
         ckpt.write(json.dumps(rec, ensure_ascii=False, default=_json_default) + "\n")

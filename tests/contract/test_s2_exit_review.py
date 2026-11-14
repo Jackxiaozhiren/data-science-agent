@@ -116,7 +116,10 @@ def test_attribution_gap_numbers_come_from_the_record() -> None:
     latency = record["latency"]
     frozen = record["failures"]["frozen_baseline"]
     review = _review()
-    assert external["stage_level"] == 0
+    # ADR-004 D2 moved this number from 0. What the review must keep doing is quoting the record;
+    # pinning the gap open would make the page fail at the moment the gap closed, which is the
+    # opposite of what an exit review is for. Whether the number counts as closed is D4's judgement.
+    assert external["stage_level"] <= external["non_passing"]
     assert frozen["non_passing"] == 0
     assert f"{external['stage_level']} of {external['non_passing']}" in review
     assert f"{latency['tasks_with_stage_boundaries']} of {latency['tasks']}" in review
