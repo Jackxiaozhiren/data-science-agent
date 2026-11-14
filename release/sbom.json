@@ -1,6 +1,6 @@
 {
   "version": "4.6.0",
-  "generated": "2026-11-14T04:13:28.027161+00:00",
+  "generated": "2026-11-14T04:51:34.780737+00:00",
   "components": [
     {
       "package": "aiosqlite",
@@ -340,10 +340,10 @@
     },
     {
       "package": "fastapi",
-      "version": "0.162.0",
+      "version": "0.162.3",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/fastapi@0.162.0"
+      "purl": "pkg:pypi/fastapi@0.162.3"
     },
     {
       "package": "fastjsonschema",
@@ -613,10 +613,10 @@
     },
     {
       "package": "jupyterlab",
-      "version": "4.6.5",
+      "version": "4.6.6",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/jupyterlab@4.6.5"
+      "purl": "pkg:pypi/jupyterlab@4.6.6"
     },
     {
       "package": "jupyterlab-pygments",
@@ -641,10 +641,10 @@
     },
     {
       "package": "langchain-core",
-      "version": "1.7.4",
+      "version": "1.7.7",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langchain-core@1.7.4"
+      "purl": "pkg:pypi/langchain-core@1.7.7"
     },
     {
       "package": "langchain-protocol",
@@ -655,10 +655,10 @@
     },
     {
       "package": "langgraph",
-      "version": "1.2.19",
+      "version": "1.2.20",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/langgraph@1.2.19"
+      "purl": "pkg:pypi/langgraph@1.2.20"
     },
     {
       "package": "langgraph-checkpoint",
@@ -760,10 +760,10 @@
     },
     {
       "package": "mkdocs-material",
-      "version": "9.8.0",
+      "version": "9.8.1",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/mkdocs-material@9.8.0"
+      "purl": "pkg:pypi/mkdocs-material@9.8.1"
     },
     {
       "package": "mkdocs-material-extensions",
@@ -1026,17 +1026,17 @@
     },
     {
       "package": "pydantic",
-      "version": "2.14.2",
+      "version": "2.14.3",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pydantic@2.14.2"
+      "purl": "pkg:pypi/pydantic@2.14.3"
     },
     {
       "package": "pydantic-core",
-      "version": "2.50.2",
+      "version": "2.50.4",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/pydantic-core@2.50.2"
+      "purl": "pkg:pypi/pydantic-core@2.50.4"
     },
     {
       "package": "pydantic-settings",
@@ -1201,10 +1201,10 @@
     },
     {
       "package": "ruff",
-      "version": "0.17.3",
+      "version": "0.17.4",
       "license": "Unknown",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/ruff@0.17.3"
+      "purl": "pkg:pypi/ruff@0.17.4"
     },
     {
       "package": "scikit-learn",
@@ -1250,10 +1250,10 @@
     },
     {
       "package": "sqlalchemy",
-      "version": "2.1.6",
+      "version": "2.1.8",
       "license": "MIT",
       "source": "https://pypi.org/simple",
-      "purl": "pkg:pypi/sqlalchemy@2.1.6"
+      "purl": "pkg:pypi/sqlalchemy@2.1.8"
     },
     {
       "package": "stack-data",
