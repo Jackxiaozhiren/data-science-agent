@@ -44,18 +44,30 @@
     "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
   ],
   "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
-  "recorded_at": "2026-11-13T07:08:25Z",
+  "recorded_at": "2026-11-14T02:40:23Z",
   "records": [
     {
       "check_kind": "record-vs-constant",
       "checked_by": "tests/contract/test_attribution_record.py",
       "declared_frame_schema": "attribution-frame/v1",
       "declared_schema": "attribution-reading/v1",
-      "detail": "the test types both tokens and compares the reading and its frame with them",
+      "detail": "the test types the superseded pass's token and its two zero counts",
       "effective_version": "v1",
-      "path": "docs/audit/attribution.json",
+      "path": "docs/audit/attribution-first.json",
       "pre_policy": true,
       "recorded_at": "2026-11-11T12:14:17Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "record-vs-constant",
+      "checked_by": "tests/contract/test_attribution_record.py",
+      "declared_frame_schema": "attribution-frame/v2",
+      "declared_schema": "attribution-reading/v2",
+      "detail": "the test types both tokens and compares the reading and its frame with them",
+      "effective_version": "v2",
+      "path": "docs/audit/attribution.json",
+      "pre_policy": false,
+      "recorded_at": "2026-11-14T02:39:47Z",
       "states_bump_rule": false
     },
     {
@@ -103,7 +115,7 @@
       "effective_version": "v2",
       "path": "docs/audit/execution-boundary.json",
       "pre_policy": false,
-      "recorded_at": "2026-11-13T07:08:18Z",
+      "recorded_at": "2026-11-14T02:32:35Z",
       "states_bump_rule": false
     },
     {
@@ -111,11 +123,23 @@
       "checked_by": "tests/contract/test_export_lifecycle_record.py",
       "declared_frame_schema": null,
       "declared_schema": "export-lifecycle/v1",
-      "detail": "the test compares the record with the instrument's own SCHEMA constant",
+      "detail": "the test types the superseded pass's token and asserts the kept file still declares it",
       "effective_version": "v1",
-      "path": "docs/audit/export-lifecycle.json",
+      "path": "docs/audit/export-lifecycle-first.json",
       "pre_policy": true,
       "recorded_at": "2026-11-11T13:46:31Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "record-vs-constant",
+      "checked_by": "tests/contract/test_export_lifecycle_record.py",
+      "declared_frame_schema": null,
+      "declared_schema": "export-lifecycle/v2",
+      "detail": "the test compares the record with the instrument's own SCHEMA constant",
+      "effective_version": "v2",
+      "path": "docs/audit/export-lifecycle.json",
+      "pre_policy": false,
+      "recorded_at": "2026-11-14T02:32:37Z",
       "states_bump_rule": false
     },
     {
@@ -143,22 +167,22 @@
       "states_bump_rule": false
     }
   ],
-  "reviewed_commit": "0d4c0a730d3c",
+  "reviewed_commit": "7e63717512be",
   "schema": "contract-versions/v1",
   "scope": {
     "gate_inputs": 5,
-    "readings": 8,
+    "readings": 10,
     "registers": 1
   },
   "summary": {
     "declaring_none": 3,
     "declaring_only_input_schema": 1,
-    "declaring_own_schema": 4,
-    "own_tokens_checked": 3,
+    "declaring_own_schema": 6,
+    "own_tokens_checked": 5,
     "own_tokens_unchecked": 1,
     "policy_violations": 0,
     "pre_policy": 7,
-    "records": 8,
+    "records": 10,
     "records_carrying_a_bump_rule": 0
   }
 }

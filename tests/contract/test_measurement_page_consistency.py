@@ -73,8 +73,12 @@ def test_the_intro_counts_the_sections_it_has() -> None:
 
 def test_the_adr_status_counts_the_same_sections() -> None:
     status = _text(ADR).splitlines()[2]
-    readings = re.search(r"S2 in progress \((\w+) readings?:", status)
+    readings = re.search(r"S2 (in progress|complete) \((\w+) readings?:", status)
     remaining = re.search(r"(\w+) items? remaining", status)
     assert readings and remaining, status
-    assert WORDS[readings.group(1)] == len(_sections()), (status, _sections())
-    assert WORDS[readings.group(1)] + WORDS[remaining.group(1)] == WORDS["four"], status
+    assert WORDS[readings.group(2)] == len(_sections()), (status, _sections())
+    assert WORDS[readings.group(2)] + WORDS[remaining.group(1)] == WORDS["four"], status
+    # The state word is not a second opinion: it must agree with what the page itself declares, so a
+    # status line left at "in progress" after the review says "the stage is exited" fails here.
+    declared = "the stage is exited" in re.sub(r"\s+", " ", _text(PAGE)).lower()
+    assert (readings.group(1) == "complete") == declared, (status, declared)

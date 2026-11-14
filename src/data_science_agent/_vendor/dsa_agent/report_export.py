@@ -529,6 +529,21 @@ def export_markdown(source: Any, mode: str = "audited") -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def export_with_digest(source: Any, mode: str = "audited") -> tuple[str, str]:
+    """The rendered markdown and the SHA-256 of those exact bytes.
+
+    ADR-004 D3 asks the export side to carry a digest without weakening the rule that removes trace
+    material from a plain document. Returning the pair — instead of appending the hash to the text —
+    is what keeps both true: ``strip_identifiers`` still removes every 64-hex token it sees, and the
+    caller that hands a file to someone can put the digest in a header or beside it.
+
+    It is not a signature. Nobody verifies it on receipt, and a recipient who recomputes it learns
+    that the bytes match the number the server reported, not that the server is trustworthy.
+    """
+    text = export_markdown(source, mode)
+    return text, hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 _CSS = (
     "body{font:15px/1.6 system-ui,sans-serif;margin:2rem auto;max-width:46rem;color:#18181b;"
     "padding:0 1rem}h1{font-size:1.5rem;margin-bottom:.25rem}h2{font-size:1.05rem;"
