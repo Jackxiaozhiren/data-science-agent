@@ -46,7 +46,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "export-lifecycle/v2"
 #: The tree this reading describes. Measured against the merge commit of the previous section.
-REVIEWED_COMMIT = "45c10aba6d08"
+REVIEWED_COMMIT = "68ee52575d9c"
 
 EXPORT_TOOL = ROOT / "packages/tools/src/dsa_tools/tools/export_artifact.py"
 SAVE_TOOL = ROOT / "packages/tools/src/dsa_tools/tools/save_artifact.py"

@@ -44,7 +44,7 @@
     "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
   ],
   "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
-  "recorded_at": "2026-11-14T01:30:06Z",
+  "recorded_at": "2026-11-14T01:32:23Z",
   "records": [
     {
       "check_kind": "record-vs-constant",
@@ -127,7 +127,7 @@
       "effective_version": "v2",
       "path": "docs/audit/export-lifecycle.json",
       "pre_policy": false,
-      "recorded_at": "2026-11-14T01:28:45Z",
+      "recorded_at": "2026-11-14T01:32:23Z",
       "states_bump_rule": false
     },
     {
