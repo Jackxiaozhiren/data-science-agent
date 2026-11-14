@@ -2,8 +2,8 @@
   "schema": "execution-boundary-matrix/v2",
   "reading": 2,
   "basis_change": "the first reading attributed profile_dataset's process-spawn cell to the absence of a process import, while the format allowlist was already deciding which reader a request could reach; it is re-attributed here rather than re-worded. The write and credential cells gained a check in the same change, so no cell is now decided by absence. The first reading's counts are kept in docs/measurement-basis.md and are not restated here.",
-  "recorded_at": "2026-11-13T07:08:18Z",
-  "reviewed_commit": "ab958723f7e8",
+  "recorded_at": "2026-11-14T02:32:35Z",
+  "reviewed_commit": "7e63717512be",
   "question": "for each surface that accepts model-authored input, is the capability decided by a check that runs at request time?",
   "verdict_rule": "the last check to run decides the cell; a capability with no request-time check is recorded undecidable even when today's code does not exercise it",
   "surfaces": [
