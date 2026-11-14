@@ -13,6 +13,10 @@ Three failure modes are worth guarding here, each because it already happened in
 
 The ADR divergence is pinned from both sides: the quoted phrase must still appear in the ADR, and the
 manifest key list the reading reports must still be the one the record carries.
+
+The second pass adds one more thing to guard: the difference between "the record names a hash" and
+"this instrument compared it with bytes". A record that collapsed the two would let a declared digest
+read as a checked one, which is the failure ADR-004's negative evidence names.
 """
 
 from __future__ import annotations
@@ -54,6 +58,14 @@ DISCLAIMERS = (
     "publication_ready",
 )
 
+#: What each export-side event claims, pinned: a digest that moved into a compared column is a
+#: change to the reading and has to be visible in this test rather than inferred from a summary.
+EXPORT_SIDE_CHECKS = {
+    "record:artifacts_json": "declared",
+    "export:bundle": "compared_here",
+    "read:report_export": "compared_here",
+}
+
 
 def test_the_record_speaks_for_one_commit() -> None:
     assert RECORD["schema"] == lifecycle.SCHEMA
@@ -75,7 +87,8 @@ def test_the_events_are_the_lifecycle_in_order() -> None:
 
 def test_every_event_is_answered_and_every_surface_exists() -> None:
     for event in RECORD["events"]:
-        assert event["integrity_hash"] in {"recorded", "absent", "stripped"}, event["id"]
+        assert event["integrity_hash"] in {"recorded", "absent"}, event["id"]
+        assert event["digest_check"] in {"compared_here", "declared", "none"}, event["id"]
         assert event["parse_check"] in {"present", "absent"}, event["id"]
         assert event["evidence"] in {"ran", "read"}, event["id"]
         assert event["detail"].strip(), event["id"]
@@ -95,6 +108,11 @@ def test_the_summary_is_arithmetic_over_the_events() -> None:
         1
         for event in events
         if event["id"] in export_side and event["integrity_hash"] == "recorded"
+    )
+    assert summary["export_side_events_whose_digest_is_compared_here"] == sum(
+        1
+        for event in events
+        if event["id"] in export_side and event["digest_check"] == "compared_here"
     )
     assert summary["events_with_a_parse_check"] == sum(
         1 for event in events if event["parse_check"] == "present"
@@ -142,11 +160,15 @@ def test_the_divergence_quotes_the_adr_it_accuses() -> None:
     assert divergence["manifest_keys"] == [
         "artifact_root",
         "excluded",
+        "files",
         "included",
         "run_id",
         "storage",
     ]
+    # No top-level key carries the digest: it is nested per file under `files`, so the key list
+    # stays hash-free while the manifest is not.
     assert divergence["hash_keys_in_manifest"] == []
+    assert divergence["per_file_digest"] is True
 
 
 def test_the_disclaimers_are_pinned() -> None:
@@ -154,3 +176,34 @@ def test_the_disclaimers_are_pinned() -> None:
     for phrase in DISCLAIMERS:
         assert phrase in joined, phrase
     assert RECORD["procedure"] and all(step.strip() for step in RECORD["procedure"])
+
+
+def test_each_export_side_event_says_whether_its_digest_was_compared() -> None:
+    by_id = {event["id"]: event for event in RECORD["events"]}
+    assert {event_id: by_id[event_id]["digest_check"] for event_id in EXPORT_SIDE_CHECKS} == (
+        EXPORT_SIDE_CHECKS
+    )
+    for event_id, check in EXPORT_SIDE_CHECKS.items():
+        # A declared digest is still a digest: the exit predicate counts recording, and the check
+        # column is what stops that count from reading as a comparison.
+        assert by_id[event_id]["integrity_hash"] == "recorded", event_id
+        if check == "declared":
+            assert "not re-checked here" in by_id[event_id]["detail"], event_id
+
+
+def test_the_first_pass_survives_the_second() -> None:
+    previous = json.loads((ROOT / RECORD["supersedes"]).read_text(encoding="utf-8"))
+    assert previous["superseded_by"] == "docs/audit/export-lifecycle.json"
+    assert previous["schema"] == "export-lifecycle/v1"
+    assert previous["summary"]["export_side_events_with_a_digest"] == 0
+    assert previous["summary"]["events_recording_a_digest"] == 1
+    # The comparison is the point of keeping the file: a later reader must be able to see that the
+    # count moved because producers changed, not because the question did.
+    assert (
+        RECORD["summary"]["export_side_events_with_a_digest"]
+        > previous["summary"]["export_side_events_with_a_digest"]
+    )
+    assert RECORD["summary"]["export_side_events"] == previous["summary"]["export_side_events"]
+    assert {event["id"] for event in previous["events"]} == {
+        event["id"] for event in RECORD["events"]
+    }
