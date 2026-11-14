@@ -3,8 +3,10 @@
 Four readings do not by themselves say whether the stage is exited: the ADR's migration row names an
 exit condition with four clauses, and the work column names four items, but the two lists are not the
 same list. This file derives the clause anchors from the ADR, the numbers from the records, and the
-verdict from the gaps those records still carry. Nothing here is typed as a literal count, so a
-record that changes makes the page stale and this test fail rather than quietly agreeing with it.
+numbers from the records. Nothing here is typed as a literal count, so a record that changes makes
+the page stale and this test fail rather than quietly agreeing with it. The verdict itself is the one
+thing the records cannot supply: since P2 and P3 closed every producer gap, "not exited" is a
+declaration that has not been made yet, and the test pins its absence instead of inferring it.
 
 No new audit record is added by the review. It is a judgement about records that already exist, and
 `docs/audit/contract-versions.json` keeps its own count of them.
@@ -156,7 +158,14 @@ def test_the_fourth_item_has_no_exit_clause() -> None:
     assert "no exit clause names it" in review
 
 
-def test_the_verdict_is_not_exited_and_the_records_support_it() -> None:
+def test_the_declaration_has_not_run_ahead_of_the_readings() -> None:
+    """No exit is declared, and the three producer gaps it used to rest on are now closed.
+
+    The previous form of this test required at least one open gap, on the argument that the verdict
+    was not exited *because* something was missing. P2 and P3 closed all three, so that premise no
+    longer holds: an exit is now a declaration to be made on one set of readings, and this test's
+    job is to keep the declaration from appearing before that review rather than to derive it.
+    """
     review = _review().lower()
     status = _text(ADR).splitlines()[2]
     assert "not exited" in review
@@ -173,4 +182,5 @@ def test_the_verdict_is_not_exited_and_the_records_support_it() -> None:
         attribution["failures"]["external_bundle"]["stage_level"] == 0,
         export["export_side_events_with_a_digest"] == 0,
     )
-    assert any(gaps), (boundary, attribution["failures"], export)
+    # All three closed. The page says so, and a reopened gap would make its paragraph false.
+    assert not any(gaps), (boundary, attribution["failures"], export)
