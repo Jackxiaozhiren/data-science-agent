@@ -274,9 +274,10 @@ field.
 
 ### Latency: what a row can name
 
-One clean-tree `dsa --limit 50` run supplies 50 rows whose manifest states `llm_mode=stub` and
-`call_count=0`. Each row carries one `elapsed_ms`, one `duration_ms` per tool call, and the run
-object's `created_at` / `updated_at`. Three quantities follow without interpretation:
+One clean-tree `dsa --limit 50 --out artifacts/bench-attribution` run supplies 50 rows whose manifest
+states `llm_mode=stub` and `call_count=0`. Each row carries one `elapsed_ms`, one `duration_ms` per
+tool call, the run object's `created_at` / `updated_at`, and — since ADR-004 D2 — the intervals the
+run spent in each status. Three quantities follow without interpretation:
 
 | Quantity | Definition | Why it is a boundary, not a benchmark |
 |---|---|---|
@@ -284,15 +285,19 @@ object's `created_at` / `updated_at`. Three quantities follow without interpreta
 | `residual_ms` | `elapsed_ms - tool_ms` | planning, evidence assembly and report writing have no timestamps of their own |
 | `outside_window_ms` | `max(0, elapsed_ms - (updated_at - created_at))` | time even the run object's own clock does not cover |
 
-The first reading: 249 tool calls across 50 tasks, all recorded as `ok`. The per-task tool share has a
-median of 0.3536 and a mean of 0.4626, ranging from 0.0 to 0.9493; every one of the 50 rows has a
-positive residual, and no row carries a stage-time field. One task stands 1168 ms outside the run
-object's window. The 168 calls whose `duration_ms` is zero are the important part: the field is an
-integer millisecond, so a sub-millisecond call is recorded as no time at all. The share is therefore
-a **lower bound on what the record can name**, not a measurement of what tools cost. A second run of
-the same clean tree at the same commit moved both the median share and the zero-duration count, so
-the frame pins the one run it describes by hash rather than quoting a stable-looking number; the
-ledger keeps the second observation as capture-time context, not as part of the reading.
+The second reading: 249 tool calls across 50 tasks, all recorded as `ok`. The per-task tool share has
+a median of 0.3786 and a mean of 0.4604, ranging from 0.0 to 0.95; every one of the 50 rows has a
+positive residual, and every one carries the run's own stage intervals. One task stands 1105 ms
+outside the run object's window. The 176 calls whose `duration_ms` is zero are the important part: the
+field is an integer millisecond, so a sub-millisecond call is recorded as no time at all. The share is
+therefore a **lower bound on what the record can name**, not a measurement of what tools cost. A
+second run of the same clean tree at the same commit moved both the median share and the zero-duration
+count, so the frame pins the one run it describes by hash rather than quoting a stable-looking number;
+the ledger keeps the second observation as capture-time context, not as part of the reading.
+
+The first reading recorded 0 of 50 rows with a stage field, because the run record had none to
+carry. The change to 50 of 50 is a producer change, and the record says so in `basis_change` rather
+than leaving it to be inferred from a diff.
 
 ### Failures: two recordings, one empty denominator
 
@@ -301,30 +306,39 @@ Two deterministic recordings ship in the tree, and neither is a random draw:
 - `benchmarks/baseline/results.json` — 50 tasks, none failing. There is no failure to attribute, so
   the record says `not_measured` with the reason "empty denominator". It does not say 100%, and it
   does not say 0/0; both would turn an absent observation into a score.
-- `benchmarks/external/datascibench/results/raw_runs.json` — 45 runs, 40 not passing (39 `failed`,
-  one `execution_error`, using the adapter's own `score >= 0.5` pass mark). It records a wall clock
-  for the bundle but no per-task latency at all.
+- `benchmarks/external/datascibench/results/raw_runs.json` — re-recorded on the reviewed commit: 38
+  runs the adapter supports, 33 of them not passing by its own `score >= 0.5` mark. Four of those runs
+  carry a `FAILED` status and a passing score, because the evaluator grades artifacts and not the run's
+  status; the record counts that disagreement in a field of its own rather than adding the two columns
+  together. The first recording of this bundle held 45 supported runs and 40 non-passing ones, so the
+  denominator moved with the recording — `basis_change` states it.
 
 Attribution is counted at three depths, each derived from fields the record actually carries:
 
 | Depth | What counts | Reading |
 |---|---|---|
-| outcome | the run's `outcome` value | 40 of 40 |
-| artifact | a mechanical signal from the recorded counts: the run did not complete, or produced no report, no tool call, or no evidence | 11 of 40 (10 with no evidence, one unfinished) |
-| stage | a closed error-code or stage field naming the cause | **0 of 40** |
+| outcome | the run's `outcome` value | 33 of 33 |
+| artifact | a mechanical signal from the recorded counts: the run did not complete, or produced no report, no tool call, or no evidence | 16 of 33 (all sixteen did not complete) |
+| stage | a `failure_stage` or `failure_code` whose value belongs to the closed vocabulary in `dsa_evaluation.failure_codes` | **33 of 33** |
 
-The 29 remaining runs completed with a report, tool calls and evidence and were still graded below
-the pass mark; the record has no field that says whether the plan, a tool's result, the evidence or
-the evaluator's expected shape was responsible. Eight of the 40 carry partial credit, so "failed" is
-not even a binary state. One run carries a free-text error and that text is not a code. **Stage-level
-attribution completeness is 0 of 40**, and the empty baseline denominator cannot improve it.
+The 17 remaining runs completed with a report, tool calls and evidence and were still graded below the
+pass mark; their location is `evaluation` with the code `score_below_threshold`, which says the
+evaluator's threshold refused the result and says nothing about why the score was low. Sixteen runs
+stopped at `validation` with `validation_hard_fail`: the critic found tool errors the run had already
+recorded, and that branch is where the refusal came from. Ten of the 33 carry partial credit, so
+"failed" is not a binary state. **Stage-level attribution completeness is 33 of 33**, and every code
+in it names a line of code rather than a reason. The empty baseline denominator is unchanged and still
+cannot be improved by this reading.
 
-### What would count as progress
+### What changed, and what did not
 
-A later reading would need the producer to write a closed stage or cause code and a stage-level
-timestamp into the record. That is a change to the producer, not to this instrument, and ADR-003's
-migration plan keeps S2 work to documents, tests and checklists — none is written here. Until then the
-honest result is a measured gap, and a green matrix in the first S2 item does not fill it.
+The producer now writes what this instrument used to report as missing: a stage interval per status,
+and one code from a vocabulary closed in code, refused by `assert_known` when a value comes from
+anywhere else. Two things this page does not claim. The first is that a code explains a failure —
+`score_below_threshold` is the location of a decision, not its cause, and the run that triggered it
+carries no field that would name one. The second is that the external bundle is reproducible on a
+clean clone: it needs the gitignored `.workspace/`, and the re-recording above is a census of the copy
+this machine holds.
 
 ## S2 — export-first lifecycle
 
@@ -405,7 +419,7 @@ reader meets first. `docs/audit/contract-versions.json` is the register and
 Ten of the fifteen files under `docs/audit/` carry a `recorded_at`: nine readings and this register.
 The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory exception
 list, a lock-divergence list and an orphan-reads registry — and state no date. Of the nine readings,
-**five declare a token of their own**: `attribution-reading/v1`,
+**five declare a token of their own**: `attribution-reading/v2`,
 `execution-boundary-matrix/v2`, `export-lifecycle/v1` and `export-lifecycle/v2` (the two passes of one
 surface) and `independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
 `evidence-alignment-frame/v1` as `frame_schema` and nothing about itself. Three declare nothing — both
@@ -431,7 +445,9 @@ token absent, rather than by trusting the record's own sentence.
 
 ### The policy, and what enforces it
 
-Five clauses, in force from 2026-11-12 and not back-dated onto the eight readings above:
+Five clauses, in force from 2026-11-12 and not back-dated: six of the nine readings above predate
+them, and the three re-taken since — attribution, the boundary and the export lifecycle — declare
+tokens the form accepts.
 
 | Clause | Rule | Enforced by |
 |---|---|---|
@@ -466,7 +482,7 @@ of records rather than the behaviour they describe; no exit clause names it.
 | Clause | Where the evidence lives | What the reading actually says |
 |---|---|---|
 | Boundary decidability | `docs/audit/execution-boundary.json` | 15 of 15 cells are decided by a request-time check; 0 are undecidable, 6 open and 9 fenced |
-| Attribution completeness | `docs/audit/attribution.json` | 0 of 40 non-passing external-bundle runs carry a stage or cause code, and 0 of 50 tasks carry stage boundaries; the frozen baseline has an empty denominator and is `not_measured` |
+| Attribution completeness | `docs/audit/attribution.json` | 33 of 33 non-passing external-bundle runs carry a `failure_stage` and a `failure_code` drawn from the vocabulary closed in `dsa_evaluation.failure_codes`, and 50 of 50 tasks carry the intervals the graph recorded; the frozen baseline has an empty denominator and is `not_measured` |
 | Artifact parseability | `docs/audit/export-lifecycle.json` | 48 of 48 committed exports parse at the consumer end; 3 of 3 export-side events record a digest (2 of them compared here, the third declared), 1 of 6 lifecycle events runs a parse check, and `csv`, `png` and `xlsx` are `not_measured` |
 | `matrix_valid` and `publication_ready` never conflated | `packages/evaluation/src/dsa_evaluation/publication.py` | `publication_ready = matrix_valid and scope == "full"`, so a valid matrix is not a publication decision; each of the four readings says in its own `not_claimed` that `publication_ready` keeps its own gate |
 
@@ -474,10 +490,12 @@ The first three clauses are recorded; the fourth holds as a property of the code
 own disclaimers. That is not the same as the three being complete. Three gaps were named, and
 ADR-004 took them one at a time. The boundary gap is closed: every cell now names a check that runs
 at request time, and the record's `basis_change` says which cell was re-attributed rather than
-re-worded. The export gap is closed on the recording side: every export surface writes a digest, and
-the two whose bytes this tree holds also compare it. One remains, and it needs a producer to write a
-field before the reading can count it: stage and cause codes have to be written before attribution
-completeness can be computed. That is P2's work, and this page does not anticipate it.
+re-worded. The attribution gap is closed too: every non-passing run now carries a stage and a code
+from a vocabulary the code refuses to extend by accident, and every task carries the intervals the
+graph itself recorded. The export gap is closed on the recording side: every export surface writes a
+digest, and the two whose bytes this tree holds also compare it. All three named gaps are closed, and
+a stage exit is still a separate judgement about all four clauses at once — `P4` is where that
+judgement is made, on one set of readings rather than on three.
 
 **The stage is not exited.** Closing one of the three gaps changes one number, and an exit is a
 judgement about all four clauses at once. Four readings are a count of items, not a judgement about

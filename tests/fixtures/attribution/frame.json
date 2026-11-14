@@ -5,454 +5,508 @@
     "python_version": "3.12.14 (main, Aug 12 2026, 13:57:54) [Clang 21.0.0 (clang-2100.1.1.101)]"
   },
   "external_bundle": {
-    "n_non_passing": 40,
-    "n_runs": 45,
+    "failed_status_but_scored_passing": 4,
+    "n_non_passing": 33,
+    "n_runs": 38,
     "per_task_latency_present": 0,
+    "runs_with_stage_count": 38,
     "stage_keys": [],
-    "wall_s": 144.2
+    "wall_s": 104.6
   },
   "failure_rows": [
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 0,
+      "n_evidence": 4,
       "n_tool_calls": 6,
       "outcome": "failed",
-      "report_chars": 2338,
-      "score": 0.0,
-      "status": "COMPLETED",
-      "task_id": "csv_excel_0"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 5,
-      "n_tool_calls": 7,
-      "outcome": "failed",
-      "report_chars": 3942,
+      "report_chars": 3030,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_1"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 4,
       "n_tool_calls": 9,
       "outcome": "failed",
-      "report_chars": 4031,
+      "report_chars": 4109,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "csv_excel_10"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
       "n_evidence": 5,
-      "n_tool_calls": 8,
+      "n_tool_calls": 7,
       "outcome": "failed",
-      "report_chars": 3708,
+      "report_chars": 3574,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_11"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 9,
+      "n_evidence": 5,
+      "n_tool_calls": 6,
       "outcome": "failed",
-      "report_chars": 4620,
+      "report_chars": 3379,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_2"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 11,
+      "n_evidence": 5,
+      "n_tool_calls": 8,
       "outcome": "failed",
-      "report_chars": 4842,
+      "report_chars": 3639,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "csv_excel_29"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 0,
-      "n_tool_calls": 6,
+      "n_evidence": 5,
+      "n_tool_calls": 10,
       "outcome": "failed",
-      "report_chars": 2338,
+      "report_chars": 4809,
       "score": 0.0,
-      "status": "COMPLETED",
-      "task_id": "csv_excel_3"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 0,
-      "n_tool_calls": 6,
-      "outcome": "failed",
-      "report_chars": 2339,
-      "score": 0.0,
-      "status": "COMPLETED",
-      "task_id": "csv_excel_30"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 11,
-      "outcome": "failed",
-      "report_chars": 5651,
-      "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "csv_excel_32"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 11,
+      "n_evidence": 5,
+      "n_tool_calls": 10,
       "outcome": "failed",
-      "report_chars": 5634,
+      "report_chars": 4810,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "csv_excel_33"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 5,
+      "n_evidence": 3,
+      "n_tool_calls": 4,
       "outcome": "failed",
-      "report_chars": 3424,
+      "report_chars": 2507,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_34"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 5,
-      "n_tool_calls": 8,
+      "n_evidence": 4,
+      "n_tool_calls": 5,
       "outcome": "failed",
-      "report_chars": 4046,
+      "report_chars": 2806,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_37"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 5,
-      "n_tool_calls": 12,
+      "n_tool_calls": 9,
       "outcome": "failed",
-      "report_chars": 5188,
-      "score": 0.0,
-      "status": "COMPLETED",
+      "report_chars": 4024,
+      "score": 0.3333333333333333,
+      "status": "FAILED",
       "task_id": "csv_excel_4"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 5,
+      "n_evidence": 3,
+      "n_tool_calls": 4,
       "outcome": "failed",
-      "report_chars": 3404,
+      "report_chars": 2502,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_41"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 5,
-      "n_tool_calls": 10,
+      "n_evidence": 4,
+      "n_tool_calls": 9,
       "outcome": "failed",
-      "report_chars": 4954,
+      "report_chars": 4103,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "csv_excel_46"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 11,
+      "n_evidence": 5,
+      "n_tool_calls": 7,
       "outcome": "failed",
-      "report_chars": 5043,
+      "report_chars": 3454,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_47"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 5,
-      "n_tool_calls": 10,
+      "n_evidence": 4,
+      "n_tool_calls": 5,
       "outcome": "failed",
-      "report_chars": 4583,
+      "report_chars": 2829,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_48"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
       "n_evidence": 5,
-      "n_tool_calls": 10,
+      "n_tool_calls": 7,
       "outcome": "failed",
-      "report_chars": 4433,
+      "report_chars": 3520,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "csv_excel_8"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 11,
+      "n_evidence": 3,
+      "n_tool_calls": 9,
       "outcome": "failed",
-      "report_chars": 4326,
+      "report_chars": 3468,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "csv_excel_9"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 5,
+      "n_evidence": 3,
+      "n_tool_calls": 4,
       "outcome": "failed",
-      "report_chars": 3424,
+      "report_chars": 2507,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "human_0"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 0,
-      "n_tool_calls": 10,
+      "n_evidence": 4,
+      "n_tool_calls": 5,
       "outcome": "failed",
-      "report_chars": 3086,
-      "score": 0.0,
-      "status": "COMPLETED",
-      "task_id": "human_1"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 3,
-      "n_tool_calls": 8,
-      "outcome": "failed",
-      "report_chars": 3122,
+      "report_chars": 2828,
       "score": 0.25,
       "status": "COMPLETED",
       "task_id": "human_10"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 5,
-      "n_tool_calls": 14,
+      "n_tool_calls": 9,
       "outcome": "failed",
-      "report_chars": 5644,
-      "score": 0.125,
-      "status": "COMPLETED",
+      "report_chars": 3837,
+      "score": 0.375,
+      "status": "FAILED",
       "task_id": "human_11"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 0,
-      "n_tool_calls": 12,
+      "n_tool_calls": 10,
       "outcome": "failed",
-      "report_chars": 3573,
+      "report_chars": 3306,
       "score": 0.125,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "human_12"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 7,
-      "n_tool_calls": 10,
+      "n_evidence": 5,
+      "n_tool_calls": 7,
       "outcome": "failed",
-      "report_chars": 5360,
+      "report_chars": 3771,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "human_131"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
       "n_evidence": 5,
-      "n_tool_calls": 10,
+      "n_tool_calls": 7,
       "outcome": "failed",
-      "report_chars": 4393,
+      "report_chars": 3350,
       "score": 0.16666666666666666,
       "status": "COMPLETED",
       "task_id": "human_132"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 0,
       "n_tool_calls": 6,
       "outcome": "failed",
-      "report_chars": 2549,
+      "report_chars": 2625,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "human_141"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 0,
       "n_tool_calls": 6,
       "outcome": "failed",
-      "report_chars": 2549,
+      "report_chars": 2625,
       "score": 0.3,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "human_142"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 0,
-      "n_tool_calls": 6,
+      "n_evidence": 5,
+      "n_tool_calls": 7,
       "outcome": "failed",
-      "report_chars": 2335,
-      "score": 0.0,
-      "status": "COMPLETED",
-      "task_id": "human_15"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 9,
-      "outcome": "failed",
-      "report_chars": 3687,
+      "report_chars": 3695,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "human_16"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 13,
+      "n_evidence": 3,
+      "n_tool_calls": 10,
       "outcome": "failed",
-      "report_chars": 5987,
+      "report_chars": 4836,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "human_18"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 0,
-      "n_tool_calls": 6,
+      "n_evidence": 4,
+      "n_tool_calls": 10,
       "outcome": "failed",
-      "report_chars": 2335,
-      "score": 0.0,
-      "status": "COMPLETED",
-      "task_id": "human_19"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 3,
-      "n_tool_calls": 16,
-      "outcome": "failed",
-      "report_chars": 4545,
-      "score": 0.0,
-      "status": "COMPLETED",
+      "report_chars": 3515,
+      "score": 0.16666666666666666,
+      "status": "FAILED",
       "task_id": "human_2"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
       "n_evidence": 3,
       "n_tool_calls": 4,
       "outcome": "failed",
-      "report_chars": 2496,
+      "report_chars": 2520,
       "score": 0.0,
       "status": "COMPLETED",
       "task_id": "human_21"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 11,
+      "n_evidence": 5,
+      "n_tool_calls": 9,
       "outcome": "failed",
-      "report_chars": 4919,
+      "report_chars": 3884,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "human_23"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
-      "n_evidence": 4,
-      "n_tool_calls": 11,
+      "n_evidence": 3,
+      "n_tool_calls": 10,
       "outcome": "failed",
-      "report_chars": 4989,
+      "report_chars": 4118,
       "score": 0.0,
-      "status": "COMPLETED",
+      "status": "FAILED",
       "task_id": "human_24"
     },
     {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
       "has_error_text": false,
-      "n_evidence": 6,
-      "n_tool_calls": 11,
+      "n_evidence": 5,
+      "n_tool_calls": 6,
       "outcome": "failed",
-      "report_chars": 5319,
+      "report_chars": 3580,
       "score": 0.125,
       "status": "COMPLETED",
       "task_id": "human_5"
     },
     {
-      "cause_keys": [],
-      "has_error_text": true,
-      "n_evidence": 0,
-      "n_tool_calls": 0,
-      "outcome": "execution_error",
-      "report_chars": 0,
-      "score": null,
-      "status": "EXECUTION_ERROR",
-      "task_id": "human_7"
-    },
-    {
-      "cause_keys": [],
-      "has_error_text": false,
-      "n_evidence": 5,
-      "n_tool_calls": 12,
-      "outcome": "failed",
-      "report_chars": 5510,
-      "score": 0.1,
-      "status": "COMPLETED",
-      "task_id": "human_8"
-    },
-    {
-      "cause_keys": [],
+      "cause_keys": [
+        "failure_stage: validation",
+        "failure_code: validation_hard_fail"
+      ],
       "has_error_text": false,
       "n_evidence": 0,
       "n_tool_calls": 6,
       "outcome": "failed",
-      "report_chars": 2334,
-      "score": 0.08333333333333333,
+      "report_chars": 3053,
+      "score": 0.3333333333333333,
+      "status": "FAILED",
+      "task_id": "human_7"
+    },
+    {
+      "cause_keys": [
+        "failure_stage: evaluation",
+        "failure_code: score_below_threshold"
+      ],
+      "has_error_text": false,
+      "n_evidence": 5,
+      "n_tool_calls": 7,
+      "outcome": "failed",
+      "report_chars": 3859,
+      "score": 0.2,
       "status": "COMPLETED",
-      "task_id": "human_9"
+      "task_id": "human_8"
     }
   ],
+  "failure_vocabulary": {
+    "codes": [
+      "adapter_execution_error",
+      "empty_report",
+      "evaluator_returned_no_score",
+      "no_evidence",
+      "no_tool_calls",
+      "report_not_persisted",
+      "run_not_completed",
+      "score_below_threshold",
+      "skipped_unsupported",
+      "stage_unrecorded",
+      "step_budget_exceeded",
+      "tool_budget_exceeded",
+      "validation_hard_fail"
+    ],
+    "stages": [
+      "adapter",
+      "analysis",
+      "data_profiling",
+      "evaluation",
+      "modeling",
+      "planning",
+      "reporting",
+      "synthesis",
+      "understanding",
+      "unrecorded",
+      "validation"
+    ]
+  },
   "frozen_baseline": {
     "n_non_passing": 0,
     "n_tasks": 50,
@@ -460,98 +514,116 @@
   },
   "latency_rows": [
     {
-      "elapsed_ms": 1526,
+      "elapsed_ms": 923,
       "n_tool_calls": 7,
-      "outside_window_ms": 1168,
-      "stage_keys": [],
+      "outside_window_ms": 730,
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "eda-01",
       "tool_failures": 0,
-      "tool_ms": 319,
-      "window_ms": 358,
+      "tool_ms": 173,
+      "window_ms": 193,
       "zero_duration_calls": 2
     },
     {
-      "elapsed_ms": 46,
+      "elapsed_ms": 43,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "eda-02",
       "tool_failures": 0,
-      "tool_ms": 35,
-      "window_ms": 46,
+      "tool_ms": 34,
+      "window_ms": 43,
       "zero_duration_calls": 1
     },
     {
-      "elapsed_ms": 51,
+      "elapsed_ms": 38,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "eda-03",
       "tool_failures": 0,
-      "tool_ms": 42,
-      "window_ms": 51,
-      "zero_duration_calls": 1
-    },
-    {
-      "elapsed_ms": 51,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "eda-04",
-      "tool_failures": 0,
-      "tool_ms": 40,
-      "window_ms": 51,
-      "zero_duration_calls": 1
-    },
-    {
-      "elapsed_ms": 210,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "eda-05",
-      "tool_failures": 0,
-      "tool_ms": 196,
-      "window_ms": 211,
-      "zero_duration_calls": 1
-    },
-    {
-      "elapsed_ms": 47,
-      "n_tool_calls": 6,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "eda-06",
-      "tool_failures": 0,
-      "tool_ms": 35,
-      "window_ms": 47,
+      "tool_ms": 30,
+      "window_ms": 39,
       "zero_duration_calls": 3
     },
     {
-      "elapsed_ms": 45,
-      "n_tool_calls": 3,
+      "elapsed_ms": 41,
+      "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "eda-07",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "eda-04",
       "tool_failures": 0,
-      "tool_ms": 35,
-      "window_ms": 45,
+      "tool_ms": 30,
+      "window_ms": 41,
+      "zero_duration_calls": 4
+    },
+    {
+      "elapsed_ms": 192,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "eda-05",
+      "tool_failures": 0,
+      "tool_ms": 178,
+      "window_ms": 192,
       "zero_duration_calls": 1
     },
     {
-      "elapsed_ms": 75,
-      "n_tool_calls": 5,
+      "elapsed_ms": 45,
+      "n_tool_calls": 6,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "eda-08",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "eda-06",
       "tool_failures": 0,
-      "tool_ms": 64,
-      "window_ms": 76,
+      "tool_ms": 33,
+      "window_ms": 45,
+      "zero_duration_calls": 3
+    },
+    {
+      "elapsed_ms": 43,
+      "n_tool_calls": 3,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "eda-07",
+      "tool_failures": 0,
+      "tool_ms": 34,
+      "window_ms": 44,
       "zero_duration_calls": 2
     },
     {
-      "elapsed_ms": 19,
+      "elapsed_ms": 48,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "eda-08",
+      "tool_failures": 0,
+      "tool_ms": 39,
+      "window_ms": 49,
+      "zero_duration_calls": 2
+    },
+    {
+      "elapsed_ms": 18,
       "n_tool_calls": 7,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-01",
       "tool_failures": 0,
       "tool_ms": 6,
@@ -559,54 +631,64 @@
       "zero_duration_calls": 6
     },
     {
-      "elapsed_ms": 14,
+      "elapsed_ms": 13,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-02",
       "tool_failures": 0,
-      "tool_ms": 5,
-      "window_ms": 15,
+      "tool_ms": 4,
+      "window_ms": 13,
       "zero_duration_calls": 4
     },
     {
-      "elapsed_ms": 111,
+      "elapsed_ms": 110,
       "n_tool_calls": 7,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-03",
       "tool_failures": 0,
-      "tool_ms": 94,
-      "window_ms": 111,
+      "tool_ms": 95,
+      "window_ms": 110,
       "zero_duration_calls": 3
     },
     {
-      "elapsed_ms": 20,
+      "elapsed_ms": 19,
       "n_tool_calls": 7,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-04",
       "tool_failures": 0,
-      "tool_ms": 7,
-      "window_ms": 21,
+      "tool_ms": 6,
+      "window_ms": 19,
       "zero_duration_calls": 6
     },
     {
-      "elapsed_ms": 15,
+      "elapsed_ms": 13,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-05",
       "tool_failures": 0,
-      "tool_ms": 5,
-      "window_ms": 16,
+      "tool_ms": 4,
+      "window_ms": 14,
       "zero_duration_calls": 4
     },
     {
-      "elapsed_ms": 18,
+      "elapsed_ms": 17,
       "n_tool_calls": 7,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-06",
       "tool_failures": 0,
       "tool_ms": 5,
@@ -614,329 +696,389 @@
       "zero_duration_calls": 6
     },
     {
-      "elapsed_ms": 14,
+      "elapsed_ms": 11,
       "n_tool_calls": 6,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "sql-07",
+      "tool_failures": 0,
+      "tool_ms": 3,
+      "window_ms": 11,
+      "zero_duration_calls": 5
+    },
+    {
+      "elapsed_ms": 40,
+      "n_tool_calls": 4,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "stats-01",
+      "tool_failures": 0,
+      "tool_ms": 31,
+      "window_ms": 41,
+      "zero_duration_calls": 2
+    },
+    {
+      "elapsed_ms": 14,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "stats-02",
+      "tool_failures": 0,
+      "tool_ms": 5,
+      "window_ms": 14,
+      "zero_duration_calls": 4
+    },
+    {
+      "elapsed_ms": 10,
+      "n_tool_calls": 4,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "stats-03",
+      "tool_failures": 0,
+      "tool_ms": 1,
+      "window_ms": 10,
+      "zero_duration_calls": 3
+    },
+    {
+      "elapsed_ms": 13,
+      "n_tool_calls": 6,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "stats-04",
       "tool_failures": 0,
       "tool_ms": 5,
       "window_ms": 14,
       "zero_duration_calls": 5
     },
     {
-      "elapsed_ms": 44,
+      "elapsed_ms": 52,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "stats-01",
-      "tool_failures": 0,
-      "tool_ms": 34,
-      "window_ms": 44,
-      "zero_duration_calls": 2
-    },
-    {
-      "elapsed_ms": 15,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "stats-02",
-      "tool_failures": 0,
-      "tool_ms": 5,
-      "window_ms": 15,
-      "zero_duration_calls": 4
-    },
-    {
-      "elapsed_ms": 11,
-      "n_tool_calls": 4,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "stats-03",
-      "tool_failures": 0,
-      "tool_ms": 2,
-      "window_ms": 12,
-      "zero_duration_calls": 3
-    },
-    {
-      "elapsed_ms": 15,
-      "n_tool_calls": 6,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "stats-04",
-      "tool_failures": 0,
-      "tool_ms": 5,
-      "window_ms": 15,
-      "zero_duration_calls": 5
-    },
-    {
-      "elapsed_ms": 41,
-      "n_tool_calls": 4,
-      "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "stats-05",
       "tool_failures": 0,
-      "tool_ms": 32,
-      "window_ms": 42,
+      "tool_ms": 36,
+      "window_ms": 53,
       "zero_duration_calls": 2
     },
     {
-      "elapsed_ms": 43,
+      "elapsed_ms": 50,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "stats-06",
       "tool_failures": 0,
-      "tool_ms": 34,
-      "window_ms": 44,
+      "tool_ms": 40,
+      "window_ms": 50,
       "zero_duration_calls": 3
-    },
-    {
-      "elapsed_ms": 45,
-      "n_tool_calls": 4,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "stats-07",
-      "tool_failures": 0,
-      "tool_ms": 35,
-      "window_ms": 45,
-      "zero_duration_calls": 3
-    },
-    {
-      "elapsed_ms": 10,
-      "n_tool_calls": 4,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "stats-08",
-      "tool_failures": 0,
-      "tool_ms": 1,
-      "window_ms": 11,
-      "zero_duration_calls": 3
-    },
-    {
-      "elapsed_ms": 152,
-      "n_tool_calls": 6,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "reg-01",
-      "tool_failures": 0,
-      "tool_ms": 143,
-      "window_ms": 152,
-      "zero_duration_calls": 4
-    },
-    {
-      "elapsed_ms": 8,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "reg-02",
-      "tool_failures": 0,
-      "tool_ms": 0,
-      "window_ms": 8,
-      "zero_duration_calls": 5
     },
     {
       "elapsed_ms": 42,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "reg-03",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "stats-07",
       "tool_failures": 0,
       "tool_ms": 33,
-      "window_ms": 43,
-      "zero_duration_calls": 2
-    },
-    {
-      "elapsed_ms": 139,
-      "n_tool_calls": 7,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "reg-04",
-      "tool_failures": 0,
-      "tool_ms": 124,
-      "window_ms": 139,
-      "zero_duration_calls": 5
-    },
-    {
-      "elapsed_ms": 122,
-      "n_tool_calls": 6,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "reg-05",
-      "tool_failures": 0,
-      "tool_ms": 113,
-      "window_ms": 123,
-      "zero_duration_calls": 4
-    },
-    {
-      "elapsed_ms": 11,
-      "n_tool_calls": 4,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "reg-06",
-      "tool_failures": 0,
-      "tool_ms": 0,
-      "window_ms": 12,
-      "zero_duration_calls": 4
-    },
-    {
-      "elapsed_ms": 13,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "clf-01",
-      "tool_failures": 0,
-      "tool_ms": 0,
-      "window_ms": 14,
-      "zero_duration_calls": 5
-    },
-    {
-      "elapsed_ms": 177,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "clf-02",
-      "tool_failures": 0,
-      "tool_ms": 163,
-      "window_ms": 177,
-      "zero_duration_calls": 1
+      "window_ms": 42,
+      "zero_duration_calls": 3
     },
     {
       "elapsed_ms": 9,
+      "n_tool_calls": 4,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "stats-08",
+      "tool_failures": 0,
+      "tool_ms": 1,
+      "window_ms": 10,
+      "zero_duration_calls": 3
+    },
+    {
+      "elapsed_ms": 125,
+      "n_tool_calls": 6,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "reg-01",
+      "tool_failures": 0,
+      "tool_ms": 117,
+      "window_ms": 125,
+      "zero_duration_calls": 4
+    },
+    {
+      "elapsed_ms": 7,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "clf-03",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "reg-02",
+      "tool_failures": 0,
+      "tool_ms": 0,
+      "window_ms": 7,
+      "zero_duration_calls": 5
+    },
+    {
+      "elapsed_ms": 37,
+      "n_tool_calls": 4,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "reg-03",
+      "tool_failures": 0,
+      "tool_ms": 28,
+      "window_ms": 37,
+      "zero_duration_calls": 3
+    },
+    {
+      "elapsed_ms": 122,
+      "n_tool_calls": 7,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "reg-04",
+      "tool_failures": 0,
+      "tool_ms": 109,
+      "window_ms": 123,
+      "zero_duration_calls": 5
+    },
+    {
+      "elapsed_ms": 105,
+      "n_tool_calls": 6,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "reg-05",
+      "tool_failures": 0,
+      "tool_ms": 97,
+      "window_ms": 106,
+      "zero_duration_calls": 4
+    },
+    {
+      "elapsed_ms": 8,
+      "n_tool_calls": 4,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "reg-06",
       "tool_failures": 0,
       "tool_ms": 0,
       "window_ms": 9,
-      "zero_duration_calls": 5
-    },
-    {
-      "elapsed_ms": 217,
-      "n_tool_calls": 6,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "clf-04",
-      "tool_failures": 0,
-      "tool_ms": 206,
-      "window_ms": 218,
-      "zero_duration_calls": 2
-    },
-    {
-      "elapsed_ms": 12,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "clf-05",
-      "tool_failures": 0,
-      "tool_ms": 0,
-      "window_ms": 13,
-      "zero_duration_calls": 5
+      "zero_duration_calls": 4
     },
     {
       "elapsed_ms": 10,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "clf-06",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "clf-01",
       "tool_failures": 0,
       "tool_ms": 0,
       "window_ms": 11,
       "zero_duration_calls": 5
     },
     {
-      "elapsed_ms": 85,
-      "n_tool_calls": 7,
+      "elapsed_ms": 156,
+      "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "ts-01",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "clf-02",
       "tool_failures": 0,
-      "tool_ms": 74,
-      "window_ms": 86,
+      "tool_ms": 144,
+      "window_ms": 157,
+      "zero_duration_calls": 1
+    },
+    {
+      "elapsed_ms": 7,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "clf-03",
+      "tool_failures": 0,
+      "tool_ms": 0,
+      "window_ms": 7,
+      "zero_duration_calls": 5
+    },
+    {
+      "elapsed_ms": 191,
+      "n_tool_calls": 6,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "clf-04",
+      "tool_failures": 0,
+      "tool_ms": 182,
+      "window_ms": 192,
       "zero_duration_calls": 3
     },
     {
-      "elapsed_ms": 96,
+      "elapsed_ms": 11,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "ts-02",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "clf-05",
       "tool_failures": 0,
-      "tool_ms": 85,
-      "window_ms": 97,
-      "zero_duration_calls": 0
+      "tool_ms": 0,
+      "window_ms": 11,
+      "zero_duration_calls": 5
     },
     {
-      "elapsed_ms": 85,
-      "n_tool_calls": 4,
-      "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "ts-03",
-      "tool_failures": 0,
-      "tool_ms": 75,
-      "window_ms": 85,
-      "zero_duration_calls": 2
-    },
-    {
-      "elapsed_ms": 128,
+      "elapsed_ms": 9,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "ts-04",
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "clf-06",
       "tool_failures": 0,
-      "tool_ms": 120,
-      "window_ms": 129,
+      "tool_ms": 0,
+      "window_ms": 10,
+      "zero_duration_calls": 5
+    },
+    {
+      "elapsed_ms": 78,
+      "n_tool_calls": 7,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "ts-01",
+      "tool_failures": 0,
+      "tool_ms": 66,
+      "window_ms": 78,
       "zero_duration_calls": 4
     },
     {
-      "elapsed_ms": 12,
+      "elapsed_ms": 82,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "ts-02",
+      "tool_failures": 0,
+      "tool_ms": 72,
+      "window_ms": 83,
+      "zero_duration_calls": 3
+    },
+    {
+      "elapsed_ms": 74,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "ts-03",
+      "tool_failures": 0,
+      "tool_ms": 65,
+      "window_ms": 75,
+      "zero_duration_calls": 2
+    },
+    {
+      "elapsed_ms": 140,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "ts-04",
+      "tool_failures": 0,
+      "tool_ms": 132,
+      "window_ms": 140,
+      "zero_duration_calls": 4
+    },
+    {
+      "elapsed_ms": 7,
+      "n_tool_calls": 4,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "ts-05",
       "tool_failures": 0,
-      "tool_ms": 1,
+      "tool_ms": 0,
+      "window_ms": 7,
+      "zero_duration_calls": 4
+    },
+    {
+      "elapsed_ms": 11,
+      "n_tool_calls": 5,
+      "outside_window_ms": 0,
+      "stage_keys": [
+        "stage_timings"
+      ],
+      "task_id": "viz-01",
+      "tool_failures": 0,
+      "tool_ms": 0,
       "window_ms": 12,
-      "zero_duration_calls": 3
+      "zero_duration_calls": 5
     },
     {
       "elapsed_ms": 13,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
-      "task_id": "viz-01",
-      "tool_failures": 0,
-      "tool_ms": 0,
-      "window_ms": 14,
-      "zero_duration_calls": 5
-    },
-    {
-      "elapsed_ms": 15,
-      "n_tool_calls": 5,
-      "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "viz-02",
       "tool_failures": 0,
       "tool_ms": 5,
-      "window_ms": 16,
+      "window_ms": 14,
       "zero_duration_calls": 4
     },
     {
-      "elapsed_ms": 9,
+      "elapsed_ms": 8,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "viz-03",
       "tool_failures": 0,
       "tool_ms": 0,
-      "window_ms": 9,
+      "window_ms": 8,
       "zero_duration_calls": 4
     },
     {
-      "elapsed_ms": 9,
+      "elapsed_ms": 8,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "viz-04",
       "tool_failures": 0,
       "tool_ms": 0,
@@ -947,18 +1089,22 @@
       "elapsed_ms": 8,
       "n_tool_calls": 3,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "viz-05",
       "tool_failures": 0,
       "tool_ms": 0,
-      "window_ms": 9,
+      "window_ms": 8,
       "zero_duration_calls": 3
     },
     {
-      "elapsed_ms": 7,
+      "elapsed_ms": 6,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "dq-01",
       "tool_failures": 0,
       "tool_ms": 0,
@@ -969,65 +1115,73 @@
       "elapsed_ms": 7,
       "n_tool_calls": 4,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "dq-02",
       "tool_failures": 0,
       "tool_ms": 0,
-      "window_ms": 8,
+      "window_ms": 7,
       "zero_duration_calls": 4
     },
     {
-      "elapsed_ms": 215,
+      "elapsed_ms": 193,
       "n_tool_calls": 6,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "dq-03",
       "tool_failures": 0,
-      "tool_ms": 199,
-      "window_ms": 215,
+      "tool_ms": 180,
+      "window_ms": 193,
       "zero_duration_calls": 2
     },
     {
-      "elapsed_ms": 15,
+      "elapsed_ms": 12,
       "n_tool_calls": 5,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "dq-04",
       "tool_failures": 0,
       "tool_ms": 0,
-      "window_ms": 15,
+      "window_ms": 12,
       "zero_duration_calls": 5
     },
     {
       "elapsed_ms": 8,
       "n_tool_calls": 3,
       "outside_window_ms": 0,
-      "stage_keys": [],
+      "stage_keys": [
+        "stage_timings"
+      ],
       "task_id": "dq-05",
       "tool_failures": 0,
       "tool_ms": 0,
-      "window_ms": 9,
+      "window_ms": 8,
       "zero_duration_calls": 3
     }
   ],
   "pass_mark": 0.5,
   "pass_mark_source": "benchmarks/external/datascibench/adapter.py (score >= 0.5)",
   "run_manifest_call_count": 0,
-  "run_manifest_commit": "a68c04b1cdb3",
+  "run_manifest_commit": "5cbee4de0906",
   "run_manifest_llm_mode": "stub",
-  "schema": "attribution-frame/v1",
+  "schema": "attribution-frame/v2",
   "sources": {
     "deterministic_run": {
-      "bytes": 6177286,
+      "bytes": 6239435,
       "committed": false,
       "path": "artifacts/bench-attribution/raw_runs.json",
-      "sha256": "3f83ead5c0c58c4c2781091d6be021587270ed5c69d6b7821d0337f99a5581bd"
+      "sha256": "614da3d980bafeedc93f05ceedeee95de1687d3bb99ae48d1b790e0061101bb7"
     },
     "external_bundle": {
-      "bytes": 24967,
+      "bytes": 23620,
       "committed": true,
       "path": "benchmarks/external/datascibench/results/raw_runs.json",
-      "sha256": "307a2882be38c9023ef4244511a46b30681ef0605ccb6d9973f9e2ea97277524"
+      "sha256": "438947759747c7ecd23808dd6f185e8a07a98fd50a63e17cd1532ba5f4f9b884"
     },
     "frozen_baseline": {
       "bytes": 178953,
@@ -1039,7 +1193,7 @@
       "bytes": 715,
       "committed": false,
       "path": "artifacts/bench-attribution/run_manifest.json",
-      "sha256": "9aae0648551a858bb1ac5da147ce680efac9fe5d5b1d50a825f9e29c1397960e"
+      "sha256": "d289db8d14e06ad8ee70d8187c2961d93f0908f1507efc8e94d48a0c2a14cf7a"
     }
   },
   "window_resolution_ms": 10

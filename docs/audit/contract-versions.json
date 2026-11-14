@@ -44,18 +44,18 @@
     "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
   ],
   "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
-  "recorded_at": "2026-11-14T01:32:23Z",
+  "recorded_at": "2026-11-14T02:18:58Z",
   "records": [
     {
       "check_kind": "record-vs-constant",
       "checked_by": "tests/contract/test_attribution_record.py",
-      "declared_frame_schema": "attribution-frame/v1",
-      "declared_schema": "attribution-reading/v1",
+      "declared_frame_schema": "attribution-frame/v2",
+      "declared_schema": "attribution-reading/v2",
       "detail": "the test types both tokens and compares the reading and its frame with them",
-      "effective_version": "v1",
+      "effective_version": "v2",
       "path": "docs/audit/attribution.json",
-      "pre_policy": true,
-      "recorded_at": "2026-11-11T12:14:17Z",
+      "pre_policy": false,
+      "recorded_at": "2026-11-14T01:49:25Z",
       "states_bump_rule": false
     },
     {
@@ -155,7 +155,7 @@
       "states_bump_rule": false
     }
   ],
-  "reviewed_commit": "0d4c0a730d3c",
+  "reviewed_commit": "5cbee4de0906",
   "schema": "contract-versions/v1",
   "scope": {
     "gate_inputs": 5,
@@ -169,7 +169,7 @@
     "own_tokens_checked": 4,
     "own_tokens_unchecked": 1,
     "policy_violations": 0,
-    "pre_policy": 7,
+    "pre_policy": 6,
     "records": 9,
     "records_carrying_a_bump_rule": 0
   }
