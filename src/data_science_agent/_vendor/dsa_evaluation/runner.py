@@ -56,6 +56,32 @@ def _evaluation_variant() -> str:
     return dsa_variant
 
 
+def _model_label(provider: str, llm_calls: list[dict[str, Any]]) -> str:
+    """The model the manifest names: what a call reported, else what the environment asked for.
+
+    Before this function the label was `"heuristic"` for every provider that was not `openai`. An
+    `openai-compat` or `ollama` run therefore wrote a manifest naming no model at all -- the one
+    field a reader needs to tell a hosted small model from the deterministic planner, and the field
+    a free-lane row would be compared on. The call log carries the model the provider actually
+    used, so it outranks the environment; when a run made no call, the defaults below mirror
+    `dsa_llm.providers` so the two cannot drift. A stub run keeps the old label, which is what the
+    earlier records mean by it.
+    """
+    if provider == "stub":
+        return "heuristic"
+    for call in llm_calls:
+        reported = str(call.get("model") or "").strip()
+        if reported:
+            return reported
+    if provider == "openai":
+        return os.getenv("DSA_OPENAI_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-5.6-luna"
+    if provider == "openai-compat":
+        return os.getenv("DSA_OPENAI_COMPAT_MODEL") or "default"
+    if provider == "ollama":
+        return os.getenv("DSA_OLLAMA_MODEL") or "qwen3:8b"
+    return "heuristic"
+
+
 def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
     from dsa_agent.critic import evidence_critic_enabled
 
@@ -65,11 +91,7 @@ def _execution_metadata(llm_calls: list[dict[str, Any]]) -> dict[str, Any]:
         if mode in {"real", "openai"}
         else "stub"
     )
-    model = (
-        os.getenv("DSA_OPENAI_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-5.6-luna"
-        if provider == "openai"
-        else "heuristic"
-    )
+    model = _model_label(provider, llm_calls)
     variant = _evaluation_variant()
     is_baseline = variant in _BASELINE_VARIANTS
     critic_enabled: bool | None = None if is_baseline else evidence_critic_enabled()

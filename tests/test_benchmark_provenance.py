@@ -187,3 +187,64 @@ def test_the_manifest_a_real_run_writes_names_the_commit(tmp_path: Path) -> None
     assert commit is not None, manifest["execution"]
     assert re.fullmatch(r"[0-9a-f]{12}", str(commit)), commit
     assert manifest["execution"]["llm_mode"] == "stub", manifest["execution"]
+
+
+# --- the free lanes have to name their model too ----------------------------------------------
+
+
+def _real_mode(monkeypatch: pytest.MonkeyPatch, provider: str) -> None:
+    """Put the process in real mode for one provider, with the variant left to the critic flag."""
+    monkeypatch.setenv("DSA_LLM_MODE", "real")
+    monkeypatch.setenv("DSA_LLM_PROVIDER", provider)
+    monkeypatch.delenv("DSA_EVALUATION_VARIANT", raising=False)
+    monkeypatch.delenv("DSA_EVIDENCE_CRITIC", raising=False)
+
+
+def test_the_free_lane_manifest_names_the_model_the_environment_asked_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RED before this change: `openai-compat` fell through to "heuristic".
+
+    A hosted free lane is the only lane that produces rows without a paid key, so a manifest that
+    names no model makes those rows unattributable -- the reader cannot tell which weight produced
+    them, which is the claim `docs/real-model-evaluation.md` asks a free-lane row to carry.
+    """
+    _real_mode(monkeypatch, "openai-compat")
+    monkeypatch.setenv("DSA_OPENAI_COMPAT_MODEL", "Qwen/Qwen3-8B")
+
+    metadata = _execution_metadata([])
+
+    assert metadata["provider"] == "openai-compat"
+    assert metadata["model"] == "Qwen/Qwen3-8B"
+
+
+def test_a_local_lane_names_its_ollama_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    _real_mode(monkeypatch, "ollama")
+    monkeypatch.delenv("DSA_OLLAMA_MODEL", raising=False)
+
+    assert _execution_metadata([])["model"] == "qwen3:8b"
+
+    monkeypatch.setenv("DSA_OLLAMA_MODEL", "qwen3:14b")
+
+    assert _execution_metadata([])["model"] == "qwen3:14b"
+
+
+def test_a_reported_call_outranks_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The call log is what happened; the environment is only what was asked for."""
+    _real_mode(monkeypatch, "openai-compat")
+    monkeypatch.setenv("DSA_OPENAI_COMPAT_MODEL", "asked-for")
+
+    metadata = _execution_metadata([{"provider": "openai-compat", "model": "served", "usage": {}}])
+
+    assert metadata["model"] == "served"
+
+
+def test_a_stub_run_keeps_the_label_earlier_records_mean(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The widening must not relabel stub runs: their stored manifests already say "heuristic"."""
+    monkeypatch.setenv("DSA_LLM_MODE", "heuristic")
+    monkeypatch.delenv("DSA_LLM_PROVIDER", raising=False)
+
+    metadata = _execution_metadata([{"provider": "stub", "model": "served", "usage": {}}])
+
+    assert metadata["provider"] == "stub"
+    assert metadata["model"] == "heuristic"
