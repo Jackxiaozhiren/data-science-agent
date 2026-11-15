@@ -16,6 +16,9 @@ env:
   DSA_OPENAI_MODEL: gpt-5.6-luna
   DSA_INPUT_COST_PER_MILLION: "0.20"
   DSA_OUTPUT_COST_PER_MILLION: "1.20"
+  # Per-process ceiling. Four variants run as four containers, so the workflow's worst case is
+  # four times this value; the run-wide bound is the provider project-level spend limit.
+  DSA_MAX_COST_USD: "2"
   DSA_GIT_COMMIT: ${{ github.sha }}
   RUN_SCOPE: smoke-5
   TASK_LIMIT: "5"
@@ -55,6 +58,7 @@ jobs:
             -e DSA_OPENAI_MODEL \
             -e DSA_INPUT_COST_PER_MILLION \
             -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_MAX_COST_USD \
             -e DSA_GIT_COMMIT \
             -e DSA_EVALUATION_VARIANT \
             -e DSA_EVIDENCE_CRITIC \
@@ -101,6 +105,7 @@ jobs:
             -e DSA_OPENAI_MODEL \
             -e DSA_INPUT_COST_PER_MILLION \
             -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_MAX_COST_USD \
             -e DSA_GIT_COMMIT \
             -e DSA_EVALUATION_VARIANT \
             -e DSA_EVIDENCE_CRITIC \
@@ -147,6 +152,7 @@ jobs:
             -e DSA_OPENAI_MODEL \
             -e DSA_INPUT_COST_PER_MILLION \
             -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_MAX_COST_USD \
             -e DSA_GIT_COMMIT \
             -e DSA_EVALUATION_VARIANT \
             -e DSA_EVIDENCE_CRITIC \
@@ -193,6 +199,7 @@ jobs:
             -e DSA_OPENAI_MODEL \
             -e DSA_INPUT_COST_PER_MILLION \
             -e DSA_OUTPUT_COST_PER_MILLION \
+            -e DSA_MAX_COST_USD \
             -e DSA_GIT_COMMIT \
             -e DSA_EVALUATION_VARIANT \
             -e DSA_EVIDENCE_CRITIC \

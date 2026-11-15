@@ -18732,3 +18732,42 @@ in place. No file was deleted and `main` was not touched.
 copies is a copy back from either `/tmp` directory. No API key was received or written, no model call
 was made, no workflow was dispatched, no governance setting changed, and no branch was pushed or
 pull request opened for this entry.
+
+## §335 — the pinned smoke now runs under the ceiling three records already named (2026-11-15)
+
+`docs/real-model-evaluation.md` tells an operator that a credentialed run always sets
+`DSA_MAX_COST_USD`, and its cost table names `DSA_MAX_COST_USD=2` for the four-variant smoke;
+`docs/audit/authorization-coverage.json` cites that paragraph as an existing control. The workflow
+set the variable nowhere and forwarded it into no container. The first run with a key in place would
+therefore have been uncapped while those records said it was capped — the same defect class as a
+gate whose exit code nobody reads, one layer below the gate itself.
+
+**What changed.** The job environment now sets `DSA_MAX_COST_USD: "2"` and each of the four
+`docker run` invocations forwards it with `-e`. The `-e` list is the load-bearing part: a container
+starts with only the variables it is told to forward, so a job-level assignment alone would have
+looked correct in review and bounded nothing. `tests/contract/test_real_model_workflow_spend_ceiling.py`
+derives the reading from both files — the workflow's value against the table row's value, one
+forward per declared variant, and the page's own statement that the ceiling is per-process — and
+each of four mutations fails it: a dropped forward, a zero cap, a page that moves the number, and a
+page that drops the scope word.
+
+**A number the page was missing.** The variable is a per-process ceiling and the workflow runs four
+variants as four containers, so the workflow-level worst case is four times the configured value —
+eight dollars at the documented setting, not two. The run-wide bound remains the provider
+project-level spend limit, which the page already calls the binding one. The page now says both
+things, because a per-process number read as a total understates the run by a factor of four.
+
+**What this does not do.** No credential exists, so the appendix row for model credentials and a
+spend ceiling stays `not provided`: a ceiling without a key is not a credentialed run, and the S3
+entry condition is unchanged. The provider, the pinned model, the dated pricing snapshot,
+`scope=smoke-5`, `TASK_LIMIT=5` and the publication gate are untouched, so `publication_ready` is
+still unreachable from this workflow. No workflow was dispatched, no model call was made and no
+spend occurred. The free lane the earlier entry selected already ships as `openai-compat`; what a
+credentialed smoke still needs is a key and a reviewed decision about which lane the pinned workflow
+should run, not a new provider class.
+
+**Rollback and confirmation.** Reverting this entry removes one ledger section, one paragraph from
+the page, one contract test and seven lines from the workflow; the smoke returns to forwarding no
+ceiling, which is the state before this entry. No key was received or written, no model call was
+made, no workflow was dispatched, no governance setting changed, and no branch was pushed or pull
+request opened for this entry.
