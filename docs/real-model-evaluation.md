@@ -145,6 +145,13 @@ metadata, so every artifact is auditable. Without the env var, no cap applies â€
 always set it for credentialed runs, *in addition to* an OpenAI project-level
 spend limit (defense in depth; the project limit is the binding one).
 
+The pinned smoke workflow sets `DSA_MAX_COST_USD=2` in its job environment and forwards it to each
+of the four `docker run` invocations, so the ceiling belongs to the run rather than to whichever
+shell launched it. The variable is read per process, and the workflow runs every variant as its own
+container: the workflow-level worst case is therefore four times the configured value ($8 at the
+setting above), while the run-wide bound stays the provider project-level limit. Read the table
+below as a per-process suggestion, not a per-run total.
+
 ## Cost estimate (gpt-5.6-luna @ $0.20/$1.20 per M, 2026-08-29 pricing)
 
 Measured call profile per task: DSA variants = 1 planner call (structured, max
