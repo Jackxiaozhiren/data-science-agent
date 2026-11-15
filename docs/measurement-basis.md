@@ -540,8 +540,10 @@ What the exit does not claim is the part worth writing down:
 - **Not full export coverage.** `csv`, `png` and `xlsx` remain `not_measured`, and one of six
   lifecycle events runs a parse check. The exit clause asks that every export-side event record a
   digest, not that every export class be re-read.
-- **Not S3.** Starting it asks for the open questions in the ADR's Appendix C, and the second of them
-  — model credentials with a spend ceiling — is still `not provided`.
+- **Not S3.** Starting it asks for the open questions in the ADR's Appendix C. The entry review
+  added there on 2026-11-15 answers the configuration row and the free-lane row, each with the limits
+  stated in its own line; the second row — model credentials with a spend ceiling — is still
+  `not provided`, and it is the one row that keeps S3 `not started`.
 
 ## What this page is not
 

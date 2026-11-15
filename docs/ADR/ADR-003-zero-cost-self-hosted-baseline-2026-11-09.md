@@ -102,3 +102,28 @@ No dependency additions, no infrastructure additions, no edits to the evaluator 
 | Whether the free lane produces a stable enough comparison to substitute for a paid baseline | untested at this date | The baseline stays "unmeasured"; do not substitute estimates |
 
 Answering the first row does not open S3. Its entry condition also requires S2's exit, and that exit is a separate maintainer decision: the four readings are recorded, but three gaps still name a producer change (`docs/measurement-basis.md`, "Stage exit — the four clauses against the four readings"). S3 therefore stays `not started` regardless of this sweep.
+
+### Entry review — 2026-11-15
+
+The paragraph above was written during the 2026-11-13 sweep, when three producer gaps still kept S2
+un-exited. S2 exited on 2026-11-14 in the stage-exit review on `docs/measurement-basis.md`, and ADR-004
+closed those gaps one at a time. That paragraph stays as written: rewording a dated sentence to describe
+a later tree is the move the ledger refuses. What follows is the current answer to the second half of
+S3's entry condition — whether the open questions in this appendix are answered.
+
+| Appendix C row | Answer as of 2026-11-15 | What the answer rests on |
+|---|---|---|
+| Cloud reporting from the `langsmith` SDK | **answered at configuration level**; platform-side variables, a gitignored `.env` and outbound traffic remain unobserved, so this is not a runtime observation | the repository-wide sweep recorded in the row above and in the ledger entry dated 2026-11-13 |
+| Model credentials and spend ceiling | **not provided**, re-checked on this date; the only row that still blocks the entry | `docs/real-model-evaluation.md` and the manual `workflow_dispatch` workflow, whose paid lane stays off |
+| Whether the free lane produces a stable enough comparison | **answered from evidence already in the tree**: the free lane is a regression anchor, not a substitute for a paid baseline | `benchmarks/baseline/README.md` — accuracy-class metrics reproduce at 50/50 on one commit, while three runs of the identical command on that commit read `mean_latency_ms` 126.86, 77.16 and 142.90; the page itself says a latency delta says more about the machine than the code |
+
+The third row is answered without a new run. A fourth machine reading would still be one observation,
+not a rate, and the answer is deliberately bounded: the free lane does not become a comparative
+quality baseline, and the reporting rule for the real-model comparison is unchanged. Reading that row
+as "the free lane is stable" would claim more than its evidence supports.
+
+**S3 stays `not started`.** The entry condition needs S2's exit, which holds, and answers to all three
+rows. Two are answered with the limits stated above; the credential row is not. No expansion is
+started here, no new ADR is proposed, and `publication_ready` keeps its own gate. INV4 remains
+**partial** — a deny list is not containment — so the first expansion will have to name that residual
+in its own ADR.

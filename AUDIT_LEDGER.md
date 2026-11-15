@@ -18642,3 +18642,52 @@ time rather than on a promise to tidy the archive first. Not a third measurement
 **Rollback and confirmation.** Reverting this one change removes a recovered file and its pointers;
 the second pass, all four exit predicates and the declaration survive it. No credential, no spend, no
 governance change and no public action is taken here beyond the pull request itself.
+
+## §333 — S3's entry condition, re-read after the exit (2026-11-15)
+
+**What was checked.** S2 exited on 2026-11-14 and the ADR status line says `S2 complete`. The
+appendix's closing paragraph, written during the 2026-11-13 sweep, still gives the old reason for
+`S3 not started`: three producer gaps and an exit nobody had declared. ADR-004 closed those gaps one at
+a time and the exit was declared, so that reason no longer describes the tree. This is the same
+contradiction shape recorded twice before — the status line, the page and a dated paragraph disagreed,
+and no prose guard read the appendix. The paragraph is not rewritten here. Under the rule that kept the
+boundary record's historical `basis_change` sentence, a dated sentence stays as written and a new
+entry carries the current state.
+
+**What was added.** `docs/ADR/ADR-003-zero-cost-self-hosted-baseline-2026-11-09.md` gains an
+"Entry review — 2026-11-15" subsection after that paragraph. It answers the three rows one at a time
+rather than replacing the table above it:
+
+- Cloud reporting is **answered at configuration level**. The sweep is a configuration-level result;
+  platform-side variables, a gitignored `.env` and outbound traffic remain unobserved, so the answer
+  does not become a runtime observation.
+- Model credentials and a spend ceiling are **not provided**, re-checked on this date. This is the
+  only row that still blocks the entry; the paid lane stays off.
+- The free-lane question is **answered from evidence already in the tree**, without a new run.
+  `benchmarks/baseline/README.md` records accuracy-class metrics reproducing at 50/50 on one commit,
+  and three runs of the identical command on that commit reading `mean_latency_ms` 126.86, 77.16 and
+  142.90 — a spread the page itself attributes to the machine, not the code. The bounded answer is
+  that the free lane is a regression anchor, not a substitute for a paid baseline; calling it "stable"
+  would claim more than the record supports. A fourth machine reading would still be one observation,
+  not a rate.
+
+**The verdict is held to the derivation.** The new `tests/contract/test_s3_entry_review.py` reads S3's
+entry condition out of the ADR's migration row, reads the three answers out of the appended review,
+and requires the status line to say `S2 complete` and `S3 not started`, exactly one row to name the
+credential row open, and every latency number quoted in the review to be present in the baseline
+README. It also pins the old paragraph as text that must survive, and checks that the measurement
+page's "Not S3" line and this section carry the same verdict. Its negative controls change one field
+at a time — the status word, the entry condition, the open-row marker, the unstarted word — and each
+change flips exactly one of the four derived clauses. That is the shape that keeps a future sweep from
+quietly agreeing with a contradiction again.
+
+**What this does not change.** The four exit predicates still read 0 of 15, 33 of 33, 50 of 50 and
+3 of 3 from the same four records; the status line keeps `S2 complete`; `S3 not started` is unchanged;
+`publication_ready` keeps its own gate; no expansion is started and no new ADR is proposed. INV4 stays
+**partial** — a deny list is not containment — and the first S3 expansion will have to name that
+residual in its own ADR.
+
+**Rollback and confirmation.** Reverting this entry removes one appendix subsection, one bullet edit,
+one contract test and one ledger section; every reading, the exit declaration and the recovered first
+pass survive it. No credential was read, no paid resource was enabled, no governance setting changed
+and no public action is taken here beyond the pull request itself.
