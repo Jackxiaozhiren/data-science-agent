@@ -18691,3 +18691,44 @@ residual in its own ADR.
 one contract test and one ledger section; every reading, the exit declaration and the recovered first
 pass survive it. No credential was read, no paid resource was enabled, no governance setting changed
 and no public action is taken here beyond the pull request itself.
+
+## §334 — two maintainer choices recorded without changing a public state (2026-11-15)
+
+Three decisions were taken on this date after the entry that re-read S3's entry condition. They are
+recorded here as dated choices, not as rewrites of any earlier sentence. The owner's 2026-11-06
+decision to leave #16 and #81 open and unworked stands as written above; this entry does not retract
+it, and no issue was commented on or closed.
+
+**Model path.** The maintainer selected a domestic no-card, OpenAI-compatible free API tier (Zhipu
+GLM or SiliconFlow) as the candidate for a future credentialed smoke that verifies the call chain.
+This selects a candidate; it is not an integration. No credential has been provided, so Appendix C's
+row for model credentials and a spend ceiling remains `not provided` and the S3 entry condition is
+still unmet. ADR-003's finding that the free lane is a regression anchor rather than a substitute for
+a paid baseline is unchanged. Replacing the current OpenAI Responses API provider, the pinned model
+or the dated pricing snapshot is a separate reviewed change. The publication gate keeps its own rule:
+`publication_ready` needs `scope=full` with `task_limit=0`, while the pinned smoke workflow fixes
+`scope=smoke-5` and `TASK_LIMIT=5`. A free tier also introduces outbound traffic that the
+configuration-level sweep did not observe at runtime, so a future ADR must name that residual
+together with INV4, which remains partial.
+
+**External evidence direction.** The proposal in #81 is accepted as a direction for a future optional
+external evidence provider, not as approval to integrate it. The four re-evaluation preconditions
+named in the owner's 2026-11-06 assessment remain in force: a real public-URL ingestion requirement,
+reviewed coverage of the target sources, a formally released auditable client, and a boundary that
+keeps evidence in the audit stream while policy decisions stay local, with a hard cost ceiling. The
+issue stays open as that registry. Its paid x402 calls would need a buyer-controlled signer, a wallet
+and an explicit bounded budget, so accepting the direction creates no cost, no key and no governance
+surface. A code search in this tree returns no reference to the proposed service, and there is no
+external-evidence-provider interface to amend.
+
+**Working-copy hygiene.** The local `tmp141` working tree carried 17 untracked files whose paths
+exist on `main` but whose contents differ from it. They were backed up to `/tmp/wip-backup-2026-11-15/`
+and moved to `/tmp/wip-isolated-2026-11-15/` in two verified batches of ten and seven, removing the
+risk that a broad staging command would overwrite the newer `main` versions. Five byte-identical
+copies, five maintainer-owned documents that do not exist on `main`, and three directories were left
+in place. No file was deleted and `main` was not touched.
+
+**Rollback and confirmation.** Reverting this entry removes one ledger section; restoring the working
+copies is a copy back from either `/tmp` directory. No API key was received or written, no model call
+was made, no workflow was dispatched, no governance setting changed, and no branch was pushed or
+pull request opened for this entry.
