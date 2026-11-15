@@ -1,6 +1,7 @@
 {
   "schema": "execution-boundary-matrix/v2",
   "reading": 2,
+  "supersedes": "docs/audit/execution-boundary-first.json",
   "basis_change": "the first reading attributed profile_dataset's process-spawn cell to the absence of a process import, while the format allowlist was already deciding which reader a request could reach; it is re-attributed here rather than re-worded. The write and credential cells gained a check in the same change, so no cell is now decided by absence. The first reading's counts are kept in docs/measurement-basis.md and are not restated here.",
   "recorded_at": "2026-11-14T02:32:35Z",
   "reviewed_commit": "7e63717512be",

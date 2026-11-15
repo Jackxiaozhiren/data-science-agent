@@ -50,6 +50,10 @@ SCHEMA = "execution-boundary-matrix/v2"
 #: value that can name a different file, and the CLI here takes flags only.
 VERIFIED_BY = "tests/security/test_sql_sandbox.py"
 REVIEWED_COMMIT = "7e63717512be"
+#: The first pass was overwritten in place when the matrix was re-attributed. It is restored under
+#: its own name now, so this reading says which record it replaces instead of leaving the pair to be
+#: inferred from a diff. A constant, not a CLI argument: the instrument takes flags only.
+SUPERSEDES = "docs/audit/execution-boundary-first.json"
 # ``SandboxViolation`` is listed separately: the sandbox module falls back to a local
 # ``ToolExecutionError`` when its import of ``dsa_tools.errors`` runs into the package cycle, so the
 # subclass relation cannot be assumed at measurement time. ``UnsupportedFormatError`` is the form
@@ -680,6 +684,7 @@ def build() -> dict[str, Any]:
     return {
         "schema": SCHEMA,
         "reading": 2,
+        "supersedes": SUPERSEDES,
         "basis_change": (
             "the first reading attributed profile_dataset's process-spawn cell to the absence of a "
             "process import, while the format allowlist was already deciding which reader a request "
@@ -720,6 +725,7 @@ def verify() -> tuple[bool, dict[str, bool]]:
     checks = {
         "schema": fresh["schema"] == record["schema"],
         "reading": fresh["reading"] == record["reading"],
+        "supersedes": fresh["supersedes"] == record["supersedes"],
         "basis_change": fresh["basis_change"] == record["basis_change"],
         "surfaces": fresh["surfaces"] == record["surfaces"],
         "probes": fresh["probes"] == record["probes"],

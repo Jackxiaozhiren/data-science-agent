@@ -243,8 +243,11 @@ record rather than leaving a stale verdict behind.
 
 ### Second reading (2026-11-13)
 
-The first reading is superseded. Two of its three `undecidable` cells gained a check, and the third
-was re-attributed after ADR-004 asked what actually runs at request time:
+The first reading is superseded, and kept as `docs/audit/execution-boundary-first.json` — the pass
+P1 overwrote in place, recovered from `a68c04b` with only a `superseded_by` pointer added. The second
+reading's `basis_change` says the first counts were kept on this page; that sentence predates the
+recovered file, and both now carry them. Two of the first reading's three `undecidable` cells gained a
+check, and the third was re-attributed after ADR-004 asked what actually runs at request time:
 
 - **process spawn.** The cell was recorded as fenced only by the absence of a process import. The
   format allowlist runs earlier and is what decides the cell: the reader is chosen from six data
@@ -418,39 +421,41 @@ section takes the second, because the first already has a reading and because a 
 reader meets first. `docs/audit/contract-versions.json` is the register and
 `scripts/measure_contract_versions.py` rebuilds it.
 
-### What the ten readings declare
+### What the eleven readings declare
 
-Eleven of the sixteen files under `docs/audit/` carry a `recorded_at`: ten readings and this register.
-The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory exception
-list, a lock-divergence list and an orphan-reads registry — and state no date. Of the ten readings,
-**six declare a token of their own**: `attribution-reading/v1` and `attribution-reading/v2`,
-`execution-boundary-matrix/v2`, `export-lifecycle/v1` and `export-lifecycle/v2` (two pairs, each the
-same surface at two passes) and `independent-rerun/v1`. One declares only its input's:
-`evidence-alignment.json` carries `evidence-alignment-frame/v1` as `frame_schema` and nothing about
-itself. Three declare nothing — both authorization-coverage readings and the served-artifact probe,
-all written before any record carried a token.
+Twelve of the seventeen files under `docs/audit/` carry a `recorded_at`: eleven readings and this
+register. The other five are gate inputs — a debt ceiling, a gitleaks ignore registry, an advisory
+exception list, a lock-divergence list and an orphan-reads registry — and state no date. Of the eleven
+readings, **seven declare a token of their own**: `attribution-reading/v1` and
+`attribution-reading/v2`, `execution-boundary-matrix/v1` and `execution-boundary-matrix/v2`,
+`export-lifecycle/v1` and `export-lifecycle/v2` (three pairs, each the same surface at two passes)
+and `independent-rerun/v1`. One declares only its input's: `evidence-alignment.json` carries
+`evidence-alignment-frame/v1` as `frame_schema` and nothing about itself. Three declare nothing —
+both authorization-coverage readings and the served-artifact probe, all written before any record
+carried a token.
 
-The seven tokens are well-formed and share no vocabulary: `-reading` appears twice, `-matrix` and
-`-frame` once each, three are bare, and two subjects appear at two majors — the attribution reading and
-the export lifecycle, in both cases because the second pass changed what a consumer's arithmetic would
-do. That is a vocabulary, not a policy — nothing says which suffix a new record should take, and
-nothing says what changing one would mean. **No record carries a field stating a bump rule**, which is
-the gap this item exists to close.
+The eight tokens are well-formed and share no vocabulary: `-reading` appears twice, `-matrix` twice,
+`-frame` once, three are bare, and three subjects appear at two majors — the attribution reading, the
+boundary matrix and the export lifecycle — in each case because the second pass changed the basis of a
+consumer's arithmetic. That is a vocabulary, not a policy — nothing says which suffix a new record
+should take, and nothing says what changing one would mean. **No record carries a field stating a
+bump rule**, which is the gap this item exists to close.
 
 ### What holds a token to the record
 
-Five of the six are compared with something that is not the record itself: the attribution test types
-both of its passes' tokens and their two zero counts, the boundary test compares a rebuild, and the
-export-lifecycle test compares the second pass with its instrument's constant and types the first
-pass's token, so a kept file cannot quietly acquire a new one. The sixth carries a token nothing
-asserts — `independent-rerun.json`, whose token is written by the instrument and read by its test
-without a comparison. The register records it as `check_kind: none`, and the contract test proves the
+Six of the seven are compared with something that is not the record itself: the attribution test types
+both of its passes' tokens and their two zero counts, the boundary test compares a rebuild and types
+the kept first pass's token and counts, and the export-lifecycle test compares the second pass with
+its instrument's constant and types the first pass's token, so a kept file cannot quietly acquire a
+new one. The seventh carries a token nothing asserts — `independent-rerun.json`, whose token is
+written by the instrument and read by its test without a comparison. The register records it as
+`check_kind: none`, and the contract test proves the
 label by reading the consumer and finding the token absent, rather than by trusting the record's own
 sentence.
 
 ### The policy, and what enforces it
 
-Five clauses, in force from 2026-11-12 and not back-dated: seven of the ten readings above predate
+Five clauses, in force from 2026-11-12 and not back-dated: eight of the eleven readings above predate
 them, and the three re-taken since — attribution, the boundary and the export lifecycle — declare
 tokens the form accepts.
 
@@ -507,8 +512,9 @@ stand today. Each clause reduces to a predicate over its record, and each record
 evidence lives at: the boundary and export readings re-read this tree at `7e63717512be`, while the
 attribution reading keeps `5cbee4de0906`, the tree its run was taken on, because re-deriving the
 record on a later tree may not move a field that describes a finished run. What makes the four one
-set is that each is the latest record for its clause, none is superseded, and the two that were
-re-taken (`attribution.json`, `export-lifecycle.json`) name the record they replace:
+set is that each is the latest record for its clause, none is superseded, and the three that were
+re-taken (`attribution.json`, `execution-boundary.json`, `export-lifecycle.json`) name the record they
+replace:
 
 | Clause predicate | Read from | Holds because |
 |---|---|---|

@@ -18594,3 +18594,51 @@ no spend is taken here.
 the declaration turns out to be wrong, the rollback is to revert this PR: the status line, the page's
 Stage-exit section, this entry and the rewritten test return to `in progress` together, while every
 reading stays intact — which is the point of never rewriting a number to reach the exit.
+
+## §332 — the boundary's first pass, recovered as a record (2026-11-14)
+
+The entry that declared S2 exited named one residual in its own text: P1 had replaced the first
+boundary matrix in place, its `basis_change` said the first counts were kept on the measurement page
+rather than in a second record, and no `-first` file was invented for it. The pair could therefore be
+compared only as prose. This entry closes that residual. It is taken after the exit declaration, and
+it changes no number in any reading, no predicate in the exit review, and no status line.
+
+**What was recovered.** `docs/audit/execution-boundary-first.json` is the tree object at `a68c04b`,
+byte-for-byte apart from one added key: `superseded_by: docs/audit/execution-boundary.json`. Its
+schema is `execution-boundary-matrix/v1`, its commit is `ab958723f7e8`, and its summary still reads
+15 cells, 6 open, 6 fenced, 3 undecidable, 12 decided by a check, decidability 0.8, 20 layers. A
+test asserts those values from the file, checks that its question and its set of cell ids match the
+second pass, and checks that the second pass has strictly fewer undecidable cells and strictly more
+cells decided by a check — so the kept file shows a moved ruler rather than an improved number.
+
+**What was added to the second pass, and what was not.** `docs/audit/execution-boundary.json` gains
+one key, `supersedes`, pointing back at the recovered file. `recorded_at`, `reviewed_commit`,
+`basis_change`, every cell, every probe and `summary` are untouched. The `basis_change` sentence that
+says the first counts are kept on the measurement page was written before the file existed and is left
+in the record as written; `docs/measurement-basis.md` now says so and points a reader at both places.
+Editing a historical sentence to describe a later recovery is exactly the move this ledger refuses.
+
+`scripts/measure_execution_boundary.py` gains the pointer as a module constant, emits it from
+`build()`, and compares it in `--verify`, so the instrument can still rebuild its own record. The CLI
+still takes flags only; no path reaches a file write from the command line.
+
+**The register follows the record.** `scripts/measure_contract_versions.py` registers the recovered
+file as `record-vs-constant`, with `tests/contract/test_execution_boundary_record.py` as its consumer;
+the contract test's consumer map gains the same pair. The register goes from 10 to 11 readings, six to
+seven self-declared tokens, five to six tokens compared with something outside their own record, and
+seven to eight pre-policy readings — the recovered pass is dated 2026-11-10, before the 2026-11-12
+policy, so it reads as `v1` rather than `v0`. `docs/measurement-basis.md` states the new counts in the
+same paragraph, including the three subjects that now appear at two majors, and the exit review's
+first/second pair list goes from two entries to three. Every one of those numbers is derived, not
+typed into a test as a target.
+
+**What this does not change.** The four exit predicates still read `undecidable 0 of 15`, 33 of 33, 50
+of 50 and 3 of 3 from the same four records; the ADR status line still says `S2 complete`; the
+`publication_ready` gate is untouched. This is a record recovered after a declaration, not evidence
+assembled to reach one — the distinction is why the exit was declared on the numbers that stood at the
+time rather than on a promise to tidy the archive first. Not a third measurement, not a trend, not
+`publication_ready`, and not S3, whose Appendix C questions are still unanswered.
+
+**Rollback and confirmation.** Reverting this one change removes a recovered file and its pointers;
+the second pass, all four exit predicates and the declaration survive it. No credential, no spend, no
+governance change and no public action is taken here beyond the pull request itself.

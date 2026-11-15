@@ -44,7 +44,7 @@
     "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
   ],
   "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
-  "recorded_at": "2026-11-14T02:40:23Z",
+  "recorded_at": "2026-11-14T06:11:17Z",
   "records": [
     {
       "check_kind": "record-vs-constant",
@@ -104,6 +104,18 @@
       "path": "docs/audit/evidence-alignment.json",
       "pre_policy": true,
       "recorded_at": "2026-11-10T11:34:51Z",
+      "states_bump_rule": false
+    },
+    {
+      "check_kind": "record-vs-constant",
+      "checked_by": "tests/contract/test_execution_boundary_record.py",
+      "declared_frame_schema": null,
+      "declared_schema": "execution-boundary-matrix/v1",
+      "detail": "the test types the superseded pass's token, counts and commit, and checks both pointers",
+      "effective_version": "v1",
+      "path": "docs/audit/execution-boundary-first.json",
+      "pre_policy": true,
+      "recorded_at": "2026-11-10T13:23:12Z",
       "states_bump_rule": false
     },
     {
@@ -171,18 +183,18 @@
   "schema": "contract-versions/v1",
   "scope": {
     "gate_inputs": 5,
-    "readings": 10,
+    "readings": 11,
     "registers": 1
   },
   "summary": {
     "declaring_none": 3,
     "declaring_only_input_schema": 1,
-    "declaring_own_schema": 6,
-    "own_tokens_checked": 5,
+    "declaring_own_schema": 7,
+    "own_tokens_checked": 6,
     "own_tokens_unchecked": 1,
     "policy_violations": 0,
-    "pre_policy": 7,
-    "records": 10,
+    "pre_policy": 8,
+    "records": 11,
     "records_carrying_a_bump_rule": 0
   }
 }
