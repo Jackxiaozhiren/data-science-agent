@@ -62,6 +62,11 @@ CHECKS: dict[str, tuple[str, str | None, str]] = {
         "tests/contract/test_attribution_record.py",
         "the test types both tokens and compares the reading and its frame with them",
     ),
+    "docs/audit/execution-boundary-first.json": (
+        "record-vs-constant",
+        "tests/contract/test_execution_boundary_record.py",
+        "the test types the superseded pass's token, counts and commit, and checks both pointers",
+    ),
     "docs/audit/execution-boundary.json": (
         "record-vs-rebuild",
         "tests/contract/test_execution_boundary_record.py",

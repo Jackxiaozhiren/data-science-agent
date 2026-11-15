@@ -201,8 +201,8 @@ def test_each_reading_names_the_commit_its_evidence_lives_at() -> None:
     export readings re-read this tree, while the attribution reading's `reviewed_commit` is the tree
     its run was taken on — its own `--verify` requires that field to equal `run_manifest_commit`, so
     re-deriving the record on a later tree cannot move it. What makes the four one set is that each
-    is the latest record for its clause, none is superseded, and the two that were re-taken say which
-    record they replace.
+    is the latest record for its clause, none is superseded, and the three that were re-taken say
+    which record they replace.
     """
     for path in (BOUNDARY, ATTRIBUTION, EXPORT, REGISTER):
         record = _record(path)
@@ -212,6 +212,7 @@ def test_each_reading_names_the_commit_its_evidence_lives_at() -> None:
     assert attribution["reviewed_commit"] == attribution["run_manifest_commit"]
     for first, second in (
         (ROOT / "docs/audit/attribution-first.json", ATTRIBUTION),
+        (ROOT / "docs/audit/execution-boundary-first.json", BOUNDARY),
         (ROOT / "docs/audit/export-lifecycle-first.json", EXPORT),
     ):
         assert _record(first)["superseded_by"] == second.relative_to(ROOT).as_posix()

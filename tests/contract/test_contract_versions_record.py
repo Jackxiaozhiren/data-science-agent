@@ -39,6 +39,9 @@ CONSUMERS = {
         "tests/contract/test_authorization_coverage_record.py"
     ),
     "docs/audit/evidence-alignment.json": "tests/contract/test_evidence_alignment_record.py",
+    "docs/audit/execution-boundary-first.json": (
+        "tests/contract/test_execution_boundary_record.py"
+    ),
     "docs/audit/execution-boundary.json": "tests/contract/test_execution_boundary_record.py",
     "docs/audit/export-lifecycle-first.json": ("tests/contract/test_export_lifecycle_record.py"),
     "docs/audit/export-lifecycle.json": "tests/contract/test_export_lifecycle_record.py",

@@ -58,6 +58,7 @@ def _derive_verdict(cell: dict) -> tuple[str, str]:
 def test_rebuild_reproduces_the_record() -> None:
     fresh = boundary.build()
     assert fresh["schema"] == RECORD["schema"]
+    assert fresh["supersedes"] == RECORD["supersedes"]
     assert fresh["surfaces"] == RECORD["surfaces"]
     assert fresh["probes"] == RECORD["probes"]
     assert fresh["cells"] == RECORD["cells"]
@@ -152,3 +153,25 @@ def test_the_basis_page_sends_a_reader_to_the_record() -> None:
     page = BASIS_PAGE.read_text(encoding="utf-8")
     assert "execution-boundary.json" in page
     assert "measure_execution_boundary.py" in page
+
+
+def test_the_first_pass_survives_the_second() -> None:
+    """P1 overwrote the first matrix in place; the restored pass must still say what it saw.
+
+    The token is typed here rather than read from the instrument, so a kept file cannot quietly
+    acquire a new schema. The counts are typed for the same reason: the point of keeping both passes
+    is that a later reader can see the ruler moved from three undecidable cells to none, rather than
+    having to take the second reading's word for what the first one said.
+    """
+    first = json.loads((ROOT / RECORD["supersedes"]).read_text(encoding="utf-8"))
+    assert first["schema"] == "execution-boundary-matrix/v1"
+    assert first["superseded_by"] == "docs/audit/execution-boundary.json"
+    assert first["reviewed_commit"] == "ab958723f7e8"
+    assert first["summary"]["undecidable"] == 3
+    assert first["summary"]["decidability"] == 0.8
+    assert first["summary"]["layers"] == 20
+    assert first["summary"]["cells"] == RECORD["summary"]["cells"]
+    assert first["question"] == RECORD["question"]
+    assert {cell["id"] for cell in first["cells"]} == {cell["id"] for cell in RECORD["cells"]}
+    assert RECORD["summary"]["undecidable"] < first["summary"]["undecidable"]
+    assert RECORD["summary"]["decided_by_check"] > first["summary"]["decided_by_check"]
