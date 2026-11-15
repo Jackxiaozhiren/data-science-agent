@@ -18771,3 +18771,34 @@ the page, one contract test and seven lines from the workflow; the smoke returns
 ceiling, which is the state before this entry. No key was received or written, no model call was
 made, no workflow was dispatched, no governance setting changed, and no branch was pushed or pull
 request opened for this entry.
+
+## §336 — a free-lane manifest now names the model it ran (2026-11-15)
+
+A one-task probe through `DSA_LLM_PROVIDER=openai-compat` wrote `run_manifest.json` with
+`execution.provider = openai-compat` and `execution.model = heuristic`. The provider was named
+correctly; the model was not named at all. `_execution_metadata` computed the label as
+`DSA_OPENAI_MODEL or OPENAI_MODEL or gpt-5.6-luna` when the provider was `openai`, and the literal
+`heuristic` for everything else, so both documented free lanes — the hosted OpenAI-compatible one
+and local Ollama — produced artifacts that could not be attributed to a weight.
+
+**What changed.** `_model_label` reads the model from the call log when a call exists, because that
+is what ran, and otherwise resolves it per provider with the same defaults `dsa_llm.providers`
+uses (`DSA_OPENAI_COMPAT_MODEL` or `default`; `DSA_OLLAMA_MODEL` or `qwen3:8b`). A stub run keeps
+`heuristic`, which is what the manifests already stored for it mean. The vendored copy under
+`src/data_science_agent/_vendor` is regenerated with `sync_vendor.py --file`, and
+`tests/test_benchmark_provenance.py` gains four cases: the free lane names its model, the local
+lane names its model and honours an override, a reported call outranks the environment, and a stub
+run is not relabelled.
+
+**Verified on the probe, not only in unit tests.** The same one-task command that produced
+`model = heuristic` now writes `model = Qwen/Qwen3-8B` with `call_count = 0`, which is the no-call
+path; the call path is the third case above.
+
+**What this does not do.** No lane was added, no credential was provided, no model call was made
+and no artifact was republished. Rows produced by a free lane stay non-publishable: the validator
+still requires the paid `openai` lane and `scope=full`, and the labeling rule for free rows is
+unchanged.
+
+**Rollback and confirmation.** Reverting this entry removes one ledger section, one helper and its
+call site, the regenerated vendored copy and four tests; free-lane manifests return to naming no
+model. No key, no spend, no workflow dispatch and no governance change is involved.
