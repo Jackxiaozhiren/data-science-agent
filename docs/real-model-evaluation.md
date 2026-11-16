@@ -37,7 +37,7 @@ The workflow also pins the checkout and setup actions by commit SHA, disables pe
 
 Each variant job uploads its own artifact bundle. In addition to the normal benchmark files, `workflow_manifest.json` records the workflow run ID, exact Git commit, model, variant, task limit, catalog SHA-256, aggregate dataset snapshot SHA-256, pricing assumptions, and pricing reference date. Artifacts are retained for 30 days by default.
 
-This workflow is a **credentialed smoke test**, not a publishable leaderboard run. After all four smoke rows complete successfully and the artifacts are reviewed, add the full-catalog run in a separate reviewed change while keeping the same exact model, evaluator, dataset snapshot, and documented pricing assumptions.
+This workflow is a **credentialed smoke test**, not a publishable leaderboard run. After all four smoke rows complete successfully and the artifacts are reviewed, add the full-catalog run in a separate reviewed change while keeping the same exact model, evaluator, dataset snapshot, and documented pricing assumptions. The reviewed shape of that change is recorded in `docs/ADR/ADR-005-full-run-real-model-baseline-2026-11-16.md`; it is a proposal, not an authorization to dispatch.
 
 When OpenAI pricing or the chosen benchmark model changes, update the pinned workflow in a pull request before running new publication candidates. Do not retroactively rewrite the pricing assumptions of existing artifacts.
 

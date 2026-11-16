@@ -127,3 +127,12 @@ rows. Two are answered with the limits stated above; the credential row is not. 
 started here, no new ADR is proposed, and `publication_ready` keeps its own gate. INV4 remains
 **partial** — a deny list is not containment — so the first expansion will have to name that residual
 in its own ADR.
+
+### Addendum — 2026-11-16
+
+`docs/ADR/ADR-005-full-run-real-model-baseline-2026-11-16.md` now records the proposed promotion of
+the pinned real-model workflow to a publishable full-catalog run. The sentence above stays as written
+for the 2026-11-15 review; this dated addendum is the later record. ADR-005 does **not** answer the
+credential row, provide a key, set a spend authorization, dispatch a run or publish a result: it names
+the exact field changes, the prerequisites and the rollback. S3 therefore stays `not started`, and
+INV4 stays **partial**, with the residual now named in that ADR.

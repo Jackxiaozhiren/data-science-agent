@@ -34,6 +34,7 @@ nav:
       - ADR — Output artefact export: ADR/ADR-002-output-artifact-export-2026-09-08.md
       - ADR — Zero-cost self-hosted baseline: ADR/ADR-003-zero-cost-self-hosted-baseline-2026-11-09.md
       - ADR — Producer changes behind S2's exit: ADR/ADR-004-producer-gaps-behind-s2-exit-2026-11-13.md
+      - ADR — Publishable full-catalog real-model run: ADR/ADR-005-full-run-real-model-baseline-2026-11-16.md
   - Evaluation:
       - Benchmark: benchmark.md
       - Contribute a Task: benchmark-task-contribution.md
