@@ -387,9 +387,21 @@ class OpenAIChatProvider(LLMProvider):
             raise RuntimeError("Chat completions API returned no message content") from exc
         raw_usage = payload.get("usage")
         usage = raw_usage if isinstance(raw_usage, dict) else {}
+        input_tokens = usage.get("prompt_tokens", usage.get("prompt_eval_count", 0))
+        output_tokens = usage.get("completion_tokens", usage.get("eval_count", 0))
+        # Hosts disagree about this field: OpenAI-compatible ones report ``total_tokens``, Ollama
+        # reports neither total but both counts. Deriving it only when absent keeps a reported
+        # total verbatim. Dropping it entirely left every chat-completions manifest with an
+        # aggregate of zero, which the publication validator reads as "no tokens were spent".
+        reported_total = usage.get("total_tokens")
+        if not isinstance(reported_total, int) or reported_total <= 0:
+            reported_total = (input_tokens if isinstance(input_tokens, int) else 0) + (
+                output_tokens if isinstance(output_tokens, int) else 0
+            )
         norm = {
-            "input_tokens": usage.get("prompt_tokens", usage.get("prompt_eval_count", 0)),
-            "output_tokens": usage.get("completion_tokens", usage.get("eval_count", 0)),
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": reported_total,
         }
         self.last_usage = {k: v for k, v in norm.items() if isinstance(v, int)}
         cost = _usd_for_usage(self.last_usage)

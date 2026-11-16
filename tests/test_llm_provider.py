@@ -155,7 +155,7 @@ async def test_chat_provider_generate_and_usage(monkeypatch: pytest.MonkeyPatch)
     assert await p.generate("hi") == "hello"
     assert seen[0]["url"] == "http://localhost:11434/v1/chat/completions"
     assert "Authorization" not in seen[0]["headers"]  # localhost: no key sent
-    assert p.last_usage == {"input_tokens": 100, "output_tokens": 50}
+    assert p.last_usage == {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
     assert p.last_response_id == "chatcmpl-test123"
 
 
@@ -175,8 +175,48 @@ async def test_chat_provider_ollama_eval_counts_and_structured(
     p = OpenAIChatProvider(model="qwen3:8b", base_url="http://localhost:11434/v1", local=True)
     out = await p.structured_output("q?", _StructuredAnswer)
     assert out.answer == "ok"
-    assert p.last_usage == {"input_tokens": 200, "output_tokens": 30}
+    assert p.last_usage == {"input_tokens": 200, "output_tokens": 30, "total_tokens": 230}
     assert (p.last_response_id or "").startswith("local-")  # honestly labeled, no fake id
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_keeps_the_total_the_host_reports(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A host's own total wins over our arithmetic; it may count tokens we cannot see."""
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    seen: list = []
+    payload = _chat_payload("hi", total_tokens=140)
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: _FakeChatClient(payload, seen))
+    p = OpenAIChatProvider(
+        model="glm-4-flash", base_url="https://open.bigmodel.cn/api/paas/v4", local=True
+    )
+
+    await p.generate("hi")
+
+    assert p.last_usage == {"input_tokens": 100, "output_tokens": 50, "total_tokens": 140}
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_derives_a_total_a_host_reports_as_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A zero total is a missing field, not a claim that the run was free of tokens."""
+    import httpx
+
+    from dsa_llm.providers import OpenAIChatProvider
+
+    seen: list = []
+    payload = _chat_payload("hi", total_tokens=0)
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: _FakeChatClient(payload, seen))
+    p = OpenAIChatProvider(model="m", base_url="http://localhost:11434/v1", local=True)
+
+    await p.generate("hi")
+
+    assert p.last_usage["total_tokens"] == 150
 
 
 @pytest.mark.asyncio

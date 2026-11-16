@@ -18802,3 +18802,39 @@ unchanged.
 **Rollback and confirmation.** Reverting this entry removes one ledger section, one helper and its
 call site, the regenerated vendored copy and four tests; free-lane manifests return to naming no
 model. No key, no spend, no workflow dispatch and no governance change is involved.
+
+## §337 — a chat-completions manifest no longer reports zero tokens (2026-11-16)
+
+The first free-lane run taken after the model-label repair wrote `provider = openai-compat`,
+`model = glm-4-flash`, `call_count = 5` and `input_tokens = 2968` / `output_tokens = 2079`, while
+`token_usage.total_tokens` was `0`. The chat-completions provider normalised a host payload into
+`input_tokens` and `output_tokens` only, so the field the runner sums and the validator reads was
+never present on this lane. Every `openai-compat` and `ollama` artifact therefore reported a total
+of zero even when the calls plainly consumed tokens.
+
+**Why it matters beyond the number.** `publication.py` requires each `llm_calls[i].total_tokens` and
+the aggregate to be greater than zero. A free-lane row could not have satisfied that clause no matter
+how it was configured, and the zero also makes an artifact look like it spent nothing — which is the
+opposite of the observation a zero-cost lane is supposed to support.
+
+**What changed.** The normalisation now carries `total_tokens`, verbatim when the host reports one,
+derived from the two counts when it does not (Ollama sends neither total), and derived as well when a
+host reports `0`, since a zero total there means "field omitted" rather than "no tokens". The two
+existing cases in `tests/test_llm_provider.py` that pinned the two-field shape were reading the
+defect, so their expectations now include the total; two further cases pin a reported total kept
+verbatim and a reported zero derived instead. The vendored copy is regenerated with
+`sync_vendor.py --file`.
+
+**Verified on a live call, not only in unit tests.** One task against the free lane before the change
+wrote a zero aggregate; the same task after it writes
+`token_usage = {input_tokens: 869, output_tokens: 97, total_tokens: 966}`, matching the host's own
+arithmetic.
+
+**What this does not do.** It does not add a lane, provide a credential, publish an artifact or change
+which lane the validator accepts: the paid `openai` lane and `scope=full` are still required for a
+publishable row, and no stored reading is re-derived by this change. The five-task run that produced
+the zero remains a local probe and is not recorded as a reading.
+
+**Rollback and confirmation.** Reverting this entry restores the two-field normalisation and the two
+test expectations that match it; chat-lane manifests return to reporting a zero total. No key, no
+spend, no workflow dispatch and no governance change is involved.
