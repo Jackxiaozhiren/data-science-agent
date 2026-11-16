@@ -18877,3 +18877,30 @@ is a rotation item that belongs to the user and is never copied into the tree, c
 **Rollback and confirmation.** Reverting this entry removes one ADR, one navigation line, one dated
 addendum, one cross-reference and this ledger section. No producer, evaluator, catalog, workflow,
 credential, spend, dispatch or governance change is involved.
+
+## §339 — the full-run cost table uses the catalog's task count (2026-11-16)
+
+ADR-005's P1 is now discharged. The cost table in `docs/real-model-evaluation.md` still described a
+full internal run as `4 × 150 = 600` tasks, while the frozen catalog's `tasks` array has 50 entries.
+That made the former expected `≈ $1.60` and upper bound `≈ $2.50` a set of numbers for a run that the
+repository cannot dispatch from this catalog, and left the suggested cap without a reviewed basis.
+
+**What changed.** The full row now reads `4 × 50 = 200` tasks with expected spend `≈ $0.53` and
+upper bound `≈ $0.83`, each scaled from the former estimate by one third. The cap column is now
+labelled per process, and a paragraph states the two boundaries explicitly: `DSA_MAX_COST_USD=5`
+applies to each variant container, the workflow worst case is `4 × 5 = $20`, and the provider
+project-level limit remains the run-wide bound. ADR-005 gains a dated addendum marking its cost-table
+open item closed; the original evidence row that quoted the stale table stays as a historical record.
+
+**Verified.** The catalog count was read from `benchmarks/ds-agent-benchmark/catalog.json` as 50.
+`1.60 / 3 = 0.533…` and `2.50 / 3 = 0.833…` give the two displayed figures. The workflow file is
+byte-identical to the merged parent; no `--limit`, `RUN_SCOPE`, `TASK_LIMIT` or cap value was edited.
+
+**What this does not do.** It does not change the workflow, configure a secret, set a spend
+authorization, dispatch a run, call a paid model, publish a result, update a result registry or close
+an issue. The cap `5` is still a proposal with headroom rather than a measured requirement; S3 stays
+`not started`, and #16 and #81 stay open.
+
+**Rollback and confirmation.** Reverting this entry restores the 600-task row, the unlabelled cap
+header and the ADR-005 open item. No producer, evaluator, catalog, workflow, credential, spend,
+dispatch or governance change is involved.
