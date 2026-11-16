@@ -18838,3 +18838,42 @@ the zero remains a local probe and is not recorded as a reading.
 **Rollback and confirmation.** Reverting this entry restores the two-field normalisation and the two
 test expectations that match it; chat-lane manifests return to reporting a zero total. No key, no
 spend, no workflow dispatch and no governance change is involved.
+
+## §338 — ADR-005 records the full-run promotion without starting it (2026-11-16)
+
+The review that preceded this entry read the pinned real-model workflow at `f6498a7` and found that a
+publishable row needs three declarations and one execution argument to agree. `RUN_SCOPE: smoke-5` and
+`TASK_LIMIT: "5"` are job-level facts; each of the four `docker run` blocks separately passes
+`--limit 5`. Changing the manifest declarations without removing the argument would produce artifacts
+that say `full` while the processes read five tasks. The publication gate derives
+`publication_ready = matrix_valid and scope == "full"` and additionally requires the paid `openai`
+lane, positive unit prices and `cost_usd > 0`, so the measured free lane cannot be the source of a
+publishable row.
+
+A second obstacle was read rather than assumed. The cost table in `docs/real-model-evaluation.md`
+says "Full internal (4 × 150) = 600 tasks", while the frozen catalog contains 50. The suggested cap
+in that table is therefore derived from twelve times the catalog's task count. ADR-005 keeps the
+corrected table as a prerequisite, not as a silent edit hidden inside the workflow decision.
+
+**What changed.** `docs/ADR/ADR-005-full-run-real-model-baseline-2026-11-16.md` is added with the full
+Problem, Evidence, Impact, Alternatives, Recommendation, Migration Plan and Rollback Plan skeleton.
+It fixes the exact seven-field contract: scope, limit declaration, the four `--limit` removals, the
+per-process cost cap, the pricing snapshot, the secret source and the labels. ADR-003 gains a dated
+addendum so its 2026-11-15 sentence "no new ADR is proposed" stays true for that date; the addendum
+states that ADR-005 is a later record and does not open S3. The real-model evaluation page links to
+the new ADR. The navigation gains one Architecture entry.
+
+**Verified.** The new record derives every acceptance from artifacts or from `publication.py`; it does
+not type a verdict into prose. The negative controls include a scope-only flip, a declaration/execution
+mismatch, a single-variant pricing change, the free-lane substitution and a zeroed token total. The
+budget section states both boundaries separately: `DSA_MAX_COST_USD` is per process and forwarded to
+four containers, while the provider project-level limit is the run-wide bound.
+
+**What this does not do.** It does not change the workflow, correct the cost table, configure a secret,
+set a spend authorization, dispatch a run, call a paid model, publish a result, update a README or
+registry, or close an issue. S3 stays `not started`; #16 and #81 stay open; the exposed free-lane key
+is a rotation item that belongs to the user and is never copied into the tree, chat, issue or PR.
+
+**Rollback and confirmation.** Reverting this entry removes one ADR, one navigation line, one dated
+addendum, one cross-reference and this ledger section. No producer, evaluator, catalog, workflow,
+credential, spend, dispatch or governance change is involved.
