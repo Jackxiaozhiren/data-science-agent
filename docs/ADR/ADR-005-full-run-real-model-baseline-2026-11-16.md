@@ -166,3 +166,13 @@ Before trusting a green result, flip each control once and require red:
 | Human provenance review and negative controls | P6, not done here | A validator result is not a publication decision |
 | #81 external evidence layer | open; "future direction" only | No public reply, no code, no change to its four re-evaluation preconditions |
 | S3 entry | still `not started` | This ADR plans an expansion; it does not provide the credential row that opens the stage |
+
+### Addendum — 2026-11-16 (P1 completed)
+
+The "Corrected 50-task cost table" row above is now closed by a docs-only change
+to `docs/real-model-evaluation.md`. The full row reads `4 × 50 = 200` tasks, with
+expected spend `≈ $0.53` and upper bound `≈ $0.83`, scaled from the former
+600-task estimate by one third. The cap column is now labelled per process;
+`DSA_MAX_COST_USD=5` remains a proposal rather than a measured requirement, and
+the provider project-level limit remains the run-wide bound. No workflow,
+credential, dispatch, publication or issue state changed with this correction.

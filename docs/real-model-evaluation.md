@@ -158,10 +158,17 @@ Measured call profile per task: DSA variants = 1 planner call (structured, max
 3000 out); llm-tools = plan + answer; llm-only = 1 answer call. Typical usage
 ≈ 4k input + 1.5k output tokens/task (≈ $0.0026).
 
-| Scope | Tasks | Expected | Upper bound (max tokens) | Suggested cap |
+| Scope | Tasks | Expected | Upper bound (max tokens) | Suggested cap (per process) |
 |---|---:|---:|---:|---:|
 | 4-variant smoke (CI pinned) | 20 | ≈ $0.05 | ≈ $0.10 | `DSA_MAX_COST_USD=2` |
-| Full internal (4 × 150) | 600 | ≈ $1.60 | ≈ $2.50 | `DSA_MAX_COST_USD=5` |
+| Full internal (4 × 50) | 200 | ≈ $0.53 | ≈ $0.83 | `DSA_MAX_COST_USD=5` |
+
+The full row is scaled from the former `4 × 150 = 600` estimate by one third,
+because the frozen catalog contains 50 tasks, not 150 per variant. The cap column
+is per process: `DSA_MAX_COST_USD=5` applies to each variant container, so the
+workflow worst case is `4 × 5 = $20`; the provider project-level limit remains the
+run-wide bound. The value is a proposal with headroom over roughly `$0.13`
+expected and `$0.21` upper-bound spend per process, not a measured requirement.
 
 Estimates only — verify against the first smoke's recorded `cost_usd` before
 scaling. Never run `scope=full` without a prior green smoke on the same commit.
