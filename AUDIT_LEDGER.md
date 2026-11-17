@@ -18904,3 +18904,35 @@ an issue. The cap `5` is still a proposal with headroom rather than a measured r
 **Rollback and confirmation.** Reverting this entry restores the 600-task row, the unlabelled cap
 header and the ADR-005 open item. No producer, evaluator, catalog, workflow, credential, spend,
 dispatch or governance change is involved.
+
+## §340 — the same-code-tree reading of the smoke commit is recorded (2026-11-17)
+
+ADR-005's D4 and P3 call for a green pinned smoke on the "target commit" before
+dispatch, and P4's workflow promotion necessarily creates a later commit. Read
+literally, the full run's `DSA_GIT_COMMIT` names the promotion commit and could
+never equal the smoke's sha, while the pinned workflow has no dispatch inputs to
+run both scopes from one tree. That made the condition unsatisfiable by
+construction, so the maintainer was asked to choose a reading before any paid
+run.
+
+**Decision recorded.** The condition is read as the same code tree, not the same
+sha. The smoke runs on the last unpinned-scope commit (`69a8628` when this entry
+was written); the promotion commit may differ only in the workflow's scope
+fields. Evaluator scoring, benchmark catalog, model identifier, pricing rates
+and dataset snapshot must be byte-identical to the smoke tree. The only promotion
+differences are `RUN_SCOPE`, `TASK_LIMIT` and the removal of the four `--limit 5`
+occurrences named in the ADR. The full run records the promotion commit; the
+review verifies the unchanged surfaces by content rather than by sha. A dated
+addendum in ADR-005 carries this reading; the alternative of dispatch inputs or
+a split workflow to force one sha remains rejected.
+
+**What this does not do.** It does not relax the publication gate, change the
+workflow, configure a secret, set a spend authorization, dispatch a run, call a
+paid model, publish a result, update a registry or close an issue. The two pinned
+free-lane smokes run on `69a8628` (`openai-compat`/`glm-4-flash` and `ollama`/
+`qwen3:8b`) are regression anchors only; neither meets `provider=openai` with a
+positive cost. S3 stays `not started`, and #16 and #81 stay open.
+
+**Rollback and confirmation.** Reverting this entry removes one dated addendum
+and this ledger section. No producer, evaluator, catalog, workflow, credential,
+spend, dispatch or governance change is involved.
