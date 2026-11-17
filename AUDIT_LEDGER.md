@@ -18936,3 +18936,43 @@ positive cost. S3 stays `not started`, and #16 and #81 stay open.
 **Rollback and confirmation.** Reverting this entry removes one dated addendum
 and this ledger section. No producer, evaluator, catalog, workflow, credential,
 spend, dispatch or governance change is involved.
+
+## §341 — both free lanes are kept as one recomputable regression anchor (2026-11-17)
+
+The model-label and token-total repairs recorded earlier were each verified by a
+single free-lane probe. This entry keeps the two-lane confirmation from this
+session as one record, so the evidence does not live only in a temporary
+directory. Both rows ran on the same code tree, `69a8628`, with five tasks,
+`llm-only`, `fallback=error` and zero unit prices.
+
+**What is recorded.** `docs/audit/free-lane-regression-anchor.json` holds two
+lanes: `openai-compat` / `glm-4-flash` with token counts `2968` / `1707` /
+`4675`, and `ollama` / `qwen3:8b` with `3408` / `7692` / `11100`. Each row
+carries its five per-call token triples and five response ids, so the aggregate
+can be recomputed without the original artifacts. The real provider and model
+names replace the former `heuristic` label, and `total_tokens` is a reported or
+derived integer rather than zero.
+
+**Verified.** A contract test checks the schema, two real labels, aggregate
+counts equal to the sum of per-call entries, distinct response ids, zero cost on
+both lanes, and the record's own statement that it is not publication evidence.
+All six tests pass. The two rows do not imply a quality comparison: the Ollama
+row's larger output count follows from reasoning being enabled on that local
+run.
+
+**What this does not do.** Neither lane satisfies the publication gate, which
+requires `provider=openai` with a positive cost; both rows report `cost_usd=0`.
+This record does not change the workflow, configure a secret, set a spend
+authorization, dispatch a run, call a paid model, publish a result, update a
+registry or close an issue. S3 stays `not started`, and #16 and #81 stay open.
+
+**Register correction.** The first CI run refused the new audit JSON: every reading under
+`docs/audit/` written after the version policy must appear in the contract-versions register,
+and an unregistered schema token fails the rebuild. The record now declares
+`free-lane-regression-anchor/v1`, its own test compares that token with a literal typed outside
+the record, and the register gains one row. This is what makes the token checked rather than
+merely asserted; the register's violation count stays at zero. No reading's numbers changed.
+
+**Rollback and confirmation.** Reverting this entry removes one audit JSON, one
+contract test, one register row and this ledger section. No producer, evaluator,
+catalog, workflow, credential, spend, dispatch or governance change is involved.

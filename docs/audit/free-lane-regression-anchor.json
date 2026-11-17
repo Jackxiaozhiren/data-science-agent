@@ -1,0 +1,67 @@
+{
+  "schema": "free-lane-regression-anchor/v1",
+  "recorded_at": "2026-11-17T14:01:00Z",
+  "reviewed_commit": "69a8628cbe1e7eddc7c7ea5a76f25b0cf8391858",
+  "purpose": "A regression anchor proving that both documented free lanes run end to end with truthful provider/model labels and usable token totals on one code tree. This is not publication evidence: neither row satisfies provider=openai with a positive cost.",
+  "gate_note": "publication_ready requires provider=openai and cost_usd>0; both rows below are cost_usd=0, so neither can promote to a leaderboard claim.",
+  "scope": {
+    "task_count": 5,
+    "evaluation_variant": "llm-only",
+    "fallback": "error",
+    "unit_prices_per_million": {"input": 0.0, "output": 0.0},
+    "cap_usd": 2.0,
+    "git_commit_source": "pinned to 69a8628 for both rows"
+  },
+  "lanes": [
+    {
+      "id": "zhipu-openai-compat",
+      "provider": "openai-compat",
+      "model": "glm-4-flash",
+      "call_count": 5,
+      "token_usage": {"input_tokens": 2968, "output_tokens": 1707, "total_tokens": 4675},
+      "cost_usd": 0.0,
+      "response_ids": [
+        "202611171917269b239f02ec6243c0",
+        "2026111719173276e2053037ca4745",
+        "20261117191747ca8b8eb680354f49",
+        "202611171917558ed3fb64019a4746",
+        "20261117191822c403a420cb1a4ba2"
+      ],
+      "per_call": [
+        {"input_tokens": 869, "output_tokens": 112, "total_tokens": 981},
+        {"input_tokens": 635, "output_tokens": 399, "total_tokens": 1034},
+        {"input_tokens": 384, "output_tokens": 176, "total_tokens": 560},
+        {"input_tokens": 419, "output_tokens": 563, "total_tokens": 982},
+        {"input_tokens": 661, "output_tokens": 457, "total_tokens": 1118}
+      ]
+    },
+    {
+      "id": "local-ollama",
+      "provider": "ollama",
+      "model": "qwen3:8b",
+      "call_count": 5,
+      "token_usage": {"input_tokens": 3408, "output_tokens": 7692, "total_tokens": 11100},
+      "cost_usd": 0.0,
+      "response_ids": [
+        "chatcmpl-956",
+        "chatcmpl-687",
+        "chatcmpl-465",
+        "chatcmpl-464",
+        "chatcmpl-714"
+      ],
+      "per_call": [
+        {"input_tokens": 1068, "output_tokens": 501, "total_tokens": 1569},
+        {"input_tokens": 716, "output_tokens": 1856, "total_tokens": 2572},
+        {"input_tokens": 417, "output_tokens": 1443, "total_tokens": 1860},
+        {"input_tokens": 470, "output_tokens": 1892, "total_tokens": 2362},
+        {"input_tokens": 737, "output_tokens": 2000, "total_tokens": 2737}
+      ]
+    }
+  ],
+  "invariants": [
+    "each lane names a real provider and a real model, never heuristic",
+    "each lane's aggregate token counts equal the sum of its per_call entries",
+    "both lanes share one reviewed_commit and cost_usd=0",
+    "response_ids are present and distinct within each lane"
+  ]
+}

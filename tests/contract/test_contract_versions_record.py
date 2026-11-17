@@ -39,6 +39,9 @@ CONSUMERS = {
         "tests/contract/test_authorization_coverage_record.py"
     ),
     "docs/audit/evidence-alignment.json": "tests/contract/test_evidence_alignment_record.py",
+    "docs/audit/free-lane-regression-anchor.json": (
+        "tests/contract/test_free_lane_regression_anchor.py"
+    ),
     "docs/audit/execution-boundary-first.json": (
         "tests/contract/test_execution_boundary_record.py"
     ),

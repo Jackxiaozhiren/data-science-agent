@@ -107,6 +107,11 @@ CHECKS: dict[str, tuple[str, str | None, str]] = {
         "tests/contract/test_evidence_alignment_record.py",
         "the test compares the frame's token with the record's frame_schema; the record has no token of its own",
     ),
+    "docs/audit/free-lane-regression-anchor.json": (
+        "record-vs-constant",
+        "tests/contract/test_free_lane_regression_anchor.py",
+        "the test types the schema token and compares it with the record's declared schema",
+    ),
 }
 
 

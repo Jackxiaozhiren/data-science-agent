@@ -44,7 +44,7 @@
     "The check column is read by hand and pinned by `tests/contract/test_contract_versions_record.py`; every token is read from the file it lives in."
   ],
   "question": "For each audit record a consumer derives numbers from: does the record name its own shape, is that name compared with anything outside the record, and does the record say what changing the name would mean?",
-  "recorded_at": "2026-11-14T06:11:17Z",
+  "recorded_at": "2026-11-17T14:33:06Z",
   "records": [
     {
       "check_kind": "record-vs-constant",
@@ -155,6 +155,18 @@
       "states_bump_rule": false
     },
     {
+      "check_kind": "record-vs-constant",
+      "checked_by": "tests/contract/test_free_lane_regression_anchor.py",
+      "declared_frame_schema": null,
+      "declared_schema": "free-lane-regression-anchor/v1",
+      "detail": "the test types the schema token and compares it with the record's declared schema",
+      "effective_version": "v1",
+      "path": "docs/audit/free-lane-regression-anchor.json",
+      "pre_policy": false,
+      "recorded_at": "2026-11-17T14:01:00Z",
+      "states_bump_rule": false
+    },
+    {
       "check_kind": "none",
       "checked_by": null,
       "declared_frame_schema": null,
@@ -183,18 +195,18 @@
   "schema": "contract-versions/v1",
   "scope": {
     "gate_inputs": 5,
-    "readings": 11,
+    "readings": 12,
     "registers": 1
   },
   "summary": {
     "declaring_none": 3,
     "declaring_only_input_schema": 1,
-    "declaring_own_schema": 7,
-    "own_tokens_checked": 6,
+    "declaring_own_schema": 8,
+    "own_tokens_checked": 7,
     "own_tokens_unchecked": 1,
     "policy_violations": 0,
     "pre_policy": 8,
-    "records": 11,
+    "records": 12,
     "records_carrying_a_bump_rule": 0
   }
 }
