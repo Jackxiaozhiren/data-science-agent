@@ -176,3 +176,27 @@ expected spend `≈ $0.53` and upper bound `≈ $0.83`, scaled from the former
 `DSA_MAX_COST_USD=5` remains a proposal rather than a measured requirement, and
 the provider project-level limit remains the run-wide bound. No workflow,
 credential, dispatch, publication or issue state changed with this correction.
+
+### Addendum — 2026-11-17 (same-code-tree reading of the smoke commit)
+
+D4 and P3 require a green pinned smoke before dispatch and speak of the "target
+commit". A literal reading would make that condition unsatisfiable: P4's workflow
+promotion creates a new commit, and the full run records the promotion commit via
+`DSA_GIT_COMMIT`, so the full run's `git_commit` cannot equal the smoke's commit
+by sha. The pinned workflow exposes no dispatch inputs that could run both scopes
+from one tree.
+
+The maintainer's reading, recorded here, is **same code tree rather than same
+sha**. The smoke runs on the last unpinned-scope commit (`69a8628` at the time of
+this addendum); the promotion commit may differ only in the workflow's scope
+fields. Its evaluator scoring, benchmark catalog, model identifier, pricing
+rates and dataset snapshot must be byte-identical to the smoke tree. The only
+promotion differences are `RUN_SCOPE`, `TASK_LIMIT`, and the removal of the four
+`--limit 5` occurrences named in C3. The full run records the promotion commit;
+the review must verify the unchanged surfaces by content, not by sha.
+
+This is a reading of an existing condition, not a change to it. It does not relax
+the publication gate, authorize a dispatch, start a paid call or publish a
+result. The alternative — dispatch inputs or a split workflow to force one sha —
+remains rejected under Alternatives item 2. S3 stays `not started`, and #16 and
+#81 stay open.
